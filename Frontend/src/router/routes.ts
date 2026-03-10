@@ -15,7 +15,9 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/customer',
     component: () => import('layouts/CustomerScreen.vue'),
-    children: [{ path: '', component: () => import('pages/CustomerMainPage.vue') }],
+    children: [{ path: '', component: () => import('pages/CustomerMainPage.vue') },
+      { path: 'defect',   name: 'defectList',     component: () => import('pages/CustomerDefectListPage.vue'), meta: { title: 'รายการ Defect' } }
+    ],
   },
 
   {
