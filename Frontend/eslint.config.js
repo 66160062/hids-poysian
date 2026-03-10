@@ -36,11 +36,12 @@ export default defineConfigWithVueTs(
   pluginVue.configs['flat/essential'],
 
   {
-    files: ['**/*.ts', '**/*.vue'],
-    rules: {
-      '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
-    },
+  files: ['**/*.ts', '**/*.vue'],
+  rules: {
+    '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
+    '@typescript-eslint/await-thenable': 'off',
   },
+},
   // https://github.com/vuejs/eslint-config-typescript
   vueTsConfigs.recommendedTypeChecked,
 
