@@ -50,13 +50,13 @@ const menuList = [
     name: 'dashboard',
     label: 'ภาพรวม',
     icon: 'home',
-    link: '/app/dashboard',
+    link: '/customer',
   },
   {
     name: 'defect',
     label: 'รายการ Defect',
     icon: 'assignment',
-    link: '/app/Defectlist',
+    link: '/customer/defect',
   },
   {
     name: 'report',
