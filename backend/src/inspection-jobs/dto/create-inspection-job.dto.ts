@@ -10,7 +10,7 @@ import {
 export class CreateInspectionJobDto {
   @ApiProperty({
     description: 'รหัสลูกค้า (Customer ID)',
-    example: 105,
+    example: 1,
   })
   @IsInt()
   customerId: number;

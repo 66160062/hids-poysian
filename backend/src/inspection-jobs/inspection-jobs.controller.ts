@@ -27,7 +27,7 @@ export class InspectionJobsController {
   @ApiConsumes('multipart/form-data')
   @ApiBody({ description: 'ข้อมูลการตรวจ', type: CreateInspectionJobDto })
   @UseInterceptors(
-    FileInterceptor('file', {
+    FileInterceptor('projectImageUrl', {
       storage: diskStorage({
         destination: './uploads/inspection_jobs',
         filename: (req, file, cb) => {
@@ -64,7 +64,7 @@ export class InspectionJobsController {
   @ApiConsumes('multipart/form-data')
   @ApiBody({ description: 'ข้อมูลการตรวจ', type: UpdateInspectionJobDto })
   @UseInterceptors(
-    FileInterceptor('file', {
+    FileInterceptor('projectImageUrl', {
       storage: diskStorage({
         destination: './uploads/inspection_jobs',
         filename: (req, file, cb) => {

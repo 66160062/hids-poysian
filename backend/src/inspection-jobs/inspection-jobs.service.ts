@@ -6,6 +6,7 @@ import { InspectionJob } from './entities/inspection-job.entity';
 import { Repository } from 'typeorm';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { Address } from 'src/addresses/entities/address.entity';
+import { HouseType } from 'src/house-types/entities/house-type.entity';
 
 @Injectable()
 export class InspectionJobsService {
@@ -16,6 +17,8 @@ export class InspectionJobsService {
     private readonly customersRepo: Repository<Customer>,
     @InjectRepository(Address)
     private readonly addressesRepo: Repository<Address>,
+    @InjectRepository(HouseType)
+    private readonly houseTypesRepo: Repository<HouseType>,
   ) {}
 
   async create(createInspectionJobDto: CreateInspectionJobDto) {
@@ -25,10 +28,14 @@ export class InspectionJobsService {
     const address = await this.addressesRepo.findOneByOrFail({
       address_id: createInspectionJobDto.addressId,
     });
+    const houseType = await this.houseTypesRepo.findOneByOrFail({
+      house_type_id: createInspectionJobDto.houseTypeId,
+    });
     const inspectionJob = this.inspectionsRepo.create({
       ...createInspectionJobDto,
       customer,
       address,
+      houseType,
     });
     return this.inspectionsRepo.save(inspectionJob);
   }
