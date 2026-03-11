@@ -9,19 +9,22 @@ import { InspectionJobsModule } from './inspection-jobs/inspection-jobs.module';
 import { InspectionJob } from './inspection-jobs/entities/inspection-job.entity';
 import { CustomersModule } from './customers/customers.module';
 import { Customer } from './customers/entities/customer.entity';
+import { AddressesModule } from './addresses/addresses.module';
+import { Address } from './addresses/entities/address.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'hids.db',
-      entities: [User, InspectionJob, Customer],
+      entities: [User, InspectionJob, Customer, Address],
       synchronize: true,
     }),
     AuthModule,
     UsersModule,
     InspectionJobsModule,
     CustomersModule,
+    AddressesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
