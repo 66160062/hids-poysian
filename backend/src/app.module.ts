@@ -14,7 +14,7 @@ import { Customer } from './customers/entities/customer.entity';
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
-      database: 'test.db',
+      database: 'hids.db',
       entities: [User, InspectionJob, Customer],
       synchronize: true,
     }),
