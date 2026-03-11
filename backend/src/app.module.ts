@@ -5,19 +5,22 @@ import { UsersModule } from './users/users.module';
 import { User } from './users/entities/user.entity';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { InspectionJobsModule } from './inspection-jobs/inspection-jobs.module';
+import { InspectionJob } from './inspection-jobs/entities/inspection-job.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'test.db',
-      entities: [User],
+      entities: [User, InspectionJob],
       synchronize: true,
     }),
     AuthModule,
     UsersModule,
+    InspectionJobsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}
