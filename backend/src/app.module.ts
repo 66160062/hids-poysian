@@ -13,14 +13,18 @@ import { AddressesModule } from './addresses/addresses.module';
 import { Address } from './addresses/entities/address.entity';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { HouseTypesModule } from './house-types/house-types.module';
+import { HouseType } from './house-types/entities/house-type.entity';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'hids.db',
-      entities: [User, InspectionJob, Customer, Address],
+      entities: [User, InspectionJob, Customer, Address, HouseType],
       synchronize: true,
+      namingStrategy: new SnakeNamingStrategy(),
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
@@ -31,6 +35,7 @@ import { join } from 'path';
     InspectionJobsModule,
     CustomersModule,
     AddressesModule,
+    HouseTypesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
