@@ -14,7 +14,6 @@
 
     <q-footer>
   <q-tabs
-    v-model="activeTab"
     dense
     align="justify"
     class="bg-white text-grey-7"
@@ -37,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed} from 'vue'
 //import { useAuthStore } from 'src/stores/authStore'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -62,9 +61,8 @@ const menuList = [
     name: 'report',
     label: 'สรุปรายงาน',
     icon: 'bar_chart',
-    link: '/app/report',
+    link: '/customer/report',
   },
 ]
 
-const activeTab = ref('dashboard')
 </script>
