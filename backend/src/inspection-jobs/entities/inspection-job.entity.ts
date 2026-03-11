@@ -1,5 +1,6 @@
 import { Address } from 'src/addresses/entities/address.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
+import { HouseType } from 'src/house-types/entities/house-type.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -12,7 +13,7 @@ import {
 
 @Entity()
 export class InspectionJob {
-  @PrimaryGeneratedColumn({ name: 'job_id' })
+  @PrimaryGeneratedColumn()
   jobId: number;
 
   @Column({ type: 'varchar', length: 50 })
@@ -25,14 +26,12 @@ export class InspectionJob {
   projectName: string;
 
   @Column({
-    name: 'location_coordinate',
     type: 'varchar',
     length: 255,
   })
   locationCoordinate: string;
 
   @Column({
-    name: 'house_plan_url',
     type: 'varchar',
     length: 255,
   })
@@ -65,9 +64,7 @@ export class InspectionJob {
   @JoinColumn({ name: 'address_id' })
   address: Address;
 
-  /*
   @ManyToOne(() => HouseType)
   @JoinColumn({ name: 'house_type_id' })
   houseType: HouseType;
-  */
 }

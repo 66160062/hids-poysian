@@ -5,9 +5,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { InspectionJob } from './entities/inspection-job.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { Address } from 'src/addresses/entities/address.entity';
+import { HouseType } from 'src/house-types/entities/house-type.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([InspectionJob, Customer, Address])],
+  imports: [
+    TypeOrmModule.forFeature([InspectionJob, Customer, Address, HouseType]),
+  ],
   controllers: [InspectionJobsController],
   providers: [InspectionJobsService],
   exports: [InspectionJobsService],

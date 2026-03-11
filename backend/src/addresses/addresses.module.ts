@@ -3,10 +3,9 @@ import { AddressesService } from './addresses.service';
 import { AddressesController } from './addresses.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Address } from './entities/address.entity';
-import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Address, InspectionJob])],
+  imports: [TypeOrmModule.forFeature([Address])],
   controllers: [AddressesController],
   providers: [AddressesService],
   exports: [AddressesService],
