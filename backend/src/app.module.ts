@@ -11,6 +11,8 @@ import { CustomersModule } from './customers/customers.module';
 import { Customer } from './customers/entities/customer.entity';
 import { AddressesModule } from './addresses/addresses.module';
 import { Address } from './addresses/entities/address.entity';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -19,6 +21,10 @@ import { Address } from './addresses/entities/address.entity';
       database: 'hids.db',
       entities: [User, InspectionJob, Customer, Address],
       synchronize: true,
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
     }),
     AuthModule,
     UsersModule,

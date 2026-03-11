@@ -1,26 +1,19 @@
+import { Address } from 'src/addresses/entities/address.entity';
+import { Customer } from 'src/customers/entities/customer.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   DeleteDateColumn,
-  //   ManyToOne,
-  //   JoinColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 
 @Entity()
 export class InspectionJob {
   @PrimaryGeneratedColumn({ name: 'job_id' })
   jobId: number;
-
-  @Column()
-  customerId: number;
-
-  @Column()
-  addressId: number;
-
-  @Column()
-  houseTypeId: number;
 
   @Column({ type: 'varchar', length: 50 })
   inspectionType: string;
@@ -64,15 +57,15 @@ export class InspectionJob {
   @DeleteDateColumn()
   deletedAt: Date;
 
-  /*
   @ManyToOne(() => Customer)
-  @JoinColumn({ name: 'customer_id' }) // ระบุคอลัมน์ FK ในตารางนี้
+  @JoinColumn({ name: 'customer_id' })
   customer: Customer;
 
   @ManyToOne(() => Address)
   @JoinColumn({ name: 'address_id' })
   address: Address;
 
+  /*
   @ManyToOne(() => HouseType)
   @JoinColumn({ name: 'house_type_id' })
   houseType: HouseType;

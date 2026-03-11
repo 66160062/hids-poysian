@@ -1,26 +1,51 @@
 import { Injectable } from '@nestjs/common';
 import { CreateInspectionJobDto } from './dto/create-inspection-job.dto';
 import { UpdateInspectionJobDto } from './dto/update-inspection-job.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { InspectionJob } from './entities/inspection-job.entity';
+import { Repository } from 'typeorm';
+import { Customer } from 'src/customers/entities/customer.entity';
+import { Address } from 'src/addresses/entities/address.entity';
 
 @Injectable()
 export class InspectionJobsService {
-  create(createInspectionJobDto: CreateInspectionJobDto) {
-    return 'This action adds a new inspectionJob';
+  constructor(
+    @InjectRepository(InspectionJob)
+    private readonly inspectionsRepo: Repository<InspectionJob>,
+    @InjectRepository(Customer)
+    private readonly customersRepo: Repository<Customer>,
+    @InjectRepository(Address)
+    private readonly addressesRepo: Repository<Address>,
+  ) {}
+
+  async create(createInspectionJobDto: CreateInspectionJobDto) {
+    const customer = await this.customersRepo.findOneByOrFail({
+      customer_id: createInspectionJobDto.customerId,
+    });
+    const address = await this.addressesRepo.findOneByOrFail({
+      address_id: createInspectionJobDto.addressId,
+    });
+    const inspectionJob = this.inspectionsRepo.create({
+      ...createInspectionJobDto,
+      customer,
+      address,
+    });
+    return this.inspectionsRepo.save(inspectionJob);
   }
 
   findAll() {
-    return `This action returns all inspectionJobs`;
+    return this.inspectionsRepo.find();
   }
 
   findOne(id: number) {
-    return `This action returns a #${id} inspectionJob`;
+    return this.inspectionsRepo.findOneByOrFail({ jobId: id });
   }
 
   update(id: number, updateInspectionJobDto: UpdateInspectionJobDto) {
-    return `This action updates a #${id} inspectionJob`;
+    return this.inspectionsRepo.update(id, updateInspectionJobDto);
   }
 
   remove(id: number) {
-    return `This action removes a #${id} inspectionJob`;
+    return this.inspectionsRepo.softDelete(id);
   }
 }
