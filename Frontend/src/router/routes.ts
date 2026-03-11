@@ -12,6 +12,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('layouts/FullScreen.vue'),
     children: [{ path: '', component: () => import('pages/LoginPage.vue') }],
   },
+  {
+    path: '/customer',
+    component: () => import('layouts/CustomerScreen.vue'),
+    children: [{ path: '', component: () => import('pages/CustomerMainPage.vue') }],
+  },
 
   {
     path: '/:catchAll(.*)*',
