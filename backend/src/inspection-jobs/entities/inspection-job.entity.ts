@@ -58,10 +58,10 @@ export class InspectionJob {
   @Column({ type: 'varchar', length: 50, default: 'draft' })
   status: string;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn()
   createdAt: Date;
 
-  @DeleteDateColumn({ name: 'deleted_at' })
+  @DeleteDateColumn()
   deletedAt: Date;
 
   /*
