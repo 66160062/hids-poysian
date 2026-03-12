@@ -7,11 +7,10 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
-
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) { }
+  ) {}
 
   create(createUserDto: CreateUserDto) {
     const user = this.usersRepository.create(createUserDto);
@@ -24,7 +23,7 @@ export class UsersService {
 
   async findOne(id: number) {
     const user = await this.usersRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!user) {
@@ -36,7 +35,7 @@ export class UsersService {
 
   async findByEmail(email: string) {
     return this.usersRepository.findOne({
-      where: { email }
+      where: { email },
     });
   }
 
