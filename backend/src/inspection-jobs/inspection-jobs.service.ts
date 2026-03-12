@@ -41,14 +41,41 @@ export class InspectionJobsService {
   }
 
   findAll() {
-    return this.inspectionsRepo.find();
+    return this.inspectionsRepo.find({
+      relations: ['customer', 'address', 'houseType'],
+    });
   }
 
   findOne(id: number) {
-    return this.inspectionsRepo.findOneByOrFail({ jobId: id });
+    return this.inspectionsRepo.findOneOrFail({
+      where: { jobId: id },
+      relations: ['customer', 'address', 'houseType'],
+    });
   }
 
-  update(id: number, updateInspectionJobDto: UpdateInspectionJobDto) {
+  async update(id: number, updateInspectionJobDto: UpdateInspectionJobDto) {
+    const inspectionJob = await this.inspectionsRepo.findOneByOrFail({
+      jobId: id,
+    });
+
+    if (updateInspectionJobDto.customerId) {
+      inspectionJob.customer = await this.customersRepo.findOneByOrFail({
+        customer_id: updateInspectionJobDto.customerId,
+      });
+    }
+
+    if (updateInspectionJobDto.addressId) {
+      inspectionJob.address = await this.addressesRepo.findOneByOrFail({
+        address_id: updateInspectionJobDto.addressId,
+      });
+    }
+
+    if (updateInspectionJobDto.houseTypeId) {
+      inspectionJob.houseType = await this.houseTypesRepo.findOneByOrFail({
+        house_type_id: updateInspectionJobDto.houseTypeId,
+      });
+    }
+
     return this.inspectionsRepo.update(id, updateInspectionJobDto);
   }
 
