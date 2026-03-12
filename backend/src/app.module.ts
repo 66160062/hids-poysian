@@ -17,13 +17,24 @@ import { HouseTypesModule } from './house-types/house-types.module';
 import { HouseType } from './house-types/entities/house-type.entity';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { Inspector } from './inspectors/entities/inspector.entity';
+import { InspectorsModule } from './inspectors/inspectors.module';
+import { InspectionTeamMembersModule } from './inspection-team-members/inspection-team-members.module';
+import { InspectionTeamMember } from './inspection-team-members/entities/inspection-team-member.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'hids.db',
-      entities: [User, InspectionJob, Customer, Address, HouseType, Inspector],
+      entities: [
+        User,
+        InspectionJob,
+        Customer,
+        Address,
+        HouseType,
+        Inspector,
+        InspectionTeamMember,
+      ],
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),
     }),
@@ -37,7 +48,8 @@ import { Inspector } from './inspectors/entities/inspector.entity';
     CustomersModule,
     AddressesModule,
     HouseTypesModule,
-    Inspector,
+    InspectorsModule,
+    InspectionTeamMembersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -5,15 +5,10 @@ import {
   Entity,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-// import { ManyToOne } from 'typeorm/browser';
-
 @Entity()
 export class Inspector {
   @PrimaryGeneratedColumn()
   id: number;
-
-  //   @ManyToOne(() => Team, (team) => team.inspectors)
-  //   team: Team;
 
   @Column()
   fullName: string;

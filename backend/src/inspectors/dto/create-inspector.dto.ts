@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber } from 'class-validator';
 
@@ -43,7 +42,7 @@ export class CreateInspectorDto {
   password: string;
 
   @ApiProperty({
-    description: 'ชื่อ-นามสกุลวิศวกรตรวจ',
+    description: 'ตำแหน่ง',
     example: 'inspector',
   })
   role: string;
