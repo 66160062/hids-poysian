@@ -1,8 +1,11 @@
+import { Team } from 'src/teams/entities/team.entity';
 import {
   Column,
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 @Entity()
@@ -33,4 +36,8 @@ export class Inspector {
 
   @DeleteDateColumn()
   deletedAt: Date;
+
+  @ManyToOne(() => Team)
+  @JoinColumn({ name: 'team_id' })
+  team: Team;
 }

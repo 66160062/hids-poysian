@@ -20,6 +20,8 @@ import { Inspector } from './inspectors/entities/inspector.entity';
 import { InspectorsModule } from './inspectors/inspectors.module';
 import { InspectionTeamMembersModule } from './inspection-team-members/inspection-team-members.module';
 import { InspectionTeamMember } from './inspection-team-members/entities/inspection-team-member.entity';
+import { TeamsModule } from './teams/teams.module';
+import { Team } from './teams/entities/team.entity';
 
 @Module({
   imports: [
@@ -34,6 +36,7 @@ import { InspectionTeamMember } from './inspection-team-members/entities/inspect
         HouseType,
         Inspector,
         InspectionTeamMember,
+        Team,
       ],
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),
@@ -50,6 +53,7 @@ import { InspectionTeamMember } from './inspection-team-members/entities/inspect
     HouseTypesModule,
     InspectorsModule,
     InspectionTeamMembersModule,
+    TeamsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
