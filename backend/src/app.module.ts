@@ -16,6 +16,7 @@ import { join } from 'path';
 import { HouseTypesModule } from './house-types/house-types.module';
 import { HouseType } from './house-types/entities/house-type.entity';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { DefectsModule } from './defects/defects.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
     CustomersModule,
     AddressesModule,
     HouseTypesModule,
+    DefectsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
