@@ -16,6 +16,9 @@ import { join } from 'path';
 import { HouseTypesModule } from './house-types/house-types.module';
 import { HouseType } from './house-types/entities/house-type.entity';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { DefectsModule } from './defects/defects.module';
+import { DefectsSubCategoriesModule } from './defects-sub-categories/defects-sub-categories.module';
+import { DefectsCategoriesModule } from './defects-categories/defects-categories.module';
 import { Inspector } from './inspectors/entities/inspector.entity';
 import { InspectorsModule } from './inspectors/inspectors.module';
 import { InspectionTeamMembersModule } from './inspection-team-members/inspection-team-members.module';
@@ -51,6 +54,9 @@ import { Team } from './teams/entities/team.entity';
     CustomersModule,
     AddressesModule,
     HouseTypesModule,
+    DefectsModule,
+    DefectsSubCategoriesModule,
+    DefectsCategoriesModule,
     InspectorsModule,
     InspectionTeamMembersModule,
     TeamsModule,
