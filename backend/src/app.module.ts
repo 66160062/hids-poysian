@@ -19,13 +19,28 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { DefectsModule } from './defects/defects.module';
 import { DefectsSubCategoriesModule } from './defects-sub-categories/defects-sub-categories.module';
 import { DefectsCategoriesModule } from './defects-categories/defects-categories.module';
+import { Inspector } from './inspectors/entities/inspector.entity';
+import { InspectorsModule } from './inspectors/inspectors.module';
+import { InspectionTeamMembersModule } from './inspection-team-members/inspection-team-members.module';
+import { InspectionTeamMember } from './inspection-team-members/entities/inspection-team-member.entity';
+import { TeamsModule } from './teams/teams.module';
+import { Team } from './teams/entities/team.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'hids.db',
-      entities: [User, InspectionJob, Customer, Address, HouseType],
+      entities: [
+        User,
+        InspectionJob,
+        Customer,
+        Address,
+        HouseType,
+        Inspector,
+        InspectionTeamMember,
+        Team,
+      ],
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),
     }),
@@ -42,6 +57,9 @@ import { DefectsCategoriesModule } from './defects-categories/defects-categories
     DefectsModule,
     DefectsSubCategoriesModule,
     DefectsCategoriesModule,
+    InspectorsModule,
+    InspectionTeamMembersModule,
+    TeamsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
