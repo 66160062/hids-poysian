@@ -13,6 +13,14 @@ const routes: RouteRecordRaw[] = [
     children: [{ path: '', component: () => import('pages/LoginPage.vue') }],
   },
   {
+    path: '/inspection',
+    component: () => import('layouts/FullScreen.vue'),
+    children: [
+      { path: '', component: () => import('pages/InspectionMainPage.vue') },
+      { path: 'info', component: () => import('pages/InspectionInfoPage.vue') }
+    ],
+  },
+  {
     path: '/customer',
     component: () => import('layouts/CustomerScreen.vue'),
     children: [{ path: '', component: () => import('pages/CustomerMainPage.vue') },

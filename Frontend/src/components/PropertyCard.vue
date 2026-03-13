@@ -19,7 +19,7 @@ defineProps<{
 const router = useRouter();
 
 const goToInspectionInfo = () => {
-  void router.push('/inspectioninfo');
+  void router.push('/inspection/info');
 };
 </script>
 
