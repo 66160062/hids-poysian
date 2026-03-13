@@ -25,6 +25,7 @@ import { InspectionTeamMembersModule } from './inspection-team-members/inspectio
 import { InspectionTeamMember } from './inspection-team-members/entities/inspection-team-member.entity';
 import { TeamsModule } from './teams/teams.module';
 import { Team } from './teams/entities/team.entity';
+import { ContractorModule } from './contractor/contractor.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { Team } from './teams/entities/team.entity';
     InspectorsModule,
     InspectionTeamMembersModule,
     TeamsModule,
+    ContractorModule,
   ],
   controllers: [AppController],
   providers: [AppService],
