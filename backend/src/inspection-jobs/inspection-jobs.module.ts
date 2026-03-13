@@ -3,16 +3,19 @@ import { InspectionJobsService } from './inspection-jobs.service';
 import { InspectionJobsController } from './inspection-jobs.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InspectionJob } from './entities/inspection-job.entity';
-import { Customer } from 'src/customers/entities/customer.entity';
-import { Address } from 'src/addresses/entities/address.entity';
-import { HouseType } from 'src/house-types/entities/house-type.entity';
+import { CustomersModule } from 'src/customers/customers.module';
+import { AddressesModule } from 'src/addresses/addresses.module';
+import { HouseTypesModule } from 'src/house-types/house-types.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InspectionJob, Customer, Address, HouseType]),
+    TypeOrmModule.forFeature([InspectionJob]),
+    CustomersModule,
+    AddressesModule,
+    HouseTypesModule,
   ],
   controllers: [InspectionJobsController],
   providers: [InspectionJobsService],
-  exports: [InspectionJobsService],
+  exports: [InspectionJobsService, TypeOrmModule],
 })
 export class InspectionJobsModule {}
