@@ -17,6 +17,8 @@ import { HouseTypesModule } from './house-types/house-types.module';
 import { HouseType } from './house-types/entities/house-type.entity';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { DefectsModule } from './defects/defects.module';
+import { DefectsSubCategoriesModule } from './defects-sub-categories/defects-sub-categories.module';
+import { DefectsCategoriesModule } from './defects-categories/defects-categories.module';
 
 @Module({
   imports: [
@@ -38,6 +40,8 @@ import { DefectsModule } from './defects/defects.module';
     AddressesModule,
     HouseTypesModule,
     DefectsModule,
+    DefectsSubCategoriesModule,
+    DefectsCategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
