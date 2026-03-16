@@ -10,6 +10,9 @@ const isMobile = computed(() => $q.screen.lt.md);
 const goBack = () => {
   router.back();
 };
+const goToReport = async () => {
+  await router.push('/inspection/report');
+};
 </script>
 
 <template>
@@ -26,7 +29,7 @@ const goBack = () => {
     >
       <div
         class="row items-center justify-between q-pt-xl q-pb-md q-px-md relative-position"
-        style="margin-top: 20px;"
+        style="margin-top: 20px"
       >
         <div style="width: 40px; z-index: 1">
           <q-icon
@@ -40,12 +43,12 @@ const goBack = () => {
 
         <div
           class="absolute-center text-weight-bold text-dark"
-          style="font-size: 24px; margin-top: 20px;;"
+          style="font-size: 24px; margin-top: 20px"
         >
           รายละเอียด
         </div>
 
-        <div style="width: 40px;"></div>
+        <div style="width: 40px"></div>
       </div>
 
       <div class="q-px-lg q-pb-xl col column">
@@ -172,7 +175,7 @@ const goBack = () => {
             </div>
           </q-btn>
 
-          <q-btn outline color="primary" class="full-width action-btn" no-caps>
+          <q-btn outline color="primary" class="full-width action-btn" no-caps @click="goToReport">
             <div class="row items-center justify-between full-width">
               <span>สรุปรายงาน</span>
               <div class="circle-icon outline-circle text-primary flex flex-center">
@@ -196,13 +199,11 @@ const goBack = () => {
 </template>
 
 <style scoped>
-/* การ์ดรายงาน */
 .report-card {
   border-radius: 8px;
   border-color: #e0e0e0;
 }
 
-/* ปุ่มกดในการ์ด */
 .action-btn {
   border-radius: 8px;
   font-family: 'Inter', sans-serif;
@@ -212,7 +213,6 @@ const goBack = () => {
   height: 44px;
 }
 
-/* วงกลมที่มีลูกศรชี้ขวา */
 .circle-icon {
   width: 24px;
   height: 24px;
@@ -223,7 +223,6 @@ const goBack = () => {
   border: 2px solid #1975d2;
 }
 
-/* ปุ่มสีเทาด้านล่างสุด */
 .disabled-btn {
   background-color: #dcdcdc !important;
   color: #757575 !important;
@@ -232,6 +231,6 @@ const goBack = () => {
   font-weight: 600;
   font-size: 16px;
   padding: 12px 0;
-  pointer-events: none; /* ปิดไม่ให้กดได้ จนกว่าจะตรวจเสร็จ (ถ้าอยากให้กดได้ให้ลบบรรทัดนี้ออก) */
+  pointer-events: none;
 }
 </style>
