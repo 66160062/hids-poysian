@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import DirectionSelector from '../components/reportcomponents/DirectionReport.vue';
 
 const router = useRouter();
 const $q = useQuasar();
@@ -33,33 +34,17 @@ const categories = ref([
         boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
       }"
     >
-
-      <div
-        class="row items-center justify-between q-pt-xl q-pb-md q-px-md relative-position"
-        style="margin-top: 20px"
-      >
+      <div class="row items-center justify-between q-pt-xl q-pb-md q-px-md relative-position" style="margin-top: 20px">
         <div style="width: 40px; z-index: 1">
-          <q-icon
-            name="arrow_back_ios_new"
-            size="24px"
-            color="primary"
-            class="cursor-pointer text-weight-bold"
-            @click="goBack"
-          />
+          <q-icon name="arrow_back_ios_new" size="24px" color="primary" class="cursor-pointer text-weight-bold" @click="goBack" />
         </div>
-
-        <div
-          class="absolute-center text-weight-bold text-dark"
-          style="font-size: 24px; margin-top: 20px"
-        >
+        <div class="absolute-center text-weight-bold text-dark" style="font-size: 24px; margin-top: 20px">
           สรุปรายงาน
         </div>
-
         <div style="width: 40px"></div>
       </div>
 
       <div class="q-px-lg q-pb-xl col column">
-
         <div class="text-weight-bold q-mb-md" style="font-size: 18px; font-family: 'Inter', sans-serif;">
           0/19
         </div>
@@ -81,13 +66,15 @@ const categories = ref([
             </template>
 
             <q-card>
-              <q-card-section class="text-grey-7" style="font-family: 'Inter', sans-serif; font-size: 14px;">
+              <DirectionSelector v-if="cat.id === 'direction'" />
+
+              <q-card-section v-else class="text-grey-7" style="font-family: 'Inter', sans-serif; font-size: 14px;">
                 ไม่มีข้อมูลของหมวดหมู่ {{ cat.title }} ในขณะนี้
               </q-card-section>
             </q-card>
+
           </q-expansion-item>
         </div>
-
       </div>
     </div>
   </q-page>
