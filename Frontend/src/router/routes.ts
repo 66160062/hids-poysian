@@ -17,7 +17,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('layouts/FullScreen.vue'),
     children: [
       { path: '', component: () => import('pages/InspectionMainPage.vue') },
-      { path: 'info', component: () => import('pages/InspectionInfoPage.vue') }
+      { path: 'info', component: () => import('pages/InspectionInfoPage.vue') },
+      { path: 'report', name: 'inspectionReport', component: () => import('pages/InspectionReportPage.vue') }
     ],
   },
   {
