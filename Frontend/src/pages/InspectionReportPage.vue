@@ -2,7 +2,8 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
-import DirectionSelector from '../components/reportcomponents/DirectionReport.vue';
+import DirectionReport from '../components/reportcomponents/DirectionReport.vue';
+import StructureReport from '../components/reportcomponents/StructureReport.vue';
 
 const router = useRouter();
 const $q = useQuasar();
@@ -66,7 +67,9 @@ const categories = ref([
             </template>
 
             <q-card>
-              <DirectionSelector v-if="cat.id === 'direction'" />
+              <DirectionReport v-if="cat.id === 'direction'" />
+
+              <StructureReport v-else-if="cat.id === 'structure'" />
 
               <q-card-section v-else class="text-grey-7" style="font-family: 'Inter', sans-serif; font-size: 14px;">
                 ไม่มีข้อมูลของหมวดหมู่ {{ cat.title }} ในขณะนี้
