@@ -1,11 +1,12 @@
-import { DefectsSubCategory } from 'src/defects-sub-categories/entities/defects-sub-category.entity';
+import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub-category.entity';
+import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
+import { User } from 'src/users/entities/user.entity';
 import {
   Column,
   Entity,
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  DeleteDateColumn,
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
@@ -13,9 +14,9 @@ import {
 @Entity()
 export class Defect {
   @PrimaryGeneratedColumn()
-  defect_id: number;
+  defectId: number;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   description: string;
 
   @Column({ type: 'varchar', length: 50 })
@@ -26,24 +27,33 @@ export class Defect {
     length: 255,
     default: '/defect-images/unknown.jpg',
   })
-  image_url: string;
+  imageUrl: string;
 
-  @Column()
-  image_file_size: number;
+  @Column({ type: 'int', nullable: true })
+  imageFileSize: number;
 
-  @Column({ type: 'varchar', length: 50, default: 'ไม่ผ่าน' })
+  @Column({ type: 'varchar', length: 50, default: 'OPEN' })
   status: string;
 
   @CreateDateColumn()
-  created_at: Date;
+  createdAt: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updatedAt: Date;
 
-  @DeleteDateColumn()
-  deleted_at: Date;
+  @ManyToOne(() => InspectionRound)
+  @JoinColumn({ name: 'round_id' })
+  round: InspectionRound;
 
-  @ManyToOne(() => DefectsSubCategory)
+  // @ManyToOne(() => RoomTemplate)
+  // @JoinColumn({ name: 'template_id' })
+  // template: RoomTemplate;
+
+  @ManyToOne(() => DefectSubCategory)
   @JoinColumn({ name: 'sub_category_id' })
-  subCategory: DefectsSubCategory;
+  subCategory: DefectSubCategory;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'inspector_id' })
+  inspector: User;
 }

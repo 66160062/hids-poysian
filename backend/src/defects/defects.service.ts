@@ -1,78 +1,86 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Defect } from './entities/defect.entity';
 import { CreateDefectDto } from './dto/create-defect.dto';
 import { UpdateDefectDto } from './dto/update-defect.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Defect } from './entities/defect.entity';
-import { Repository } from 'typeorm';
+import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
+// import { RoomTemplate } from 'src/room-templates/entities/room-template.entity';
+import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub-category.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class DefectsService {
   constructor(
     @InjectRepository(Defect)
     private readonly defectsRepo: Repository<Defect>,
+
+    @InjectRepository(InspectionRound)
+    private readonly roundsRepo: Repository<InspectionRound>,
+
+    // @InjectRepository(RoomTemplate)
+    // private readonly templatesRepo: Repository<RoomTemplate>,
+
+    @InjectRepository(DefectSubCategory)
+    private readonly subCategoriesRepo: Repository<DefectSubCategory>,
+
+    @InjectRepository(User)
+    private readonly usersRepo: Repository<User>,
   ) {}
-  async create(createDefectDto: CreateDefectDto): Promise<Defect[]> {
-    try {
-      const { subCategoryIds, ...defectData } = createDefectDto;
-      const defectsToSave = subCategoryIds.map((subId) => {
-        return this.defectsRepo.create({
-          ...defectData,
-          status: defectData.status || 'Pending',
-          subCategory: subId,
-        });
-      });
-      return await this.defectsRepo.save(defectsToSave);
-    } catch (error) {
-      console.error('Error creating defect:', error);
-      throw new InternalServerErrorException(
-        'ไม่สามารถบันทึกข้อมูล Defect ได้',
-      );
-    }
+
+  async create(
+    createDefectDto: CreateDefectDto & {
+      imageUrl?: string;
+      imageFileSize?: number;
+    },
+  ) {
+    const round = await this.roundsRepo.findOneByOrFail({
+      roundId: createDefectDto.roundId,
+    });
+    // const template = await this.templatesRepo.findOneByOrFail({
+    //   templateId: createDefectDto.templateId,
+    // });
+    const subCategory = await this.subCategoriesRepo.findOneByOrFail({
+      subCategoryId: createDefectDto.subCategoryId,
+    });
+    const inspector = await this.usersRepo.findOneByOrFail({
+      id: createDefectDto.inspectorId,
+    });
+
+    const defect = this.defectsRepo.create({
+      ...createDefectDto,
+      round,
+      // template,
+      subCategory,
+      inspector,
+    });
+
+    return this.defectsRepo.save(defect);
   }
 
-  async findAll(): Promise<Defect[]> {
-    return await this.defectsRepo.find({
-      relations: ['subCategory'],
-      order: { created_at: 'DESC' },
+  findAll() {
+    return this.defectsRepo.find({
+      // relations: ['round', 'template', 'subCategory', 'inspector'],
+      relations: ['round', 'subCategory', 'inspector'],
     });
   }
 
-  async findOne(id: number): Promise<Defect> {
-    const defect = await this.defectsRepo.findOne({
-      where: { defect_id: id },
-      relations: ['subCategory'],
+  findOne(id: number) {
+    return this.defectsRepo.findOneOrFail({
+      where: { defectId: id },
+      // relations: ['round', 'template', 'subCategory', 'inspector'],
+      relations: ['round', 'subCategory', 'inspector'],
     });
-
-    if (!defect) {
-      throw new NotFoundException(`ไม่พบข้อมูล Defect ID: ${id}`);
-    }
-    return defect;
   }
 
-  async update(id: number, updateDefectDto: UpdateDefectDto): Promise<Defect> {
-    const defect = await this.findOne(id);
-    const updated = this.defectsRepo.merge(defect, updateDefectDto);
-    try {
-      return await this.defectsRepo.save(updated);
-    } catch (error) {
-      console.error('Error creating defect:', error);
-      throw new InternalServerErrorException('ไม่สามารถแก้ไขข้อมูลได้');
-    }
+  async update(id: number, updateDefectDto: UpdateDefectDto) {
+    const defect = await this.defectsRepo.findOneByOrFail({ defectId: id });
+    Object.assign(defect, updateDefectDto);
+    return this.defectsRepo.save(defect);
   }
 
-  async remove(id: number): Promise<{ message: string }> {
-    const defect = await this.findOne(id);
-
-    try {
-      await this.defectsRepo.softDelete(defect); // จะไปเติมค่าในช่อง deleted_at
-      return { message: `ลบข้อมูล Defect ID: ${id} เรียบร้อยแล้ว` };
-    } catch (error) {
-      console.error('Error removing defect:', error);
-      throw new InternalServerErrorException('ไม่สามารถลบข้อมูลได้');
-    }
+  async remove(id: number) {
+    const defect = await this.defectsRepo.findOneByOrFail({ defectId: id });
+    return this.defectsRepo.remove(defect);
   }
 }
