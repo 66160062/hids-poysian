@@ -25,6 +25,7 @@ import { TeamsModule } from './teams/teams.module';
 import { Team } from './teams/entities/team.entity';
 import { ContractorModule } from './contractor/contractor.module';
 import { RepairRecordsModule } from './repair-records/repair-records.module';
+import { InspectionRoundsModule } from './inspection-rounds/inspection-rounds.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { RepairRecordsModule } from './repair-records/repair-records.module';
     TeamsModule,
     ContractorModule,
     RepairRecordsModule,
+    InspectionRoundsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
