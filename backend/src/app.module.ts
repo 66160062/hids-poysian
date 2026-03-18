@@ -19,8 +19,6 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { DefectsModule } from './defects/defects.module';
 import { DefectsSubCategoriesModule } from './defects-sub-categories/defects-sub-categories.module';
 import { DefectsCategoriesModule } from './defects-categories/defects-categories.module';
-import { Inspector } from './inspectors/entities/inspector.entity';
-import { InspectorsModule } from './inspectors/inspectors.module';
 import { InspectionTeamMembersModule } from './inspection-team-members/inspection-team-members.module';
 import { InspectionTeamMember } from './inspection-team-members/entities/inspection-team-member.entity';
 import { TeamsModule } from './teams/teams.module';
@@ -39,7 +37,6 @@ import { RepairRecordsModule } from './repair-records/repair-records.module';
         Customer,
         Address,
         HouseType,
-        Inspector,
         InspectionTeamMember,
         Team,
       ],
@@ -59,7 +56,6 @@ import { RepairRecordsModule } from './repair-records/repair-records.module';
     DefectsModule,
     DefectsSubCategoriesModule,
     DefectsCategoriesModule,
-    InspectorsModule,
     InspectionTeamMembersModule,
     TeamsModule,
     ContractorModule,
