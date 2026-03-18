@@ -1,8 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { MaxLength } from 'class-validator/types/decorator/string/MaxLength';
-import { IsString } from 'class-validator/types/decorator/typechecker/IsString';
+import { IsString, MaxLength } from 'class-validator';
 
-export class CreateDefectsCategoryDto {
+export class CreateDefectCategoryDto {
   @ApiProperty({ description: 'ชื่อหมวดหมู่', example: 'โครงสร้าง' })
   @IsString()
   @MaxLength(255)
