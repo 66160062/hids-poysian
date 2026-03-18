@@ -26,10 +26,20 @@
           <div class="text-right q-mt-xs">
             <a class="forgot">ลืมรหัสผ่าน?</a>
           </div>
+
+          <div v-if="errorMessage" class="error q-mt-sm">
+            {{ errorMessage }}
+          </div>
         </q-card-section>
 
         <q-card-section class="flex flex-center">
-          <q-btn label="เข้าสู่ระบบ" class="login-btn" :loading="loading" @click="login" />
+          <q-btn
+            label="เข้าสู่ระบบ"
+            class="login-btn"
+            :loading="loading"
+            :disable="!email || !password"
+            @click="login"
+          />
         </q-card-section>
       </q-card>
     </div>
@@ -38,21 +48,53 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import Logos from 'src/assets/Logos/Poysianlogo.png';
+import { useAuthStore } from 'src/stores/useAuth';
 
-const email = ref<string>('');
-const password = ref<string>('');
+const router = useRouter();
+const auth = useAuthStore();
 
-const loading = ref<boolean>(false);
-const showPassword = ref<boolean>(false);
+const email = ref('');
+const password = ref('');
+const loading = ref(false);
+const showPassword = ref(false);
+const errorMessage = ref('');
 
-const login = async (): Promise<void> => {
-  if (!email.value || !password.value) return;
+/* ------------ MOCK USER (ลบตอนมี backend) ------------ */
+const mockUser = {
+  email: 'admin@test.com',
+  password: '123456',
+  name: 'Admin',
+};
+/* ----------------------------------------------------- */
+
+const login = async () => {
+  if (!email.value || !password.value) {
+    errorMessage.value = 'กรุณากรอกข้อมูลให้ครบ';
+    return;
+  }
+
+  loading.value = true;
+  errorMessage.value = '';
 
   try {
-    loading.value = true;
+    // จำลอง API delay
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    /* ------------ MOCK LOGIN ------------ */
+    if (email.value === mockUser.email && password.value === mockUser.password) {
+      // เก็บ token ใน Pinia
+      auth.setToken('mock-jwt-token');
+
+      // ไปหน้า dashboard
+      await router.push('/dashboard');
+    } else {
+      errorMessage.value = 'Email หรือ Password ไม่ถูกต้อง';
+    }
+    /* ------------ END MOCK LOGIN ------------ */
+  } catch {
+    errorMessage.value = 'เกิดข้อผิดพลาด';
   } finally {
     loading.value = false;
   }
@@ -65,15 +107,11 @@ const login = async (): Promise<void> => {
   min-height: 100vh;
 }
 
-/* wrapper */
-
 .login-wrapper {
   width: 100%;
   max-width: 420px;
   padding: 20px;
 }
-
-/* logo */
 
 .logo {
   display: flex;
@@ -83,20 +121,14 @@ const login = async (): Promise<void> => {
 .logo-img {
   width: 320px;
   max-width: 90%;
-  height: auto;
 }
-
-/* card */
 
 .login-card {
   width: 100%;
   border-radius: 12px;
   border: 1px solid #cfcfcf;
   padding: 10px 20px 20px;
-  background: white;
 }
-
-/* title */
 
 .title {
   font-size: 28px;
@@ -104,33 +136,24 @@ const login = async (): Promise<void> => {
   color: #2d6fb7;
 }
 
-/* inputs */
-
-.input .q-field__control {
-  border-radius: 8px;
-  background: #f4f4f4;
-}
-
-/* forgot */
-
 .forgot {
   font-size: 13px;
   color: #2d6fb7;
   cursor: pointer;
 }
 
-/* button */
-
 .login-btn {
   width: 200px;
-  max-width: 100%;
   border-radius: 10px;
   background: #2d6fb7;
   color: white;
   font-weight: 600;
 }
 
-/* ---------- Responsive ---------- */
+.error {
+  color: red;
+  font-size: 13px;
+}
 
 @media (max-width: 600px) {
   .logo-img {
