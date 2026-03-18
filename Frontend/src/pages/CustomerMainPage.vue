@@ -186,7 +186,16 @@
       </q-card>
 
     </div>
-
+<q-btn
+        color="primary"
+        icon="star"
+        label="รีวิวและให้คะแนน"
+        class="full-width q-mb-md download-btn"
+        unelevated
+        size="md"
+        @click="review"
+      />
+      <ReviewDialog v-model="dialog" />
     <!--Tab Bar -->
     <q-footer class="bg-white bottom-bar">
       <q-tabs :model-value="activeTab"
@@ -203,9 +212,9 @@
 <script setup lang="ts">
 
 import { useDefectSummary } from 'src/stores/useDefectSummary'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-
+import ReviewDialog from 'src/components/ReviewDialog.vue'
 
 // ── Defect summary จาก stores ──────────────────────────────────────────
 const {
@@ -222,7 +231,10 @@ const {
 const router    = useRouter()
 const route     = useRoute()
 const activeTab = computed(() => route.path.split('/').pop())
-
+const dialog = ref(false)
+  function review(){
+    dialog.value = true
+  }
 
 // Mock Data
 const projectFields = [
