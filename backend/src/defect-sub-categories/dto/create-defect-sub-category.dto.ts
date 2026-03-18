@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsInt, IsString, MaxLength } from 'class-validator';
 
-export class CreateDefectsSubCategoryDto {
+export class CreateDefectSubCategoryDto {
   @ApiProperty({ description: 'รหัสหมวดหมู่หลัก', example: 1 })
   @IsInt()
   categoryId: number;

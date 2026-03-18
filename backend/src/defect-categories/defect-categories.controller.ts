@@ -7,47 +7,47 @@ import {
   Param,
   Delete,
 } from '@nestjs/common';
-import { DefectsCategoriesService } from './defects-categories.service';
-import { CreateDefectsCategoryDto } from './dto/create-defects-category.dto';
-import { UpdateDefectsCategoryDto } from './dto/update-defects-category.dto';
+import { DefectCategoriesService } from './defect-categories.service';
+import { CreateDefectCategoryDto } from './dto/create-defect-category.dto';
+import { UpdateDefectCategoryDto } from './dto/update-defect-category.dto';
 import { ApiOperation } from '@nestjs/swagger/dist/decorators/api-operation.decorator';
 
-@Controller('defects-categories')
-export class DefectsCategoriesController {
+@Controller('Defect-categories')
+export class DefectCategoriesController {
   constructor(
-    private readonly defectsCategoriesService: DefectsCategoriesService,
+    private readonly defectCategoriesService: DefectCategoriesService,
   ) {}
 
   @Post()
   @ApiOperation({ summary: 'สร้างหมวดหมู่หลักใหม่' })
-  create(@Body() createDefectsCategoryDto: CreateDefectsCategoryDto) {
-    return this.defectsCategoriesService.create(createDefectsCategoryDto);
+  create(@Body() CreateDefectCategoryDto: CreateDefectCategoryDto) {
+    return this.defectCategoriesService.create(CreateDefectCategoryDto);
   }
 
   @Get()
   @ApiOperation({ summary: 'ดึงรายการหมวดหมู่หลักทั้งหมด' })
   findAll() {
-    return this.defectsCategoriesService.findAll();
+    return this.defectCategoriesService.findAll();
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'ดึงข้อมูลหมวดหมู่หลักตาม ID' })
   findOne(@Param('id') id: string) {
-    return this.defectsCategoriesService.findOne(+id);
+    return this.defectCategoriesService.findOne(+id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'อัปเดตข้อมูลหมวดหมู่หลักตาม ID' })
   update(
     @Param('id') id: string,
-    @Body() updateDefectsCategoryDto: UpdateDefectsCategoryDto,
+    @Body() UpdateDefectCategoryDto: UpdateDefectCategoryDto,
   ) {
-    return this.defectsCategoriesService.update(+id, updateDefectsCategoryDto);
+    return this.defectCategoriesService.update(+id, UpdateDefectCategoryDto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'ลบหมวดหมู่หลัก' })
   remove(@Param('id') id: string) {
-    return this.defectsCategoriesService.remove(+id);
+    return this.defectCategoriesService.remove(+id);
   }
 }

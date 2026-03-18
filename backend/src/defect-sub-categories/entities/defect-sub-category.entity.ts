@@ -1,3 +1,4 @@
+import { DefectCategory } from 'src/defect-categories/entities/defect-category.entity';
 import {
   Column,
   Entity,
@@ -5,15 +6,15 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-@Entity()
-export class DefectsSubCategory {
+@Entity('defect_sub_category')
+export class DefectSubCategory {
   @PrimaryGeneratedColumn()
   subCategoryId: number;
 
   @Column({ type: 'varchar', length: 255 })
   name: string;
 
-  @ManyToOne(() => DefectCategory)
+  @ManyToOne(() => DefectCategory, (category) => category.subCategories)
   @JoinColumn({ name: 'category_id' })
   category: DefectCategory;
 }

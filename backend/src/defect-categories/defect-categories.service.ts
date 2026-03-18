@@ -5,24 +5,24 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { DefectsCategory } from './entities/defects-category.entity';
-import { CreateDefectsCategoryDto } from './dto/create-defects-category.dto';
-import { UpdateDefectsCategoryDto } from './dto/update-defects-category.dto';
+import { DefectCategory } from './entities/defect-category.entity';
+import { CreateDefectCategoryDto } from './dto/create-defect-category.dto';
+import { UpdateDefectCategoryDto } from './dto/update-defect-category.dto';
 
 @Injectable()
-export class DefectsCategoriesService {
+export class DefectCategoriesService {
   constructor(
-    @InjectRepository(DefectsCategory)
-    private readonly defectsCategoryRepository: Repository<DefectsCategory>,
+    @InjectRepository(DefectCategory)
+    private readonly defectCategoriesRepository: Repository<DefectCategory>,
   ) {}
   async create(
-    createDefectsCategoryDto: CreateDefectsCategoryDto,
-  ): Promise<DefectsCategory> {
+    createdefectCategoriesDto: CreateDefectCategoryDto,
+  ): Promise<DefectCategory> {
     try {
-      const newCategory = this.defectsCategoryRepository.create(
-        createDefectsCategoryDto,
+      const newCategory = this.defectCategoriesRepository.create(
+        createdefectCategoriesDto,
       );
-      return await this.defectsCategoryRepository.save(newCategory);
+      return await this.defectCategoriesRepository.save(newCategory);
     } catch (error) {
       console.error('Error creating category:', error);
       throw new InternalServerErrorException('ไม่สามารถสร้างหมวดหมู่หลักได้');
@@ -30,12 +30,12 @@ export class DefectsCategoriesService {
   }
 
   async findAll() {
-    return await this.defectsCategoryRepository.find();
+    return await this.defectCategoriesRepository.find();
   }
 
-  async findOne(id: number): Promise<DefectsCategory> {
-    const category = await this.defectsCategoryRepository.findOneOrFail({
-      where: { category_id: id },
+  async findOne(id: number): Promise<DefectCategory> {
+    const category = await this.defectCategoriesRepository.findOneOrFail({
+      where: { categoryId: id },
     });
     if (!category) {
       throw new NotFoundException(`ไม่พบข้อมูลหมวดหมู่หลัก ID: ${id}`);
@@ -44,15 +44,15 @@ export class DefectsCategoriesService {
   }
   async update(
     id: number,
-    updateDto: UpdateDefectsCategoryDto,
-  ): Promise<DefectsCategory> {
+    updateDto: UpdateDefectCategoryDto,
+  ): Promise<DefectCategory> {
     await this.findOne(id);
-    await this.defectsCategoryRepository.update(id, updateDto);
+    await this.defectCategoriesRepository.update(id, updateDto);
     return this.findOne(id);
   }
 
   async remove(id: number): Promise<{ message: string }> {
-    const result = await this.defectsCategoryRepository.softDelete(id);
+    const result = await this.defectCategoriesRepository.softDelete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`ไม่สามารถลบได้ เนื่องจากไม่พบ ID: ${id}`);
     }
