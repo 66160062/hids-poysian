@@ -17,16 +17,21 @@ import { HouseTypesModule } from './house-types/house-types.module';
 import { HouseType } from './house-types/entities/house-type.entity';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { DefectsModule } from './defects/defects.module';
-import { DefectsSubCategoriesModule } from './defects-sub-categories/defects-sub-categories.module';
-import { DefectsCategoriesModule } from './defects-categories/defects-categories.module';
-import { Inspector } from './inspectors/entities/inspector.entity';
-import { InspectorsModule } from './inspectors/inspectors.module';
+import { DefectSubCategoriesModule } from './defect-sub-categories/defect-sub-categories.module';
+import { DefectCategoriesModule } from './defect-categories/defect-categories.module';
 import { InspectionTeamMembersModule } from './inspection-team-members/inspection-team-members.module';
 import { InspectionTeamMember } from './inspection-team-members/entities/inspection-team-member.entity';
 import { TeamsModule } from './teams/teams.module';
 import { Team } from './teams/entities/team.entity';
 import { ContractorModule } from './contractor/contractor.module';
 import { RepairRecordsModule } from './repair-records/repair-records.module';
+import { InspectionRoundsModule } from './inspection-rounds/inspection-rounds.module';
+import { InspectionRound } from './inspection-rounds/entities/inspection-round.entity';
+import { DefectCategory } from './defect-categories/entities/defect-category.entity';
+import { DefectSubCategory } from './defect-sub-categories/entities/defect-sub-category.entity';
+import { RepairRecord } from './repair-records/entities/repair-record.entity';
+import { Contractor } from './contractor/entities/contractor.entity';
+import { Defect } from './defects/entities/defect.entity';
 
 @Module({
   imports: [
@@ -39,9 +44,14 @@ import { RepairRecordsModule } from './repair-records/repair-records.module';
         Customer,
         Address,
         HouseType,
-        Inspector,
         InspectionTeamMember,
         Team,
+        InspectionRound,
+        DefectCategory,
+        DefectSubCategory,
+        RepairRecord,
+        Contractor,
+        Defect,
       ],
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),
@@ -57,13 +67,13 @@ import { RepairRecordsModule } from './repair-records/repair-records.module';
     AddressesModule,
     HouseTypesModule,
     DefectsModule,
-    DefectsSubCategoriesModule,
-    DefectsCategoriesModule,
-    InspectorsModule,
+    DefectSubCategoriesModule,
+    DefectCategoriesModule,
     InspectionTeamMembersModule,
     TeamsModule,
     ContractorModule,
     RepairRecordsModule,
+    InspectionRoundsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

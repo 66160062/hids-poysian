@@ -1,77 +1,46 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsInt,
-  IsNotEmpty,
-  IsString,
-  IsOptional,
-  MaxLength,
-  IsArray,
-  ArrayNotEmpty,
-} from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsOptional, IsNumber } from 'class-validator';
 export class CreateDefectDto {
-  @ApiProperty({ description: 'รหัสรอบการตรวจ', example: 1 })
-  @IsInt()
-  @IsNotEmpty()
-  roundId!: number;
+  @ApiProperty({ description: 'รหัสรอบตรวจ', example: 1 })
+  @IsNumber()
+  roundId: number;
 
-  @ApiProperty({ description: 'รหัสผู้ตรวจที่พบ Defect นี้', example: 99 })
-  @IsInt()
-  @IsNotEmpty()
-  inspectorId!: number;
+  @ApiProperty({ description: 'รหัส template ห้อง', example: 1 })
+  @IsNumber()
+  templateId: number;
 
-  @ApiProperty({ description: 'รหัสห้อง', example: 10 })
-  @IsInt()
-  @IsNotEmpty()
-  templateId!: number;
+  @ApiProperty({ description: 'รหัสหมวดหมู่ย่อย', example: 1 })
+  @IsNumber()
+  subCategoryId: number;
 
-  @ApiProperty({
-    description: 'รหัสหมวดหมู่ Defects',
-    example: [5, 6, 8],
-    type: [Number],
-  })
-  @IsArray()
-  @ArrayNotEmpty()
-  @IsInt({ each: true })
-  subCategoryIds!: number[];
+  @ApiProperty({ description: 'รหัสผู้ตรวจ', example: 1 })
+  @IsNumber()
+  inspectorId: number;
 
   @ApiProperty({
-    description: 'รายละเอียดของข้อบกพร่อง',
-    example: 'ผนังมีรอยร้าวยาวประมาณ 10 ซม.',
+    description: 'รายละเอียด',
+    example: 'ผนังแตกร้าว',
+    required: false,
   })
-  @IsString()
-  @IsNotEmpty()
-  description!: string;
-
-  @ApiProperty({ description: 'ระดับความรุนแรง', example: 'Major' })
-  @IsString()
-  @MaxLength(50)
-  @IsNotEmpty()
-  severity!: string;
-
-  @ApiPropertyOptional({
-    description: 'ลิงก์รูปภาพจุดที่เกิด Defect',
-    example: 'https://example.com/defect-01.jpg',
-  })
-  @IsString()
-  @MaxLength(255)
   @IsOptional()
-  imageUrl?: string;
-
-  @ApiPropertyOptional({
-    description: 'ขนาดไฟล์รูปภาพ (Byte)',
-    example: 204800,
-  })
-  @IsInt()
-  @IsOptional()
-  imageFileSize?: number;
-
-  @ApiPropertyOptional({
-    description: 'สถานะการแก้ไข',
-    example: 'ไม่ผ่าน',
-    default: 'ไม่ผ่าน',
-  })
   @IsString()
-  @MaxLength(50)
+  description?: string;
+
+  @ApiProperty({ description: 'ความรุนแรง', example: 'HIGH' })
+  @IsString()
+  severity: string;
+
+  @ApiProperty({ description: 'สถานะ', example: 'OPEN', required: false })
   @IsOptional()
+  @IsString()
   status?: string;
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'รูปภาพ defect',
+    required: false,
+  })
+  @IsOptional()
+  file?: Express.Multer.File;
 }

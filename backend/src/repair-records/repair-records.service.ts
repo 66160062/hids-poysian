@@ -17,8 +17,8 @@ export class RepairRecordsService {
     const repairData = {
       ...rest,
       repairedAt: new Date(),
-      defect: { defect_id: defectId },
-      contractor: { contractor_id: contractorId },
+      defect: { defectId: defectId },
+      contractor: { contractorId: contractorId },
     };
     const newRecord = this.repairRepository.create(repairData);
     return await this.repairRepository.save(newRecord);
@@ -56,15 +56,15 @@ export class RepairRecordsService {
     const { defectId, contractorId, ...rest } = updateDto;
     const updatedRecord = this.repairRepository.merge(record, {
       ...rest,
-      ...(defectId && { defect: { defect_id: defectId } }),
-      ...(contractorId && { contractor: { contractor_id: contractorId } }),
+      ...(defectId && { defect: { defectId: defectId } }),
+      ...(contractorId && { contractor: { contractorId: contractorId } }),
     });
 
     return await this.repairRepository.save(updatedRecord);
   }
 
   async remove(id: number): Promise<void> {
-    const record = await this.findOne(id);
-    await this.repairRepository.softDelete(record);
+    await this.findOne(id);
+    await this.repairRepository.softDelete(id);
   }
 }
