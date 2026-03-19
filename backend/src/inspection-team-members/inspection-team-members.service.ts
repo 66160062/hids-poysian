@@ -4,8 +4,8 @@ import { UpdateInspectionTeamMemberDto } from './dto/update-inspection-team-memb
 import { InjectRepository } from '@nestjs/typeorm';
 import { InspectionTeamMember } from './entities/inspection-team-member.entity';
 import { Repository } from 'typeorm';
-import { Inspector } from 'src/inspectors/entities/inspector.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class InspectionTeamMembersService {
@@ -14,8 +14,8 @@ export class InspectionTeamMembersService {
     private readonly teamsRepo: Repository<InspectionTeamMember>,
     @InjectRepository(InspectionJob)
     private readonly jobsRepo: Repository<InspectionJob>,
-    @InjectRepository(Inspector)
-    private readonly inspectorsRepo: Repository<Inspector>,
+    @InjectRepository(User)
+    private readonly inspectorsRepo: Repository<User>,
   ) {}
   async create(createInspectionTeamMemberDto: CreateInspectionTeamMemberDto) {
     const job = await this.jobsRepo.findOneByOrFail({

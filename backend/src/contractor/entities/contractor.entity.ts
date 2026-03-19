@@ -1,26 +1,31 @@
-
-import { Column, Entity, PrimaryGeneratedColumn,CreateDateColumn,DeleteDateColumn} from "typeorm";
+import {
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  DeleteDateColumn,
+} from 'typeorm';
 
 @Entity('contractor')
 export class Contractor {
- @PrimaryGeneratedColumn()
- contractor_id : number;
+  @PrimaryGeneratedColumn()
+  contractorId: number;
 
- @Column({type : 'varchar' , length: 255})
- full_name : string;
+  @Column({ type: 'varchar', length: 255 })
+  fullName: string;
 
- @Column ({type : 'varchar' , length : 255})
- phone_number : string;
+  @Column({ type: 'varchar', length: 255 })
+  phoneNumber: string;
 
- @Column([type: 'varchar', length : 255])
- email : string;
+  @Column({ type: 'varchar', length: 255 })
+  email: string;
 
- @Column({ type : 'varchar' ,length : 255})
- comapany_name : string;
+  @Column({ type: 'varchar', length: 255 })
+  comapanyName: string;
 
- @CreateDateColumn()
- created_at : Date;
+  @CreateDateColumn()
+  createdAt: Date;
 
- @DeleteDateColumn()
- delete_at : Date;
+  @DeleteDateColumn()
+  deleteAt: Date;
 }

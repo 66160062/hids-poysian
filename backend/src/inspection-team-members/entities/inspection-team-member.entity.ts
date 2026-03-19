@@ -7,7 +7,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
-import { Inspector } from 'src/inspectors/entities/inspector.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Entity('inspection_team_member')
 export class InspectionTeamMember {
@@ -18,9 +18,9 @@ export class InspectionTeamMember {
   @JoinColumn({ name: 'job_id' })
   job: InspectionJob;
 
-  @ManyToOne(() => Inspector)
+  @ManyToOne(() => User)
   @JoinColumn({ name: 'inspector_id' })
-  inspector: Inspector;
+  inspector: User;
 
   @CreateDateColumn({ name: 'assigned_at' })
   assignedAt: Date;

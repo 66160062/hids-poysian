@@ -20,7 +20,7 @@ export class ContractorService {
   }
 
   async findOne(id: number) {
-    return await this.contractorRepo.findOneByOrFail({ contractor_id: id });
+    return await this.contractorRepo.findOneByOrFail({ contractorId: id });
   }
 
   async update(id: number, updateContractorDto: UpdateContractorDto) {
