@@ -13,6 +13,7 @@ const routes: RouteRecordRaw[] = [
     children: [{ path: '', component: () => import('pages/LoginPage.vue') }],
   },
   {
+
     path: '/inspection',
     component: () => import('layouts/FullScreen.vue'),
     children: [
@@ -21,12 +22,89 @@ const routes: RouteRecordRaw[] = [
       { path: 'report', name: 'inspectionReport', component: () => import('pages/InspectionReportPage.vue') }
     ],
   },
+    {path: '/dashboard',
+    component: () => import('layouts/FullScreen.vue'),
+    meta: { requiresAuth: true }, // ⭐ ต้องมีบรรทัดนี้
+    children: [{ path: '', component: () => import('pages/DashboardTestPage.vue') }],
+  },
+
+  // {
+  //   path: '/customer',
+  //   component: () => import('layouts/CustomerScreen.vue'),
+  //   children: [
+  //     { path: '', component: () => import('pages/CustomerMainPage.vue') },
+  //     {
+  //       path: 'defect',
+  //       name: 'defectList',
+  //       component: () => import('pages/CustomerDefectListPage.vue'),
+  //       meta: { title: 'รายการ Defect' },
+  //     },
+  //     {
+  //       path: 'report',
+  //       name: 'reportList',
+  //       component: () => import('pages/CustomerReportPage.vue'),
+  //       meta: { title: 'สรุปรายงาน' },
+  //     },
+  //   ],
+  // },
   {
     path: '/customer',
     component: () => import('layouts/CustomerScreen.vue'),
-    children: [{ path: '', component: () => import('pages/CustomerMainPage.vue') },
-      { path: 'defect',   name: 'defectList',     component: () => import('pages/CustomerDefectListPage.vue'), meta: { title: 'รายการ Defect' } },
-      { path: 'report',   name: 'reportList',     component: () => import('pages/CustomerReportPage.vue'), meta: { title: 'สรุปรายงาน' } }
+    children: [
+      { path: '', component: () => import('pages/CustomerMainPage.vue') },
+      {
+        path: 'defect',
+        name: 'defectList',
+        component: () => import('pages/CustomerDefectListPage.vue'),
+        meta: { title: 'รายการ Defect' },
+      },
+      {
+        path: 'report',
+        name: 'reportList',
+        component: () => import('pages/CustomerReportPage.vue'),
+        meta: { title: 'สรุปรายงาน' },
+      },
+    ],
+  },
+  {
+    path: '/admin',
+    component: () => import('layouts/AdminScreen.vue'),
+    children: [
+      {
+        path: '',
+        component: () => import('pages/AdminMainPage.vue'),
+        meta: { title: 'หน้าหลัก', icon: 'home' },
+      },
+      {
+        path: 'work',
+        component: () => import('pages/AdminWorkListPage.vue'),
+        meta: { title: 'จัดการงานตรวจ', icon: 'check_circle' },
+      },
+      {
+        path: 'calendar',
+        component: () => import('pages/AdminMainPage.vue'),
+        meta: { title: 'ตารางงาน', icon: 'calendar_today' },
+      },
+      {
+        path: 'users',
+        component: () => import('pages/AdminMainPage.vue'),
+        meta: { title: 'จัดการผู้ใช้', icon: 'group' },
+      },
+      {
+        path: 'menu',
+        component: () => import('pages/AdminMainPage.vue'),
+        meta: { title: 'หมวดหมู่งาน', icon: 'category' },
+      },
+      {
+        path: 'report',
+        component: () => import('pages/AdminMainPage.vue'),
+        meta: { title: 'รายงาน', icon: 'bar_chart' },
+      },
+      {
+        path: 'settings',
+        component: () => import('pages/AdminMainPage.vue'),
+        meta: { title: 'ตั้งค่า', icon: 'settings' },
+      },
     ],
   },
 

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import DirectionReport from '../components/reportcomponents/DirectionReport.vue';
 import StructureReport from '../components/reportcomponents/StructureReport.vue';
+import PlumbingSection from '../components/reportcomponents/PlumbingReport.vue';
 
 const router = useRouter();
 const $q = useQuasar();
@@ -68,8 +69,8 @@ const categories = ref([
 
             <q-card>
               <DirectionReport v-if="cat.id === 'direction'" />
-
               <StructureReport v-else-if="cat.id === 'structure'" />
+              <PlumbingSection v-else-if="cat.id === 'plumbing'" />
 
               <q-card-section v-else class="text-grey-7" style="font-family: 'Inter', sans-serif; font-size: 14px;">
                 ไม่มีข้อมูลของหมวดหมู่ {{ cat.title }} ในขณะนี้

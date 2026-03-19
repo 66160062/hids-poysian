@@ -6,18 +6,44 @@ import {
   Patch,
   Param,
   Delete,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { DefectsService } from './defects.service';
 import { CreateDefectDto } from './dto/create-defect.dto';
 import { UpdateDefectDto } from './dto/update-defect.dto';
+import { ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { v4 as uuidv4 } from 'uuid';
+import { extname } from 'path';
 
 @Controller('defects')
 export class DefectsController {
   constructor(private readonly defectsService: DefectsService) {}
 
   @Post()
-  create(@Body() createDefectDto: CreateDefectDto) {
-    return this.defectsService.create(createDefectDto);
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './uploads/defects',
+        filename: (req, file, cb) => {
+          const uniqueFileName = uuidv4() + extname(file.originalname);
+          cb(null, uniqueFileName);
+        },
+      }),
+    }),
+  )
+  create(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() createDefectDto: CreateDefectDto,
+  ) {
+    return this.defectsService.create({
+      ...createDefectDto,
+      imageUrl: file ? '/uploads/defects/' + file.filename : undefined,
+      imageFileSize: file ? file.size : undefined,
+    });
   }
 
   @Get()
