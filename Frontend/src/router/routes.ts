@@ -38,6 +38,7 @@ const routes: RouteRecordRaw[] = [
   //     },
   //   ],
   // },
+  {
     path: '/customer',
     component: () => import('layouts/CustomerScreen.vue'),
     children: [
@@ -60,7 +61,11 @@ const routes: RouteRecordRaw[] = [
     path: '/admin',
     component: () => import('layouts/AdminScreen.vue'),
     children: [
-      { path: '', component: () => import('pages/AdminMainPage.vue'), meta: { title: 'หน้าหลัก', icon: 'home' } },
+      {
+        path: '',
+        component: () => import('pages/AdminMainPage.vue'),
+        meta: { title: 'หน้าหลัก', icon: 'home' },
+      },
       {
         path: 'work',
         component: () => import('pages/AdminWorkListPage.vue'),
