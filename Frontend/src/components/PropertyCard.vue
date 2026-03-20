@@ -1,34 +1,48 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 
-interface InspectionItem {
-  id: number;
-  projectName: string;
-  address: string;
-  type: string;
-  customer: string;
-  phone: string;
-  status: string;
-  image: string;
+interface PropertyItem {
+  roundId: number;
+  job: {
+    projectName: string;
+    projectImageUrl?: string;
+    address?: {
+      houseNumber?: string;
+      soi?: string;
+      subDistrict?: string;
+      district?: string;
+      province?: string;
+      postalCode?: string;
+      floor?: number | string;
+    };
+    houseType?: {
+      name: string;
+    };
+    customer?: {
+      fullName?: string;
+      phoneNumber?: string;
+    };
+  };
 }
+
 defineProps<{
-  item: InspectionItem;
+  item: PropertyItem;
   isMobile: boolean;
 }>();
 
 const router = useRouter();
 
-const goToInspectionInfo = () => {
-  void router.push('/inspection/info');
+const goToInspectionInfo = (roundId: number) => {
+  void router.push(`/inspector/job/${roundId}`);
 };
 </script>
 
 <template>
-  <q-card v-if="item" flat bordered class="q-mb-md property-card q-mx-auto">
+  <q-card v-if="item && item.job" flat bordered class="q-mb-md property-card q-mx-auto">
     <q-card-section class="row no-wrap items-stretch" style="padding: 16px">
       <div class="col-auto column" style="padding-right: 16px">
         <q-img
-          :src="item.image"
+          :src="item.job.projectImageUrl ? `http://localhost:3000${item.job.projectImageUrl}` : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=300'"
           class="col"
           :style="{ width: isMobile ? '110px' : '150px', borderRadius: '8px' }"
           fit="cover"
@@ -46,7 +60,7 @@ const goToInspectionInfo = () => {
               line-height: 1.2;
             "
           >
-            {{ item.projectName }}
+            {{ item.job.projectName }}
           </div>
 
           <q-badge
@@ -66,7 +80,7 @@ const goToInspectionInfo = () => {
               font-size: 8px;
             "
           >
-            {{ item.status }}
+            รอเข้าตรวจ
           </q-badge>
         </div>
 
@@ -83,7 +97,9 @@ const goToInspectionInfo = () => {
             overflow: hidden;
           "
         >
-          {{ item.address }}
+          เลขที่ {{ item.job.address?.houseNumber || '-' }} ถ.{{ item.job.address?.soi || '-' }}
+          ต.{{ item.job.address?.subDistrict || '-' }} อ.{{ item.job.address?.district || '-' }}
+          จ.{{ item.job.address?.province || '-' }} {{ item.job.address?.postalCode || '-' }}
         </div>
 
         <div
@@ -91,7 +107,7 @@ const goToInspectionInfo = () => {
           style="font-family: 'Inter', sans-serif; font-weight: 500; font-size: 10px"
         >
           <span class="text-primary">ประเภทที่อยู่:</span>
-          <span> {{ item.type }}</span>
+          <span> {{ item.job.houseType?.name }} {{ item.job.address?.floor ? item.job.address.floor + ' ชั้น' : '' }}</span>
         </div>
 
         <div class="q-mt-xs">
@@ -101,7 +117,7 @@ const goToInspectionInfo = () => {
               class="text-primary"
               style="font-family: 'Inter', sans-serif; font-weight: 500; font-size: 12px"
             >
-              {{ item.customer }}
+              {{ item.job.customer?.fullName || 'ไม่ระบุชื่อ' }}
             </span>
           </div>
           <div class="row items-center q-gutter-x-xs q-mt-xs">
@@ -110,7 +126,7 @@ const goToInspectionInfo = () => {
               class="text-dark"
               style="font-family: 'Inter', sans-serif; font-weight: 500; font-size: 12px"
             >
-              {{ item.phone }}
+              {{ item.job.customer?.phoneNumber || 'ไม่ระบุเบอร์โทร' }}
             </span>
           </div>
         </div>
@@ -126,7 +142,7 @@ const goToInspectionInfo = () => {
             style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500"
             no-caps
           />
-          <q-btn flat round icon="chevron_right" color="primary" @click="goToInspectionInfo" />
+          <q-btn flat round icon="chevron_right" color="primary" @click="goToInspectionInfo(item.roundId)" />
         </div>
       </div>
     </q-card-section>
