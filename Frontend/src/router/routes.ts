@@ -17,26 +17,6 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true }, // ⭐ ต้องมีบรรทัดนี้
     children: [{ path: '', component: () => import('pages/DashboardTestPage.vue') }],
   },
-
-  // {
-  //   path: '/customer',
-  //   component: () => import('layouts/CustomerScreen.vue'),
-  //   children: [
-  //     { path: '', component: () => import('pages/CustomerMainPage.vue') },
-  //     {
-  //       path: 'defect',
-  //       name: 'defectList',
-  //       component: () => import('pages/CustomerDefectListPage.vue'),
-  //       meta: { title: 'รายการ Defect' },
-  //     },
-  //     {
-  //       path: 'report',
-  //       name: 'reportList',
-  //       component: () => import('pages/CustomerReportPage.vue'),
-  //       meta: { title: 'สรุปรายงาน' },
-  //     },
-  //   ],
-  // },
   {
     path: '/customer',
     component: () => import('layouts/CustomerScreen.vue'),
@@ -94,6 +74,17 @@ const routes: RouteRecordRaw[] = [
         path: 'settings',
         component: () => import('pages/AdminMainPage.vue'),
         meta: { title: 'ตั้งค่า', icon: 'settings' },
+      },
+    ],
+  },
+  {
+    path: '/inspector',
+    component: () => import('layouts/InspectorScreen.vue'),
+    children: [
+      {
+        path: '',
+        component: () => import('pages/InspectorDashboardPage.vue'),
+        meta: { title: 'การตรวจบ้าน' },
       },
     ],
   },
