@@ -17,6 +17,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true }, // ⭐ ต้องมีบรรทัดนี้
     children: [{ path: '', component: () => import('pages/DashboardTestPage.vue') }],
   },
+  {
+    path: '/inspections',
+    component: () => import('layouts/FullScreen.vue'),
+    meta: { requiresAuth: true },
+    children: [{ path: '', component: () => import('pages/InspectionPage.vue') }],
+  },
 
   // {
   //   path: '/customer',
