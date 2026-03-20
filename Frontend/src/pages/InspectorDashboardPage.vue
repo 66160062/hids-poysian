@@ -88,6 +88,7 @@
             bordered
             class="q-mb-md"
             style="border-color: #1976d2; border-radius: 12px"
+            @click="goToDetails(round.roundId)"
           >
             <q-card-section horizontal class="q-pa-sm">
               <q-img
@@ -160,6 +161,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { api } from 'src/boot/axios';
 import type { InspectionRound } from 'src/models';
+import { useRouter } from 'vue-router';
+const router = useRouter();
 
 interface CalendarDay {
   isEmpty: boolean;
@@ -296,6 +299,10 @@ function toLocalDateStr(date: Date): string {
 function toUTCDateStr(dateStr: string): string {
   if (!dateStr) return '';
   return String(dateStr).substring(0, 10);
+}
+
+function goToDetails(roundId: number) {
+  void router.push(`/inspector/job/${roundId}`);
 }
 
 onMounted(() => {

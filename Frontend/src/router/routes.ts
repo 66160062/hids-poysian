@@ -86,9 +86,17 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/InspectorDashboardPage.vue'),
         meta: { title: 'การตรวจบ้าน' },
       },
+      {
+        path: 'job/:roundId',
+        component: () => import('pages/InspectorDetailPage.vue'),
+        meta: { title: 'รายละเอียดงานตรวจ' },
+      },
+      {
+        path: 'job/:roundId/inspection',
+        component: () => import('pages/InspectionPage.vue'),
+      },
     ],
   },
-
   {
     path: '/:catchAll(.*)*',
     component: () => import('pages/ErrorNotFound.vue'),
