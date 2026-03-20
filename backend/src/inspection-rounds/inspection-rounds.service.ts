@@ -3,7 +3,7 @@ import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InspectionRound } from './entities/inspection-round.entity';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 
@@ -42,6 +42,25 @@ export class InspectionRoundsService {
 
   findOne(id: number) {
     return this.inspectionRoundsRepo.findOneByOrFail({ roundId: id });
+  }
+
+  async findByWeek(inspectorId: number) {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    return this.inspectionRoundsRepo.find({
+      where: {
+        scheduledDate: Between(startOfWeek, endOfWeek),
+        teamMember: { inspector: { id: inspectorId } },
+      },
+      relations: ['job', 'job.customer', 'job.address', 'job.houseType'],
+    });
   }
 
   async update(id: number, updateInspectionRoundDto: UpdateInspectionRoundDto) {
