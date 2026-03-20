@@ -25,12 +25,15 @@ export interface InspectionRound {
   roundId: number;
   scheduledDate: string;
   status: string;
+  roundNumber: string;
+  teamMember?: { inspector?: { team?: { teamName: string } } };
   job: {
     projectName: string;
     projectImageUrl: string;
     inspectionType: string;
     houseType: { name: string };
-    customer: { fullName: string; phoneNumber: string };
+    customer: { fullName: string; phoneNumber: string; email: string };
+    usableArea: string;
     address: {
       houseNumber: string;
       subDistrict: string;
