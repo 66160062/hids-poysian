@@ -8,10 +8,10 @@ import {
 @Entity('address')
 export class Address {
   @PrimaryGeneratedColumn()
-  address_id: number;
+  addressId: number;
 
   @Column({ type: 'varchar', length: 10 })
-  house_number: string;
+  houseNumber: string;
 
   @Column({ type: 'varchar', length: 10 })
   floor: string;
@@ -20,7 +20,7 @@ export class Address {
   soi: string;
 
   @Column({ type: 'varchar', length: 255 })
-  sub_district: string;
+  subDistrict: string;
 
   @Column({ type: 'varchar', length: 255 })
   district: string;
@@ -29,11 +29,11 @@ export class Address {
   province: string;
 
   @Column({ type: 'varchar', length: 50 })
-  postal_code: string;
+  postalCode: string;
 
   @Column({ type: 'real' })
-  usable_area: number;
+  usableArea: number;
 
   @DeleteDateColumn()
-  deleted_at: Date;
+  deletedAt: Date;
 }
