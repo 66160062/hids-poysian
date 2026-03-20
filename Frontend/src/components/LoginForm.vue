@@ -65,7 +65,17 @@ const handleLogin = async () => {
   const success = await auth.login(email.value, password.value);
 
   if (success) {
-    await router.push('/dashboard');
+    const role = auth.user?.role;
+
+    if (role === 'inspector') {
+      await router.push('/inspector/dashboard');
+    } else if (role === 'admin') {
+      await router.push('/admin');
+    } else if (role === 'customer') {
+      await router.push('/customer');
+    } else {
+      await router.push('/dashboard');
+    }
   } else {
     errorMessage.value = 'Email หรือ Password ไม่ถูกต้อง';
   }
@@ -104,7 +114,11 @@ const handleLogin = async () => {
   text-align: center;
 }
 @media (max-width: 600px) {
-  .title { font-size: 24px; }
-  .login-card { padding: 20px; }
+  .title {
+    font-size: 24px;
+  }
+  .login-card {
+    padding: 20px;
+  }
 }
 </style>

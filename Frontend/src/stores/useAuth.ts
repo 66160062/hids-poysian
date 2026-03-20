@@ -13,6 +13,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(email: string, password: string): Promise<boolean> {
     try {
+      console.log('Calling:', api.defaults.baseURL + '/auth/login');
       const res = await api.post('/auth/login', { email, password });
 
       user.value = res.data.user;
