@@ -17,7 +17,7 @@
         <InspectionSummaryCard class="q-mt-md" :data="summaryData" />
 
         <div class="q-mt-xl">
-          <EmptyState v-if="defectsList.length === 0" message="ไม่มีพบรายการตรวจ" />
+          <EmptyState v-if="defectsList.length === 0" message="ไม่พบรายการตรวจ" />
 
           <div v-else class="column q-gutter-y-md">
             <InspectionItemCard v-for="(item, index) in defectsList" :key="index" :groupedData="item" />
@@ -25,13 +25,12 @@
         </div>
 
         <ActionFab @add="onAddDefectClick" />
-
-        <q-page-sticky position="bottom" :offset="[0, 16]">
-          <q-btn color="primary" label="ยืนยันการตรวจ" class="full-width text-weight-bold shadow-2"
-            style="width: 90vw; border-radius: 8px" @click="onSubmit" />
-        </q-page-sticky>
       </q-page>
     </q-page-container>
+    <q-footer class="bg-transparent q-px-md q-pb-lg">
+      <q-btn color="primary" label="ยืนยันการตรวจ" class="full-width text-weight-bold shadow-3"
+        style="border-radius: 8px; height: 48px;" @click="onSubmit" />
+    </q-footer>
   </q-layout>
 </template>
 
