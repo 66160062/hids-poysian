@@ -36,6 +36,9 @@ export interface InspectionRound {
       subDistrict: string;
       district: string;
       province: string;
+      soi: string;
+      floor: string;
+      postalCode: string;
     };
   };
 }

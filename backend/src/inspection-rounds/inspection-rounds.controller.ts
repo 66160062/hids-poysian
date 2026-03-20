@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { InspectionRoundsService } from './inspection-rounds.service';
 import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
@@ -48,5 +49,13 @@ export class InspectionRoundsController {
   @Get('week/:inspectorId')
   findByWeek(@Param('inspectorId') inspectorId: string) {
     return this.inspectionRoundsService.findByWeek(+inspectorId);
+  }
+
+  @Get('month/:inspectorId')
+  async getRoundsByMonth(
+    @Param('inspectorId') inspectorId: number,
+    @Query('date') dateString?: string,
+  ) {
+    return this.inspectionRoundsService.findByMonth(inspectorId, dateString);
   }
 }
