@@ -23,6 +23,18 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
     children: [{ path: '', component: () => import('pages/InspectionPage.vue') }],
   },
+  {
+    path: '/room-defect',
+    component: () => import('layouts/FullScreen.vue'),
+    meta: { requiresAuth: true },
+    children: [{ path: '', component: () => import('pages/RoomDefectPage.vue') }],
+  },
+  {
+    path: '/add-defect',
+    component: () => import('layouts/FullScreen.vue'),
+    meta: { requiresAuth: true },
+    children: [{ path: '', component: () => import('pages/AddDefectPage.vue') }],
+  },
 
   // {
   //   path: '/customer',

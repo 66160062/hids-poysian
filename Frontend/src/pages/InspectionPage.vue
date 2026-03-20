@@ -20,7 +20,8 @@
           <EmptyState v-if="defectsList.length === 0" message="ไม่พบรายการตรวจ" />
 
           <div v-else class="column q-gutter-y-md">
-            <InspectionItemCard v-for="(item, index) in defectsList" :key="index" :groupedData="item" />
+            <InspectionItemCard v-for="(item, index) in defectsList" :key="index" :groupedData="item"
+              @clickCard="goToRoomDetail" />
           </div>
         </div>
 
@@ -42,9 +43,10 @@ import InspectionSummaryCard from '../components/InspectionSummaryCard.vue';
 import EmptyState from '../components/EmptyState.vue';
 import InspectionItemCard from '../components/InspectionItemCard.vue';
 import ActionFab from '../components/ActionFab.vue';
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const searchQuery = ref('');
-
 const summaryData = ref({
   totalRooms: 1,
   totalJobs: 1,
@@ -65,6 +67,14 @@ const defectsList = ref([
     failPercentage: 100,
   },
 ]);
+
+const goToRoomDetail = async (roomData: { roomName: string; }) => {
+  console.log('กดที่ห้อง:', roomData.roomName)
+  await router.push({
+    path: '/room-defect',
+    query: { roomName: roomData.roomName }
+  });
+};
 const goBack = () => {
   console.log('ย้อนกลับไปหน้า Job Details');
 };
@@ -73,8 +83,8 @@ const onFilterClick = () => {
   console.log('เปิดหน้าต่าง Filter');
 };
 
-const onAddDefectClick = () => {
-  console.log('เปิดหน้าต่างเพิ่มรายการตรวจ');
+const onAddDefectClick = async () => {
+  await router.push('/add-defect');
 };
 
 const onSubmit = () => {

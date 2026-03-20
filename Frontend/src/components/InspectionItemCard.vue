@@ -1,5 +1,6 @@
 <template>
-  <q-card flat bordered class="rounded-borders bg-white q-mb-sm">
+  <q-card flat bordered class="rounded-borders bg-white q-mb-sm cursor-pointer q-hoverable" v-ripple
+    @click="$emit('clickCard', groupedData)">
     <q-card-section class="q-pb-none">
       <div class="row items-start justify-between">
         <div class="row items-baseline q-gutter-x-xs">
@@ -36,19 +37,11 @@
 
     <q-card-section class="q-pt-none">
       <div class="custom-progress-bar">
-        <div
-          v-if="groupedData.passCount > 0"
-          class="bar-pass"
-          :style="{ width: passPercentage + '%' }"
-        >
+        <div v-if="groupedData.passCount > 0" class="bar-pass" :style="{ width: passPercentage + '%' }">
           <span class="text-weight-bold">{{ groupedData.passCount }}</span>
         </div>
 
-        <div
-          v-if="groupedData.failCount > 0"
-          class="bar-fail"
-          :style="{ width: failPercentage + '%' }"
-        >
+        <div v-if="groupedData.failCount > 0" class="bar-fail" :style="{ width: failPercentage + '%' }">
           <span class="text-weight-bold">{{ groupedData.failCount }}</span>
         </div>
       </div>
@@ -73,6 +66,8 @@ const props = defineProps({
     }),
   },
 });
+
+defineEmits(['clickCard'])
 
 const passPercentage = computed(() => {
   const total = props.groupedData.passCount + props.groupedData.failCount;
