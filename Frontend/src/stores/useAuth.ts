@@ -1,29 +1,23 @@
-// src/stores/useAuth.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { api } from 'src/boot/axios';
 import { LocalStorage } from 'quasar';
-import type { User } from 'src/models';
+import type { User } from 'src/models.ts';
 
 export const useAuthStore = defineStore('auth', () => {
-  // --- STATE ---
   const user = ref<User | null>(null);
   const token = ref<string | null>(null);
 
-  // --- GETTERS ---
   const isLogin = computed(() => !!token.value);
   const currentUser = computed(() => user.value);
 
-  // --- ACTIONS ---
   async function login(email: string, password: string): Promise<boolean> {
     try {
-
       const res = await api.post('/auth/login', { email, password });
 
       user.value = res.data.user;
       token.value = res.data.access_token;
 
-      // บันทึกลง LocalStorage
       LocalStorage.set('user', user.value);
       LocalStorage.set('token', token.value);
 
