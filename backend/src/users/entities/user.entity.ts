@@ -31,6 +31,13 @@ export class User {
   @Column()
   role: string;
 
+  @Column({
+    type: 'varchar',
+    length: 255,
+    default: '/project-images/unknown.jpg',
+  })
+  imageUrl: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
