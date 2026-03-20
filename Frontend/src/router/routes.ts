@@ -12,7 +12,16 @@ const routes: RouteRecordRaw[] = [
     children: [{ path: '', component: () => import('pages/LoginPage.vue') }],
   },
   {
-    path: '/dashboard',
+
+    path: '/inspection',
+    component: () => import('layouts/FullScreen.vue'),
+    children: [
+      { path: '', component: () => import('pages/InspectionMainPage.vue') },
+      { path: 'info', component: () => import('pages/InspectionInfoPage.vue') },
+      { path: 'report', name: 'inspectionReport', component: () => import('pages/InspectionReportPage.vue') }
+    ],
+  },
+    {path: '/dashboard',
     component: () => import('layouts/FullScreen.vue'),
     meta: { requiresAuth: true }, // ⭐ ต้องมีบรรทัดนี้
     children: [{ path: '', component: () => import('pages/DashboardTestPage.vue') }],
