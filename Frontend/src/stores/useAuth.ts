@@ -36,8 +36,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function loadUserFromStorage() {
-    user.value = LocalStorage.getItem('user') as User | null;
-    token.value = LocalStorage.getItem('token') as string | null;
+    user.value = LocalStorage.getItem('user');
+    token.value = LocalStorage.getItem('token');
   }
 
   loadUserFromStorage();
