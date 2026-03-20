@@ -3,7 +3,7 @@ import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InspectionRound } from './entities/inspection-round.entity';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 
@@ -41,7 +41,57 @@ export class InspectionRoundsService {
   }
 
   findOne(id: number) {
-    return this.inspectionRoundsRepo.findOneByOrFail({ roundId: id });
+    return this.inspectionRoundsRepo.findOneOrFail({
+      where: { roundId: id },
+      relations: [
+        'job',
+        'job.address',
+        'job.customer',
+        'job.houseType',
+        'teamMember',
+        'teamMember.inspector',
+        'teamMember.inspector.team',
+      ],
+    });
+  }
+
+  async findByWeek(inspectorId: number) {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    return this.inspectionRoundsRepo.find({
+      where: {
+        scheduledDate: Between(startOfWeek, endOfWeek),
+        teamMember: { inspector: { id: inspectorId } },
+      },
+      relations: ['job', 'job.customer', 'job.address', 'job.houseType'],
+    });
+  }
+
+  async findByMonth(inspectorId: number, dateString?: string) {
+    const targetDate = dateString ? new Date(dateString) : new Date();
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth(); // 0-11
+
+    const startOfMonth = new Date(year, month, 1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const endOfMonth = new Date(year, month + 1, 0);
+    endOfMonth.setHours(23, 59, 59, 999);
+
+    return this.inspectionRoundsRepo.find({
+      where: {
+        scheduledDate: Between(startOfMonth, endOfMonth),
+        teamMember: { inspector: { id: inspectorId } },
+      },
+      relations: ['job', 'job.customer', 'job.address', 'job.houseType'],
+    });
   }
 
   async update(id: number, updateInspectionRoundDto: UpdateInspectionRoundDto) {

@@ -21,11 +21,11 @@ export class TeamsService {
   }
 
   findOne(id: number) {
-    return this.teamsRepo.findOneByOrFail({ team_id: id });
+    return this.teamsRepo.findOneByOrFail({ teamId: id });
   }
 
   async update(id: number, updateTeamDto: UpdateTeamDto) {
-    const team = await this.teamsRepo.findOneByOrFail({ team_id: id });
+    const team = await this.teamsRepo.findOneByOrFail({ teamId: id });
     Object.assign(team, updateTeamDto);
     return this.teamsRepo.save(team);
   }

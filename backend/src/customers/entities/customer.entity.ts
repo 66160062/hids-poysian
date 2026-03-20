@@ -9,23 +9,23 @@ import {
 @Entity('customer')
 export class Customer {
   @PrimaryGeneratedColumn()
-  customer_id: number;
+  customerId: number;
 
   @Column({ type: 'varchar', length: 255 })
-  full_name: string;
+  fullName: string;
 
   @Column({ type: 'varchar', length: 255 })
-  phone_number: string;
+  phoneNumber: string;
 
   @Column({ type: 'varchar', length: 255 })
   email: string;
 
   @Column({ type: 'varchar', length: 255 })
-  line_id: string;
+  lineId: string;
 
   @CreateDateColumn()
-  created_at: Date;
+  createdAt: Date;
 
   @DeleteDateColumn()
-  deleted_at: Date;
+  deletedAt: Date;
 }

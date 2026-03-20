@@ -20,7 +20,7 @@ export class AddressesService {
   }
 
   findOne(id: number) {
-    return this.addressesRepo.findOneByOrFail({ address_id: id });
+    return this.addressesRepo.findOneByOrFail({ addressId: id });
   }
 
   update(id: number, updateAddressDto: UpdateAddressDto) {

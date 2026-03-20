@@ -12,49 +12,20 @@ const routes: RouteRecordRaw[] = [
     children: [{ path: '', component: () => import('pages/LoginPage.vue') }],
   },
   {
-    path: '/dashboard',
+
+    path: '/inspection',
+    component: () => import('layouts/FullScreen.vue'),
+    children: [
+      { path: '', component: () => import('pages/InspectionMainPage.vue') },
+      { path: 'info', component: () => import('pages/InspectionInfoPage.vue') },
+      { path: 'report', name: 'inspectionReport', component: () => import('pages/InspectionReportPage.vue') }
+    ],
+  },
+    {path: '/dashboard',
     component: () => import('layouts/FullScreen.vue'),
     meta: { requiresAuth: true }, // ⭐ ต้องมีบรรทัดนี้
     children: [{ path: '', component: () => import('pages/DashboardTestPage.vue') }],
   },
-  {
-    path: '/inspections',
-    component: () => import('layouts/FullScreen.vue'),
-    meta: { requiresAuth: true },
-    children: [{ path: '', component: () => import('pages/InspectionPage.vue') }],
-  },
-  {
-    path: '/room-defect',
-    component: () => import('layouts/FullScreen.vue'),
-    meta: { requiresAuth: true },
-    children: [{ path: '', component: () => import('pages/RoomDefectPage.vue') }],
-  },
-  {
-    path: '/add-defect',
-    component: () => import('layouts/FullScreen.vue'),
-    meta: { requiresAuth: true },
-    children: [{ path: '', component: () => import('pages/AddDefectPage.vue') }],
-  },
-
-  // {
-  //   path: '/customer',
-  //   component: () => import('layouts/CustomerScreen.vue'),
-  //   children: [
-  //     { path: '', component: () => import('pages/CustomerMainPage.vue') },
-  //     {
-  //       path: 'defect',
-  //       name: 'defectList',
-  //       component: () => import('pages/CustomerDefectListPage.vue'),
-  //       meta: { title: 'รายการ Defect' },
-  //     },
-  //     {
-  //       path: 'report',
-  //       name: 'reportList',
-  //       component: () => import('pages/CustomerReportPage.vue'),
-  //       meta: { title: 'สรุปรายงาน' },
-  //     },
-  //   ],
-  // },
   {
     path: '/customer',
     component: () => import('layouts/CustomerScreen.vue'),
@@ -115,7 +86,26 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
-
+  {
+    path: '/inspector',
+    component: () => import('layouts/InspectorScreen.vue'),
+    children: [
+      {
+        path: 'dashboard',
+        component: () => import('pages/InspectorDashboardPage.vue'),
+        meta: { title: 'การตรวจบ้าน' },
+      },
+      {
+        path: 'job/:roundId',
+        component: () => import('pages/InspectorDetailPage.vue'),
+        meta: { title: 'รายละเอียดงานตรวจ' },
+      },
+      {
+        path: 'job/:roundId/inspection',
+        component: () => import('pages/InspectionPage.vue'),
+      },
+    ],
+  },
   {
     path: '/:catchAll(.*)*',
     component: () => import('pages/ErrorNotFound.vue'),

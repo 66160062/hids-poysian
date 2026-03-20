@@ -20,7 +20,7 @@ export class CustomersService {
   }
 
   findOne(id: number) {
-    return this.customersRepo.findOneByOrFail({ customer_id: id });
+    return this.customersRepo.findOneByOrFail({ customerId: id });
   }
 
   update(id: number, updateCustomerDto: UpdateCustomerDto) {
