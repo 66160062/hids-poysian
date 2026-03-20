@@ -20,3 +20,30 @@ export interface User {
   createdAt: string;
   deletedAt: string | null;
 }
+
+export interface InspectionRound {
+  roundId: number;
+  scheduledDate: string;
+  status: string;
+  job: {
+    projectName: string;
+    projectImageUrl: string;
+    inspectionType: string;
+    houseType: { name: string };
+    customer: { fullName: string; phoneNumber: string };
+    address: {
+      houseNumber: string;
+      subDistrict: string;
+      district: string;
+      province: string;
+    };
+  };
+}
+
+export interface WeekDay {
+  label: string;
+  date: number;
+  dateStr: string;
+  isActive: boolean;
+  hasDot: boolean;
+}

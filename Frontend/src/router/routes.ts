@@ -82,7 +82,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('layouts/InspectorScreen.vue'),
     children: [
       {
-        path: '',
+        path: 'dashboard',
         component: () => import('pages/InspectorDashboardPage.vue'),
         meta: { title: 'การตรวจบ้าน' },
       },
