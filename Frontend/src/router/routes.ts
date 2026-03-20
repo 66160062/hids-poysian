@@ -26,26 +26,6 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true }, // ⭐ ต้องมีบรรทัดนี้
     children: [{ path: '', component: () => import('pages/DashboardTestPage.vue') }],
   },
-
-  // {
-  //   path: '/customer',
-  //   component: () => import('layouts/CustomerScreen.vue'),
-  //   children: [
-  //     { path: '', component: () => import('pages/CustomerMainPage.vue') },
-  //     {
-  //       path: 'defect',
-  //       name: 'defectList',
-  //       component: () => import('pages/CustomerDefectListPage.vue'),
-  //       meta: { title: 'รายการ Defect' },
-  //     },
-  //     {
-  //       path: 'report',
-  //       name: 'reportList',
-  //       component: () => import('pages/CustomerReportPage.vue'),
-  //       meta: { title: 'สรุปรายงาน' },
-  //     },
-  //   ],
-  // },
   {
     path: '/customer',
     component: () => import('layouts/CustomerScreen.vue'),
@@ -106,7 +86,26 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
-
+  {
+    path: '/inspector',
+    component: () => import('layouts/InspectorScreen.vue'),
+    children: [
+      {
+        path: 'dashboard',
+        component: () => import('pages/InspectorDashboardPage.vue'),
+        meta: { title: 'การตรวจบ้าน' },
+      },
+      {
+        path: 'job/:roundId',
+        component: () => import('pages/InspectorDetailPage.vue'),
+        meta: { title: 'รายละเอียดงานตรวจ' },
+      },
+      {
+        path: 'job/:roundId/inspection',
+        component: () => import('pages/InspectionPage.vue'),
+      },
+    ],
+  },
   {
     path: '/:catchAll(.*)*',
     component: () => import('pages/ErrorNotFound.vue'),

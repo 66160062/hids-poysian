@@ -1,18 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsInt,
-  IsNumber,
-  IsOptional,
-  IsString,
-  MaxLength,
-} from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateInspectionJobDto {
   @ApiProperty({
     description: 'รหัสลูกค้า (Customer ID)',
     example: 1,
   })
-  @IsInt()
+  @Type(() => Number)
+  @IsNumber()
   customerId: number;
 
   @ApiProperty({
@@ -25,11 +21,13 @@ export class CreateInspectionJobDto {
   inspectionType: string;
 
   @ApiProperty({ description: 'รหัสที่อยู่โครงการ (Address ID)', example: 1 })
-  @IsInt()
+  @Type(() => Number)
+  @IsNumber()
   addressId: number;
 
   @ApiProperty({ description: 'ไอดีประเภทบ้าน', example: '1' })
-  @IsInt()
+  @Type(() => Number)
+  @IsNumber()
   houseTypeId: number;
 
   @ApiProperty({ description: 'ชื่อโครงการ', example: 'หมู่บ้านแสนสุข วิลเลจ' })
@@ -54,6 +52,7 @@ export class CreateInspectionJobDto {
   housePlanUrl: string;
 
   @ApiProperty({ description: 'พื้นที่ใช้สอย (ตารางเมตร)', example: 150.5 })
+  @Type(() => Number)
   @IsNumber()
   usableArea: number;
 

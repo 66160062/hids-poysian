@@ -20,3 +20,36 @@ export interface User {
   createdAt: string;
   deletedAt: string | null;
 }
+
+export interface InspectionRound {
+  roundId: number;
+  scheduledDate: string;
+  status: string;
+  roundNumber: string;
+  teamMember?: { inspector?: { team?: { teamName: string } } };
+  job: {
+    projectName: string;
+    projectImageUrl: string;
+    inspectionType: string;
+    houseType: { name: string };
+    customer: { fullName: string; phoneNumber: string; email: string };
+    usableArea: string;
+    address: {
+      houseNumber: string;
+      subDistrict: string;
+      district: string;
+      province: string;
+      soi: string;
+      floor: string;
+      postalCode: string;
+    };
+  };
+}
+
+export interface WeekDay {
+  label: string;
+  date: number;
+  dateStr: string;
+  isActive: boolean;
+  hasDot: boolean;
+}

@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsString, IsOptional, IsDateString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsNumber, IsString, IsOptional, IsDate } from 'class-validator';
 
 export class CreateInspectionRoundDto {
   @ApiProperty({ description: 'รหัสงานตรวจ', example: 1 })
@@ -15,7 +16,8 @@ export class CreateInspectionRoundDto {
   roundNumber: number;
 
   @ApiProperty({ description: 'วันที่นัดตรวจ', example: '2026-03-12' })
-  @IsDateString()
+  @Type(() => Date)
+  @IsDate()
   scheduledDate: Date;
 
   @ApiProperty({ description: 'สถานะ', example: 'SCHEDULED', required: false })

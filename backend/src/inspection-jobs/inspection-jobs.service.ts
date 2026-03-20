@@ -23,10 +23,10 @@ export class InspectionJobsService {
 
   async create(createInspectionJobDto: CreateInspectionJobDto) {
     const customer = await this.customersRepo.findOneByOrFail({
-      customer_id: createInspectionJobDto.customerId,
+      customerId: createInspectionJobDto.customerId,
     });
     const address = await this.addressesRepo.findOneByOrFail({
-      address_id: createInspectionJobDto.addressId,
+      addressId: createInspectionJobDto.addressId,
     });
     const houseType = await this.houseTypesRepo.findOneByOrFail({
       house_type_id: createInspectionJobDto.houseTypeId,
@@ -60,13 +60,13 @@ export class InspectionJobsService {
 
     if (updateInspectionJobDto.customerId) {
       inspectionJob.customer = await this.customersRepo.findOneByOrFail({
-        customer_id: updateInspectionJobDto.customerId,
+        customerId: updateInspectionJobDto.customerId,
       });
     }
 
     if (updateInspectionJobDto.addressId) {
       inspectionJob.address = await this.addressesRepo.findOneByOrFail({
-        address_id: updateInspectionJobDto.addressId,
+        addressId: updateInspectionJobDto.addressId,
       });
     }
 
