@@ -31,9 +31,6 @@ export class Address {
   @Column({ type: 'varchar', length: 50 })
   postalCode: string;
 
-  @Column({ type: 'real' })
-  usableArea: number;
-
   @DeleteDateColumn()
   deletedAt: Date;
 }

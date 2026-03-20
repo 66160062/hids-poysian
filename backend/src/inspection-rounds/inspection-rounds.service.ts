@@ -41,7 +41,18 @@ export class InspectionRoundsService {
   }
 
   findOne(id: number) {
-    return this.inspectionRoundsRepo.findOneByOrFail({ roundId: id });
+    return this.inspectionRoundsRepo.findOneOrFail({
+      where: { roundId: id },
+      relations: [
+        'job',
+        'job.address',
+        'job.customer',
+        'job.houseType',
+        'teamMember',
+        'teamMember.inspector',
+        'teamMember.inspector.team',
+      ],
+    });
   }
 
   async findByWeek(inspectorId: number) {
@@ -64,20 +75,16 @@ export class InspectionRoundsService {
   }
 
   async findByMonth(inspectorId: number, dateString?: string) {
-    // 1. กำหนดเดือนเป้าหมาย (ถ้าไม่ส่ง dateString มา ให้ใช้เดือนปัจจุบัน)
     const targetDate = dateString ? new Date(dateString) : new Date();
     const year = targetDate.getFullYear();
     const month = targetDate.getMonth(); // 0-11
 
-    // 2. หาวันแรกของเดือน (วันที่ 1 เวลา 00:00:00)
     const startOfMonth = new Date(year, month, 1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    // 3. หาวันสุดท้ายของเดือน (ใช้ trick ใส่วันที่ 0 ของเดือนถัดไป)
     const endOfMonth = new Date(year, month + 1, 0);
     endOfMonth.setHours(23, 59, 59, 999);
 
-    // 4. ดึงข้อมูลจาก Database
     return this.inspectionRoundsRepo.find({
       where: {
         scheduledDate: Between(startOfMonth, endOfMonth),
