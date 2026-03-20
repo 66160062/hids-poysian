@@ -9,23 +9,23 @@ import {
 @Entity('team')
 export class Team {
   @PrimaryGeneratedColumn()
-  team_id: number;
+  teamId: number;
 
   @Column({ type: 'varchar', length: 255 })
-  team_name: string;
+  teamName: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  logo_url: string | null;
+  logoUrl: string | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  contact_info: string;
+  contactInfo: string;
 
   @Column({ type: 'varchar', length: 50, default: 'active' })
   status: string;
 
   @CreateDateColumn()
-  created_at: Date;
+  createdAt: Date;
 
   @DeleteDateColumn()
-  deleted_at: Date;
+  deletedAt: Date;
 }

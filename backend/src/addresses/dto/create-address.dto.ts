@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber } from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class CreateAddressDto {
   @ApiProperty({ description: 'บ้านเลขที่', example: '123' })
@@ -29,8 +29,4 @@ export class CreateAddressDto {
   @ApiProperty({ description: 'รหัสไปรษณีย์', example: '10110' })
   @IsString()
   postal_code: string;
-
-  @ApiProperty({ description: 'พื้นที่ใช้สอย (ตร.ม.)', example: 120.5 })
-  @IsNumber()
-  usable_area: number;
 }
