@@ -5,12 +5,17 @@ import { RoomTemplate } from './entities/room-template.entity';
 import { CreateRoomTemplateDto } from './dto/create-room-template.dto';
 import { UpdateRoomTemplateDto } from './dto/update-room-template.dto';
 import { Floor } from 'src/floor/entities/floor.entity';
+import { SubRoom } from 'src/sub-rooms/entities/sub-room.entity';
 
 @Injectable()
 export class RoomTemplatesService {
   constructor(
     @InjectRepository(RoomTemplate)
     private readonly roomTemplatesRepo: Repository<RoomTemplate>,
+    @InjectRepository(Floor)
+    private readonly floorsRepo: Repository<Floor>,
+    @InjectRepository(SubRoom)
+    private readonly subRoomsRepo: Repository<SubRoom>,
   ) {}
 
   async create(createRoomTemplateDto: CreateRoomTemplateDto) {
@@ -23,8 +28,10 @@ export class RoomTemplatesService {
     return await this.roomTemplatesRepo.save(roomTemplate);
   }
 
-  findAll() {
-    return this.roomTemplatesRepo.find();
+  async findAll() {
+    return this.roomTemplatesRepo.find({
+      relations: ['floor', 'subRoom'],
+    });
   }
 
   findOne(id: number) {
