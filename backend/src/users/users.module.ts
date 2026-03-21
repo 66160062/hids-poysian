@@ -14,6 +14,6 @@ import { TeamsModule } from 'src/teams/teams.module';
   ],
   controllers: [UsersController],
   providers: [UsersService],
-  exports: [UsersService, UsersModule],
+  exports: [UsersService, TypeOrmModule],
 })
 export class UsersModule {}

@@ -8,6 +8,7 @@ import {
   Delete,
   UseInterceptors,
   UploadedFile,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { DefectsService } from './defects.service';
 import { CreateDefectDto } from './dto/create-defect.dto';
@@ -51,14 +52,41 @@ export class DefectsController {
     return this.defectsService.findAll();
   }
 
+  @Get('round/:roundId')
+  findByRound(@Param('roundId', ParseIntPipe) roundId: number) {
+    return this.defectsService.findByRound(roundId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.defectsService.findOne(+id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDefectDto: UpdateDefectDto) {
-    return this.defectsService.update(+id, updateDefectDto);
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './uploads/defects',
+        filename: (req, file, cb) => {
+          const uniqueFileName = uuidv4() + extname(file.originalname);
+          cb(null, uniqueFileName);
+        },
+      }),
+    }),
+  )
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() updateDefectDto: UpdateDefectDto,
+  ) {
+    return this.defectsService.update(id, {
+      ...updateDefectDto,
+      ...(file && {
+        imageUrl: '/uploads/defects/' + file.filename,
+        imageFileSize: file.size,
+      }),
+    });
   }
 
   @Delete(':id')

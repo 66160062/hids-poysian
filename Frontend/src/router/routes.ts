@@ -15,11 +15,8 @@ const routes: RouteRecordRaw[] = [
     path: '/inspection',
     component: () => import('layouts/FullScreen.vue'),
     children: [
-      {
-        path: 'report',
-        name: 'inspectionReport',
-        component: () => import('pages/InspectionReportPage.vue'),
-      },
+      { path: '', component: () => import('pages/InspectionMainPage.vue') },
+      { path: 'info', component: () => import('pages/InspectionInfoPage.vue') },
       {
         path: 'report',
         name: 'inspectionReport',
@@ -110,6 +107,12 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'job/:roundId/inspection',
         component: () => import('pages/InspectionPage.vue'),
+        meta: { title: 'การตรวจ' },
+      },
+      {
+        path: 'job/:roundId/report',
+        component: () => import('pages/InspectionReportPage.vue'),
+        meta: { title: 'รายงาน' },
       },
       {
         path: 'job/:roundId/inspection/room-defect',
