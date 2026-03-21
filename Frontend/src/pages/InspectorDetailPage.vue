@@ -10,9 +10,8 @@
         boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
       }"
     >
-      <div class="bg-white relative-position" style="position: sticky; top: 0; z-index: 100;">
-
-        <div class="absolute" style="left: 20px; bottom: 20px; z-index: 10;">
+      <div class="bg-white relative-position" style="position: sticky; top: 0; z-index: 100">
+        <div class="absolute" style="left: 20px; bottom: 20px; z-index: 10">
           <q-icon
             name="arrow_back_ios_new"
             size="24px"
@@ -22,13 +21,10 @@
           />
         </div>
 
-        <div
-          class="text-center text-weight-bold q-pt-xl q-pb-md"
-          style="font-size: 24px; "
-        >
+        <div class="text-center text-weight-bold q-pt-xl q-pb-md" style="font-size: 24px">
           ข้อมูลการตรวจบ้าน
         </div>
-                <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
+        <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
       </div>
 
       <div v-if="loading" class="flex flex-center col q-pa-xl">
@@ -42,7 +38,7 @@
               ? `http://localhost:3000${jobData.job.projectImageUrl}`
               : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600'
           "
-          style="border-radius: 8px; height: 250px; margin-top: 20px ;"
+          style="border-radius: 8px; height: 250px; margin-top: 20px"
           fit="cover"
           class="q-mb-md q-mt-sm"
         />
@@ -251,25 +247,10 @@
               </q-card-section>
             </q-card>
           </q-dialog>
-        </q-card-section>
-      </q-card>
-
-      <q-btn
-        disable
-        color="grey-4"
-        text-color="grey-6"
-        class="full-width text-weight-bold q-py-md"
-        style="border-radius: 12px; font-size: 16px"
-        label="ส่งอนุมัติการตรวจ"
-        unelevated
-      />
-    </div>
-
-        <q-space />
+        </q-card>
 
         <q-btn disable class="full-width q-mt-xl disabled-btn" label="ส่งอนุมัติการตรวจ" no-caps />
       </div>
-
       <div v-else class="text-center q-pa-xl col column justify-center text-grey-7">
         ไม่พบข้อมูลงานตรวจนี้
       </div>
@@ -332,6 +313,14 @@ function formatDate(dateStr: string) {
 async function fetchDefects() {
   const res = await api.get(`/defects/round/${roundId}`);
   defects.value = res.data;
+}
+
+function startInspection() {
+  void router.push(`/inspector/job/${roundId}/inspection`);
+}
+
+function goBack() {
+  router.back();
 }
 
 onMounted(() => {
