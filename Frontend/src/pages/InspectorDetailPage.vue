@@ -11,7 +11,6 @@
       }"
     >
       <div class="bg-white relative-position" style="position: sticky; top: 0; z-index: 100;">
-
         <div class="absolute" style="left: 20px; bottom: 20px; z-index: 10;">
           <q-icon
             name="arrow_back_ios_new"
@@ -23,12 +22,12 @@
         </div>
 
         <div
-          class="text-center text-weight-bold q-pt-xl q-pb-md"
+          class="text-center text-weight-bold q-pt-md q-pb-md"
           style="font-size: 24px; "
         >
-          ข้อมูลการตรวจบ้าน
+          รายละเอียด
         </div>
-                <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
+        <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
       </div>
 
       <div v-if="loading" class="flex flex-center col q-pa-xl">
@@ -109,7 +108,7 @@
               </span>
             </div>
           </div>
-          <q-btn round outline color="primary" icon="map" size="md" />
+          <q-btn round outline color="primary" icon="map" size="md" @click="openGoogleMaps" />
         </div>
 
         <q-separator color="primary" style="opacity: 0.5; height: 1px" class="q-my-md" />
@@ -186,15 +185,84 @@
             </div>
           </q-btn>
 
-          <q-btn outline color="primary" class="full-width action-btn" no-caps @click="goToReport">
-            <div class="row items-center justify-between full-width">
-              <span>สรุปรายงาน</span>
-              <div class="circle-icon outline-circle text-primary flex flex-center">
-                <q-icon name="chevron_right" size="18px" />
-              </div>
+          <q-btn outline color="blue" class="full-width q-py-sm" @click="showReport = true">
+            <div class="row full-width justify-between items-center q-px-sm">
+              <span class="text-weight-bold">ดูตัวอย่างรายงาน PDF</span>
+              <q-icon
+                name="chevron_right"
+                class="bg-blue text-white rounded-borders q-pa-xs"
+                size="18px"
+              />
             </div>
           </q-btn>
-        </q-card>
+
+          <DefectReport
+            ref="reportComp"
+            :round="jobData"
+            :defects="defects"
+            style="position: absolute; left: -9999px; top: -9999px"
+          />
+          <!-- ปุ่ม print reporttttttttt -->
+          <!-- <q-btn
+            @click="router.push(`/inspection/job/${roundId}/report`)"
+            outline
+            color="blue"
+            class="full-width q-py-sm"
+          >
+            <div class="row full-width justify-between items-center q-px-sm">
+              <span class="text-weight-bold">สรุปรายงาน</span>
+              <q-icon
+                name="chevron_right"
+                class="bg-blue text-white rounded-borders q-pa-xs"
+                size="18px"
+              />
+            </div>
+          </q-btn> -->
+          <q-btn
+            :outline="!hasSummary"
+            :color="hasSummary ? 'green' : 'blue'"
+            class="full-width q-py-sm"
+            style="border-radius: 10px; border-width: 1.5px"
+            @click="router.push(`/inspector/job/${roundId}/report`)"
+          >
+            <div class="row full-width justify-between items-center q-px-sm">
+              <span class="text-weight-bold">สรุปรายงาน</span>
+              <q-icon
+                :name="hasSummary ? 'check_circle' : 'chevron_right'"
+                :class="hasSummary ? 'text-white' : 'bg-blue text-white rounded-borders q-pa-xs'"
+                size="28px"
+              />
+            </div>
+          </q-btn>
+
+          <q-dialog v-model="showReport" full-width full-height>
+            <q-card>
+              <q-bar class="bg-primary text-white">
+                <div>ตัวอย่างรายงาน Defect</div>
+                <q-space />
+                <q-btn dense flat icon="close" v-close-popup>
+                  <q-tooltip>ปิด</q-tooltip>
+                </q-btn>
+              </q-bar>
+
+              <q-card-section class="q-pa-none">
+                <DefectReport :round="jobData" :defects="defects" />
+              </q-card-section>
+            </q-card>
+          </q-dialog>
+        </q-card-section>
+      </q-card>
+
+      <q-btn
+        disable
+        color="grey-4"
+        text-color="grey-6"
+        class="full-width text-weight-bold q-py-md"
+        style="border-radius: 12px; font-size: 16px"
+        label="ส่งอนุมัติการตรวจ"
+        unelevated
+      />
+    </div>
 
         <q-space />
 
@@ -214,6 +282,7 @@ import { useQuasar } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
 import type { InspectionRound } from 'src/models';
+import DefectReport from 'src/components/DefectReport.vue';
 
 const $q = useQuasar();
 const route = useRoute();
@@ -225,7 +294,6 @@ const jobData = ref<InspectionRound | null>(null);
 
 const roundId = route.params.roundId as string;
 
-// การนำทาง
 const goBack = () => {
   router.back();
 };
@@ -236,7 +304,44 @@ const startInspection = () => {
   void router.push(`/inspector/job/${roundId}/inspection`);
 };
 
-// ฟังก์ชันดึงข้อมูลจาก API
+const openGoogleMaps = () => {
+  if (!jobData.value?.job) return;
+
+  const job = jobData.value.job;
+  const address = job.address;
+
+  const searchQueryParts = [
+    job.projectName,
+    address?.houseNumber ? `เลขที่ ${address.houseNumber}` : '',
+    address?.soi ? `ถ.${address.soi}` : '',
+    address?.subDistrict ? `ต.${address.subDistrict}` : '',
+    address?.district ? `อ.${address.district}` : '',
+    address?.province ? `จ.${address.province}` : '',
+    address?.postalCode || ''
+  ];
+
+  const searchQuery = searchQueryParts.filter(part => part).join(' ');
+
+  if (searchQuery.trim()) {
+    const encodedQuery = encodeURIComponent(searchQuery);
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
+    window.open(mapsUrl, '_blank');
+  } else {
+    alert('ไม่พบข้อมูลที่อยู่สำหรับนำทาง');
+  }
+};
+const reportComp = ref<InstanceType<typeof DefectReport> | null>(null);
+const defects = ref([]);
+
+const showReport = ref(false);
+
+const hasSummary = ref(false);
+
+async function checkSummary() {
+  const res = await api.get(`/inspection-summary-items/round/${roundId}`);
+  hasSummary.value = res.data.length > 0;
+}
+
 async function fetchJobDetails() {
   loading.value = true;
   try {
@@ -249,8 +354,7 @@ async function fetchJobDetails() {
   }
 }
 
-// ฟังก์ชันแปลงวันที่
-function formatDate(dateStr?: string) {
+function formatDate(dateStr: string) {
   if (!dateStr) return '';
   const date = new Date(dateStr);
   return date.toLocaleDateString('th-TH', {
@@ -260,8 +364,15 @@ function formatDate(dateStr?: string) {
   });
 }
 
+async function fetchDefects() {
+  const res = await api.get(`/defects/round/${roundId}`);
+  defects.value = res.data;
+}
+
 onMounted(() => {
   void fetchJobDetails();
+  void fetchDefects();
+  void checkSummary();
 });
 </script>
 
