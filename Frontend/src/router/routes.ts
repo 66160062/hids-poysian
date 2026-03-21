@@ -15,14 +15,16 @@ const routes: RouteRecordRaw[] = [
     path: '/inspection',
     component: () => import('layouts/FullScreen.vue'),
     children: [
-      { path: '', component: () => import('pages/InspectionMainPage.vue') },
-      { path: 'info', component: () => import('pages/InspectionInfoPage.vue') },
       {
         path: 'report',
         name: 'inspectionReport',
         component: () => import('pages/InspectionReportPage.vue'),
       },
-      { path: 'report', name: 'inspectionReport', component: () => import('pages/InspectionReportPage.vue') }
+      {
+        path: 'report',
+        name: 'inspectionReport',
+        component: () => import('pages/InspectionReportPage.vue'),
+      },
     ],
   },
   {
@@ -113,6 +115,11 @@ const routes: RouteRecordRaw[] = [
         path: 'job/:roundId/inspection/room-defect',
         name: 'roomDefect',
         component: () => import('pages/RoomDefectPage.vue'),
+      },
+      {
+        path: 'job/:roundId/inspection/add-defect',
+        name: 'addDefect',
+        component: () => import('pages/AddDefectPage.vue'),
       },
     ],
   },
