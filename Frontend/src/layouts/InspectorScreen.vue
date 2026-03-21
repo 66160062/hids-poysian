@@ -65,7 +65,6 @@ function changeTab(tabName: string, path: string) {
 </script>
 
 <style scoped>
-/* ปรับแต่งเพื่อให้ Footer ดูสะอาดตาเหมือนในรูป */
 .q-footer {
   border-top: 1px solid #e0e0e0;
 }

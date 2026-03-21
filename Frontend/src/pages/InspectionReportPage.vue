@@ -1,7 +1,7 @@
 <template>
   <q-page class="bg-grey-3 row justify-center">
     <div
-      class="bg-white relative-position column"
+      class="bg-white relative-position"
       :style="{
         width: '100%',
         maxWidth: isMobile ? '430px' : '800px',
