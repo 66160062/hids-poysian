@@ -114,6 +114,16 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/InspectionReportPage.vue'),
         meta: { title: 'รายงาน' },
       },
+      {
+        path: 'job/:roundId/inspection/room-defect',
+        name: 'roomDefect',
+        component: () => import('pages/RoomDefectPage.vue'),
+      },
+      {
+        path: 'job/:roundId/inspection/add-defect',
+        name: 'addDefect',
+        component: () => import('pages/AddDefectPage.vue'),
+      },
     ],
   },
   {

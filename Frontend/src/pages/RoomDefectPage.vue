@@ -33,10 +33,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import DefectDetailCard from '../components/DefectDetailCard.vue'
+import { useRouter } from 'vue-router';
 
-const goBack = () => {
-  console.log('ย้อนกลับไปหน้า InspectionPage')
-  // ถ้าใช้ Vue Router จะเป็น router.push('/inspection') หรือ router.back()
+const router = useRouter();
+
+const goBack = async () => {
+  await router.back();
 }
 
 const defectList = ref([

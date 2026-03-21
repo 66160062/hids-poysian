@@ -52,9 +52,12 @@ import InspectionSummaryCard from '../components/InspectionSummaryCard.vue';
 import EmptyState from '../components/EmptyState.vue';
 import InspectionItemCard from '../components/InspectionItemCard.vue';
 import ActionFab from '../components/ActionFab.vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
+const route = useRoute();
 const router = useRouter();
+const roundId = route.params.roundId;
+
 const searchQuery = ref('');
 const summaryData = ref({
   totalRooms: 1,
@@ -77,15 +80,15 @@ const defectsList = ref([
   },
 ]);
 
-const goToRoomDetail = async (roomData: { roomName: string }) => {
-  console.log('กดที่ห้อง:', roomData.roomName);
+const goToRoomDetail = async (roomData: { room_id: number; roomName: string; }) => {
   await router.push({
-    path: '/room-defect',
-    query: { roomName: roomData.roomName },
+    name: 'roomDefect',
+    params: { roundId: roundId },
+    query: { roomName: roomData.roomName, roomId: roomData.room_id }
   });
 };
-const goBack = () => {
-  console.log('ย้อนกลับไปหน้า Job Details');
+const goBack = async () => {
+  await router.back();
 };
 
 const onFilterClick = () => {
@@ -93,7 +96,10 @@ const onFilterClick = () => {
 };
 
 const onAddDefectClick = async () => {
-  await router.push('/add-defect');
+  await router.push({
+    name: 'addDefect',
+    params: { roundId: roundId }
+  });
 };
 
 const onSubmit = () => {
