@@ -10,29 +10,25 @@
         boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
       }"
     >
-      <div class="bg-white" style="position: sticky; top: 0; z-index: 100;">
+      <div class="bg-white relative-position" style="position: sticky; top: 0; z-index: 100;">
 
-        <div class="row items-center q-pt-xl q-pb-md q-px-md">
-
-          <div class="col-2 text-left">
-            <q-icon
-              name="arrow_back_ios_new"
-              size="24px"
-              color="primary"
-              class="cursor-pointer text-weight-bold"
-              @click="goBack"
-            />
-          </div>
-
-          <div class="col-8 text-center text-weight-bold" style="font-size: 24px;">
-            ข้อมูลการตรวจบ้าน
-          </div>
-
-          <div class="col-2"></div>
-
+        <div class="absolute" style="left: 20px; bottom: 20px; z-index: 10;">
+          <q-icon
+            name="arrow_back_ios_new"
+            size="24px"
+            color="primary"
+            class="cursor-pointer text-weight-bold"
+            @click="goBack"
+          />
         </div>
 
-        <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
+        <div
+          class="text-center text-weight-bold q-pt-xl q-pb-md"
+          style="font-size: 24px; "
+        >
+          ข้อมูลการตรวจบ้าน
+        </div>
+                <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
       </div>
 
       <div v-if="loading" class="flex flex-center col q-pa-xl">
@@ -46,7 +42,7 @@
               ? `http://localhost:3000${jobData.job.projectImageUrl}`
               : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600'
           "
-          style="border-radius: 8px; height: 180px"
+          style="border-radius: 8px; height: 250px; margin-top: 20px ;"
           fit="cover"
           class="q-mb-md q-mt-sm"
         />
