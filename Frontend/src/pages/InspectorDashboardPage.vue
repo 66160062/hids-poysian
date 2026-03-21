@@ -10,8 +10,17 @@
         boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
       }"
     >
+      <div class="bg-white" style="position: sticky; top: 0; z-index: 100;">
+        <div
+          class="text-center text-weight-bold q-pt-xl q-pb-md"
+          style="font-size: 24px; "
+        >
+          ข้อมูลการตรวจบ้าน
+        </div>
+        <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
+      </div>
 
-      <div class="q-pa-lg" style="margin-top: 120px;">
+      <div class="q-pa-lg" style="max-width: 600px; margin: 20px auto 0">
         <div class="row justify-between items-center q-mb-md">
           <div class="text-weight-bold" style="font-size: 16px">
             {{ isMonthlyView ? 'ตารางงานเดือนนี้' : 'ตารางงานสัปดาห์นี้' }}
