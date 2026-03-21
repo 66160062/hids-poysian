@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsEnum } from 'class-validator';
+import { DefectStatus } from '../entities/defect.entity';
 export class CreateDefectDto {
   @ApiProperty({ description: 'รหัสรอบตรวจ', example: 1 })
   @IsNumber()
@@ -26,14 +27,17 @@ export class CreateDefectDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ description: 'ความรุนแรง', example: 'HIGH' })
+  @ApiProperty({ description: 'ความรุนแรง', example: 'Minor' })
   @IsString()
   severity: string;
 
-  @ApiProperty({ description: 'สถานะ', example: 'OPEN', required: false })
-  @IsOptional()
-  @IsString()
-  status?: string;
+  @ApiProperty({
+    enum: DefectStatus,
+    example: DefectStatus.PENDING_REPAIR,
+    required: false,
+  })
+  @IsEnum(DefectStatus)
+  status?: DefectStatus;
 
   @ApiProperty({
     type: 'string',
