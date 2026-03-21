@@ -5,7 +5,7 @@ import { Defect } from './entities/defect.entity';
 import { CreateDefectDto } from './dto/create-defect.dto';
 import { UpdateDefectDto } from './dto/update-defect.dto';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
-// import { RoomTemplate } from 'src/room-templates/entities/room-template.entity';
+import { RoomTemplate } from 'src/room-templates/entities/room-template.entity';
 import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub-category.entity';
 import { User } from 'src/users/entities/user.entity';
 
@@ -18,8 +18,8 @@ export class DefectsService {
     @InjectRepository(InspectionRound)
     private readonly roundsRepo: Repository<InspectionRound>,
 
-    // @InjectRepository(RoomTemplate)
-    // private readonly templatesRepo: Repository<RoomTemplate>,
+    @InjectRepository(RoomTemplate)
+    private readonly templatesRepo: Repository<RoomTemplate>,
 
     @InjectRepository(DefectSubCategory)
     private readonly subCategoriesRepo: Repository<DefectSubCategory>,
@@ -37,9 +37,9 @@ export class DefectsService {
     const round = await this.roundsRepo.findOneByOrFail({
       roundId: createDefectDto.roundId,
     });
-    // const template = await this.templatesRepo.findOneByOrFail({
-    //   templateId: createDefectDto.templateId,
-    // });
+    const template = await this.templatesRepo.findOneByOrFail({
+      templateId: createDefectDto.templateId,
+    });
     const subCategory = await this.subCategoriesRepo.findOneByOrFail({
       subCategoryId: createDefectDto.subCategoryId,
     });
@@ -50,9 +50,10 @@ export class DefectsService {
     const defect = this.defectsRepo.create({
       ...createDefectDto,
       round,
-      // template,
+      template,
       subCategory,
       inspector,
+      imageFileSize: createDefectDto.imageFileSize,
     });
 
     return this.defectsRepo.save(defect);
@@ -60,20 +61,24 @@ export class DefectsService {
 
   findAll() {
     return this.defectsRepo.find({
-      // relations: ['round', 'template', 'subCategory', 'inspector'],
-      relations: ['round', 'subCategory', 'inspector'],
+      relations: ['round', 'template', 'subCategory', 'inspector'],
     });
   }
 
   findOne(id: number) {
     return this.defectsRepo.findOneOrFail({
       where: { defectId: id },
-      // relations: ['round', 'template', 'subCategory', 'inspector'],
-      relations: ['round', 'subCategory', 'inspector'],
+      relations: ['round', 'template', 'subCategory', 'inspector'],
     });
   }
 
-  async update(id: number, updateDefectDto: UpdateDefectDto) {
+  async update(
+    id: number,
+    updateDefectDto: UpdateDefectDto & {
+      imageUrl?: string;
+      imageFileSize?: number;
+    },
+  ) {
     const defect = await this.defectsRepo.findOneByOrFail({ defectId: id });
     Object.assign(defect, updateDefectDto);
     return this.defectsRepo.save(defect);
@@ -82,5 +87,18 @@ export class DefectsService {
   async remove(id: number) {
     const defect = await this.defectsRepo.findOneByOrFail({ defectId: id });
     return this.defectsRepo.remove(defect);
+  }
+
+  findByRound(roundId: number) {
+    return this.defectsRepo.find({
+      where: { round: { roundId } },
+      relations: [
+        'round',
+        'subCategory',
+        'subCategory.category',
+        'inspector',
+        'template',
+      ],
+    });
   }
 }

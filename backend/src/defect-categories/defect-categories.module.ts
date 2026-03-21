@@ -8,6 +8,6 @@ import { TypeOrmModule } from '@nestjs/typeorm/dist/typeorm.module';
   imports: [TypeOrmModule.forFeature([DefectCategory])],
   controllers: [DefectCategoriesController],
   providers: [DefectCategoriesService],
-  exports: [DefectCategoriesService, DefectCategoriesModule],
+  exports: [DefectCategoriesService, TypeOrmModule],
 })
 export class DefectCategoriesModule {}

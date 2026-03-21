@@ -1,35 +1,38 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateDefectSubCategoryDto } from './dto/create-defect-sub-category.dto';
 import { UpdateDefectSubCategoryDto } from './dto/update-defect-sub-category.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DefectSubCategory } from './entities/defect-sub-category.entity';
 import { Repository } from 'typeorm';
+import { DefectCategory } from 'src/defect-categories/entities/defect-category.entity';
 
 @Injectable()
 export class DefectSubCategoriesService {
   constructor(
     @InjectRepository(DefectSubCategory)
-    private readonly DefectSubCategoryRepository: Repository<DefectSubCategory>,
+    private readonly DefectSubCategoriesRepository: Repository<DefectSubCategory>,
+    @InjectRepository(DefectCategory)
+    private readonly DefectCategoriesRepository: Repository<DefectCategory>,
   ) {}
 
   async create(
     createDto: CreateDefectSubCategoryDto,
   ): Promise<DefectSubCategory> {
-    try {
-      const newSubCategory = this.DefectSubCategoryRepository.create(createDto);
-      return await this.DefectSubCategoryRepository.save(newSubCategory);
-    } catch (error) {
-      console.error('Error creating sub category:', error);
-      throw new InternalServerErrorException('ไม่สามารถสร้างหมวดย่อยได้');
-    }
+    const subCategory = this.DefectSubCategoriesRepository.create(createDto);
+    subCategory.category =
+      await this.DefectCategoriesRepository.findOneByOrFail({
+        categoryId: createDto.categoryId,
+      });
+
+    return await this.DefectSubCategoriesRepository.save(subCategory);
   }
 
   async findAll() {
-    return this.DefectSubCategoryRepository.find();
+    return this.DefectSubCategoriesRepository.find();
   }
 
   async findOne(id: number) {
-    return this.DefectSubCategoryRepository.findOneByOrFail({
+    return this.DefectSubCategoriesRepository.findOneByOrFail({
       subCategoryId: id,
     });
   }
@@ -38,14 +41,19 @@ export class DefectSubCategoriesService {
     id: number,
     updateDefectSubCategoryDto: UpdateDefectSubCategoryDto,
   ) {
-    await this.DefectSubCategoryRepository.update(
-      id,
-      updateDefectSubCategoryDto,
-    );
+    const subCategory =
+      await this.DefectSubCategoriesRepository.findOneByOrFail({
+        subCategoryId: id,
+      });
+    subCategory.category =
+      await this.DefectCategoriesRepository.findOneByOrFail({
+        categoryId: updateDefectSubCategoryDto.categoryId,
+      });
+    await this.DefectSubCategoriesRepository.update(id, subCategory);
     return this.findOne(id);
   }
 
   async remove(id: number) {
-    return this.DefectSubCategoryRepository.softDelete(id);
+    return this.DefectSubCategoriesRepository.softDelete(id);
   }
 }
