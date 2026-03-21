@@ -105,11 +105,29 @@
             </div>
           </q-btn>
 
-          <q-btn
+          <q-btn outline color="blue" class="full-width q-py-sm" @click="showReport = true">
+            <div class="row full-width justify-between items-center q-px-sm">
+              <span class="text-weight-bold">ดูตัวอย่างรายงาน PDF</span>
+              <q-icon
+                name="chevron_right"
+                class="bg-blue text-white rounded-borders q-pa-xs"
+                size="18px"
+              />
+            </div>
+          </q-btn>
+
+          <DefectReport
+            ref="reportComp"
+            :round="jobData"
+            :defects="defects"
+            style="position: absolute; left: -9999px; top: -9999px"
+          />
+          <!-- ปุ่ม print reporttttttttt -->
+          <!-- <q-btn
+            @click="router.push(`/inspection/job/${roundId}/report`)"
             outline
             color="blue"
             class="full-width q-py-sm"
-            style="border-radius: 10px; border-width: 1.5px"
           >
             <div class="row full-width justify-between items-center q-px-sm">
               <span class="text-weight-bold">สรุปรายงาน</span>
@@ -119,7 +137,39 @@
                 size="18px"
               />
             </div>
+          </q-btn> -->
+          <q-btn
+            :outline="!hasSummary"
+            :color="hasSummary ? 'green' : 'blue'"
+            class="full-width q-py-sm"
+            style="border-radius: 10px; border-width: 1.5px"
+            @click="router.push(`/inspector/job/${roundId}/report`)"
+          >
+            <div class="row full-width justify-between items-center q-px-sm">
+              <span class="text-weight-bold">สรุปรายงาน</span>
+              <q-icon
+                :name="hasSummary ? 'check_circle' : 'chevron_right'"
+                :class="hasSummary ? 'text-white' : 'bg-blue text-white rounded-borders q-pa-xs'"
+                size="28px"
+              />
+            </div>
           </q-btn>
+
+          <q-dialog v-model="showReport" full-width full-height>
+            <q-card>
+              <q-bar class="bg-primary text-white">
+                <div>ตัวอย่างรายงาน Defect</div>
+                <q-space />
+                <q-btn dense flat icon="close" v-close-popup>
+                  <q-tooltip>ปิด</q-tooltip>
+                </q-btn>
+              </q-bar>
+
+              <q-card-section class="q-pa-none">
+                <DefectReport :round="jobData" :defects="defects" />
+              </q-card-section>
+            </q-card>
+          </q-dialog>
         </q-card-section>
       </q-card>
 
@@ -143,6 +193,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
 import type { InspectionRound } from 'src/models';
+import DefectReport from 'src/components/DefectReport.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -151,11 +202,21 @@ const jobData = ref<InspectionRound | null>(null);
 
 const roundId = route.params.roundId as string;
 
-// ฟังก์ชันดึงข้อมูลจาก API
+const reportComp = ref<InstanceType<typeof DefectReport> | null>(null);
+const defects = ref([]);
+
+const showReport = ref(false);
+
+const hasSummary = ref(false);
+
+async function checkSummary() {
+  const res = await api.get(`/inspection-summary-items/round/${roundId}`);
+  hasSummary.value = res.data.length > 0;
+}
+
 async function fetchJobDetails() {
   loading.value = true;
   try {
-    // แก้ endpoint ให้ตรงกับของหลังบ้านคุณ (เช่น /inspection-rounds/:id)
     const res = await api.get(`/inspection-rounds/${roundId}`);
     console.log('API response:', res.data);
     jobData.value = res.data;
@@ -166,7 +227,6 @@ async function fetchJobDetails() {
   }
 }
 
-// ฟังก์ชันแปลงวันที่ให้เป็นภาษาไทย
 function formatDate(dateStr: string) {
   if (!dateStr) return '';
   const date = new Date(dateStr);
@@ -177,8 +237,15 @@ function formatDate(dateStr: string) {
   });
 }
 
+async function fetchDefects() {
+  const res = await api.get(`/defects/round/${roundId}`);
+  defects.value = res.data;
+}
+
 onMounted(() => {
   void fetchJobDetails();
+  void fetchDefects();
+  void checkSummary();
 });
 </script>
 

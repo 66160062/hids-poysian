@@ -20,8 +20,12 @@
           <EmptyState v-if="defectsList.length === 0" message="ไม่พบรายการตรวจ" />
 
           <div v-else class="column q-gutter-y-md">
-            <InspectionItemCard v-for="(item, index) in defectsList" :key="index" :groupedData="item"
-              @clickCard="goToRoomDetail" />
+            <InspectionItemCard
+              v-for="(item, index) in defectsList"
+              :key="index"
+              :groupedData="item"
+              @clickCard="goToRoomDetail"
+            />
           </div>
         </div>
 
@@ -29,8 +33,13 @@
       </q-page>
     </q-page-container>
     <q-footer class="bg-transparent q-px-md q-pb-lg">
-      <q-btn color="primary" label="ยืนยันการตรวจ" class="full-width text-weight-bold shadow-3"
-        style="border-radius: 8px; height: 48px;" @click="onSubmit" />
+      <q-btn
+        color="primary"
+        label="ยืนยันการตรวจ"
+        class="full-width text-weight-bold shadow-3"
+        style="border-radius: 8px; height: 48px"
+        @click="onSubmit"
+      />
     </q-footer>
   </q-layout>
 </template>
@@ -68,11 +77,11 @@ const defectsList = ref([
   },
 ]);
 
-const goToRoomDetail = async (roomData: { roomName: string; }) => {
-  console.log('กดที่ห้อง:', roomData.roomName)
+const goToRoomDetail = async (roomData: { roomName: string }) => {
+  console.log('กดที่ห้อง:', roomData.roomName);
   await router.push({
     path: '/room-defect',
-    query: { roomName: roomData.roomName }
+    query: { roomName: roomData.roomName },
   });
 };
 const goBack = () => {

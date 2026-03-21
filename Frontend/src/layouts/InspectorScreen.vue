@@ -1,6 +1,6 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header class="bg-white text-black" flat bordered>
+    <q-header v-if="!hideHeader" class="bg-white text-black" flat bordered>
       <q-toolbar class="justify-center q-py-md">
         <q-toolbar-title class="text-center text-weight-bold" style="font-size: 24px">
           ข้อมูลการตรวจบ้าน
@@ -55,6 +55,7 @@ const router = useRouter();
 const activeTab = ref('inspection');
 
 const route = useRoute();
+const hideHeader = computed(() => route.path.includes('/job/'));
 const hideBottomBar = computed(() => route.path.includes('/job/'));
 
 function changeTab(tabName: string, path: string) {
