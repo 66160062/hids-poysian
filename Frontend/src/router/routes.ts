@@ -12,16 +12,20 @@ const routes: RouteRecordRaw[] = [
     children: [{ path: '', component: () => import('pages/LoginPage.vue') }],
   },
   {
-
     path: '/inspection',
     component: () => import('layouts/FullScreen.vue'),
     children: [
       { path: '', component: () => import('pages/InspectionMainPage.vue') },
       { path: 'info', component: () => import('pages/InspectionInfoPage.vue') },
-      { path: 'report', name: 'inspectionReport', component: () => import('pages/InspectionReportPage.vue') }
+      {
+        path: 'report',
+        name: 'inspectionReport',
+        component: () => import('pages/InspectionReportPage.vue'),
+      },
     ],
   },
-    {path: '/dashboard',
+  {
+    path: '/dashboard',
     component: () => import('layouts/FullScreen.vue'),
     meta: { requiresAuth: true }, // ⭐ ต้องมีบรรทัดนี้
     children: [{ path: '', component: () => import('pages/DashboardTestPage.vue') }],
@@ -103,6 +107,11 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'job/:roundId/inspection',
         component: () => import('pages/InspectionPage.vue'),
+      },
+      {
+        path: 'job/:roundId/inspection/room-defect',
+        name: 'roomDefect',
+        component: () => import('pages/RoomDefectPage.vue'),
       },
     ],
   },
