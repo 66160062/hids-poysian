@@ -9,7 +9,9 @@ describe('SummaryTemplateOptionsService', () => {
       providers: [SummaryTemplateOptionsService],
     }).compile();
 
-    service = module.get<SummaryTemplateOptionsService>(SummaryTemplateOptionsService);
+    service = module.get<SummaryTemplateOptionsService>(
+      SummaryTemplateOptionsService,
+    );
   });
 
   it('should be defined', () => {

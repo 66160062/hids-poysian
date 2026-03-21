@@ -60,7 +60,6 @@ export interface Defect {
   severity: string;
   status: string;
   imageUrl?: string;
-  remark: string;
   subCategory?: {
     name: string;
     category?: { name: string };
