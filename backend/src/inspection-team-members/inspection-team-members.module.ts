@@ -5,18 +5,18 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { InspectionTeamMember } from './entities/inspection-team-member.entity';
 import { InspectionJobsModule } from 'src/inspection-jobs/inspection-jobs.module';
 import { UsersModule } from 'src/users/users.module';
-import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
-import { User } from 'src/users/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InspectionTeamMember, InspectionJob, User]),
+    TypeOrmModule.forFeature([InspectionTeamMember]),
+    InspectionJobsModule,
+    UsersModule,
     InspectionJobsModule,
     UsersModule,
   ],
 
   controllers: [InspectionTeamMembersController],
   providers: [InspectionTeamMembersService],
-  exports: [InspectionTeamMembersService, InspectionTeamMembersModule],
+  exports: [InspectionTeamMembersService, TypeOrmModule],
 })
 export class InspectionTeamMembersModule {}
