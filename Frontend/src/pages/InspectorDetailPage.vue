@@ -1,163 +1,246 @@
 <template>
-  <q-page class="bg-grey-2 q-pb-xl">
-    <q-header class="bg-white text-black" bordered>
-      <q-toolbar>
-        <q-btn flat dense icon="arrow_back_ios" color="blue" @click="router.back()" />
-        <q-toolbar-title class="text-center text-weight-bold q-pr-xl" style="font-size: 18px">
-          รายละเอียด
-        </q-toolbar-title>
-      </q-toolbar>
-    </q-header>
+  <q-page class="bg-grey-3 row justify-center">
+    <div
+      class="bg-white relative-position column"
+      :style="{
+        width: '100%',
+        maxWidth: isMobile ? '430px' : '800px',
+        minHeight: '100vh',
+        paddingBottom: '90px',
+        boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
+      }"
+    >
+      <div class="bg-white relative-position" style="position: sticky; top: 0; z-index: 100;">
 
-    <div v-if="loading" class="flex flex-center q-pa-xl">
-      <q-spinner color="blue" size="40px" />
-    </div>
-
-    <div v-else-if="jobData" class="q-pa-md">
-      <q-img
-        :src="`http://localhost:3000${jobData.job.projectImageUrl}`"
-        style="height: 200px; border-radius: 16px"
-        class="q-mb-md shadow-2"
-      />
-
-      <div class="bg-white q-pa-md rounded-borders shadow-1 q-mb-sm" style="border-radius: 12px">
-        <div class="row justify-between items-center q-mb-xs">
-          <div class="text-h6 text-blue text-weight-bold">{{ jobData.job.projectName }}</div>
-          <q-badge color="orange" class="q-pa-xs text-weight-bold" rounded>รอเข้าตรวจ</q-badge>
+        <div class="absolute" style="left: 20px; bottom: 20px; z-index: 10;">
+          <q-icon
+            name="arrow_back_ios_new"
+            size="24px"
+            color="primary"
+            class="cursor-pointer text-weight-bold"
+            @click="goBack"
+          />
         </div>
 
-        <div class="text-grey-7" style="font-size: 11px; line-height: 1.4">
-          เลขที่ {{ jobData.job.address?.houseNumber }} ถ.{{ jobData.job.address?.soi }} ต.{{
-            jobData.job.address?.subDistrict
+        <div
+          class="text-center text-weight-bold q-pt-xl q-pb-md"
+          style="font-size: 24px; "
+        >
+          ข้อมูลการตรวจบ้าน
+        </div>
+                <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
+      </div>
+
+      <div v-if="loading" class="flex flex-center col q-pa-xl">
+        <q-spinner color="primary" size="40px" />
+      </div>
+
+      <div v-else-if="jobData" class="q-px-lg q-pb-xl col column">
+        <q-img
+          :src="
+            jobData.job.projectImageUrl
+              ? `http://localhost:3000${jobData.job.projectImageUrl}`
+              : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600'
+          "
+          style="border-radius: 8px; height: 250px; margin-top: 20px ;"
+          fit="cover"
+          class="q-mb-md q-mt-sm"
+        />
+
+        <div class="row items-center justify-between no-wrap q-mb-xs">
+          <div
+            class="text-primary text-weight-bold ellipsis"
+            style="font-family: 'Inter', sans-serif; font-size: 20px"
+          >
+            {{ jobData.job.projectName }}
+          </div>
+          <q-badge
+            color="warning"
+            text-color="black"
+            style="
+              border-radius: 99px;
+              font-family: 'Inter', sans-serif;
+              font-weight: 500;
+              font-size: 10px;
+              padding: 4px 10px;
+            "
+          >
+            รอเข้าตรวจ
+          </q-badge>
+        </div>
+
+        <div
+          class="text-grey-6 q-mb-md"
+          style="
+            font-family: 'Inter', sans-serif;
+            font-size: 10px;
+            font-weight: 300;
+            line-height: 1.4;
+          "
+        >
+          เลขที่ {{ jobData.job.address?.houseNumber || '-' }} ถ.{{
+            jobData.job.address?.soi || '-'
           }}
-          อ.{{ jobData.job.address?.district }} จ.{{ jobData.job.address?.province }}
-          {{ jobData.job.address?.postalCode }}
+          ต.{{ jobData.job.address?.subDistrict || '-' }} อ.{{
+            jobData.job.address?.district || '-'
+          }}
+          จ.{{ jobData.job.address?.province || '-' }} {{ jobData.job.address?.postalCode || '-' }}
         </div>
 
-        <q-separator class="q-my-md" />
-
-        <div class="row items-center justify-between">
-          <div class="column q-gutter-y-xs">
-            <div class="row items-center text-blue">
-              <q-icon name="home" size="20px" class="q-mr-sm" />
-              <span class="text-black text-weight-medium">
-                {{ jobData.job.houseType?.name }} {{ jobData.job.address?.floor }} ชั้น
+        <div class="row items-center justify-between no-wrap q-mb-sm">
+          <div class="column q-gutter-y-sm">
+            <div class="row items-center q-gutter-x-sm">
+              <q-icon name="home" color="primary" size="18px" />
+              <span
+                class="text-dark"
+                style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500"
+              >
+                : {{ jobData.job.houseType?.name || '-' }}
+                {{ jobData.job.address?.floor ? jobData.job.address.floor + ' ชั้น' : '' }}
               </span>
             </div>
-            <div class="row items-center text-blue">
-              <q-icon name="zoom_out_map" size="20px" class="q-mr-sm" />
-              <span class="text-black text-weight-medium">
-                {{ jobData.job.usableArea }} ตร.ม.
+            <div class="row items-center q-gutter-x-sm">
+              <q-icon name="open_in_full" color="primary" size="18px" />
+              <span
+                class="text-dark"
+                style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500"
+              >
+                : {{ jobData.job.usableArea || '-' }} ตร.ม.
               </span>
             </div>
           </div>
-          <q-btn round color="blue-1" text-color="blue" icon="map" size="sm" unelevated />
+          <q-btn round outline color="primary" icon="map" size="md" />
         </div>
-      </div>
 
-      <div class="bg-white q-pa-md rounded-borders shadow-1 q-mb-sm" style="border-radius: 12px">
-        <div class="text-subtitle1 text-blue text-weight-bold q-mb-sm">
-          {{ jobData.job.customer?.fullName }}
-        </div>
-        <div class="row items-center justify-between">
-          <div class="column q-gutter-y-xs">
-            <div class="row items-center text-blue">
-              <q-icon name="phone" size="20px" class="q-mr-sm" />
-              <span class="text-black">{{ jobData.job.customer?.phoneNumber }}</span>
+        <q-separator color="primary" style="opacity: 0.5; height: 1px" class="q-my-md" />
+
+        <div class="row items-center justify-between no-wrap q-mb-sm">
+          <div class="column q-gutter-y-sm">
+            <div
+              class="text-primary text-weight-bold"
+              style="font-family: 'Inter', sans-serif; font-size: 14px"
+            >
+              {{ jobData.job.customer?.fullName || 'ไม่ระบุชื่อลูกค้า' }}
             </div>
-            <div class="row items-center text-blue">
-              <q-icon name="email" size="20px" class="q-mr-sm" />
-              <span class="text-black">{{ jobData.job.customer?.email || '-' }}</span>
+            <div class="row items-center q-gutter-x-sm">
+              <q-icon name="phone_in_talk" color="primary" size="18px" />
+              <span
+                class="text-dark"
+                style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500"
+              >
+                : {{ jobData.job.customer?.phoneNumber || '-' }}
+              </span>
+            </div>
+            <div class="row items-center q-gutter-x-sm">
+              <q-icon name="mail_outline" color="primary" size="18px" />
+              <span
+                class="text-dark"
+                style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500"
+              >
+                : {{ jobData.job.customer?.email || '-' }}
+              </span>
             </div>
           </div>
-          <q-btn round color="blue-1" text-color="blue" icon="call" size="sm" unelevated />
+          <q-btn round outline color="primary" icon="phone_in_talk" size="md" />
         </div>
-      </div>
 
-      <q-card flat bordered style="border-radius: 12px" class="q-mb-md">
-        <q-card-section>
-          <div class="row justify-between items-center q-mb-sm">
-            <div class="text-subtitle1 text-weight-bold">
-              รายงานการตรวจ <span class="text-blue">ครั้งที่ {{ jobData.roundNumber || 1 }}</span>
+        <q-separator color="primary" style="opacity: 0.5; height: 1px" class="q-my-md" />
+
+        <q-card flat bordered class="q-pa-md report-card">
+          <div class="row items-center justify-between q-mb-xs">
+            <div
+              style="
+                font-family: 'Inter', sans-serif;
+                font-size: 14px;
+                font-weight: 600;
+                color: #333;
+              "
+            >
+              รายงานการตรวจ
+              <span class="text-primary">ครั้งที่ {{ jobData.roundNumber || 1 }}</span>
             </div>
-            <div class="text-blue text-caption text-weight-bold">
+            <div class="text-primary" style="font-family: 'Inter', sans-serif; font-size: 11px">
               {{ formatDate(jobData.scheduledDate) }}
             </div>
           </div>
-          <div class="text-caption text-grey-7 q-mb-md">
+
+          <div
+            class="text-grey-6 q-mb-md"
+            style="font-family: 'Inter', sans-serif; font-size: 10px"
+          >
             ผู้ตรวจ: {{ jobData.teamMember?.inspector?.team?.teamName || 'ทีมวิศวกร' }}
           </div>
 
           <q-btn
-            color="blue"
-            class="full-width q-mb-sm q-py-sm"
-            style="border-radius: 10px"
             unelevated
-            @click="router.push(`/inspector/job/${roundId}/inspection`)"
+            color="primary"
+            class="full-width q-mb-sm action-btn"
+            no-caps
+            @click="startInspection"
           >
-            <div class="row full-width justify-between items-center q-px-sm">
-              <span class="text-weight-bold">เริ่มตรวจบ้าน</span>
-              <q-icon
-                name="chevron_right"
-                class="bg-white text-blue rounded-borders q-pa-xs"
-                size="18px"
-              />
+            <div class="row items-center justify-between full-width">
+              <span>เริ่มตรวจบ้าน</span>
+              <div class="circle-icon bg-white text-primary flex flex-center">
+                <q-icon name="chevron_right" size="18px" />
+              </div>
             </div>
           </q-btn>
 
-          <q-btn
-            outline
-            color="blue"
-            class="full-width q-py-sm"
-            style="border-radius: 10px; border-width: 1.5px"
-          >
-            <div class="row full-width justify-between items-center q-px-sm">
-              <span class="text-weight-bold">สรุปรายงาน</span>
-              <q-icon
-                name="chevron_right"
-                class="bg-blue text-white rounded-borders q-pa-xs"
-                size="18px"
-              />
+          <q-btn outline color="primary" class="full-width action-btn" no-caps @click="goToReport">
+            <div class="row items-center justify-between full-width">
+              <span>สรุปรายงาน</span>
+              <div class="circle-icon outline-circle text-primary flex flex-center">
+                <q-icon name="chevron_right" size="18px" />
+              </div>
             </div>
           </q-btn>
-        </q-card-section>
-      </q-card>
+        </q-card>
 
-      <q-btn
-        disable
-        color="grey-4"
-        text-color="grey-6"
-        class="full-width text-weight-bold q-py-md"
-        style="border-radius: 12px; font-size: 16px"
-        label="ส่งอนุมัติการตรวจ"
-        unelevated
-      />
+        <q-space />
+
+        <q-btn disable class="full-width q-mt-xl disabled-btn" label="ส่งอนุมัติการตรวจ" no-caps />
+      </div>
+
+      <div v-else class="text-center q-pa-xl col column justify-center text-grey-7">
+        ไม่พบข้อมูลงานตรวจนี้
+      </div>
     </div>
-
-    <div v-else class="text-center q-pa-xl text-grey-7">ไม่พบข้อมูลงานตรวจนี้</div>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useQuasar } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
 import type { InspectionRound } from 'src/models';
 
+const $q = useQuasar();
 const route = useRoute();
 const router = useRouter();
+
+const isMobile = computed(() => $q.screen.lt.md);
 const loading = ref(true);
 const jobData = ref<InspectionRound | null>(null);
 
 const roundId = route.params.roundId as string;
 
+// การนำทาง
+const goBack = () => {
+  router.back();
+};
+const goToReport = async () => {
+  await router.push('/inspection/report');
+};
+const startInspection = () => {
+  void router.push(`/inspector/job/${roundId}/inspection`);
+};
+
 // ฟังก์ชันดึงข้อมูลจาก API
 async function fetchJobDetails() {
   loading.value = true;
   try {
-    // แก้ endpoint ให้ตรงกับของหลังบ้านคุณ (เช่น /inspection-rounds/:id)
     const res = await api.get(`/inspection-rounds/${roundId}`);
-    console.log('API response:', res.data);
     jobData.value = res.data;
   } catch (error) {
     console.error('Error fetching job details:', error);
@@ -166,8 +249,8 @@ async function fetchJobDetails() {
   }
 }
 
-// ฟังก์ชันแปลงวันที่ให้เป็นภาษาไทย
-function formatDate(dateStr: string) {
+// ฟังก์ชันแปลงวันที่
+function formatDate(dateStr?: string) {
   if (!dateStr) return '';
   const date = new Date(dateStr);
   return date.toLocaleDateString('th-TH', {
@@ -183,7 +266,38 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.rounded-borders {
-  border-radius: 12px;
+.report-card {
+  border-radius: 8px;
+  border-color: #e0e0e0;
+}
+
+.action-btn {
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  padding: 8px 16px;
+  height: 44px;
+}
+
+.circle-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.outline-circle {
+  border: 2px solid #1975d2;
+}
+
+.disabled-btn {
+  background-color: #dcdcdc !important;
+  color: #757575 !important;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  padding: 12px 0;
+  pointer-events: none;
 }
 </style>

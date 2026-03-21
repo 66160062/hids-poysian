@@ -31,26 +31,42 @@ const categories = ref([
 <template>
   <q-page class="bg-grey-3 row justify-center">
     <div
-      class="bg-white relative-position column"
+      class="bg-white relative-position"
       :style="{
         width: '100%',
         maxWidth: isMobile ? '430px' : '800px',
         minHeight: '100vh',
+        paddingBottom: '90px',
         boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
       }"
     >
-      <div class="row items-center justify-between q-pt-xl q-pb-md q-px-md relative-position" style="margin-top: 20px">
+      <div
+        class="row items-center justify-between q-pt-xl q-pb-md q-px-md relative-position"
+        style="margin-top: 20px"
+      >
         <div style="width: 40px; z-index: 1">
-          <q-icon name="arrow_back_ios_new" size="24px" color="primary" class="cursor-pointer text-weight-bold" @click="goBack" />
+          <q-icon
+            name="arrow_back_ios_new"
+            size="24px"
+            color="primary"
+            class="cursor-pointer text-weight-bold"
+            @click="goBack"
+          />
         </div>
-        <div class="absolute-center text-weight-bold text-dark" style="font-size: 24px; margin-top: 20px">
+        <div
+          class="absolute-center text-weight-bold text-dark"
+          style="font-size: 24px; margin-top: 20px"
+        >
           สรุปรายงาน
         </div>
         <div style="width: 40px"></div>
       </div>
 
       <div class="q-px-lg q-pb-xl col column">
-        <div class="text-weight-bold q-mb-md" style="font-size: 18px; font-family: 'Inter', sans-serif;">
+        <div
+          class="text-weight-bold q-mb-md"
+          style="font-size: 18px; font-family: 'Inter', sans-serif"
+        >
           0/19
         </div>
 
@@ -64,7 +80,10 @@ const categories = ref([
           >
             <template v-slot:header>
               <q-item-section>
-                <div class="text-primary text-weight-bold" style="font-family: 'Inter', sans-serif; font-size: 15px;">
+                <div
+                  class="text-primary text-weight-bold"
+                  style="font-family: 'Inter', sans-serif; font-size: 15px"
+                >
                   {{ cat.title }}
                 </div>
               </q-item-section>
@@ -78,11 +97,14 @@ const categories = ref([
               <OtherReport v-else-if="cat.id === 'others'" />
               <CleanReport v-else-if="cat.id === 'cleanliness'" />
 
-              <q-card-section v-else class="text-grey-7" style="font-family: 'Inter', sans-serif; font-size: 14px;">
+              <q-card-section
+                v-else
+                class="text-grey-7"
+                style="font-family: 'Inter', sans-serif; font-size: 14px"
+              >
                 ไม่มีข้อมูลของหมวดหมู่ {{ cat.title }} ในขณะนี้
               </q-card-section>
             </q-card>
-
           </q-expansion-item>
         </div>
       </div>

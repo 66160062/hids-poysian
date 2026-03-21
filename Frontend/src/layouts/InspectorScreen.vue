@@ -1,12 +1,6 @@
 <template>
   <q-layout view="lHh Lpr lFf">
     <q-header class="bg-white text-black" flat>
-      <q-toolbar class="justify-center q-py-md">
-        <q-toolbar-title class="text-center text-weight-bold" style="font-size: 24px; margin-top: 40px">
-          ข้อมูลการตรวจบ้าน
-        </q-toolbar-title>
-      </q-toolbar>
-      <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
     </q-header>
 
     <q-page-container class="bg-white">
