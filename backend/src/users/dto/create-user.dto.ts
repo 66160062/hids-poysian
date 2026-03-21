@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -13,6 +14,7 @@ export class CreateUserDto {
     description: 'ไอดีทีม',
     example: '101',
   })
+  @Type(() => Number)
   @IsNotEmpty()
   @IsNumber()
   teamId: number;
@@ -46,4 +48,14 @@ export class CreateUserDto {
     example: 'inspector',
   })
   role: string;
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'ลิงก์รูปภาพผู้ใช้',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  imageUrl?: string;
 }

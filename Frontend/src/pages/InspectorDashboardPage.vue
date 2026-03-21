@@ -1,168 +1,228 @@
 <template>
-  <q-page class="bg-grey-1 q-pb-xl">
-    <div class="bg-white q-pa-md q-mb-sm">
-      <div class="row justify-between items-center q-mb-sm">
-        <span class="text-weight-bold text-h6">
-          {{ isMonthlyView ? 'ตารางงานเดือนนี้' : 'ตารางงานสัปดาห์นี้' }}
-        </span>
-        <span class="text-blue text-caption cursor-pointer" @click="toggleView">
-          {{ isMonthlyView ? 'ดูตารางแบบสัปดาห์' : 'ดูตารางงานทั้งหมด' }}
-        </span>
-      </div>
-
-      <div v-if="isMonthlyView" class="row text-grey-7 q-mb-sm text-center">
-        <div class="col" v-for="dayName in dayLabels" :key="dayName">
-          <span class="text-caption">{{ dayName }}</span>
-        </div>
-      </div>
-
-      <div :class="isMonthlyView ? 'row wrap' : 'row no-wrap scroll q-gutter-sm'">
+  <q-page class="bg-grey-3 row justify-center">
+    <div
+      class="bg-white relative-position"
+      :style="{
+        width: '100%',
+        maxWidth: isMobile ? '430px' : '800px',
+        minHeight: '100vh',
+        paddingBottom: '90px',
+        boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
+      }"
+    >
+      <div class="bg-white" style="position: sticky; top: 0; z-index: 100;">
         <div
-          v-for="(day, index) in calendarDays"
-          :key="day.dateStr || index"
-          :class="isMonthlyView ? '' : 'col-auto'"
-          :style="isMonthlyView ? 'width: 14.28%; padding: 2px;' : ''"
+          class="text-center text-weight-bold q-pt-xl q-pb-md"
+          style="font-size: 24px; "
         >
-          <div v-if="day.isEmpty" style="height: 100%"></div>
+          ข้อมูลการตรวจบ้าน
+        </div>
+        <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
+      </div>
 
-          <q-btn
-            v-else
-            flat
-            dense
-            :class="day.isActive ? 'bg-blue text-white rounded-borders' : 'bg-grey-2 text-grey-8'"
+      <div class="q-pa-lg" style="max-width: 600px; margin: 20px auto 0">
+        <div class="row justify-between items-center q-mb-md">
+          <div class="text-weight-bold" style="font-size: 16px">
+            {{ isMonthlyView ? 'ตารางงานเดือนนี้' : 'ตารางงานสัปดาห์นี้' }}
+          </div>
+          <div class="text-primary text-weight-bold" style="font-size: 13px; cursor: pointer" @click="toggleView">
+            {{ isMonthlyView ? 'ดูตารางแบบสัปดาห์' : 'ดูตารางงานทั้งหมด' }}
+          </div>
+        </div>
+
+        <div v-if="isMonthlyView" class="row text-grey-7 q-mb-sm text-center">
+          <div class="col" v-for="dayName in dayLabels" :key="dayName">
+            <span style="font-size: 12px">{{ dayName }}</span>
+          </div>
+        </div>
+
+        <div
+          class="hide-scrollbar"
+          :class="isMonthlyView ? 'row wrap' : 'row no-wrap q-gutter-x-sm items-start'"
+          :style="isMonthlyView ? '' : 'overflow-x: auto; padding: 10px 0'"
+        >
+          <div
+            v-for="(day, index) in calendarDays"
+            :key="day.dateStr || index"
+            :class="isMonthlyView ? '' : 'column items-center relative-position'"
             :style="
               isMonthlyView
-                ? 'width: 100%; border-radius: 12px'
-                : 'min-width: 52px; border-radius: 12px'
+                ? 'width: 14.28%; padding: 2px;'
+                : 'min-width: 68px; border-radius: 14px; padding-top: 14px; height: ' + (day.isActive ? '100px' : '85px') + ';'
             "
-            @click="selectDay(day)"
           >
-            <div class="column items-center q-pa-xs">
-              <span v-if="!isMonthlyView" class="text-caption q-mb-xs">{{ day.label }}</span>
-              <span class="text-h6 text-weight-bold">{{ day.date }}</span>
-              <q-badge
-                v-if="day.hasDot"
-                :color="day.isActive ? 'white' : 'blue'"
-                rounded
-                style="width: 12px; height: 6px; padding: 0; margin-top: 2px"
-              />
-            </div>
-          </q-btn>
-        </div>
-      </div>
-    </div>
+            <div v-if="day.isEmpty" style="height: 100%"></div>
 
-    <div class="bg-white q-pa-md q-mb-sm">
-      <div class="row justify-between items-end">
-        <span class="text-weight-bold text-h6">รายการงานตรวจ</span>
-        <span class="text-subtitle2 text-black">วันที่ {{ selectedDateLabel }}</span>
-      </div>
-      <div class="text-caption text-grey-7 q-mt-xs">
-        สรุป: ตรวจบ้าน {{ selectedDayRounds.length }} งาน | ตรวจความคืบหน้า (-)
-      </div>
-    </div>
-
-    <div v-if="loading" class="flex flex-center q-pa-xl">
-      <q-spinner color="blue" size="40px" />
-    </div>
-
-    <div v-else class="q-px-md q-mb-xl">
-      <div v-if="selectedDayRounds.length === 0" class="text-center text-grey q-pa-xl">
-        ไม่มีงานตรวจในวันนี้
-      </div>
-
-      <template
-        v-for="(session, index) in [
-          { title: 'รอบเช้า 9:00-12:00', rounds: morningRounds },
-          { title: 'รอบบ่าย 13:00-16:00', rounds: afternoonRounds },
-        ]"
-        :key="index"
-      >
-        <div v-if="session.rounds.length > 0" class="q-mb-md">
-          <div class="text-blue text-weight-bold q-mb-sm">{{ session.title }}</div>
-
-          <q-card
-            v-for="round in session.rounds"
-            :key="round.roundId"
-            flat
-            bordered
-            class="q-mb-md"
-            style="border-color: #1976d2; border-radius: 12px"
-            @click="goToDetails(round.roundId)"
-          >
-            <q-card-section horizontal class="q-pa-sm">
-              <q-img
-                :src="`http://localhost:3000${round.job.projectImageUrl}`"
-                style="width: 120px; height: 130px; border-radius: 8px; object-fit: cover"
-              />
-
-              <div class="col q-pl-sm column justify-between">
-                <div>
-                  <div class="row justify-between items-start q-mb-xs">
-                    <span class="text-blue text-weight-bold text-subtitle2">
-                      {{ round.job.projectName }}
-                    </span>
-                    <q-badge
-                      color="orange"
-                      rounded
-                      text-color="white"
-                      class="text-caption q-px-sm"
-                      style="font-size: 10px"
-                    >
-                      รอเข้าตรวจ
-                    </q-badge>
-                  </div>
-
-                  <div class="text-grey-7 text-caption" style="line-height: 1.2; font-size: 11px">
-                    เลขที่ {{ round.job.address?.houseNumber }} ถ.{{ round.job.address?.soi }} ต.{{
-                      round.job.address?.subDistrict
-                    }}
-                    อ.{{ round.job.address?.district }} จ.{{ round.job.address?.province }}
-                    {{ round.job.address?.postalCode }}
-                  </div>
-
-                  <div class="text-black text-weight-medium q-mt-xs" style="font-size: 11px">
-                    ประเภทที่อยู่: {{ round.job.houseType?.name }}
-                    {{ round.job.address.floor }} ชั้น
-                  </div>
-
-                  <div class="row items-center q-mt-xs text-blue">
-                    <q-icon name="person_outline" size="14px" class="q-mr-xs" />
-                    <span style="font-size: 11px">: {{ round.job.customer?.fullName }}</span>
-                  </div>
-
-                  <div class="row items-center text-blue q-mb-xs">
-                    <q-icon name="call" size="14px" class="q-mr-xs" />
-                    <span style="font-size: 11px">: {{ round.job.customer?.phoneNumber }}</span>
-                  </div>
-                </div>
-
-                <div class="row justify-between items-end">
-                  <q-btn
-                    color="blue"
-                    icon="map"
-                    label="นำทาง"
-                    dense
-                    unelevated
-                    style="border-radius: 8px; font-size: 12px; padding: 2px 12px"
-                  />
-                  <q-icon name="chevron_right" color="blue" size="20px" />
-                </div>
+            <div
+              v-else
+              class="column items-center relative-position full-width full-height cursor-pointer"
+              @click="selectDay(day)"
+              :class="[
+                day.isActive
+                  ? 'bg-primary text-white shadow-3 rounded-borders'
+                  : day.dateStr < todayStr
+                    ? 'bg-grey-4 text-grey-6 rounded-borders'
+                    : 'bg-white text-dark rounded-borders'
+              ]"
+              :style="[
+                !isMonthlyView && day.dateStr > todayStr ? { border: '1px solid #E0E0E0' } : { border: 'none' },
+                isMonthlyView ? { borderRadius: '12px', padding: '4px 0' } : { borderRadius: '14px' }
+              ]"
+            >
+              <div v-if="!isMonthlyView" style="font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500">
+                {{ day.label }}
               </div>
-            </q-card-section>
-          </q-card>
+              <div
+                class="text-weight-bold q-mt-xs"
+                style="font-family: 'Inter', sans-serif; font-size: 24px; line-height: 1"
+              >
+                {{ day.date }}
+              </div>
+              <div
+                v-if="day.hasDot"
+                class="absolute-bottom"
+                style="
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 50%;
+                  margin-bottom: 14px;
+                  left: 50%;
+                  transform: translateX(-50%);
+                "
+                :class="
+                  day.isActive
+                    ? 'bg-white'
+                    : day.dateStr < todayStr
+                      ? 'bg-grey-5'
+                      : 'bg-dark'
+                "
+              ></div>
+            </div>
+          </div>
         </div>
-      </template>
+      </div>
+
+      <q-separator color="primary" class="q-mx-lg q-mb-lg" style="height: 2px" />
+
+      <div class="q-px-lg q-mb-md">
+        <div class="row justify-between items-end">
+          <div class="text-weight-bold" style="font-size: 16px">รายการงานตรวจ</div>
+          <div class="text-weight-bold" style="font-size: 15px">วันที่ {{ selectedDateLabel }}</div>
+        </div>
+        <div class="text-grey-6 q-mt-xs" style="font-size: 12px">
+          สรุป: ตรวจบ้าน {{ selectedDayRounds.length }} งาน | ตรวจความคืบหน้า (-)
+        </div>
+      </div>
+
+      <div v-if="loading" class="flex flex-center q-pa-xl">
+        <q-spinner color="blue" size="40px" />
+      </div>
+
+      <div v-else class="q-px-lg q-mb-xl">
+        <div v-if="selectedDayRounds.length === 0" class="text-center text-grey q-pa-xl">
+          ไม่มีงานตรวจในวันนี้
+        </div>
+
+        <template v-else>
+          <div v-if="morningRounds.length > 0">
+            <div class="text-primary text-weight-bold q-mb-sm" style="font-size: 12px">
+              รอบเช้า 9:00-12:00
+            </div>
+            <PropertyCard
+              v-for="round in morningRounds"
+              :key="'m' + round.roundId"
+              :item="round"
+              :isMobile="isMobile"
+            />
+          </div>
+
+          <div v-if="afternoonRounds.length > 0" class="q-mt-lg">
+            <div class="text-primary text-weight-bold q-mb-sm" style="font-size: 12px">
+              รอบบ่าย 13:00-16:00
+            </div>
+            <PropertyCard
+              v-for="round in afternoonRounds"
+              :key="'a' + round.roundId"
+              :item="round"
+              :isMobile="isMobile"
+            />
+          </div>
+        </template>
+      </div>
+
+      <div class="fixed-bottom row justify-center" style="pointer-events: none; z-index: 100">
+        <div
+          class="bg-white row items-center"
+          :style="{
+            width: '100%',
+            maxWidth: isMobile ? '430px' : '800px',
+            height: '75px',
+            pointerEvents: 'auto',
+            boxShadow: '0 -4px 15px rgba(0, 0, 0, 0.05)',
+            borderTop: '1px solid #eee',
+          }"
+        >
+          <div
+            @click="activeTab = 'inspection'"
+            class="col column items-center justify-center relative-position cursor-pointer h-full"
+            style="height: 100%"
+          >
+            <div
+              v-if="activeTab === 'inspection'"
+              class="absolute-top bg-primary"
+              style="height: 4px; width: 100%"
+            ></div>
+            <q-icon
+              name="engineering"
+              size="28px"
+              :color="activeTab === 'inspection' ? 'primary' : 'grey-5'"
+              class="q-mb-xs"
+            />
+            <div
+              class="text-weight-bold"
+              :class="activeTab === 'inspection' ? 'text-primary' : 'text-grey-5'"
+              style="font-size: 12px"
+            >
+              การตรวจบ้าน
+            </div>
+          </div>
+
+          <div
+            @click="activeTab = 'progress'"
+            class="col column items-center justify-center relative-position cursor-pointer h-full"
+            style="height: 100%"
+          >
+            <div
+              v-if="activeTab === 'progress'"
+              class="absolute-top bg-primary"
+              style="height: 4px; width: 100%"
+            ></div>
+            <q-icon
+              name="assignment_turned_in"
+              size="28px"
+              :color="activeTab === 'progress' ? 'primary' : 'grey-5'"
+              class="q-mb-xs"
+            />
+            <div
+              class="text-weight-bold"
+              :class="activeTab === 'progress' ? 'text-primary' : 'text-grey-5'"
+              style="font-size: 12px"
+            >
+              การตรวจความคืบหน้า
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </q-page>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { useQuasar } from 'quasar';
 import { api } from 'src/boot/axios';
 import type { InspectionRound } from 'src/models';
-import { useRouter } from 'vue-router';
-const router = useRouter();
+import PropertyCard from '../components/PropertyCard.vue';
 
 interface CalendarDay {
   isEmpty: boolean;
@@ -173,6 +233,10 @@ interface CalendarDay {
   hasDot?: boolean;
 }
 
+const $q = useQuasar();
+const isMobile = computed(() => $q.screen.lt.md);
+
+const activeTab = ref('inspection');
 const inspectorId = ref(1);
 const loading = ref(false);
 const isMonthlyView = ref(false);
@@ -180,6 +244,9 @@ const rounds = ref<InspectionRound[]>([]);
 const selectedDate = ref(new Date());
 
 const dayLabels = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+
+// วันที่ปัจจุบันสำหรับเทียบเป็นอดีต/ปัจจุบัน/อนาคต ในปฏิทิน
+const todayStr = computed(() => toLocalDateStr(new Date()));
 
 const calendarDays = computed<CalendarDay[]>(() => {
   const today = new Date();
@@ -301,11 +368,17 @@ function toUTCDateStr(dateStr: string): string {
   return String(dateStr).substring(0, 10);
 }
 
-function goToDetails(roundId: number) {
-  void router.push(`/inspector/job/${roundId}`);
-}
-
 onMounted(() => {
   void fetchRounds();
 });
 </script>
+
+<style scoped>
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+</style>

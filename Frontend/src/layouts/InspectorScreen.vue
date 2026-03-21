@@ -1,12 +1,6 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header class="bg-white text-black" flat bordered>
-      <q-toolbar class="justify-center q-py-md">
-        <q-toolbar-title class="text-center text-weight-bold" style="font-size: 24px">
-          ข้อมูลการตรวจบ้าน
-        </q-toolbar-title>
-      </q-toolbar>
-      <q-separator color="blue" size="2px" class="q-mx-md" />
+    <q-header class="bg-white text-black" flat>
     </q-header>
 
     <q-page-container class="bg-white">
@@ -64,7 +58,6 @@ function changeTab(tabName: string, path: string) {
 </script>
 
 <style scoped>
-/* ปรับแต่งเพื่อให้ Footer ดูสะอาดตาเหมือนในรูป */
 .q-footer {
   border-top: 1px solid #e0e0e0;
 }
