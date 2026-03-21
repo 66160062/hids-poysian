@@ -61,14 +61,14 @@ export class DefectsService {
 
   findAll() {
     return this.defectsRepo.find({
-      relations: ['round', 'template', 'subCategory', 'inspector'],
+      relations: ['round', 'template', 'subCategories', 'inspector'],
     });
   }
 
   findOne(id: number) {
     return this.defectsRepo.findOneOrFail({
       where: { defectId: id },
-      relations: ['round', 'template', 'subCategory', 'inspector'],
+      relations: ['round', 'template', 'subCategories', 'inspector'],
     });
   }
 
@@ -98,6 +98,8 @@ export class DefectsService {
         'subCategories.category',
         'inspector',
         'template',
+        'template.floor',
+        'template.subRoom',
       ],
     });
   }

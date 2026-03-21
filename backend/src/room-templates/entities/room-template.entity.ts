@@ -23,7 +23,7 @@ export class RoomTemplate {
   @JoinColumn({ name: 'floor_id' })
   floor: Floor;
 
-  @ManyToOne(() => SubRoom)
+  @ManyToOne(() => SubRoom, { nullable: true })
   @JoinColumn({ name: 'sub_room_id' })
-  subRoom: SubRoom;
+  subRoom: SubRoom | null;
 }

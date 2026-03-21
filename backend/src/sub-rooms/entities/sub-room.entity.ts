@@ -6,5 +6,5 @@ export class SubRoom {
   subRoomId: number;
 
   @Column()
-  room_name: string;
+  roomName: string;
 }
