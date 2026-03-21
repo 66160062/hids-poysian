@@ -54,6 +54,16 @@ export interface WeekDay {
   hasDot: boolean;
 }
 
+export interface Category {
+  categoryId: number;
+  name: string;
+}
+
+export interface SubCategory {
+  subCategoryId: number;
+  name: string;
+  categoryId: Category;
+}
 export interface Defect {
   defectId: number;
   description: string;
