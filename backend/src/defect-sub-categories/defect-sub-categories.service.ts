@@ -25,7 +25,9 @@ export class DefectSubCategoriesService {
   }
 
   async findAll() {
-    return this.DefectSubCategoryRepository.find();
+    return this.DefectSubCategoryRepository.find({
+      relations: ['category'],
+    });
   }
 
   async findOne(id: number) {
