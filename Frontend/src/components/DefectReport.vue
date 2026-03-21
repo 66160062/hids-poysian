@@ -16,7 +16,7 @@
         </div>
 
         <div class="row justify-center q-py-sm">
-          <img :src="PoisyanLogo" style="height: 100px; object-fit: contain" />
+          <img :src="PoysianLogo" style="height: 100px; object-fit: contain" />
         </div>
 
         <div class="row justify-center q-mb-md">
@@ -154,12 +154,15 @@
             <div class="card-body">
               <div class="room-title">{{ getRoomShortName(defect) }}</div>
               <div class="info-row">
-                <span class="label">ประเภทงาน:</span> {{ defect.subCategory?.name }}
+                <span class="label">ประเภทงาน:</span> {{ defect.subCategory?.category?.name }}
               </div>
               <div class="info-row">
-                <span class="label">รายการ:</span> {{ defect.description }}
+                <span class="label">รายการ:</span> {{ defect.subCategory?.name }}
               </div>
-              <img :src="PoisyanLogo" class="card-logo-watermark-img" />
+              <div class="info-row">
+                <span class="label">หมายเหตุ:</span> {{ defect.description }}
+              </div>
+              <img :src="PoysianLogo" class="card-logo-watermark-img" />
             </div>
           </div>
         </div>
@@ -200,12 +203,15 @@
               <img :src="`http://localhost:3000${defect.imageUrl}`" class="defect-img" />
               <div class="card-body">
                 <div class="info-row">
-                  <span class="label">ประเภทงาน:</span> {{ defect.subCategory?.name }}
+                  <span class="label">ประเภทงาน:</span> {{ defect.subCategory?.category?.name }}
                 </div>
                 <div class="info-row">
-                  <span class="label">รายการ:</span> {{ defect.description }}
+                  <span class="label">รายการ:</span> {{ defect.subCategory?.name }}
                 </div>
-                <img :src="PoisyanLogo" class="card-logo-watermark-img" />
+                <div class="info-row">
+                  <span class="label">หมายเหตุ:</span> {{ defect.description }}
+                </div>
+                <img :src="PoysianLogo" class="card-logo-watermark-img" />
               </div>
             </div>
           </div>
@@ -236,7 +242,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import type { InspectionRound, Defect } from 'src/models';
-import PoisyanLogo from 'src/assets/Logos/Poysian.png';
+import PoysianLogo from 'src/assets/Logos/Poysian.png';
 import LineLogo from 'src/assets/Logos/LINE.png';
 import FacebookLogo from 'src/assets/Logos/Facebook.png';
 import CallLogo from 'src/assets/Logos/Call.png';
@@ -448,6 +454,8 @@ defineExpose({ exportPdf });
   flex: 1;
 }
 .defect-card {
+  display: flex;
+  flex-direction: column;
   border: 1px solid #f48fb1;
   border-radius: 8px;
   background: #fff5f7;
@@ -486,7 +494,8 @@ defineExpose({ exportPdf });
   padding: 8px;
   font-size: 11px;
   position: relative;
-  height: calc(100% - 130px);
+  flex: 1;
+  overflow: visible;
 }
 .room-title {
   font-weight: bold;
@@ -527,7 +536,7 @@ defineExpose({ exportPdf });
   position: absolute;
   bottom: 0px;
   right: 10px;
-  opacity: 0.2;
+  opacity: 0.3;
   width: 60px;
   object-fit: contain;
 }

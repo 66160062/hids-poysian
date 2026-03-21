@@ -11,7 +11,9 @@ describe('SummaryTemplateOptionsController', () => {
       providers: [SummaryTemplateOptionsService],
     }).compile();
 
-    controller = module.get<SummaryTemplateOptionsController>(SummaryTemplateOptionsController);
+    controller = module.get<SummaryTemplateOptionsController>(
+      SummaryTemplateOptionsController,
+    );
   });
 
   it('should be defined', () => {

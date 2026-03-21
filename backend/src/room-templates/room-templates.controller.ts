@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { RoomTemplatesService } from './room-templates.service';
 import { CreateRoomTemplateDto } from './dto/create-room-template.dto';
 import { UpdateRoomTemplateDto } from './dto/update-room-template.dto';
@@ -23,7 +31,10 @@ export class RoomTemplatesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateRoomTemplateDto: UpdateRoomTemplateDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateRoomTemplateDto: UpdateRoomTemplateDto,
+  ) {
     return this.roomTemplatesService.update(+id, updateRoomTemplateDto);
   }
 
