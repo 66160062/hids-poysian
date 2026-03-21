@@ -8,7 +8,11 @@ export class CreateRoomTemplateDto {
 
   @ApiProperty({ example: '1' })
   @IsString()
-  floor: string;
+  floorId: number;
+
+  @ApiProperty({ example: '1' })
+  @IsString()
+  subRoomId: number;
 
   @ApiProperty({ example: '-' })
   @IsString()

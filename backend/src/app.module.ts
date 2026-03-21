@@ -40,7 +40,10 @@ import { SummaryTemplatesModule } from './summary-templates/summary-templates.mo
 import { SummaryTemplate } from './summary-templates/entities/summary-template.entity';
 import { InspectionSummaryItemsModule } from './inspection-summary-items/inspection-summary-items.module';
 import { InspectionSummaryItem } from './inspection-summary-items/entities/inspection-summary-item.entity';
-import { FloorsModule } from './floors/floors.module';
+import { FloorModule } from './floor/floor.module';
+import { SubRoomsModule } from './sub-rooms/sub-rooms.module';
+import { Floor } from './floor/entities/floor.entity';
+import { SubRoom } from './sub-rooms/entities/sub-room.entity';
 
 @Module({
   imports: [
@@ -65,6 +68,8 @@ import { FloorsModule } from './floors/floors.module';
         SummaryTemplateOption,
         SummaryTemplate,
         InspectionSummaryItem,
+        Floor,
+        SubRoom,
       ],
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),
@@ -91,7 +96,8 @@ import { FloorsModule } from './floors/floors.module';
     SummaryTemplateOptionsModule,
     SummaryTemplatesModule,
     InspectionSummaryItemsModule,
-    FloorsModule,
+    FloorModule,
+    SubRoomsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

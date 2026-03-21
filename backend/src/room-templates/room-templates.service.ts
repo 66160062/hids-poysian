@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { RoomTemplate } from './entities/room-template.entity';
 import { CreateRoomTemplateDto } from './dto/create-room-template.dto';
 import { UpdateRoomTemplateDto } from './dto/update-room-template.dto';
+import { Floor } from 'src/floor/entities/floor.entity';
 
 @Injectable()
 export class RoomTemplatesService {
@@ -12,9 +13,14 @@ export class RoomTemplatesService {
     private readonly roomTemplatesRepo: Repository<RoomTemplate>,
   ) {}
 
-  create(createRoomTemplateDto: CreateRoomTemplateDto) {
-    const roomTemplate = this.roomTemplatesRepo.create(createRoomTemplateDto);
-    return this.roomTemplatesRepo.save(roomTemplate);
+  async create(createRoomTemplateDto: CreateRoomTemplateDto) {
+    const { floorId, ...rest } = createRoomTemplateDto;
+    const roomTemplate = this.roomTemplatesRepo.create({
+      ...rest,
+      floor: { floorId } as Floor,
+    });
+
+    return await this.roomTemplatesRepo.save(roomTemplate);
   }
 
   findAll() {
