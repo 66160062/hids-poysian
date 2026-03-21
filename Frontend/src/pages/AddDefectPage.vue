@@ -44,22 +44,41 @@
       <div v-if="step === 2" class="col column">
         <div class="text-h6 text-weight-bold text-primary">รายละเอียดงาน</div>
         <div class="text-caption text-grey-7 q-mb-lg">กรุณากรอกรายละเอียดงาน</div>
+
         <div class="column q-gutter-y-md">
-          <div class="row no-wrap items-start">
-            <q-icon name="work_outline" size="sm" color="primary" class="q-pt-sm q-mr-sm" />
-            <div class="col column q-gutter-y-md">
+
+          <div class="row no-wrap items-center">
+            <q-icon name="work_outline" size="sm" color="primary" class="q-mr-sm" />
+            <div class="col">
               <q-select outlined dense v-model="form.jobType" :options="categoryOptions" label="ประเภทงาน"
-                @update:model-value="form.defectTypes = []" />
-              <q-select outlined dense multiple use-chips v-model="form.defectTypes" :options="subCategoryOptions"
-                label="เลือกประเภทตำหนิ" :disable="!form.jobType" />
+                option-value="value" option-label="label" emit-value map-options
+                @update:model-value="onCategoryChange" />
             </div>
           </div>
+
+          <div class="row no-wrap items-start">
+            <q-icon name="list" size="sm" color="primary" class="q-pt-sm q-mr-sm" />
+            <div class="col">
+              <q-select outlined multiple use-chips stack-label v-model="form.defectTypes" :options="subCategoryOptions"
+                label="เลือกประเภทตำหนิ" option-value="value" option-label="label" emit-value map-options
+                :disable="!form.jobType" style="max-width: 100%">
+                <template v-slot:selected-item="scope">
+                  <q-chip removable dense @remove="scope.removeAtIndex(scope.index)" :tabindex="scope.tabindex"
+                    color="primary" text-color="white" size="11px" class="q-ma-xs">
+                    {{ scope.opt.label }}
+                  </q-chip>
+                </template>
+              </q-select>
+            </div>
+          </div>
+
           <div class="row no-wrap items-start">
             <q-icon name="edit_note" size="sm" color="primary" class="q-pt-sm q-mr-sm" />
             <div class="col">
               <q-input outlined dense type="textarea" v-model="form.note" label="หมายเหตุ" rows="3" />
             </div>
           </div>
+
         </div>
       </div>
 
@@ -92,17 +111,13 @@ const route = useRoute();
 const inspectionStore = useInspectionStore();
 const roundId = route.params.roundId;
 const step = ref<number>(1);
-interface SelectOption {
-  label: string;
-  value: number;
-}
 
 interface DefectForm {
   roomType: string | null;
   subRoomType: string | null;
   floor: string | null;
-  jobType: SelectOption | null;
-  defectTypes: SelectOption[];
+  jobType: number | null;
+  defectTypes: number[];
   note: string;
 }
 
@@ -118,14 +133,24 @@ const form = ref<DefectForm>({
 
 // ดึง Category จาก Store มาทำ Options
 const categoryOptions = computed(() =>
-  inspectionStore.categories.map(c => ({ label: c.name, value: c.id }))
+  inspectionStore.categories.map(c => ({
+    label: c.name,
+    value: (c as any).categoryId
+  }))
 );
+const onCategoryChange = (val: number | null) => {
+  form.value.jobType = val; // เก็บ ID ลงใน form
+  form.value.defectTypes = []; // ล้างค่าตำหนิเก่าทุกครั้งที่เปลี่ยนประเภทงาน
+};
 
 // ดึง Sub-Category โดยกรองตาม Category ที่เลือกใน jobType
 const subCategoryOptions = computed(() => {
   if (!form.value.jobType) return [];
-  return inspectionStore.getSubByCategoryId(form.value.jobType.value)
-    .map(s => ({ label: s.name, value: s.id }));
+  return inspectionStore.getSubByCategoryId(form.value.jobType)
+    .map(s => ({
+      label: s.name,
+      value: (s as any).subCategoryId
+    }));
 });
 
 
@@ -168,29 +193,26 @@ const handleNext = async () => {
   if (step.value === 1) {
     step.value = 2;
   } else {
-    const formData = new FormData();
-    formData.append('roundId', String(roundId));
-    formData.append('description', form.value.note || '');
-    formData.append('status', 'ไม่ผ่าน');
-
-    // ส่ง ID ของ Sub-Categories (แปลงเป็น JSON string หรือส่งแยกตามที่ Backend ออกแบบ)
-    const subIds = form.value.defectTypes.map(d => d.value);
-    formData.append('subCategoryId', JSON.stringify(subIds));
-
-    formData.append('description', form.value.note);
-    formData.append('status', 'ไม่ผ่าน'); // ค่าเริ่มต้น
-
-    if (selectedFile.value) {
-      formData.append('file', selectedFile.value);
-      formData.append('imagefileSize', String(selectedFile.value.size));
-    }
-
     try {
+      const formData = new FormData();
+      formData.append('roundId', String(roundId));
+      formData.append('description', form.value.note || '');
+      formData.append('status', 'ไม่ผ่าน'); //
+      if (form.value.defectTypes && form.value.defectTypes.length > 0) {
+        // ส่ง ID ของตัวแรกที่เลือก เพื่อให้ตรงกับ DB ที่เป็นประเภท int
+        formData.append('subCategoryId', String(form.value.defectTypes[0]));
+      }
+
+      if (selectedFile.value) {
+        formData.append('file', selectedFile.value);
+        formData.append('imagefileSize', String(selectedFile.value.size)); //
+      }
+
       await inspectionStore.saveDefect(formData);
       alert('บันทึกข้อมูลสำเร็จ!');
       router.back();
     } catch (err) {
-      console.error('Save Defect Error:', err);
+      console.error('Save error:', err); // แก้ warning unused var
       alert('เกิดข้อผิดพลาดในการบันทึก');
     }
   }

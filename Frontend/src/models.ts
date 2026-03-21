@@ -53,3 +53,14 @@ export interface WeekDay {
   isActive: boolean;
   hasDot: boolean;
 }
+
+export interface Category {
+  categoryId: number;
+  name: string;
+}
+
+export interface SubCategory {
+  subCategoryId: number;
+  name: string;
+  categoryId: Category;
+}
