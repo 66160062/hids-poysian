@@ -78,7 +78,8 @@ export interface Defect {
   template?: {
     roomName: string;
     roomType: string;
-    floor: string;
+    floor: { label: string };
+    subRoom: { roomName: string };
   };
 }
 
@@ -101,4 +102,33 @@ export interface InspectionSummaryItem {
   template: SummaryTemplate;
   option: SummaryTemplateOption;
   detailValue?: string;
+}
+
+export interface DefectCategory {
+  categoryId: number;
+  name: string;
+}
+
+export interface DefectSubCategory {
+  subCategoryId: number;
+  name: string;
+  category?: DefectCategory;
+}
+
+export interface SubRoom {
+  subRoomId: number;
+  roomName: string;
+}
+
+export interface Floor {
+  floorId: number;
+  label: string;
+}
+
+export interface RoomTemplate {
+  templateId: number;
+  roomName: string;
+  roomType: string;
+  floor: Floor;
+  subRoom: SubRoom;
 }

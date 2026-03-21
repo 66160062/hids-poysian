@@ -164,6 +164,18 @@
               <div class="info-row">
                 <span class="label">หมายเหตุ:</span> {{ defect.description }}
               </div>
+              <div class="info-row">
+                <span class="label">สถานะ:</span>
+                {{
+                  defect.status === 'PENDING_REPAIR'
+                    ? 'กำลังรอซ่อม'
+                    : defect.status === 'REJECTED'
+                      ? 'ซ่อมไม่ผ่าน'
+                      : defect.status === 'CLOSED'
+                        ? 'ซ่อมผ่านแล้ว'
+                        : defect.status
+                }}
+              </div>
               <img :src="PoysianLogo" class="card-logo-watermark-img" />
             </div>
           </div>
@@ -214,6 +226,10 @@
                 </div>
                 <div class="info-row">
                   <span class="label">หมายเหตุ:</span> {{ defect.description }}
+                </div>
+                <div class="info-row">
+                  <span class="label">สถานะ:</span>
+                  {{ defect.status === 'PENDING_REPAIR' ? 'กำลังรอซ่อม' : defect.status }}
                 </div>
                 <img :src="PoysianLogo" class="card-logo-watermark-img" />
               </div>
@@ -279,17 +295,17 @@ const summaryStats = computed(() => [
     color: 'text-amber',
   },
   {
-    label: 'Pending Repair',
+    label: 'กำลังรอซ่อม',
     value: props.defects.filter((d) => d.status === 'PENDING_REPAIR').length,
     color: 'text-orange',
   },
   {
-    label: 'Rejected',
+    label: 'ซ่อมไม่ผ่าน',
     value: props.defects.filter((d) => d.status === 'REJECTED').length,
     color: 'text-negative',
   },
   {
-    label: 'Closed',
+    label: 'ซ่อมผ่านแล้ว',
     value: props.defects.filter((d) => d.status === 'CLOSED').length,
     color: 'text-positive',
   },
@@ -309,7 +325,7 @@ const allDefectGroups = computed(() => {
   const groups: Record<string, Defect[]> = {};
   props.defects.forEach((defect) => {
     const key = defect.template
-      ? `${defect.template.roomName}, ${defect.template.roomType}, ชั้น ${defect.template.floor}`
+      ? `${defect.template?.roomName}, ${defect.template?.subRoom?.roomName ?? '-'}, ${defect.template?.floor?.label}`
       : 'ไม่ระบุห้อง';
     if (!groups[key]) groups[key] = [];
     groups[key].push(defect);
@@ -334,7 +350,7 @@ const totalPages = computed(() => 1 + majorChunks.value.length + allDefectChunks
 
 function getRoomShortName(defect: Defect) {
   if (!defect.template) return 'ไม่ระบุห้อง';
-  return `${defect.template.roomName}, ชั้น ${defect.template.floor}`;
+  return `${defect.template?.roomName}, ${defect.template?.subRoom?.roomName ?? '-'}, ${defect.template?.floor?.label}`;
 }
 
 function formatDate(dateStr: string) {
