@@ -60,10 +60,11 @@ export interface Defect {
   severity: string;
   status: string;
   imageUrl?: string;
-  subCategory?: {
+  subCategories: {
+    subCategoryId: number;
     name: string;
     category?: { name: string };
-  };
+  }[];
   template?: {
     roomName: string;
     roomType: string;

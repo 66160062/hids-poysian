@@ -8,7 +8,7 @@ export class RoomTemplate {
   @Column()
   roomName: string;
 
-  @Column()
+  @Column({ type: 'varchar', length: 10, nullable: true })
   floor: string;
 
   @Column({ length: 50 })

@@ -154,10 +154,12 @@
             <div class="card-body">
               <div class="room-title">{{ getRoomShortName(defect) }}</div>
               <div class="info-row">
-                <span class="label">ประเภทงาน:</span> {{ defect.subCategory?.category?.name }}
+                <span class="label">ประเภทงาน:</span>
+                {{ defect.subCategories?.[0]?.category?.name }}
               </div>
               <div class="info-row">
-                <span class="label">รายการ:</span> {{ defect.subCategory?.name }}
+                <span class="label">รายการ:</span>
+                {{ defect.subCategories?.map((s) => s.name).join(', ') }}
               </div>
               <div class="info-row">
                 <span class="label">หมายเหตุ:</span> {{ defect.description }}
@@ -203,10 +205,12 @@
               <img :src="`http://localhost:3000${defect.imageUrl}`" class="defect-img" />
               <div class="card-body">
                 <div class="info-row">
-                  <span class="label">ประเภทงาน:</span> {{ defect.subCategory?.category?.name }}
+                  <span class="label">ประเภทงาน:</span>
+                  {{ defect.subCategories?.[0]?.category?.name }}
                 </div>
                 <div class="info-row">
-                  <span class="label">รายการ:</span> {{ defect.subCategory?.name }}
+                  <span class="label">รายการ:</span>
+                  {{ defect.subCategories?.map((s) => s.name).join(', ') }}
                 </div>
                 <div class="info-row">
                   <span class="label">หมายเหตุ:</span> {{ defect.description }}
