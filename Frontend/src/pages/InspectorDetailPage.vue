@@ -11,7 +11,6 @@
       }"
     >
       <div class="bg-white relative-position" style="position: sticky; top: 0; z-index: 100;">
-
         <div class="absolute" style="left: 20px; bottom: 20px; z-index: 10;">
           <q-icon
             name="arrow_back_ios_new"
@@ -23,12 +22,12 @@
         </div>
 
         <div
-          class="text-center text-weight-bold q-pt-xl q-pb-md"
+          class="text-center text-weight-bold q-pt-md q-pb-md"
           style="font-size: 24px; "
         >
-          ข้อมูลการตรวจบ้าน
+          รายละเอียด
         </div>
-                <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
+        <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
       </div>
 
       <div v-if="loading" class="flex flex-center col q-pa-xl">
@@ -109,7 +108,7 @@
               </span>
             </div>
           </div>
-          <q-btn round outline color="primary" icon="map" size="md" />
+          <q-btn round outline color="primary" icon="map" size="md" @click="openGoogleMaps" />
         </div>
 
         <q-separator color="primary" style="opacity: 0.5; height: 1px" class="q-my-md" />
@@ -225,7 +224,6 @@ const jobData = ref<InspectionRound | null>(null);
 
 const roundId = route.params.roundId as string;
 
-// การนำทาง
 const goBack = () => {
   router.back();
 };
@@ -236,7 +234,33 @@ const startInspection = () => {
   void router.push(`/inspector/job/${roundId}/inspection`);
 };
 
-// ฟังก์ชันดึงข้อมูลจาก API
+const openGoogleMaps = () => {
+  if (!jobData.value?.job) return;
+
+  const job = jobData.value.job;
+  const address = job.address;
+
+  const searchQueryParts = [
+    job.projectName,
+    address?.houseNumber ? `เลขที่ ${address.houseNumber}` : '',
+    address?.soi ? `ถ.${address.soi}` : '',
+    address?.subDistrict ? `ต.${address.subDistrict}` : '',
+    address?.district ? `อ.${address.district}` : '',
+    address?.province ? `จ.${address.province}` : '',
+    address?.postalCode || ''
+  ];
+
+  const searchQuery = searchQueryParts.filter(part => part).join(' ');
+
+  if (searchQuery.trim()) {
+    const encodedQuery = encodeURIComponent(searchQuery);
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
+    window.open(mapsUrl, '_blank');
+  } else {
+    alert('ไม่พบข้อมูลที่อยู่สำหรับนำทาง');
+  }
+};
+
 async function fetchJobDetails() {
   loading.value = true;
   try {
@@ -249,7 +273,6 @@ async function fetchJobDetails() {
   }
 }
 
-// ฟังก์ชันแปลงวันที่
 function formatDate(dateStr?: string) {
   if (!dateStr) return '';
   const date = new Date(dateStr);
