@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { api } from 'src/boot/axios';
-import type { Category, SubCategory } from 'src/models.ts';
+import type { Category, DefectSubCategory, RoomTemplate, SubCategory } from 'src/models.ts';
 
 export const useInspectionStore = defineStore('inspection', () => {
-  const rooms = ref<any[]>([]);
+  const rooms = ref<RoomTemplate[]>([]);
   const categories = ref<Category[]>([]);
   const subCategories = ref<SubCategory[]>([]);
   const isLoading = ref(false);
@@ -12,16 +12,17 @@ export const useInspectionStore = defineStore('inspection', () => {
   const allCategories = computed(() => categories.value);
 
   const getSubByCategoryId = (selectedId: number) => {
-    return subCategories.value.filter((sub: any) => {
+    return subCategories.value.filter((sub: DefectSubCategory) => {
       return sub.category && Number(sub.category.categoryId) === Number(selectedId);
     });
   };
-  async function fetchInspectionMasterData(_roundId: string | number) {
+  async function fetchInspectionMasterData(roundId: string | number) {
     isLoading.value = true;
     try {
       const [catRes, subRes] = await Promise.all([
         api.get('/defect-categories'),
         api.get('/defect-sub-categories'),
+        api.get(`/inspection-rounds/${roundId}`),
       ]);
 
       //rooms.value = roomRes.data;

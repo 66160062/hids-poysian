@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Defect } from './entities/defect.entity';
 import { CreateDefectDto } from './dto/create-defect.dto';
 import { UpdateDefectDto } from './dto/update-defect.dto';
@@ -40,8 +40,8 @@ export class DefectsService {
     const template = await this.templatesRepo.findOneByOrFail({
       templateId: createDefectDto.templateId,
     });
-    const subCategory = await this.subCategoriesRepo.findOneByOrFail({
-      subCategoryId: createDefectDto.subCategoryId,
+    const subCategories = await this.subCategoriesRepo.findBy({
+      subCategoryId: In(createDefectDto.subCategoryIds),
     });
     const inspector = await this.usersRepo.findOneByOrFail({
       id: createDefectDto.inspectorId,
@@ -51,7 +51,7 @@ export class DefectsService {
       ...createDefectDto,
       round,
       template,
-      subCategory,
+      subCategories,
       inspector,
       imageFileSize: createDefectDto.imageFileSize,
     });
@@ -61,14 +61,14 @@ export class DefectsService {
 
   findAll() {
     return this.defectsRepo.find({
-      relations: ['round', 'template', 'subCategory', 'inspector'],
+      relations: ['round', 'template', 'subCategories', 'inspector'],
     });
   }
 
   findOne(id: number) {
     return this.defectsRepo.findOneOrFail({
       where: { defectId: id },
-      relations: ['round', 'template', 'subCategory', 'inspector'],
+      relations: ['round', 'template', 'subCategories', 'inspector'],
     });
   }
 
@@ -94,10 +94,12 @@ export class DefectsService {
       where: { round: { roundId } },
       relations: [
         'round',
-        'subCategory',
-        'subCategory.category',
+        'subCategories',
+        'subCategories.category',
         'inspector',
         'template',
+        'template.floor',
+        'template.subRoom',
       ],
     });
   }

@@ -25,7 +25,7 @@ export class SubRoomsService {
   }
 
   update(id: number, updateSubRoomDto: UpdateSubRoomDto) {
-    return this.subRoomsRepo.update({ subRoomId: id }, updateSubRoomDto);
+    return this.subRoomsRepo.update(id, updateSubRoomDto);
   }
 
   remove(id: number) {

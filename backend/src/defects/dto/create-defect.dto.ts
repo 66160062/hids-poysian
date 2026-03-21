@@ -1,20 +1,36 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNumber, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsEnum,
+  IsArray,
+} from 'class-validator';
 import { DefectStatus } from '../entities/defect.entity';
+import { Transform, Type } from 'class-transformer';
 export class CreateDefectDto {
   @ApiProperty({ description: 'รหัสรอบตรวจ', example: 1 })
+  @Type(() => Number)
   @IsNumber()
   roundId: number;
 
   @ApiProperty({ description: 'รหัส template ห้อง', example: 1 })
+  @Type(() => Number)
   @IsNumber()
   templateId: number;
 
-  @ApiProperty({ description: 'รหัสหมวดหมู่ย่อย', example: 1 })
-  @IsNumber()
-  subCategoryId: number;
+  @Transform(({ value }: { value: string | string[] }) => {
+    if (Array.isArray(value)) return value.map((v) => Number(v));
+    if (typeof value === 'string')
+      return value.split(',').map((v) => Number(v.trim()));
+    return value;
+  })
+  @IsArray()
+  @IsNumber({}, { each: true })
+  subCategoryIds: number[];
 
   @ApiProperty({ description: 'รหัสผู้ตรวจ', example: 1 })
+  @Type(() => Number)
   @IsNumber()
   inspectorId: number;
 

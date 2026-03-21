@@ -10,6 +10,8 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 export enum DefectStatus {
   PENDING_REPAIR = 'PENDING_REPAIR',
@@ -60,9 +62,9 @@ export class Defect {
   @JoinColumn({ name: 'template_id' })
   template: RoomTemplate;
 
-  @ManyToOne(() => DefectSubCategory)
-  @JoinColumn({ name: 'sub_category_id' })
-  subCategory: DefectSubCategory;
+  @ManyToMany(() => DefectSubCategory)
+  @JoinTable({ name: 'defect_sub_category_map' })
+  subCategories: DefectSubCategory[];
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'inspector_id' })

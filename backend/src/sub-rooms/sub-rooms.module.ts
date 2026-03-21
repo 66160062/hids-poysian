@@ -8,6 +8,6 @@ import { SubRoom } from './entities/sub-room.entity';
   imports: [TypeOrmModule.forFeature([SubRoom])],
   controllers: [SubRoomsController],
   providers: [SubRoomsService],
-  exports: [SubRoomsService, TypeOrmModule],
+  exports: [SubRoomsService],
 })
 export class SubRoomsModule {}

@@ -276,16 +276,6 @@ const jobData = ref<InspectionRound | null>(null);
 
 const roundId = route.params.roundId as string;
 
-const goBack = () => {
-  router.back();
-};
-const goToReport = async () => {
-  await router.push('/inspection/report');
-};
-const startInspection = () => {
-  void router.push(`/inspector/job/${roundId}/inspection`);
-};
-
 const openGoogleMaps = () => {
   if (!jobData.value?.job) return;
 
@@ -299,10 +289,10 @@ const openGoogleMaps = () => {
     address?.subDistrict ? `ต.${address.subDistrict}` : '',
     address?.district ? `อ.${address.district}` : '',
     address?.province ? `จ.${address.province}` : '',
-    address?.postalCode || ''
+    address?.postalCode || '',
   ];
 
-  const searchQuery = searchQueryParts.filter(part => part).join(' ');
+  const searchQuery = searchQueryParts.filter((part) => part).join(' ');
 
   if (searchQuery.trim()) {
     const encodedQuery = encodeURIComponent(searchQuery);
