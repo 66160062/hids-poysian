@@ -25,7 +25,7 @@ export class User {
   @Column()
   lineId: string;
 
-  @Column()
+  @Column({ select: false })
   password: string;
 
   @Column()

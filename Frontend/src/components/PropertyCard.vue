@@ -25,7 +25,8 @@ interface PropertyItem {
   };
 }
 
-defineProps<{
+// 🎯 เปลี่ยนเป็นประกาศตัวแปร props เพื่อให้เรียกใช้ข้อมูลข้างในฟังก์ชันได้
+const props = defineProps<{
   item: PropertyItem;
   isMobile: boolean;
 }>();
@@ -34,6 +35,41 @@ const router = useRouter();
 
 const goToInspectionInfo = (roundId: number) => {
   void router.push(`/inspector/job/${roundId}`);
+};
+
+// 🎯 ฟังก์ชันสำหรับเปิด Google Maps พร้อมคำค้นหา
+const openGoogleMaps = () => {
+  if (!props.item?.job) return;
+
+  const job = props.item.job;
+  const address = job.address;
+
+  // รวมข้อมูลที่อยู่ทั้งหมดเพื่อใช้ค้นหา
+  const searchQueryParts = [
+    job.projectName,
+    address?.houseNumber ? `เลขที่ ${address.houseNumber}` : '',
+    address?.soi ? `ถ.${address.soi}` : '',
+    address?.subDistrict ? `ต.${address.subDistrict}` : '',
+    address?.district ? `อ.${address.district}` : '',
+    address?.province ? `จ.${address.province}` : '',
+    address?.postalCode || ''
+  ];
+
+  // กรองค่าว่างทิ้ง แล้วต่อเป็นข้อความเดียวด้วยช่องว่าง
+  const searchQuery = searchQueryParts.filter(part => part).join(' ');
+
+  if (searchQuery.trim()) {
+    // แปลงข้อความให้รองรับ URL (รองรับภาษาไทย)
+    const encodedQuery = encodeURIComponent(searchQuery);
+
+    // ลิงก์มาตรฐานของ Google Maps Search
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
+
+    // เปิดแท็บใหม่ (หรือเปิดแอป Maps บนมือถือ)
+    window.open(mapsUrl, '_blank');
+  } else {
+    alert('ไม่พบข้อมูลที่อยู่สำหรับนำทาง');
+  }
 };
 </script>
 
@@ -141,6 +177,7 @@ const goToInspectionInfo = (roundId: number) => {
             class="nav-button"
             style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500"
             no-caps
+            @click.stop="openGoogleMaps"
           />
           <q-btn flat round icon="chevron_right" color="primary" @click="goToInspectionInfo(item.roundId)" />
         </div>

@@ -12,6 +12,6 @@ import { DefectCategoriesModule } from 'src/defect-categories/defect-categories.
   ],
   controllers: [DefectSubCategoriesController],
   providers: [DefectSubCategoriesService],
-  exports: [DefectSubCategoriesService, DefectSubCategoriesModule],
+  exports: [DefectSubCategoriesService, TypeOrmModule],
 })
 export class DefectSubCategoriesModule {}

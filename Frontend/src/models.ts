@@ -26,7 +26,7 @@ export interface InspectionRound {
   scheduledDate: string;
   status: string;
   roundNumber: string;
-  teamMember?: { inspector?: { team?: { teamName: string } } };
+  teamMember?: { inspector?: { team?: { teamName: string; contactInfo: string } } };
   job: {
     projectName: string;
     projectImageUrl: string;
@@ -63,4 +63,42 @@ export interface SubCategory {
   subCategoryId: number;
   name: string;
   categoryId: Category;
+}
+export interface Defect {
+  defectId: number;
+  description: string;
+  severity: string;
+  status: string;
+  imageUrl?: string;
+  remark: string;
+  subCategory?: {
+    name: string;
+    category?: { name: string };
+  };
+  template?: {
+    roomName: string;
+    roomType: string;
+    floor: string;
+  };
+}
+
+export interface SummaryTemplateOption {
+  optionId: number;
+  value: string;
+  group: string;
+  type: string;
+}
+
+export interface SummaryTemplate {
+  templateId: number;
+  category: string;
+  label: string;
+  options: SummaryTemplateOption[];
+}
+
+export interface InspectionSummaryItem {
+  itemId: number;
+  template: SummaryTemplate;
+  option: SummaryTemplateOption;
+  detailValue?: string;
 }

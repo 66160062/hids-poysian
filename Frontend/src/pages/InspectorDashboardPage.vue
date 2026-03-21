@@ -12,7 +12,7 @@
     >
       <div class="bg-white" style="position: sticky; top: 0; z-index: 100;">
         <div
-          class="text-center text-weight-bold q-pt-xl q-pb-md"
+          class="text-center text-weight-bold q-pt-md q-pb-md"
           style="font-size: 24px; "
         >
           ข้อมูลการตรวจบ้าน

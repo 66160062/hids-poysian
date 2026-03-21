@@ -6,21 +6,15 @@ import { DefectSubCategoriesModule } from 'src/defect-sub-categories/defect-sub-
 import { InspectionRoundsModule } from 'src/inspection-rounds/inspection-rounds.module';
 import { UsersModule } from 'src/users/users.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
-import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub-category.entity';
-import { User } from 'src/users/entities/user.entity';
+import { RoomTemplatesModule } from 'src/room-templates/room-templates.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Defect,
-      InspectionRound,
-      DefectSubCategory,
-      User,
-    ]),
+    TypeOrmModule.forFeature([Defect]),
     DefectSubCategoriesModule,
     InspectionRoundsModule,
     UsersModule,
+    RoomTemplatesModule,
   ],
   controllers: [DefectsController],
   providers: [DefectsService],
