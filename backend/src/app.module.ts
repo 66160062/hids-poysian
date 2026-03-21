@@ -40,6 +40,7 @@ import { SummaryTemplatesModule } from './summary-templates/summary-templates.mo
 import { SummaryTemplate } from './summary-templates/entities/summary-template.entity';
 import { InspectionSummaryItemsModule } from './inspection-summary-items/inspection-summary-items.module';
 import { InspectionSummaryItem } from './inspection-summary-items/entities/inspection-summary-item.entity';
+import { FloorsModule } from './floors/floors.module';
 
 @Module({
   imports: [
@@ -90,6 +91,7 @@ import { InspectionSummaryItem } from './inspection-summary-items/entities/inspe
     SummaryTemplateOptionsModule,
     SummaryTemplatesModule,
     InspectionSummaryItemsModule,
+    FloorsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
