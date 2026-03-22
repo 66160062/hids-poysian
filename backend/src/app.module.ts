@@ -44,6 +44,8 @@ import { FloorModule } from './floor/floor.module';
 import { SubRoomsModule } from './sub-rooms/sub-rooms.module';
 import { Floor } from './floor/entities/floor.entity';
 import { SubRoom } from './sub-rooms/entities/sub-room.entity';
+import { RoomsModule } from './rooms/rooms.module';
+import { Room } from './rooms/entities/room.entity';
 
 @Module({
   imports: [
@@ -70,6 +72,7 @@ import { SubRoom } from './sub-rooms/entities/sub-room.entity';
         InspectionSummaryItem,
         Floor,
         SubRoom,
+        Room,
       ],
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),
@@ -98,6 +101,7 @@ import { SubRoom } from './sub-rooms/entities/sub-room.entity';
     InspectionSummaryItemsModule,
     FloorModule,
     SubRoomsModule,
+    RoomsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

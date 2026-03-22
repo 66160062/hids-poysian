@@ -73,13 +73,13 @@ export interface Defect {
   subCategories: {
     subCategoryId: number;
     name: string;
-    category?: { name: string };
+    category?: { name: string; categoryId: number };
   }[];
   template?: {
-    roomName: string;
-    roomType: string;
-    floor: { label: string };
-    subRoom: { roomName: string };
+    templateId: number;
+    room: { roomName: string; roomId: number };
+    subRoom: { roomName: string; roomId: number } | null;
+    floor: { floorId: number; label: string };
   };
 }
 
