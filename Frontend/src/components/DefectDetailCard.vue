@@ -3,7 +3,7 @@
     <div class="row no-wrap q-gutter-x-md">
       <div class="image-wrapper">
         <q-img
-          :src="`http://localhost:3000${defect.imageUrl}`"
+          :src="defect.imageUrl ? `http://localhost:3000${defect.imageUrl}` : ''"
           class="defect-img rounded-borders"
         />
         <div class="location-badge">{{ defect.locationLabel }}</div>
