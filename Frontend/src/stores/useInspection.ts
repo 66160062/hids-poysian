@@ -271,7 +271,6 @@ export const useInspectionStore = defineStore('inspection', () => {
     try {
       const { data } = await api.get<Defect[]>(`/defects/round/${roundId}`);
       defects.value = data;
-      data.forEach((d) => console.log(d.defectId, JSON.stringify(d.subCategories)));
     } catch (err) {
       defectsError.value = 'โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
       console.error('Fetch Defects Error:', err);
