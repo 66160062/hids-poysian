@@ -44,6 +44,7 @@
       class="bg-white col q-pa-lg flex column shadow-up-2"
       style="border-radius: 24px 24px 0 0; margin-top: -24px; z-index: 1"
     >
+      <!-- Step 1: รายละเอียดห้อง -->
       <div v-if="step === 1" class="col column">
         <div class="text-h6 text-weight-bold text-primary">รายละเอียดห้อง</div>
         <div class="text-caption text-grey-7 q-mb-lg">กรุณากรอกรายละเอียดห้อง</div>
@@ -51,42 +52,85 @@
           <div class="row no-wrap items-start">
             <q-icon name="meeting_room" size="sm" color="primary" class="q-pt-sm q-mr-sm" />
             <div class="col column q-gutter-y-md">
+              <!-- ประเภทห้อง -->
               <q-select
                 outlined
                 dense
-                v-model="form.roomType"
-                :options="['ห้องนอน', 'ห้องน้ำ', 'ห้องนั่งเล่น']"
+                v-model="form.roomId"
+                :options="roomOptions"
                 label="ประเภทห้อง"
+                option-value="value"
+                option-label="label"
+                emit-value
+                map-options
+                :loading="isLoadingRooms"
+                @update:model-value="onRoomChange"
               />
+
+              <!-- ประเภทห้องย่อย -->
               <q-select
                 outlined
                 dense
-                v-model="form.subRoomType"
-                :options="['-']"
+                v-model="form.subRoomId"
+                :options="subRoomOptions"
                 label="ประเภทห้องย่อย"
+                option-value="value"
+                option-label="label"
+                emit-value
+                map-options
+                :disable="!form.roomId"
+                clearable
               />
             </div>
           </div>
+
           <div class="row no-wrap items-start">
             <q-icon name="layers" size="sm" color="primary" class="q-pt-sm q-mr-sm" />
             <div class="col">
+              <!-- ชั้น -->
               <q-select
                 outlined
                 dense
-                v-model="form.floor"
-                :options="['ชั้น 1', 'ชั้น 2']"
+                v-model="form.floorId"
+                :options="floorOptions"
                 label="ชั้น"
+                option-value="value"
+                option-label="label"
+                emit-value
+                map-options
+                :disable="!form.roomId"
+                :loading="isLoadingFloors"
+                @update:model-value="onFloorChange"
               />
             </div>
           </div>
         </div>
       </div>
 
+      <!-- Step 2: รายละเอียดงาน -->
       <div v-if="step === 2" class="col column">
         <div class="text-h6 text-weight-bold text-primary">รายละเอียดงาน</div>
         <div class="text-caption text-grey-7 q-mb-lg">กรุณากรอกรายละเอียดงาน</div>
-
         <div class="column q-gutter-y-md">
+          <!-- ความรุนแรง -->
+          <div class="row no-wrap items-center">
+            <q-icon name="warning_amber" size="sm" color="primary" class="q-mr-sm" />
+            <div class="col">
+              <q-select
+                outlined
+                dense
+                v-model="form.severity"
+                :options="severityOptions"
+                label="ความรุนแรง"
+                option-value="value"
+                option-label="label"
+                emit-value
+                map-options
+              />
+            </div>
+          </div>
+
+          <!-- ประเภทงาน -->
           <div class="row no-wrap items-center">
             <q-icon name="work_outline" size="sm" color="primary" class="q-mr-sm" />
             <div class="col">
@@ -105,6 +149,7 @@
             </div>
           </div>
 
+          <!-- ประเภทตำหนิ -->
           <div class="row no-wrap items-start">
             <q-icon name="list" size="sm" color="primary" class="q-pt-sm q-mr-sm" />
             <div class="col">
@@ -121,9 +166,8 @@
                 emit-value
                 map-options
                 :disable="!form.jobType"
-                style="max-width: 100%"
               >
-                <template v-slot:selected-item="scope">
+                <template #selected-item="scope">
                   <q-chip
                     removable
                     dense
@@ -141,6 +185,7 @@
             </div>
           </div>
 
+          <!-- หมายเหตุ -->
           <div class="row no-wrap items-start">
             <q-icon name="edit_note" size="sm" color="primary" class="q-pt-sm q-mr-sm" />
             <div class="col">
@@ -157,6 +202,7 @@
         </div>
       </div>
 
+      <!-- Footer -->
       <div class="row justify-between items-end q-mt-auto q-pt-md">
         <div class="column">
           <div class="text-caption text-primary text-weight-bold q-mb-xs">หน้าที่ {{ step }}/2</div>
@@ -190,45 +236,94 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import imageCompression from 'browser-image-compression';
 import { useInspectionStore } from 'src/stores/useInspection';
+import { api } from 'src/boot/axios';
 
 const router = useRouter();
 const route = useRoute();
 const inspectionStore = useInspectionStore();
-const roundId = route.params.roundId;
+const roundId = route.params.roundId as string;
 const step = ref<number>(1);
 
+// ── Types ─────────────────────────────────────────────────────
+
 interface DefectForm {
-  roomType: string | null;
-  subRoomType: string | null;
-  floor: string | null;
+  roomId: number | null;
+  subRoomId: number | null;
+  floorId: number | null;
+  templateId: number | null;
+  severity: string;
   jobType: number | null;
   defectTypes: number[];
   note: string;
 }
 
+// ── Form state ────────────────────────────────────────────────
+
 const form = ref<DefectForm>({
-  roomType: null,
-  subRoomType: null,
-  floor: null,
+  roomId: null,
+  subRoomId: null,
+  floorId: null,
+  templateId: null,
+  severity: '',
   jobType: null,
   defectTypes: [],
   note: '',
 });
 
-// ดึง Category จาก Store มาทำ Options
+// ── Master data ───────────────────────────────────────────────
+
+const isLoadingRooms = ref(false);
+const isLoadingFloors = ref(false);
+
+const roomOptions = computed(() => {
+  const seen = new Set<number>();
+  return templates.value
+    .filter((t) => {
+      if (seen.has(t.room.roomId)) return false;
+      seen.add(t.room.roomId);
+      return true;
+    })
+    .map((t) => ({ value: t.room.roomId, label: t.room.roomName }));
+});
+
+const subRoomOptions = computed(() => {
+  if (!form.value.roomId) return [];
+
+  const seen = new Set<number>();
+  return templates.value
+    .filter((t) => t.room.roomId === form.value.roomId && t.subRoom !== null)
+    .filter((t) => {
+      if (seen.has(t.subRoom!.subRoomId)) return false;
+      seen.add(t.subRoom!.subRoomId);
+      return true;
+    })
+    .map((t) => ({ value: t.subRoom!.subRoomId, label: t.subRoom!.roomName }));
+});
+
+const floorOptions = computed(() => {
+  if (!form.value.roomId) return [];
+  const seen = new Set<number>();
+  return templates.value
+    .filter((t) => t.room.roomId === form.value.roomId)
+    .filter((t) => {
+      if (seen.has(t.floor.floorId)) return false;
+      seen.add(t.floor.floorId);
+      return true;
+    })
+    .map((t) => ({ value: t.floor.floorId, label: t.floor.label }));
+});
+
+const severityOptions = [
+  { value: 'Major', label: 'Major' },
+  { value: 'Minor', label: 'Minor' },
+];
+
+// ── Category / SubCategory ────────────────────────────────────
+
 const categoryOptions = computed(() =>
-  inspectionStore.categories.map((c) => ({
-    label: c.name,
-    value: c.categoryId,
-  })),
+  inspectionStore.categories.map((c) => ({ label: c.name, value: c.categoryId })),
 );
 
-const onCategoryChange = (val: number | null) => {
-  form.value.jobType = val; // เก็บ ID ลงใน form
-  form.value.defectTypes = []; // ล้างค่าตำหนิเก่าทุกครั้งที่เปลี่ยนประเภทงาน
-};
-
-// ดึง Sub-Category โดยกรองตาม Category ที่เลือกใน jobType
 const subCategoryOptions = computed(() => {
   if (!form.value.jobType) return [];
   return inspectionStore.getSubByCategoryId(form.value.jobType).map((s) => ({
@@ -236,6 +331,39 @@ const subCategoryOptions = computed(() => {
     value: s.subCategoryId,
   }));
 });
+
+const onCategoryChange = (val: number | null) => {
+  form.value.jobType = val;
+  form.value.defectTypes = [];
+};
+
+// ── Room/Floor change → lookup templateId ────────────────────
+
+const onRoomChange = () => {
+  form.value.subRoomId = null;
+  form.value.templateId = null;
+  void lookupTemplate();
+};
+
+const onFloorChange = () => {
+  form.value.templateId = null;
+  void lookupTemplate();
+};
+
+function lookupTemplate() {
+  const { roomId, subRoomId, floorId } = form.value;
+  if (!roomId || !floorId) return;
+
+  const found = templates.value.find(
+    (t) =>
+      t.room.roomId === roomId &&
+      t.floor.floorId === floorId &&
+      (subRoomId ? t.subRoom?.subRoomId === subRoomId : !t.subRoom),
+  );
+  form.value.templateId = found?.templateId ?? null;
+}
+
+// ── Image ─────────────────────────────────────────────────────
 
 const imagePreview = ref<string | null>(null);
 const selectedFile = ref<File | null>(null);
@@ -254,8 +382,7 @@ const onFileSelected = async (event: Event) => {
       const compressedFile = await imageCompression(file, options);
       selectedFile.value = compressedFile;
       imagePreview.value = URL.createObjectURL(compressedFile);
-    } catch (error) {
-      console.error('Compression Error:', error);
+    } catch {
       selectedFile.value = file;
       imagePreview.value = URL.createObjectURL(file);
     }
@@ -263,48 +390,70 @@ const onFileSelected = async (event: Event) => {
   target.value = '';
 };
 
-// --- Navigation & Submit ---
+// ── Navigation & Submit ───────────────────────────────────────
+
 const handleBack = () => {
-  if (step.value === 2) {
-    step.value = 1;
-  } else {
-    router.back();
-  }
+  if (step.value === 2) step.value = 1;
+  else router.back();
 };
 
 const handleNext = async () => {
   if (step.value === 1) {
     step.value = 2;
-  } else {
-    try {
-      const formData = new FormData();
-      formData.append('roundId', String(roundId));
-      formData.append('description', form.value.note || '');
-      formData.append('status', 'ไม่ผ่าน'); //
-      if (form.value.defectTypes && form.value.defectTypes.length > 0) {
-        // ส่ง ID ของตัวแรกที่เลือก เพื่อให้ตรงกับ DB ที่เป็นประเภท int
-        formData.append('subCategoryId', String(form.value.defectTypes[0]));
-      }
+    return;
+  }
 
-      if (selectedFile.value) {
-        formData.append('file', selectedFile.value);
-        formData.append('imagefileSize', String(selectedFile.value.size)); //
-      }
+  if (!form.value.templateId) {
+    alert('ไม่พบห้องที่ตรงกับที่เลือก กรุณาเลือกใหม่');
+    return;
+  }
 
-      await inspectionStore.saveDefect(formData);
-      alert('บันทึกข้อมูลสำเร็จ!');
-      router.back();
-    } catch (err) {
-      console.error('Save error:', err); // แก้ warning unused var
-      alert('เกิดข้อผิดพลาดในการบันทึก');
+  try {
+    const formData = new FormData();
+    formData.append('roundId', String(roundId));
+    formData.append('templateId', String(form.value.templateId));
+    formData.append('inspectorId', '1'); // TODO: ดึงจาก auth store
+    formData.append('severity', form.value.severity);
+    formData.append('description', form.value.note || '');
+    formData.append('status', 'PENDING_REPAIR');
+
+    // ส่ง subCategoryIds[] ทุกตัวที่เลือก
+    form.value.defectTypes.forEach((id) => {
+      formData.append('subCategoryIds', String(id));
+    });
+
+    if (selectedFile.value) {
+      formData.append('file', selectedFile.value);
     }
+
+    await inspectionStore.saveDefect(formData);
+
+    // refresh defects ในหน้า inspection
+    await inspectionStore.fetchDefects(roundId);
+
+    alert('บันทึกข้อมูลสำเร็จ!');
+    router.back();
+  } catch {
+    alert('เกิดข้อผิดพลาดในการบันทึก');
   }
 };
 
-onMounted(() => {
-  if (roundId) {
-    void inspectionStore.fetchInspectionMasterData(String(roundId));
-  }
+// ── Lifecycle ─────────────────────────────────────────────────
+
+const templates = ref<
+  {
+    templateId: number;
+    room: { roomId: number; roomName: string };
+    subRoom: { subRoomId: number; roomName: string } | null;
+    floor: { floorId: number; label: string };
+  }[]
+>([]);
+
+onMounted(async () => {
+  void inspectionStore.fetchInspectionMasterData(roundId);
+
+  const { data } = await api.get('/room-templates');
+  templates.value = data;
 });
 </script>
 
@@ -312,7 +461,6 @@ onMounted(() => {
 :deep(.q-field--dense .q-field__control) {
   height: 40px;
 }
-
 :deep(.q-field--dense .q-field__marginal) {
   height: 40px;
 }

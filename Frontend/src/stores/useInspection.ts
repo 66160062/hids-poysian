@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { api } from 'src/boot/axios';
 import type { Category, DefectSubCategory, RoomTemplate, SubCategory, Defect } from 'src/models.ts';
+import { api } from 'src/boot/axios';
 
 // ── Types เพิ่มเติมสำหรับ filter/group ───────────────────────
 
@@ -42,10 +42,8 @@ const getRoomName = (d: Defect) =>
 const getRoomType = (d: Defect) => d.template?.room?.roomName ?? 'ไม่ระบุประเภท';
 
 const SEVERITY_LABEL: Record<string, string> = {
-  low: 'ความรุนแรงน้อย',
-  medium: 'ความรุนแรงปานกลาง',
-  high: 'ความรุนแรงมาก',
-  critical: 'วิกฤต',
+  Major: 'สำคัญมาก',
+  Minor: 'เล็กน้อย',
 };
 
 // ── Store ─────────────────────────────────────────────────────
@@ -143,7 +141,7 @@ export const useInspectionStore = defineStore('inspection', () => {
         map.set(key, {
           groupKey: key,
           roomName: buildGroupLabel(defect),
-          roomId: defect.template?.templateId ?? defect.defectId,
+          roomId: defect.template?.room?.roomId ?? defect.defectId,
           floorLabel: getFloorLabel(defect),
           roomType: getRoomType(defect),
           severity: defect.severity,
@@ -159,7 +157,7 @@ export const useInspectionStore = defineStore('inspection', () => {
       const group = map.get(key)!;
       group.totalItems++;
       group.defects.push(defect);
-      if (defect.status === 'pass') group.passCount++;
+      if (defect.status === 'PASS') group.passCount++;
       else group.failCount++;
     }
 
@@ -175,7 +173,7 @@ export const useInspectionStore = defineStore('inspection', () => {
 
   const summaryData = computed(() => {
     const list = filteredDefects.value;
-    const pass = list.filter((d) => d.status === 'pass').length;
+    const pass = list.filter((d) => d.status === 'PASS').length;
     return {
       // ประเภทห้องทั้งหมด = unique room (ไม่ใช่ unique roomName)
       totalRooms: new Set(list.map((d) => d.template?.room?.roomId)).size,
@@ -252,7 +250,8 @@ export const useInspectionStore = defineStore('inspection', () => {
       });
       return res.data;
     } catch (err) {
-      console.error('Save Defect Error:', err);
+      const error = err as { response?: { data: unknown } };
+      console.error('Save Defect Error:', error.response?.data);
       throw err;
     }
   }
@@ -271,6 +270,7 @@ export const useInspectionStore = defineStore('inspection', () => {
     try {
       const { data } = await api.get<Defect[]>(`/defects/round/${roundId}`);
       defects.value = data;
+      console.log('test test: ', data);
     } catch (err) {
       defectsError.value = 'โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
       console.error('Fetch Defects Error:', err);
