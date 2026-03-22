@@ -21,7 +21,7 @@
 
         <div class="row justify-center q-mb-md">
           <img
-            :src="`http://localhost:3000${round.job.projectImageUrl}`"
+            :src="`${apiUrl}${round.job.projectImageUrl}`"
             style="
               width: 95%;
               max-height: 200px;
@@ -150,7 +150,7 @@
           <div v-for="defect in chunk" :key="defect.defectId" class="defect-card">
             <div class="badge-id">#{{ defect.defectId }}</div>
             <div class="badge-main" style="background: #ef4444">{{ defect.severity }}</div>
-            <img :src="`http://localhost:3000${defect.imageUrl}`" class="defect-img" />
+            <img :src="`${apiUrl}${defect.imageUrl}`" class="defect-img" />
             <div class="card-body">
               <div class="room-title">{{ getRoomShortName(defect) }}</div>
               <div class="info-row">
@@ -227,7 +227,7 @@
               >
                 {{ defect.severity }}
               </div>
-              <img :src="`http://localhost:3000${defect.imageUrl}`" class="defect-img" />
+              <img :src="`${apiUrl}${defect.imageUrl}`" class="defect-img" />
               <div class="card-body">
                 <div class="info-row">
                   <span class="label">ประเภทงาน:</span>
@@ -306,8 +306,8 @@
           <div
             class="text-center text-bold q-py-xs"
             style="
-              background: #1976d2;
-              color: white;
+              background: #1976d2 !important;
+              color: white !important;
               border-radius: 4px;
               font-size: 13px;
               margin-bottom: 8px;
@@ -357,6 +357,7 @@ import LineLogo from 'src/assets/Logos/LINE.png';
 import FacebookLogo from 'src/assets/Logos/Facebook.png';
 import CallLogo from 'src/assets/Logos/Call.png';
 import GmailLogo from 'src/assets/Logos/Gmail.png';
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const props = defineProps<{
   round: InspectionRound;
@@ -479,14 +480,40 @@ function exportPdf() {
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap">
         <style>
           ${allStyles}
+          /* --- เพิ่มจุดที่ 1: บังคับให้พิมพ์สีพื้นหลัง (แก้ปัญหาสีหาย) --- */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
           body { margin: 0; padding: 0; font-family: 'Sarabun', sans-serif !important; background: #ccc; }
           .pdf-wrapper { background: #ccc; padding: 0; }
-          .pdf-page { width: 210mm; height: 297mm; padding: 10mm; margin: 10mm auto; background: white; display: flex; flex-direction: column; box-shadow: 0 0 10px rgba(0,0,0,0.5); page-break-after: always; }
+
+          /* --- เพิ่มจุดที่ 2: แก้ไขความสูงหน้ากระดาษ (แก้ปัญหาหน้ายาวว่างเปล่า) --- */
+          .pdf-page {
+            width: 210mm;
+            min-height: 297mm; /* ใช้ min-height เพื่อให้หดได้ถ้าเนื้อหาน้อย */
+            padding: 10mm;
+            margin: 10mm auto;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            page-break-after: always;
+            position: relative;
+          }
+
           @media print {
             body { background: none; }
-            .pdf-page { margin: 0; box-shadow: none; }
+            .pdf-page {
+              margin: 0;
+              box-shadow: none;
+              height: 297mm; /* ตอนพิมพ์จริงค่อยล็อคให้เต็มหน้า A4 */
+            }
             @page { size: A4; margin: 0; }
           }
+          /* -------------------------------------------------- */
+
           .defects-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 10px; flex: 1; }
           .defect-card { display: flex; flex-direction: column; border: 1px solid #f48fb1; border-radius: 8px; background: #fff5f7; position: relative; overflow: hidden; height: 100mm; }
           .defect-img { width: 100%; height: 55mm; object-fit: cover; }
@@ -494,19 +521,15 @@ function exportPdf() {
           .badge-main { position: absolute; top: 5px; right: 5px; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; z-index: 10; }
           .card-body { padding: 8px; font-size: 11px; position: relative; flex: 1; overflow: visible; }
           .room-title { font-weight: bold; text-align: center; margin-bottom: 5px; border-bottom: 1px solid #fecaca; }
-          .signature-line { border-top: 1px solid #000; margin: 0 40px; padding-top: 4px; }
-          .card-logo-watermark { position: absolute; bottom: 5px; right: 8px; opacity: 0.2; font-weight: bold; font-size: 14px; color: #1976d2; }
           .header-line { border-bottom: 1px solid #ccc; margin-bottom: 8px; }
           .section-title { border-left: 4px solid #1976d2; padding-left: 8px; font-weight: bold; font-size: 12px; }
           .info-box { border: 1px solid #e0e0e0; border-radius: 4px; background: #fafafa; min-height: 85px; padding: 8px; }
-          .stat-card { border: 1px solid #e0e0e0; border-radius: 8px; }
           .label { font-weight: bold; }
           .info-row { margin-bottom: 2px; font-size: 10px; }
           .card-logo-watermark-img { position: absolute; bottom: 0px; right: 10px; opacity: 0.3; width: 60px; object-fit: contain; }
           .pdf-footer { border-top: 1px solid #ccc; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #555; margin-top: auto; }
           .footer-contacts { display: flex; align-items: center; gap: 6px; font-size: 10px; }
-          .text-description-header { line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-          </style>
+        </style>
       </head>
       <body>
         ${reportRef.value.innerHTML}
@@ -555,13 +578,14 @@ const summaryChunks = computed(() => {
 }
 .pdf-page {
   width: 210mm;
-  height: 297mm;
+  min-height: 297mm;
   background: white;
   margin: 0 auto 20px auto;
   padding: 10mm;
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  position: relative;
 }
 .header-line {
   border-bottom: 1px solid #ccc;

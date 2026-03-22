@@ -35,7 +35,7 @@
         <q-img
           :src="
             jobData.job.projectImageUrl
-              ? `http://localhost:3000${jobData.job.projectImageUrl}`
+              ? `${apiUrl}${jobData.job.projectImageUrl}`
               : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600'
           "
           style="border-radius: 8px; height: 250px; margin-top: 20px"
@@ -193,6 +193,17 @@
             </div>
           </q-btn>
 
+          <q-btn outline color="blue" class="full-width q-py-sm" @click="exportPdf()">
+            <div class="row full-width justify-between items-center q-px-sm">
+              <span class="text-weight-bold">ปรินต์ PDF</span>
+              <q-icon
+                name="chevron_right"
+                class="bg-blue text-white rounded-borders q-pa-xs"
+                size="18px"
+              />
+            </div>
+          </q-btn>
+
           <DefectReport
             ref="reportComp"
             :round="jobData"
@@ -266,6 +277,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
 import type { InspectionRound, InspectionSummaryItem } from 'src/models';
 import DefectReport from 'src/components/DefectReport.vue';
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const $q = useQuasar();
 const route = useRoute();
@@ -277,6 +289,10 @@ const jobData = ref<InspectionRound | null>(null);
 const summaryItems = ref<InspectionSummaryItem[] | []>([]);
 
 const roundId = route.params.roundId as string;
+
+function exportPdf() {
+  reportComp.value?.exportPdf();
+}
 
 const openGoogleMaps = () => {
   if (!jobData.value?.job) return;

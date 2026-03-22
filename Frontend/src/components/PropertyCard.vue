@@ -52,11 +52,11 @@ const openGoogleMaps = () => {
     address?.subDistrict ? `ต.${address.subDistrict}` : '',
     address?.district ? `อ.${address.district}` : '',
     address?.province ? `จ.${address.province}` : '',
-    address?.postalCode || ''
+    address?.postalCode || '',
   ];
 
   // กรองค่าว่างทิ้ง แล้วต่อเป็นข้อความเดียวด้วยช่องว่าง
-  const searchQuery = searchQueryParts.filter(part => part).join(' ');
+  const searchQuery = searchQueryParts.filter((part) => part).join(' ');
 
   if (searchQuery.trim()) {
     // แปลงข้อความให้รองรับ URL (รองรับภาษาไทย)
@@ -71,6 +71,8 @@ const openGoogleMaps = () => {
     alert('ไม่พบข้อมูลที่อยู่สำหรับนำทาง');
   }
 };
+
+const apiUrl = import.meta.env.VITE_API_URL;
 </script>
 
 <template>
@@ -78,7 +80,11 @@ const openGoogleMaps = () => {
     <q-card-section class="row no-wrap items-stretch" style="padding: 16px">
       <div class="col-auto column" style="padding-right: 16px">
         <q-img
-          :src="item.job.projectImageUrl ? `http://localhost:3000${item.job.projectImageUrl}` : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=300'"
+          :src="
+            item.job.projectImageUrl
+              ? `${apiUrl}${item.job.projectImageUrl}`
+              : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=300'
+          "
           class="col"
           :style="{ width: isMobile ? '110px' : '150px', borderRadius: '8px' }"
           fit="cover"
@@ -133,8 +139,12 @@ const openGoogleMaps = () => {
             overflow: hidden;
           "
         >
-          เลขที่ {{ item.job.address?.houseNumber || '-' }} ถ.{{ item.job.address?.soi || '-' }}
-          ต.{{ item.job.address?.subDistrict || '-' }} อ.{{ item.job.address?.district || '-' }}
+          เลขที่ {{ item.job.address?.houseNumber || '-' }} ถ.{{
+            item.job.address?.soi || '-'
+          }}
+          ต.{{ item.job.address?.subDistrict || '-' }} อ.{{
+            item.job.address?.district || '-'
+          }}
           จ.{{ item.job.address?.province || '-' }} {{ item.job.address?.postalCode || '-' }}
         </div>
 
@@ -143,7 +153,10 @@ const openGoogleMaps = () => {
           style="font-family: 'Inter', sans-serif; font-weight: 500; font-size: 10px"
         >
           <span class="text-primary">ประเภทที่อยู่:</span>
-          <span> {{ item.job.houseType?.name }} {{ item.job.address?.floor ? item.job.address.floor + ' ชั้น' : '' }}</span>
+          <span>
+            {{ item.job.houseType?.name }}
+            {{ item.job.address?.floor ? item.job.address.floor + ' ชั้น' : '' }}</span
+          >
         </div>
 
         <div class="q-mt-xs">
@@ -179,7 +192,13 @@ const openGoogleMaps = () => {
             no-caps
             @click.stop="openGoogleMaps"
           />
-          <q-btn flat round icon="chevron_right" color="primary" @click="goToInspectionInfo(item.roundId)" />
+          <q-btn
+            flat
+            round
+            icon="chevron_right"
+            color="primary"
+            @click="goToInspectionInfo(item.roundId)"
+          />
         </div>
       </div>
     </q-card-section>

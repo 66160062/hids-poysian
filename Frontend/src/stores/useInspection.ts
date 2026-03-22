@@ -42,8 +42,8 @@ const getRoomName = (d: Defect) =>
 const getRoomType = (d: Defect) => d.template?.room?.roomName ?? 'ไม่ระบุประเภท';
 
 const SEVERITY_LABEL: Record<string, string> = {
-  Major: 'สำคัญมาก',
-  Minor: 'เล็กน้อย',
+  Major: 'Major',
+  Minor: 'Minor',
 };
 
 // ── Store ─────────────────────────────────────────────────────
@@ -270,7 +270,6 @@ export const useInspectionStore = defineStore('inspection', () => {
     try {
       const { data } = await api.get<Defect[]>(`/defects/round/${roundId}`);
       defects.value = data;
-      console.log('test test: ', data);
     } catch (err) {
       defectsError.value = 'โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
       console.error('Fetch Defects Error:', err);
