@@ -16,7 +16,7 @@ import {
 export enum DefectStatus {
   PENDING_REPAIR = 'PENDING_REPAIR',
   REJECTED = 'REJECTED',
-  CLOSED = 'CLOSED',
+  PASS = 'PASS',
 }
 
 @Entity()
@@ -24,7 +24,7 @@ export class Defect {
   @PrimaryGeneratedColumn()
   defectId: number;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'text', nullable: true, default: '-' })
   description: string;
 
   @Column({ type: 'varchar', length: 50 })
