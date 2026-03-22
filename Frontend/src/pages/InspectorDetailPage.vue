@@ -193,6 +193,17 @@
             </div>
           </q-btn>
 
+          <q-btn outline color="blue" class="full-width q-py-sm" @click="exportPdf()">
+            <div class="row full-width justify-between items-center q-px-sm">
+              <span class="text-weight-bold">ปรินต์ PDF</span>
+              <q-icon
+                name="chevron_right"
+                class="bg-blue text-white rounded-borders q-pa-xs"
+                size="18px"
+              />
+            </div>
+          </q-btn>
+
           <DefectReport
             ref="reportComp"
             :round="jobData"
@@ -278,6 +289,10 @@ const jobData = ref<InspectionRound | null>(null);
 const summaryItems = ref<InspectionSummaryItem[] | []>([]);
 
 const roundId = route.params.roundId as string;
+
+function exportPdf() {
+  reportComp.value?.exportPdf();
+}
 
 const openGoogleMaps = () => {
   if (!jobData.value?.job) return;
