@@ -100,6 +100,7 @@ export class DefectsService {
         'template',
         'template.floor',
         'template.subRoom',
+        'template.room',
       ],
     });
   }

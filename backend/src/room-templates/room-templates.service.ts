@@ -6,6 +6,7 @@ import { CreateRoomTemplateDto } from './dto/create-room-template.dto';
 import { UpdateRoomTemplateDto } from './dto/update-room-template.dto';
 import { Floor } from 'src/floor/entities/floor.entity';
 import { SubRoom } from 'src/sub-rooms/entities/sub-room.entity';
+import { Room } from 'src/rooms/entities/room.entity';
 
 @Injectable()
 export class RoomTemplatesService {
@@ -15,9 +16,10 @@ export class RoomTemplatesService {
   ) {}
 
   async create(createRoomTemplateDto: CreateRoomTemplateDto) {
-    const { floorId, subRoomId, ...rest } = createRoomTemplateDto;
+    const { roomId, subRoomId, floorId, ...rest } = createRoomTemplateDto;
     const roomTemplate = this.roomTemplatesRepo.create({
       ...rest,
+      room: { roomId } as Room,
       floor: { floorId } as Floor,
       ...(subRoomId && { subRoom: { subRoomId } as SubRoom }),
     });
@@ -27,25 +29,26 @@ export class RoomTemplatesService {
 
   findAll() {
     return this.roomTemplatesRepo.find({
-      relations: ['floor', 'subRoom'],
+      relations: ['room', 'subRoom', 'floor'],
     });
   }
 
   findOne(id: number) {
     return this.roomTemplatesRepo.findOneOrFail({
       where: { templateId: id },
-      relations: ['floor', 'subRoom'],
+      relations: ['room', 'subRoom', 'floor'],
     });
   }
 
   async update(id: number, updateRoomTemplateDto: UpdateRoomTemplateDto) {
     const roomTemplate = await this.findOne(id);
-    const { floorId, subRoomId, ...rest } = updateRoomTemplateDto;
+    const { roomId, subRoomId, floorId, ...rest } = updateRoomTemplateDto;
 
     Object.assign(roomTemplate, {
       ...rest,
-      ...(floorId && { floor: { floorId } as Floor }),
+      ...(roomId && { room: { roomId } as Room }),
       ...(subRoomId && { subRoom: { subRoomId } as SubRoom }),
+      ...(floorId && { floor: { floorId } as Floor }),
     });
 
     return this.roomTemplatesRepo.save(roomTemplate);
