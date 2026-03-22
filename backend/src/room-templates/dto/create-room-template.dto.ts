@@ -1,21 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNumber, IsOptional } from 'class-validator';
 
 export class CreateRoomTemplateDto {
-  @ApiProperty({ example: 'ห้องนอน' })
-  @IsString()
-  roomName: string;
-
-  @ApiProperty({ example: '1' })
+  @ApiProperty({ example: 1, required: false })
+  @IsOptional()
   @IsNumber()
-  floorId: number;
+  roomId?: number;
 
   @ApiProperty({ example: 1, required: false })
   @IsOptional()
   @IsNumber()
   subRoomId?: number;
 
-  @ApiProperty({ example: '-' })
-  @IsString()
-  roomType: string;
+  @ApiProperty({ example: '1' })
+  @IsNumber()
+  floorId: number;
 }
