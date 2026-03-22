@@ -197,6 +197,7 @@
             ref="reportComp"
             :round="jobData"
             :defects="defects"
+            :summaryItems="summaryItems"
             style="position: absolute; left: -9999px; top: -9999px"
           />
           <!-- ปุ่ม print reporttttttttt -->
@@ -243,7 +244,7 @@
               </q-bar>
 
               <q-card-section class="q-pa-none">
-                <DefectReport :round="jobData" :defects="defects" />
+                <DefectReport :round="jobData" :defects="defects" :summaryItems="summaryItems" />
               </q-card-section>
             </q-card>
           </q-dialog>
@@ -263,7 +264,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
-import type { InspectionRound } from 'src/models';
+import type { InspectionRound, InspectionSummaryItem } from 'src/models';
 import DefectReport from 'src/components/DefectReport.vue';
 
 const $q = useQuasar();
@@ -273,6 +274,7 @@ const router = useRouter();
 const isMobile = computed(() => $q.screen.lt.md);
 const loading = ref(true);
 const jobData = ref<InspectionRound | null>(null);
+const summaryItems = ref<InspectionSummaryItem[] | []>([]);
 
 const roundId = route.params.roundId as string;
 
@@ -326,6 +328,16 @@ async function fetchJobDetails() {
   }
 }
 
+async function fetchSummaryItems() {
+  try {
+    const res = await api.get(`/inspection-summary-items/round/${roundId}`);
+    summaryItems.value = Array.isArray(res.data) ? res.data : [];
+  } catch (e) {
+    console.error(e);
+    summaryItems.value = [];
+  }
+}
+
 function formatDate(dateStr: string) {
   if (!dateStr) return '';
   const date = new Date(dateStr);
@@ -352,6 +364,7 @@ function goBack() {
 onMounted(() => {
   void fetchJobDetails();
   void fetchDefects();
+  void fetchSummaryItems();
   void checkSummary();
 });
 </script>

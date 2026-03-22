@@ -180,6 +180,19 @@
             </div>
           </div>
         </div>
+        <div class="pdf-footer">
+          <span>© 2026, POYSIAN</span>
+          <div class="footer-contacts">
+            <img :src="LineLogo" style="height: 16px" />
+            <span>@poysian,</span>
+            <img :src="FacebookLogo" style="height: 16px" />
+            <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
+            <img :src="CallLogo" style="height: 16px" />
+            <span>098-765-4321,</span>
+            <img :src="GmailLogo" style="height: 12px" />
+            <span>poysian@gmail.com</span>
+          </div>
+        </div>
       </div>
 
       <!-- หน้า All Defects -->
@@ -238,7 +251,7 @@
         </div>
 
         <!-- ลายเซ็นหน้าสุดท้าย -->
-        <div v-if="pageIndex === allDefectChunks.length - 1" class="row q-mt-auto q-pb-lg">
+        <!-- <div v-if="pageIndex === allDefectChunks.length - 1" class="row q-mt-auto q-pb-lg">
           <div class="col-6 text-center">
             <div class="signature-line">
               <div class="text-caption">ลายเซ็นผู้ตรวจ</div>
@@ -253,6 +266,83 @@
               <div class="text-caption text-grey-7">{{ round.job.customer?.fullName }}</div>
             </div>
           </div>
+        </div> -->
+        <div class="pdf-footer">
+          <span>© 2026, POYSIAN</span>
+          <div class="footer-contacts">
+            <img :src="LineLogo" style="height: 16px" />
+            <span>@poysian,</span>
+            <img :src="FacebookLogo" style="height: 16px" />
+            <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
+            <img :src="CallLogo" style="height: 16px" />
+            <span>098-765-4321,</span>
+            <img :src="GmailLogo" style="height: 12px" />
+            <span>poysian@gmail.com</span>
+          </div>
+        </div>
+      </div>
+      <!-- หน้า Summary -->
+      <div
+        v-for="(categoryGroup, pageIndex) in summaryChunks"
+        :key="`summary-${pageIndex}`"
+        class="pdf-page"
+      >
+        <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
+          <div class="text-caption text-grey-7">
+            {{ round.job.projectName }}, ครั้งที่ {{ round.roundNumber }},
+            {{ formatDate(round.scheduledDate) }}
+          </div>
+          <div class="text-caption text-grey-7">
+            หน้า | {{ 1 + majorChunks.length + allDefectChunks.length + pageIndex + 1 }} /
+            {{ totalPages }}
+          </div>
+        </div>
+
+        <div class="text-center text-bold q-py-sm" style="font-size: 16px; color: #1976d2">
+          สรุปผลการตรวจ
+        </div>
+
+        <div v-for="(labelGroup, category) in categoryGroup" :key="category" class="q-mb-sm">
+          <div
+            class="text-center text-bold q-py-xs"
+            style="
+              background: #1976d2;
+              color: white;
+              border-radius: 4px;
+              font-size: 13px;
+              margin-bottom: 8px;
+            "
+          >
+            {{ category }}
+          </div>
+
+          <div
+            v-for="(items, label) in labelGroup"
+            :key="label"
+            class="q-mb-xs"
+            style="border-bottom: 1px solid #eee; padding-bottom: 4px"
+          >
+            <div class="text-caption text-weight-bold">{{ label }}</div>
+            <div v-for="item in items" :key="item.itemId">
+              <div class="text-caption text-grey-8">• {{ item.option?.value ?? '-' }}</div>
+              <div v-if="item.detailValue" class="text-caption text-grey-7">
+                <span class="label">รายละเอียด:</span> {{ item.detailValue }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pdf-footer">
+          <span>© 2026, POYSIAN</span>
+          <div class="footer-contacts">
+            <img :src="LineLogo" style="height: 16px" />
+            <span>@poysian,</span>
+            <img :src="FacebookLogo" style="height: 16px" />
+            <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
+            <img :src="CallLogo" style="height: 16px" />
+            <span>098-765-4321,</span>
+            <img :src="GmailLogo" style="height: 12px" />
+            <span>poysian@gmail.com</span>
+          </div>
         </div>
       </div>
     </div>
@@ -261,7 +351,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import type { InspectionRound, Defect } from 'src/models';
+import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
 import PoysianLogo from 'src/assets/Logos/Poysian.png';
 import LineLogo from 'src/assets/Logos/LINE.png';
 import FacebookLogo from 'src/assets/Logos/Facebook.png';
@@ -271,6 +361,7 @@ import GmailLogo from 'src/assets/Logos/Gmail.png';
 const props = defineProps<{
   round: InspectionRound;
   defects: Defect[];
+  summaryItems: InspectionSummaryItem[];
 }>();
 
 const pageScale = ref(1);
@@ -346,7 +437,10 @@ const allDefectChunks = computed(() => {
   return pages;
 });
 
-const totalPages = computed(() => 1 + majorChunks.value.length + allDefectChunks.value.length);
+// const totalPages = computed(() => 1 + majorChunks.value.length + allDefectChunks.value.length);
+const totalPages = computed(
+  () => 1 + majorChunks.value.length + allDefectChunks.value.length + summaryChunks.value.length,
+);
 
 function getRoomShortName(defect: Defect) {
   if (!defect.template) return 'ไม่ระบุห้อง';
@@ -394,11 +488,11 @@ function exportPdf() {
             @page { size: A4; margin: 0; }
           }
           .defects-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 10px; flex: 1; }
-          .defect-card { border: 1px solid #f48fb1; border-radius: 8px; background: #fff5f7; position: relative; overflow: hidden; height: 116mm; }
-          .defect-img { width: 100%; height: 65mm; object-fit: cover; }
+          .defect-card { display: flex; flex-direction: column; border: 1px solid #f48fb1; border-radius: 8px; background: #fff5f7; position: relative; overflow: hidden; height: 100mm; }
+          .defect-img { width: 100%; height: 55mm; object-fit: cover; }
           .badge-id { position: absolute; top: 5px; left: 5px; background: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; border: 1px solid #ddd; z-index: 10; }
           .badge-main { position: absolute; top: 5px; right: 5px; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; z-index: 10; }
-          .card-body { padding: 8px; font-size: 11px; position: relative; }
+          .card-body { padding: 8px; font-size: 11px; position: relative; flex: 1; overflow: visible; }
           .room-title { font-weight: bold; text-align: center; margin-bottom: 5px; border-bottom: 1px solid #fecaca; }
           .signature-line { border-top: 1px solid #000; margin: 0 40px; padding-top: 4px; }
           .card-logo-watermark { position: absolute; bottom: 5px; right: 8px; opacity: 0.2; font-weight: bold; font-size: 14px; color: #1976d2; }
@@ -408,9 +502,10 @@ function exportPdf() {
           .stat-card { border: 1px solid #e0e0e0; border-radius: 8px; }
           .label { font-weight: bold; }
           .info-row { margin-bottom: 2px; font-size: 10px; }
-          .card-logo-watermark-img { position: absolute; bottom: 5px; right: 8px; opacity: 0.15; width: 40px; object-fit: contain; }
+          .card-logo-watermark-img { position: absolute; bottom: 0px; right: 10px; opacity: 0.3; width: 60px; object-fit: contain; }
           .pdf-footer { border-top: 1px solid #ccc; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #555; margin-top: auto; }
           .footer-contacts { display: flex; align-items: center; gap: 6px; font-size: 10px; }
+          .text-description-header { line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
           </style>
       </head>
       <body>
@@ -428,6 +523,28 @@ function exportPdf() {
 }
 
 defineExpose({ exportPdf });
+
+const summaryGroups = computed(() => {
+  const groups: Record<string, Record<string, InspectionSummaryItem[]>> = {};
+  props.summaryItems.forEach((item) => {
+    const cat = item.template.category;
+    const label = item.template.label;
+    if (!groups[cat]) groups[cat] = {};
+    if (!groups[cat][label]) groups[cat][label] = [];
+    groups[cat][label].push(item);
+  });
+  return groups;
+});
+
+const summaryChunks = computed(() => {
+  const chunks: Record<string, Record<string, InspectionSummaryItem[]>>[] = [];
+  const entries = Object.entries(summaryGroups.value);
+  for (let i = 0; i < entries.length; i += 3) {
+    const chunk = Object.fromEntries(entries.slice(i, i + 3));
+    chunks.push(chunk);
+  }
+  return chunks;
+});
 </script>
 
 <style scoped>
@@ -578,5 +695,9 @@ defineExpose({ exportPdf });
   align-items: center;
   gap: 6px;
   font-size: 10px;
+}
+
+.page-content {
+  flex: 1;
 }
 </style>
