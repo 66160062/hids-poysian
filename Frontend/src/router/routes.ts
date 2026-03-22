@@ -89,6 +89,16 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/admin/work/:id',
+    component: () => import('layouts/FullScreen.vue'),
+    children: [
+      {
+        path: '',
+        component: () => import('pages/AdminJobDetailPage.vue'),
+      },
+    ],
+  },
+  {
     path: '/inspector',
     component: () => import('layouts/InspectorScreen.vue'),
     children: [

@@ -165,10 +165,8 @@ const filteredWorks = computed(() => {
   );
 });
 
-function viewDetail(work: Work) {
-  dialogTitle.value = 'รายละเอียดงาน';
-  dialogMessage.value = `คุณกำลังดูรายละเอียดของ: ${work.title}`;
-  showDialog.value = true;
+async function viewDetail(work: Work) {
+  await router.push(`/admin/work/${work.id}`);
 }
 
 function editWork(work: Work) {
