@@ -24,38 +24,38 @@
       <router-view />
     </q-page-container>
 
-    <q-footer class="bg-white">
-      <div class="admin-footer-tabs">
-        <q-tabs
-          dense
-          align="justify"
-          class="bg-white text-grey-7"
-          active-color="primary"
-          indicator-color="transparent"
-          style="min-height: 56px"
-          content-class="admin-tabs-content"
-        >
-          <q-route-tab
-            v-for="item in menuList"
-            :key="item.name"
-            :name="item.name"
-            :icon="item.icon"
-            :label="item.label"
-            :to="item.link"
-            class="admin-menu-tab"
-            no-caps
-          />
-        </q-tabs>
+    <q-footer class="bg-white shadow-up-3">
+      <div
+        class="admin-footer-tabs"
+        ref="footerRef"
+        @pointerdown="onDragStart"
+        @pointermove="onDragMove"
+        @pointerup="onDragEnd"
+        @pointercancel="onDragEnd"
+      >
+        <div class="admin-tabs-inner">
+          <template v-for="item in menuList" :key="item.name">
+            <div
+              class="admin-menu-tab"
+              :class="{ 'is-active': isActive(item.link) }"
+              @click="handleTabClick(item.link)"
+            >
+              <q-icon :name="item.icon" size="22px" />
+              <div class="tab-label">{{ item.label }}</div>
+            </div>
+          </template>
+        </div>
       </div>
     </q-footer>
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
+const router = useRouter();
 const currentTitle = computed(() => (route.meta.title as string) || 'Admin');
 const menuList = [
   { name: 'dashboard', label: 'หน้าหลัก', icon: 'home', link: '/admin' },
@@ -66,50 +66,100 @@ const menuList = [
   { name: 'report', label: 'รายงาน', icon: 'bar_chart', link: '/admin/report' },
   { name: 'settings', label: 'ตั้งค่า', icon: 'settings', link: '/admin/settings' },
 ];
+
+// --- Drag Scroll Logic ---
+const footerRef = ref<HTMLElement | null>(null);
+let isDragging = false;
+let dragStartX = 0;
+let scrollStartX = 0;
+let dragMoved = false;
+
+function onDragStart(e: PointerEvent) {
+  if (!footerRef.value) return;
+  isDragging = true;
+  dragMoved = false;
+  dragStartX = e.clientX;
+  scrollStartX = footerRef.value.scrollLeft;
+  footerRef.value.setPointerCapture(e.pointerId);
+}
+
+function onDragMove(e: PointerEvent) {
+  if (!isDragging || !footerRef.value) return;
+  const dx = e.clientX - dragStartX;
+  if (Math.abs(dx) > 5) dragMoved = true;
+  footerRef.value.scrollLeft = scrollStartX - dx;
+}
+
+function onDragEnd(e: PointerEvent) {
+  isDragging = false;
+  if (footerRef.value) footerRef.value.releasePointerCapture(e.pointerId);
+}
+
+function isActive(link: string) {
+  if (link === '/admin') return route.path === '/admin';
+  return route.path.startsWith(link);
+}
+
+async function handleTabClick(link: string) {
+  if (dragMoved) return; // cancel click if was dragging
+  await router.push(link);
+}
 </script>
 
 <style scoped>
 .admin-footer-tabs {
   overflow-x: auto;
-  white-space: nowrap;
-  -webkit-overflow-scrolling: touch; /* Enable smooth touch scroll on iOS */
-  scrollbar-width: none; /* Hide scrollbar Firefox */
+  overflow-y: hidden;
+  scrollbar-width: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-footer-tabs:active {
+  cursor: grabbing;
 }
 
 .admin-footer-tabs::-webkit-scrollbar {
-  display: none; /* Hide scrollbar Chrome/Safari/Edge */
+  display: none;
 }
 
-.admin-tabs-content {
+.admin-tabs-inner {
   display: flex;
-  gap: 8px;
-  min-width: max-content;
+  flex-direction: row;
+  gap: 4px;
   padding: 8px 12px;
+  min-width: max-content;
 }
 
 .admin-menu-tab {
-  min-width: 85px;
-  font-size: 0.75rem;
-  padding: 8px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  padding: 6px 8px;
   border-radius: 12px;
-  margin: 4px 0;
-  transition: all 0.3s ease;
+  cursor: pointer;
+  color: #9e9e9e;
+  transition: all 0.2s ease;
+  min-height: 54px;
+  gap: 2px;
 }
 
-/* Highlight background when active */
-:deep(.q-tab--active) {
-  background: rgba(var(--q-primary-rgb, 25, 118, 210), 0.1);
-  color: var(--q-primary) !important;
+.admin-menu-tab:hover {
+  background: rgba(0, 0, 0, 0.04);
 }
 
-:deep(.q-tab__content) {
-  min-height: 48px;
-  width: 100%;
+.admin-menu-tab.is-active {
+  background: rgba(25, 118, 210, 0.1);
+  color: var(--q-primary);
 }
 
-:deep(.q-tab__label) {
-  text-align: center;
-  white-space: pre-line;
+.tab-label {
+  font-size: 0.72rem;
   line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
 }
 </style>

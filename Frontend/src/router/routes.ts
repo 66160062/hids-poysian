@@ -48,8 +48,9 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'work',
         component: () => import('pages/AdminWorkListPage.vue'),
-        meta: { title: 'จัดการงานตรวจ', icon: 'check_circle' },
+        meta: { title: 'จัดการงานตรวจ', icon: 'business_center' },
       },
+
       {
         path: 'calendar',
         component: () => import('pages/AdminMainPage.vue'),
@@ -74,6 +75,16 @@ const routes: RouteRecordRaw[] = [
         path: 'settings',
         component: () => import('pages/AdminMainPage.vue'),
         meta: { title: 'ตั้งค่า', icon: 'settings' },
+      },
+    ],
+  },
+  {
+    path: '/admin/work/create',
+    component: () => import('layouts/FullScreen.vue'),
+    children: [
+      {
+        path: '',
+        component: () => import('pages/AdminCreateJobPage.vue'),
       },
     ],
   },

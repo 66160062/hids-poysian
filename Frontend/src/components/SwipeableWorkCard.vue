@@ -32,19 +32,13 @@
           </q-chip>
         </div>
 
-        <div class="row q-gutter-sm q-mt-xs">
-          <q-chip dense outline color="blue-2" text-color="blue-7" class="info-chip">
+        <div class="row q-gutter-sm q-mt-sm">
+          <q-chip color="indigo-1" text-color="indigo-8" class="type-chip" icon="home_work" square>
             {{ work.type }}
           </q-chip>
-          <q-chip dense outline color="blue-2" text-color="blue-7" class="info-chip">
+          <q-chip color="teal-1" text-color="teal-8" class="area-chip" icon="straighten" square>
             {{ work.area }}
           </q-chip>
-        </div>
-
-        <div class="row items-center q-mt-sm text-grey-8">
-          <q-icon name="person_outline" size="18px" class="q-mr-xs" />
-          <span class="text-caption">ผู้ตรวจสอบ:</span>
-          <span class="text-caption text-weight-medium q-ml-xs">{{ work.inspector }}</span>
         </div>
 
         <q-separator class="q-my-sm" />
@@ -259,9 +253,24 @@ function getStatusColor(status: string) {
   border-radius: 4px;
 }
 
-.info-chip {
-  font-size: 11px;
-  border-radius: 6px;
-  background: #f0f7ff !important;
+.type-chip {
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px !important;
+  padding: 4px 10px;
+  border: 1.5px solid #c5cae9;
+}
+
+.area-chip {
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px !important;
+  padding: 4px 10px;
+  border: 1.5px solid #b2dfdb;
+}
+
+:deep(.type-chip .q-chip__icon),
+:deep(.area-chip .q-chip__icon) {
+  font-size: 15px;
 }
 </style>
