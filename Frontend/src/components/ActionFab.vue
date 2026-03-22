@@ -7,6 +7,7 @@
         icon="add"
         label="เพิ่มรายการตรวจ"
         label-class="text-weight-bold"
+        style="transform: translateX(-45px)"
         @click="onClickAdd"
       />
     </q-fab>

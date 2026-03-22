@@ -152,12 +152,11 @@ onMounted(() => {
 
 // ── Navigation ────────────────────────────────────────────────
 
-const goToRoomDetail = async (roomData: { roomId: number; roomName: string }) => {
-  console.log('roomData:', roomData);
+const goToRoomDetail = async (roomData: { roomId: number; roomName: string; groupKey: number }) => {
   await router.push({
     name: 'roomDefect',
     params: { roundId },
-    query: { roomName: roomData.roomName, roomId: roomData.roomId },
+    query: { roomName: roomData.roomName, groupKey: roomData.groupKey },
   });
 };
 

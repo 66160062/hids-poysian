@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { FloorService } from './floor.service';
 import { CreateFloorDto } from './dto/create-floor.dto';
 import { UpdateFloorDto } from './dto/update-floor.dto';
