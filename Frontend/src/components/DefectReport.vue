@@ -21,7 +21,7 @@
 
         <div class="row justify-center q-mb-md">
           <img
-            :src="`http://localhost:3000${round.job.projectImageUrl}`"
+            :src="`${apiUrl}${round.job.projectImageUrl}`"
             style="
               width: 95%;
               max-height: 200px;
@@ -150,7 +150,7 @@
           <div v-for="defect in chunk" :key="defect.defectId" class="defect-card">
             <div class="badge-id">#{{ defect.defectId }}</div>
             <div class="badge-main" style="background: #ef4444">{{ defect.severity }}</div>
-            <img :src="`http://localhost:3000${defect.imageUrl}`" class="defect-img" />
+            <img :src="`${apiUrl}${defect.imageUrl}`" class="defect-img" />
             <div class="card-body">
               <div class="room-title">{{ getRoomShortName(defect) }}</div>
               <div class="info-row">
@@ -227,7 +227,7 @@
               >
                 {{ defect.severity }}
               </div>
-              <img :src="`http://localhost:3000${defect.imageUrl}`" class="defect-img" />
+              <img :src="`${apiUrl}${defect.imageUrl}`" class="defect-img" />
               <div class="card-body">
                 <div class="info-row">
                   <span class="label">ประเภทงาน:</span>
@@ -357,6 +357,7 @@ import LineLogo from 'src/assets/Logos/LINE.png';
 import FacebookLogo from 'src/assets/Logos/Facebook.png';
 import CallLogo from 'src/assets/Logos/Call.png';
 import GmailLogo from 'src/assets/Logos/Gmail.png';
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const props = defineProps<{
   round: InspectionRound;

@@ -35,7 +35,7 @@
         <q-img
           :src="
             jobData.job.projectImageUrl
-              ? `http://localhost:3000${jobData.job.projectImageUrl}`
+              ? `${apiUrl}${jobData.job.projectImageUrl}`
               : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600'
           "
           style="border-radius: 8px; height: 250px; margin-top: 20px"
@@ -266,6 +266,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
 import type { InspectionRound, InspectionSummaryItem } from 'src/models';
 import DefectReport from 'src/components/DefectReport.vue';
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const $q = useQuasar();
 const route = useRoute();

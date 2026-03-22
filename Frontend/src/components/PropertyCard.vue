@@ -71,6 +71,8 @@ const openGoogleMaps = () => {
     alert('ไม่พบข้อมูลที่อยู่สำหรับนำทาง');
   }
 };
+
+const apiUrl = import.meta.env.VITE_API_URL;
 </script>
 
 <template>
@@ -80,7 +82,7 @@ const openGoogleMaps = () => {
         <q-img
           :src="
             item.job.projectImageUrl
-              ? `http://localhost:3000${item.job.projectImageUrl}`
+              ? `${apiUrl}${item.job.projectImageUrl}`
               : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=300'
           "
           class="col"
