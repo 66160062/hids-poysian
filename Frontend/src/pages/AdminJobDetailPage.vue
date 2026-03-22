@@ -7,11 +7,21 @@
       <q-btn flat no-caps label="แก้ไข" color="primary" @click="onEdit" />
     </div>
 
-    <div class="detail-content q-pa-md">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="text-center q-py-xl absolute-center full-width">
+      <q-spinner color="primary" size="3em" />
+      <div class="text-grey-6 q-mt-md">กำลังโหลดข้อมูล...</div>
+    </div>
+
+    <div v-else class="detail-content q-pa-md">
       <!-- Project Card -->
       <q-card flat bordered class="q-mb-md card-round overflow-hidden">
         <!-- House Image -->
-        <div class="house-image-wrapper">
+        <div
+          class="house-image-wrapper"
+          :class="job.projectImage ? 'cursor-pointer' : ''"
+          @click="viewProjectImage"
+        >
           <q-img v-if="job.projectImage" :src="job.projectImage" class="house-img" fit="cover" />
           <div v-else class="house-img-placeholder row items-center justify-center bg-grey-2">
             <q-icon name="home" size="64px" color="grey-4" />
@@ -76,6 +86,7 @@
                 {{ job.coordPhone }}
               </div>
               <div class="text-caption text-grey-7 q-mt-xs">{{ job.coordEmail }}</div>
+              <div class="text-caption text-grey-7 q-mt-xs">Line ID: {{ job.coordLine }}</div>
             </div>
           </div>
 
@@ -179,61 +190,86 @@
       <!-- Bottom spacing -->
       <div style="height: 32px" />
     </div>
+
+    <!-- Image Viewer Dialog -->
+    <q-dialog v-model="showImageDialog" maximized transition-show="fade" transition-hide="fade">
+      <q-card class="bg-black text-white column">
+        <q-toolbar class="bg-transparent absolute-top z-top">
+          <q-space />
+          <q-btn dense flat round icon="close" v-close-popup size="lg" color="white" />
+        </q-toolbar>
+        <q-card-section class="col flex flex-center q-pa-none">
+          <q-img :src="currentImageUrl" fit="contain" class="full-height full-width" />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useQuasar } from 'quasar';
 import { useWorkListStore } from '../stores/useWorkList';
 
 const route = useRoute();
 const router = useRouter();
+const $q = useQuasar();
 const workStore = useWorkListStore();
 
 const jobId = computed(() => Number(route.params.id));
+const isLoading = ref(true);
 
-// Find job from store, fallback to mock if not found
+onMounted(async () => {
+  try {
+    // Simulate Backend API fetch
+    await new Promise((resolve) => setTimeout(resolve, 600));
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+// Find job from store
 const job = computed(() => {
   const found = workStore.works.find((w) => w.id === jobId.value);
-  if (found) {
+  const base = found ?? workStore.works[0];
+  if (!base) {
     return {
-      projectName: found.title,
-      houseType: found.type,
-      area: found.area.replace(' ตร.ม.', ''),
-      appointmentDate: found.date,
-      address: 'เลขที่ 50/12 ถ.บางแสนสาย 2 ต.แสนสุข อ.เมือง จ.ชลบุรี 20130',
-      customerName: found.customerName ?? 'John Smith',
-      customerPhone: found.customerPhone ?? '011-111-1111',
+      projectName: '-',
+      houseType: '-',
+      area: '-',
+      appointmentDate: '-',
+      address: '-',
+      customerName: '-',
+      customerPhone: '-',
       customerEmail: '-',
-      coordName: 'John Smith',
-      coordPhone: '011-111-1111',
+      coordName: '-',
+      coordPhone: '-',
       coordEmail: '-',
       coordLine: '-',
-      housePlanImage: null as string | null,
-      projectImage: null as string | null,
-      status: found.status,
-      statusKey: found.statusKey,
+      housePlanImage: null,
+      projectImage: null,
+      status: '-',
+      statusKey: '',
     };
   }
-  // Default mock
   return {
-    projectName: 'บ้านใหญ่ชลบุรี',
-    houseType: 'ทาวน์โฮม',
-    area: '400',
-    appointmentDate: '24/12/2026',
-    address: 'เลขที่ 50/12 ถ.บางแสนสาย 2 ต.แสนสุข อ.เมือง จ.ชลบุรี 20130',
-    customerName: 'John Smith',
-    customerPhone: '011-111-1111',
-    customerEmail: 'john@example.com',
-    coordName: 'John Smith',
-    coordPhone: '011-111-1111',
-    coordEmail: 'coord@example.com',
-    coordLine: '@johnsmith',
-    housePlanImage: null as string | null,
-    projectImage: null as string | null,
-    status: 'กำลังดำเนินการ',
-    statusKey: 'in_progress',
+    projectName: base.title,
+    houseType: base.type,
+    area: base.area.replace(' ตร.ม.', ''),
+    appointmentDate: base.date,
+    address: base.address ?? `จ.ตัวเมือง: ${base.province ?? '-'}`,
+    customerName: base.customerName ?? '-',
+    customerPhone: base.customerPhone ?? '-',
+    customerEmail: base.customerEmail ?? '-',
+    coordName: base.coordName ?? '-',
+    coordPhone: base.coordPhone ?? '-',
+    coordEmail: base.coordEmail ?? '-',
+    coordLine: base.coordLine ?? '-',
+    housePlanImage: base.housePlanImage ?? null,
+    projectImage: base.projectImage ?? null,
+    status: base.status,
+    statusKey: base.statusKey,
   };
 });
 
@@ -250,11 +286,31 @@ const goBack = async () => {
 };
 
 const onEdit = async () => {
-  await router.push(`/admin/work/${jobId.value}/edit`);
+  await router.push(`/admin/work/create?editId=${jobId.value}`);
+};
+
+const showImageDialog = ref(false);
+const currentImageUrl = ref('');
+
+const viewProjectImage = () => {
+  if (job.value.projectImage) {
+    currentImageUrl.value = job.value.projectImage;
+    showImageDialog.value = true;
+  }
 };
 
 const viewPlan = () => {
-  // TODO: open plan image in dialog or full screen
+  if (job.value.housePlanImage) {
+    currentImageUrl.value = job.value.housePlanImage;
+    showImageDialog.value = true;
+  } else {
+    $q.notify({
+      message: 'ไม่มีรูปแปลนบ้านสำหรับโครงการนี้',
+      color: 'warning',
+      icon: 'warning',
+      position: 'top',
+    });
+  }
 };
 
 const onCreateRound = () => {

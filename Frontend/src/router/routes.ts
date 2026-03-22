@@ -58,7 +58,7 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: 'users',
-        component: () => import('pages/AdminMainPage.vue'),
+        component: () => import('pages/AdminUserManagementPage.vue'),
         meta: { title: 'จัดการผู้ใช้', icon: 'group' },
       },
       {
