@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { SubRoomsService } from './sub-rooms.service';
 import { CreateSubRoomDto } from './dto/create-sub-room.dto';
 import { UpdateSubRoomDto } from './dto/update-sub-room.dto';

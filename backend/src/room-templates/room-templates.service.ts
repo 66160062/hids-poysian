@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { RoomTemplate } from './entities/room-template.entity';
 import { CreateRoomTemplateDto } from './dto/create-room-template.dto';
 import { UpdateRoomTemplateDto } from './dto/update-room-template.dto';
@@ -57,5 +57,17 @@ export class RoomTemplatesService {
   async remove(id: number) {
     const roomTemplate = await this.findOne(id);
     return this.roomTemplatesRepo.remove(roomTemplate);
+  }
+
+  async lookup(roomId: number, floorId: number, subRoomId: number | null) {
+    const template = await this.roomTemplatesRepo.findOne({
+      where: {
+        room: { roomId },
+        floor: { floorId },
+        ...(subRoomId ? { subRoom: { subRoomId } } : { subRoom: IsNull() }),
+      },
+      relations: ['room', 'floor', 'subRoom'],
+    });
+    return template ?? null;
   }
 }

@@ -6,6 +6,8 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { RoomTemplatesService } from './room-templates.service';
 import { CreateRoomTemplateDto } from './dto/create-room-template.dto';
@@ -23,6 +25,19 @@ export class RoomTemplatesController {
   @Get()
   findAll() {
     return this.roomTemplatesService.findAll();
+  }
+
+  @Get('lookup')
+  lookup(
+    @Query('roomId', ParseIntPipe) roomId: number,
+    @Query('floorId', ParseIntPipe) floorId: number,
+    @Query('subRoomId') subRoomId?: string,
+  ) {
+    return this.roomTemplatesService.lookup(
+      roomId,
+      floorId,
+      subRoomId ? Number(subRoomId) : null,
+    );
   }
 
   @Get(':id')
