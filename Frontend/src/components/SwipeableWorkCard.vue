@@ -27,16 +27,20 @@
       <q-card-section>
         <div class="row items-start justify-between">
           <div class="text-weight-bold text-subtitle1">{{ work.title }}</div>
-          <q-chip dense :color="getStatusColor(work.status)" text-color="dark" class="status-chip">
+          <q-chip
+            :color="getStatusColor(work.status)"
+            :text-color="getStatusTextColor(work.status)"
+            class="status-chip"
+          >
             {{ work.status }}
           </q-chip>
         </div>
 
         <div class="row q-gutter-sm q-mt-sm">
-          <q-chip color="indigo-1" text-color="indigo-8" class="type-chip" icon="home_work" square>
+          <q-chip color="indigo-1" text-color="indigo-8" class="type-chip" icon="home_work">
             {{ work.type }}
           </q-chip>
-          <q-chip color="teal-1" text-color="teal-8" class="area-chip" icon="straighten" square>
+          <q-chip color="teal-1" text-color="teal-8" class="area-chip" icon="straighten">
             {{ work.area }}
           </q-chip>
         </div>
@@ -195,6 +199,19 @@ function getStatusColor(status: string) {
       return 'grey-3';
   }
 }
+
+function getStatusTextColor(status: string) {
+  switch (status) {
+    case 'กำลังดำเนินการ':
+      return 'orange-9';
+    case 'รอดำเนินการ':
+      return 'grey-8';
+    case 'เสร็จสิ้น':
+      return 'green-9';
+    default:
+      return 'grey-8';
+  }
+}
 </script>
 
 <style scoped>
@@ -248,24 +265,25 @@ function getStatusColor(status: string) {
 }
 
 .status-chip {
-  font-size: 11px;
-  font-weight: 500;
-  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 100px !important;
+  padding: 6px 16px;
 }
 
 .type-chip {
   font-size: 13px;
   font-weight: 600;
-  border-radius: 8px !important;
-  padding: 4px 10px;
+  border-radius: 100px !important;
+  padding: 4px 12px;
   border: 1.5px solid #c5cae9;
 }
 
 .area-chip {
   font-size: 13px;
   font-weight: 600;
-  border-radius: 8px !important;
-  padding: 4px 10px;
+  border-radius: 100px !important;
+  padding: 4px 12px;
   border: 1.5px solid #b2dfdb;
 }
 

@@ -169,10 +169,8 @@ async function viewDetail(work: Work) {
   await router.push(`/admin/work/${work.id}`);
 }
 
-function editWork(work: Work) {
-  dialogTitle.value = 'แก้ไขงาน';
-  dialogMessage.value = `คุณต้องการแก้ไขงาน: ${work.title}`;
-  showDialog.value = true;
+async function editWork(work: Work) {
+  await router.push(`/admin/work/create?editId=${work.id}`);
 }
 
 async function addNewWork() {
@@ -189,16 +187,19 @@ function onDelete(work: Work) {
     .onOk(() => {
       openCardId.value = null;
 
+      $q.loading.show({ message: 'กำลังลบรายการ...' });
+      
       setTimeout(() => {
         workStore.removeWork(work.id);
 
+        $q.loading.hide();
         $q.notify({
           message: 'ลบรายการสำเร็จ',
-          color: 'negative',
-          icon: 'delete',
+          color: 'positive',
+          icon: 'check_circle',
           position: 'top',
         });
-      }, 200);
+      }, 600);
     })
     .onCancel(() => {
       openCardId.value = null;
@@ -236,9 +237,11 @@ function onDelete(work: Work) {
   min-width: fit-content;
   white-space: nowrap;
   border: 1px solid #f0f0f0;
-  height: 40px;
-  padding: 0 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  height: 24px;
+  padding: 0 20px;
+  border-radius: 100px !important;
+  font-size: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .count-badge {

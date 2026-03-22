@@ -5,12 +5,20 @@
       class="header-container bg-white q-px-md q-py-sm row items-center justify-between shadow-1 sticky-top"
     >
       <q-btn flat no-caps label="ยกเลิก" color="primary" @click="goBack" />
-      <div class="text-subtitle1 text-weight-bold">สร้างงานใหม่</div>
+      <div class="text-subtitle1 text-weight-bold">
+        {{ isEditMode ? 'แก้ไขงาน' : 'สร้างงานใหม่' }}
+      </div>
       <div style="width: 60px"></div>
       <!-- Spacer for centering -->
     </div>
 
-    <div class="form-container q-pa-md q-gutter-y-lg pb-100">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="text-center q-py-xl absolute-center full-width">
+      <q-spinner color="primary" size="3em" />
+      <div class="text-grey-6 q-mt-md">กำลังโหลดข้อมูล...</div>
+    </div>
+
+    <div v-else class="form-container q-pa-md q-gutter-y-lg pb-100">
       <!-- ข้อมูลลูกค้า -->
       <div class="section">
         <div class="row items-center q-mb-sm text-primary">
@@ -34,7 +42,10 @@
               placeholder="เบอร์โทรศัพท์"
               class="custom-input"
               mask="###-###-####"
-              :rules="[(val) => !!val || 'กรุณากรอกเบอร์โทรศัพท์']"
+              :rules="[
+                (val) => !!val || 'กรุณากรอกเบอร์โทรศัพท์',
+                (val) => val.length === 12 || 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก',
+              ]"
             />
             <q-input
               v-model="form.customerEmail"
@@ -69,6 +80,9 @@
               placeholder="เบอร์โทรศัพท์"
               class="custom-input"
               mask="###-###-####"
+              :rules="[
+                (val) => !val || val.length === 12 || 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก',
+              ]"
             />
             <q-input
               v-model="form.coordEmail"
@@ -218,14 +232,25 @@
             <q-card
               flat
               bordered
-              class="upload-box flex flex-center cursor-pointer"
+              class="upload-box flex flex-center cursor-pointer relative-position"
               @click="triggerUpload('housePlan')"
             >
               <div v-if="!form.housePlanImage" class="column items-center">
                 <q-icon name="add_a_photo" size="32px" color="grey-5" />
                 <div class="text-caption text-grey-6 q-mt-xs">คลิกเพื่ออัปโหลดรูปภาพ</div>
               </div>
-              <q-img v-else :src="form.housePlanImage" class="full-height full-width" fit="cover" />
+              <template v-else>
+                <q-img :src="form.housePlanImage" class="full-height full-width" fit="cover" />
+                <q-btn
+                  round
+                  dense
+                  color="negative"
+                  icon="close"
+                  class="absolute-top-right q-ma-xs shadow-2"
+                  size="sm"
+                  @click.stop="form.housePlanImage = null"
+                />
+              </template>
             </q-card>
           </div>
           <div class="col-6">
@@ -246,14 +271,25 @@
             <q-card
               flat
               bordered
-              class="upload-box flex flex-center cursor-pointer"
+              class="upload-box flex flex-center cursor-pointer relative-position"
               @click="triggerUpload('projectPhoto')"
             >
               <div v-if="!form.projectImage" class="column items-center">
                 <q-icon name="add_a_photo" size="32px" color="grey-5" />
                 <div class="text-caption text-grey-6 q-mt-xs">คลิกเพื่ออัปโหลดรูปภาพ</div>
               </div>
-              <q-img v-else :src="form.projectImage" class="full-height full-width" fit="cover" />
+              <template v-else>
+                <q-img :src="form.projectImage" class="full-height full-width" fit="cover" />
+                <q-btn
+                  round
+                  dense
+                  color="negative"
+                  icon="close"
+                  class="absolute-top-right q-ma-xs shadow-2"
+                  size="sm"
+                  @click.stop="form.projectImage = null"
+                />
+              </template>
             </q-card>
           </div>
           <div class="col-6">
@@ -276,27 +312,36 @@
       <!-- Submit Button (Fixed Bottom) -->
     </div>
 
-    <div class="submit-footer">
+    <div class="submit-footer" v-if="!isLoading">
       <q-btn
-        label="สร้างงานใหม่"
+        unelevated
+        :label="isEditMode ? 'บันทึก' : 'สร้างงานใหม่'"
         color="primary"
         class="full-width text-weight-bold submit-btn custom-button"
-        @click="onSubmit"
         no-caps
+        @click="onSubmit"
       />
     </div>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, reactive, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useWorkListStore } from '../stores/useWorkList';
 
+const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
 const workStore = useWorkListStore();
+
+// Edit mode: detect ?editId=X in query
+const editId = computed(() => {
+  const val = route.query.editId;
+  return val ? Number(val) : null;
+});
+const isEditMode = computed(() => editId.value !== null);
 
 const form = reactive({
   customerName: '',
@@ -325,8 +370,62 @@ const houseTypeOptions = ['บ้านเดี่ยว', 'คอนโด', '
 const fileInput = ref<HTMLInputElement | null>(null);
 const currentUploadType = ref<'housePlan' | 'projectPhoto' | null>(null);
 
-const goBack = async () => {
-  await router.push('/admin/work');
+const isLoading = ref(false);
+
+// Pre-fill form on edit mode
+onMounted(async () => {
+  if (!editId.value) return;
+
+  isLoading.value = true;
+  try {
+    // Simulate Backend API fetch
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    const existing = workStore.works.find((w) => w.id === editId.value);
+    if (!existing) return;
+
+    // Project Info
+    form.projectName = existing.title;
+    form.houseType = existing.type;
+    form.usableArea = existing.area.replace(' ตร.ม.', '');
+    form.roomNumber = existing.roomNumber ?? '';
+    form.floor = existing.floor ?? '';
+    form.district = existing.district ?? '';
+    form.subdistrict = existing.subdistrict ?? '';
+    form.postalCode = existing.postalCode ?? '';
+    form.province = existing.province ?? '';
+    // Convert date back for picker (DD/MM/YYYY -> YYYY-MM-DD)
+    if (existing.date && existing.date.includes('/')) {
+      const [d, m, y] = existing.date.split('/');
+      form.appointmentDate = `${y}-${m}-${d}`;
+    } else {
+      form.appointmentDate = existing.date;
+    }
+
+    // Customer Info
+    form.customerName = existing.customerName ?? '';
+    form.customerPhone = existing.customerPhone ?? '';
+    form.customerEmail = existing.customerEmail ?? '';
+
+    // Coordinator Info
+    form.coordName = existing.coordName ?? '';
+    form.coordPhone = existing.coordPhone ?? '';
+    form.coordEmail = existing.coordEmail ?? '';
+    form.coordidLine = existing.coordLine ?? '';
+
+    // Location
+    form.province = existing.province ?? '';
+
+    // Images
+    form.housePlanImage = existing.housePlanImage ?? null;
+    form.projectImage = existing.projectImage ?? null;
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+const goBack = () => {
+  router.back();
 };
 
 const triggerUpload = (type: 'housePlan' | 'projectPhoto') => {
@@ -347,6 +446,32 @@ const handleFileChange = (e: Event) => {
   }
 };
 
+/* =========================================
+   BACKEND API MOCKS
+   ========================================= */
+const createCustomerAPI = async (data: Record<string, unknown>) => {
+  // TODO: Replace with real API e.g. await axios.post('/api/customers', data)
+  console.log('Mock POST /customers', data);
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  return { id: Math.floor(Math.random() * 1000) };
+};
+
+const createJobAPI = async (customerId: number, data: Record<string, unknown>) => {
+  // TODO: Replace with real API e.g. await axios.post('/api/jobs', { ...data, customer_id: customerId })
+  console.log('Mock POST /jobs with customerId:', customerId, data);
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  return { id: Math.floor(Math.random() * 1000) };
+};
+
+const updateJobAPI = async (jobId: number, data: Record<string, unknown>) => {
+  // TODO: Replace with real API e.g. await axios.put(`/api/jobs/${jobId}`, data)
+  console.log('Mock PUT /jobs/', jobId, data);
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  return true;
+};
+
+const isSubmitting = ref(false);
+
 const onSubmit = async () => {
   // Basic Validation
   if (!form.projectName || !form.customerName || !form.customerPhone) {
@@ -359,36 +484,126 @@ const onSubmit = async () => {
     return;
   }
 
-  // Format date for display
-  const displayDate = form.appointmentDate
-    ? form.appointmentDate.replace(/^(\d{4})-(\d{2})-(\d{2}).*/, '$3/$2/$1')
-    : 'ยังไม่กำหนด';
+  isSubmitting.value = true;
+  $q.loading.show({ message: 'กำลังบันทึกข้อมูล...' });
 
-  // Format area
-  const displayArea = form.usableArea ? `${form.usableArea} ตร.ม.` : '-';
+  try {
+    // Format date for display
+    const displayDate = form.appointmentDate
+      ? form.appointmentDate.replace(/^(\d{4})-(\d{2})-(\d{2}).*/, '$3/$2/$1')
+      : 'ยังไม่กำหนด';
 
-  // Add to store
-  workStore.addWork({
-    title: form.projectName,
-    type: form.houseType,
-    area: displayArea,
-    inspector: '-',
-    date: displayDate,
-    status: 'รอดำเนินการ',
-    statusKey: 'waiting',
-    customerName: form.customerName,
-    customerPhone: form.customerPhone,
-    province: form.province,
-  });
+    // Format area
+    const displayArea = form.usableArea ? `${form.usableArea} ตร.ม.` : '-';
 
-  $q.notify({
-    message: `สร้างงาน "${form.projectName}" สำเร็จ!`,
-    color: 'positive',
-    icon: 'check_circle',
-    position: 'top',
-  });
+    // Format full address
+    const addressParts = [];
+    if (form.roomNumber) addressParts.push(`เลขที่ ${form.roomNumber}`);
+    if (form.floor && form.floor !== '-') addressParts.push(`ชั้น ${form.floor}`);
+    if (form.subdistrict) addressParts.push(`ข./ต.${form.subdistrict}`);
+    if (form.district) addressParts.push(`ข./อ.${form.district}`);
+    if (form.province) addressParts.push(`จ.${form.province}`);
+    if (form.postalCode) addressParts.push(`${form.postalCode}`);
+    const fullAddress = addressParts.join(' ') || '-';
 
-  await router.push('/admin/work');
+    if (isEditMode.value && editId.value) {
+      // 1. Update backend via Mock API
+      await updateJobAPI(editId.value, { ...form, displayDate, displayArea, fullAddress });
+
+      // 2. Update local mock store for UI
+      const idx = workStore.works.findIndex((w) => w.id === editId.value);
+      if (idx !== -1) {
+        const original = workStore.works[idx]!;
+        workStore.works[idx] = {
+          ...original,
+          title: form.projectName,
+          type: form.houseType,
+          area: displayArea,
+          date: displayDate,
+          customerName: form.customerName,
+          customerPhone: form.customerPhone,
+          customerEmail: form.customerEmail,
+          coordName: form.coordName,
+          coordPhone: form.coordPhone,
+          coordEmail: form.coordEmail,
+          coordLine: form.coordidLine,
+          roomNumber: form.roomNumber,
+          floor: form.floor,
+          district: form.district,
+          subdistrict: form.subdistrict,
+          postalCode: form.postalCode,
+          province: form.province,
+          address: fullAddress,
+          housePlanImage: form.housePlanImage,
+          projectImage: form.projectImage,
+        };
+      }
+      $q.notify({
+        message: `แก้ไขงาน "${form.projectName}" สำเร็จ!`,
+        color: 'positive',
+        position: 'top',
+        icon: 'check_circle',
+      });
+      await router.push(`/admin/work/${editId.value}`);
+    } else {
+      // 1. Create Customer via Mock API
+      const customerMockResponse = await createCustomerAPI({
+        name: form.customerName,
+        phone: form.customerPhone,
+        email: form.customerEmail,
+      });
+      const customerId = customerMockResponse.id;
+
+      // 2. Create Job linking to Customer via Mock API
+      await createJobAPI(customerId, {
+        projectName: form.projectName,
+        houseType: form.houseType,
+        appointmentDate: displayDate,
+        // Insert more form fields here...
+      });
+      // (Used jobMockResponse.id if we need to redirect to new item ID)
+
+      // 3. Update local mock store for UI
+      workStore.addWork({
+        title: form.projectName,
+        type: form.houseType,
+        area: displayArea,
+        inspector: '-',
+        date: displayDate,
+        status: 'รอดำเนินการ',
+        statusKey: 'waiting',
+        customerName: form.customerName,
+        customerPhone: form.customerPhone,
+        customerEmail: form.customerEmail,
+        coordName: form.coordName,
+        coordPhone: form.coordPhone,
+        coordEmail: form.coordEmail,
+        coordLine: form.coordidLine,
+        roomNumber: form.roomNumber,
+        floor: form.floor,
+        district: form.district,
+        subdistrict: form.subdistrict,
+        postalCode: form.postalCode,
+        province: form.province,
+        address: fullAddress,
+        housePlanImage: form.housePlanImage,
+        projectImage: form.projectImage,
+      });
+      $q.notify({
+        message: `สร้างงาน "${form.projectName}" สำเร็จ!`,
+        color: 'positive',
+        position: 'top',
+        icon: 'check_circle',
+      });
+      await router.push('/admin/work');
+    }
+  } catch (error) {
+    console.error('Submit Failed', error);
+    $q.notify({ message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', color: 'negative', position: 'top' });
+  } finally {
+    $q.loading.hide();
+    isSubmitting.value = false;
+  }
 };
 </script>
 
