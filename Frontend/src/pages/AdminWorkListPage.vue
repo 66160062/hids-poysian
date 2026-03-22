@@ -15,9 +15,9 @@
           <template v-slot:prepend>
             <q-icon name="search" />
           </template>
-          <template v-slot:append>
+          <!-- <template v-slot:append>
             <q-btn flat round dense icon="tune" class="text-grey-6" />
-          </template>
+          </template> -->
         </q-input>
       </div>
 
@@ -95,10 +95,15 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
-import SwipeableWorkCard, { type Work } from '../components/SwipeableWorkCard.vue';
+import SwipeableWorkCard from '../components/SwipeableWorkCard.vue';
+import type { Work } from '../components/SwipeableWorkCard.vue';
+import { useWorkListStore } from '../stores/useWorkList';
 
+const router = useRouter();
 const $q = useQuasar();
+const workStore = useWorkListStore();
 const searchTerm = ref('');
 const activeFilter = ref('all');
 const showDialog = ref(false);
@@ -129,58 +134,13 @@ const filters = computed(() => {
   ];
 });
 
-const works = ref<Work[]>([
-  {
-    id: 1,
-    title: 'บ้านใหญ่พลังชล',
-    type: 'คอนโด',
-    area: '33 ตร.ม.',
-    inspector: 'TEAM-A',
-    date: '24/12/2026',
-    status: 'กำลังดำเนินการ',
-    statusKey: 'in_progress',
-  },
-  {
-    id: 2,
-    title: 'บ้านสมหวัง',
-    type: 'บ้านเดี่ยว',
-    area: '150 ตร.ม.',
-    inspector: 'TEAM-B',
-    date: '25/12/2026',
-    status: 'รอดำเนินการ',
-    statusKey: 'waiting',
-  },
-  {
-    id: 3,
-    title: 'โครงการพฤกษา',
-    type: 'ทาวน์เฮาส์',
-    area: '120 ตร.ม.',
-    inspector: 'TEAM-A',
-    date: '26/12/2026',
-    status: 'กำลังดำเนินการ',
-    statusKey: 'in_progress',
-  },
-  {
-    id: 4,
-    title: 'เดอะ เบส คอนโด',
-    type: 'คอนโด',
-    area: '45 ตร.ม.',
-    inspector: 'TEAM-C',
-    date: '27/12/2026',
-    status: 'เสร็จสิ้น',
-    statusKey: 'others',
-  },
-  {
-    id: 5,
-    title: 'บ้านชายเขา',
-    type: 'บ้านเดี่ยว',
-    area: '200 ตร.ม.',
-    inspector: 'TEAM-A',
-    date: '28/12/2026',
-    status: 'รอดำเนินการ',
-    statusKey: 'waiting',
-  },
-]);
+const works = computed(() => workStore.works);
+
+const STATUS_ORDER: Record<string, number> = {
+  in_progress: 0,
+  waiting: 1,
+  others: 2,
+};
 
 const filteredWorks = computed(() => {
   let result = works.value;
@@ -199,7 +159,10 @@ const filteredWorks = computed(() => {
     );
   }
 
-  return result;
+  // เรียงลำดับตามสถานะ: กำลังดำเนินการ → รอดำเนินการ → เสร็จสิ้น
+  return [...result].sort(
+    (a, b) => (STATUS_ORDER[a.statusKey] ?? 99) - (STATUS_ORDER[b.statusKey] ?? 99),
+  );
 });
 
 function viewDetail(work: Work) {
@@ -214,10 +177,8 @@ function editWork(work: Work) {
   showDialog.value = true;
 }
 
-function addNewWork() {
-  dialogTitle.value = 'เพิ่มงานใหม่';
-  dialogMessage.value = 'เข้าสู่หน้าจอเพิ่มข้อมูลงานใหม่';
-  showDialog.value = true;
+async function addNewWork() {
+  await router.push('/admin/work/create');
 }
 
 function onDelete(work: Work) {
@@ -231,7 +192,7 @@ function onDelete(work: Work) {
       openCardId.value = null;
 
       setTimeout(() => {
-        works.value = works.value.filter((w) => w.id !== work.id);
+        workStore.removeWork(work.id);
 
         $q.notify({
           message: 'ลบรายการสำเร็จ',
