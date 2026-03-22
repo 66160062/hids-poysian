@@ -26,7 +26,9 @@
     >
       <q-card-section>
         <div class="row items-start justify-between">
-          <div class="text-weight-bold text-subtitle1">{{ work.title }}</div>
+          <div class="text-weight-bold text-subtitle1" style="font-size: 18px">
+            {{ work.title }}
+          </div>
           <q-chip
             :color="getStatusColor(work.status)"
             :text-color="getStatusTextColor(work.status)"
@@ -48,13 +50,13 @@
         <q-separator class="q-my-sm" />
 
         <div class="row items-center justify-between">
-          <div class="row items-center text-grey-6">
-            <q-icon name="calendar_today" size="16px" class="q-mr-xs" />
-            <span class="text-caption">{{ work.date }}</span>
+          <div class="row items-center text-grey-7">
+            <q-icon name="person" size="24px" class="q-mr-sm" />
+            <span class="text-weight-medium" style="font-size: 14px">{{
+              work.customerName || 'ไม่ระบุชื่อลูกค้า'
+            }}</span>
           </div>
-          <div class="row q-gutter-x-sm">
-            <q-btn flat round dense icon="edit" color="grey-7" @click.stop="$emit('edit', work)" />
-          </div>
+          <q-btn flat round dense icon="edit" color="grey-7" @click.stop="$emit('edit', work)" />
         </div>
       </q-card-section>
     </q-card>
@@ -73,6 +75,7 @@ export interface Work {
   date: string;
   status: string;
   statusKey: string;
+  customerName?: string;
 }
 
 const props = defineProps<{

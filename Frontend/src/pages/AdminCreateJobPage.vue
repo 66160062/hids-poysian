@@ -187,36 +187,6 @@
                 />
               </div>
             </div>
-
-            <!-- เพิ่ม Appointment Date & Assign Inspector ตาม Prompt -->
-            <q-input
-              v-model="form.appointmentDate"
-              filled
-              dense
-              label="วันที่นัดหมาย"
-              class="custom-input"
-            >
-              <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="form.appointmentDate" mask="YYYY-MM-DD HH:mm">
-                      <div class="row items-center justify-end">
-                        <q-btn v-close-popup label="Close" color="primary" flat />
-                      </div>
-                    </q-date>
-                  </q-popup-proxy>
-                </q-icon>
-                <q-icon name="access_time" class="cursor-pointer q-ml-sm">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-time v-model="form.appointmentDate" mask="YYYY-MM-DD HH:mm" format24h>
-                      <div class="row items-center justify-end">
-                        <q-btn v-close-popup label="Close" color="primary" flat />
-                      </div>
-                    </q-time>
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
           </div>
         </q-card>
       </div>
@@ -360,7 +330,6 @@ const form = reactive({
   postalCode: '',
   usableArea: '',
   houseType: 'บ้านเดี่ยว',
-  appointmentDate: '',
   housePlanImage: null as string | null,
   projectImage: null as string | null,
 });
@@ -394,13 +363,6 @@ onMounted(async () => {
     form.subdistrict = existing.subdistrict ?? '';
     form.postalCode = existing.postalCode ?? '';
     form.province = existing.province ?? '';
-    // Convert date back for picker (DD/MM/YYYY -> YYYY-MM-DD)
-    if (existing.date && existing.date.includes('/')) {
-      const [d, m, y] = existing.date.split('/');
-      form.appointmentDate = `${y}-${m}-${d}`;
-    } else {
-      form.appointmentDate = existing.date;
-    }
 
     // Customer Info
     form.customerName = existing.customerName ?? '';
@@ -489,9 +451,7 @@ const onSubmit = async () => {
 
   try {
     // Format date for display
-    const displayDate = form.appointmentDate
-      ? form.appointmentDate.replace(/^(\d{4})-(\d{2})-(\d{2}).*/, '$3/$2/$1')
-      : 'ยังไม่กำหนด';
+    const displayDate = 'ยังไม่กำหนด';
 
     // Format area
     const displayArea = form.usableArea ? `${form.usableArea} ตร.ม.` : '-';
