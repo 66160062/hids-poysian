@@ -10,22 +10,16 @@
         boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
       }"
     >
-      <div class="bg-white" style="position: sticky; top: 0; z-index: 100;">
-        <div
-          class="text-center text-weight-bold q-pt-md q-pb-md"
-          style="font-size: 24px; "
-        >
-          ข้อมูลการตรวจบ้าน
-        </div>
-        <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
-      </div>
-
       <div class="q-pa-lg" style="max-width: 600px; margin: 20px auto 0">
         <div class="row justify-between items-center q-mb-md">
           <div class="text-weight-bold" style="font-size: 16px">
             {{ isMonthlyView ? 'ตารางงานเดือนนี้' : 'ตารางงานสัปดาห์นี้' }}
           </div>
-          <div class="text-primary text-weight-bold" style="font-size: 13px; cursor: pointer" @click="toggleView">
+          <div
+            class="text-primary text-weight-bold"
+            style="font-size: 13px; cursor: pointer"
+            @click="toggleView"
+          >
             {{ isMonthlyView ? 'ดูตารางแบบสัปดาห์' : 'ดูตารางงานทั้งหมด' }}
           </div>
         </div>
@@ -48,7 +42,9 @@
             :style="
               isMonthlyView
                 ? 'width: 14.28%; padding: 2px;'
-                : 'min-width: 68px; border-radius: 14px; padding-top: 14px; height: ' + (day.isActive ? '100px' : '85px') + ';'
+                : 'min-width: 68px; border-radius: 14px; padding-top: 14px; height: ' +
+                  (day.isActive ? '100px' : '85px') +
+                  ';'
             "
           >
             <div v-if="day.isEmpty" style="height: 100%"></div>
@@ -62,14 +58,21 @@
                   ? 'bg-primary text-white shadow-3 rounded-borders'
                   : day.dateStr < todayStr
                     ? 'bg-grey-4 text-grey-6 rounded-borders'
-                    : 'bg-white text-dark rounded-borders'
+                    : 'bg-white text-dark rounded-borders',
               ]"
               :style="[
-                !isMonthlyView && day.dateStr > todayStr ? { border: '1px solid #E0E0E0' } : { border: 'none' },
-                isMonthlyView ? { borderRadius: '12px', padding: '4px 0' } : { borderRadius: '14px' }
+                !isMonthlyView && day.dateStr > todayStr
+                  ? { border: '1px solid #E0E0E0' }
+                  : { border: 'none' },
+                isMonthlyView
+                  ? { borderRadius: '12px', padding: '4px 0' }
+                  : { borderRadius: '14px' },
               ]"
             >
-              <div v-if="!isMonthlyView" style="font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500">
+              <div
+                v-if="!isMonthlyView"
+                style="font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500"
+              >
                 {{ day.label }}
               </div>
               <div
@@ -90,11 +93,7 @@
                   transform: translateX(-50%);
                 "
                 :class="
-                  day.isActive
-                    ? 'bg-white'
-                    : day.dateStr < todayStr
-                      ? 'bg-grey-5'
-                      : 'bg-dark'
+                  day.isActive ? 'bg-white' : day.dateStr < todayStr ? 'bg-grey-5' : 'bg-dark'
                 "
               ></div>
             </div>

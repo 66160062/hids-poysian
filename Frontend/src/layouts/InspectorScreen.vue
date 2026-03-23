@@ -1,9 +1,23 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header v-if="!hideHeader" class="bg-white text-black" flat bordered>
-      <q-toolbar class="justify-center q-py-md">
+    <q-header class="bg-white text-black" flat bordered>
+      <q-toolbar class="justify-center q-py-md relative-position">
+        <div
+          v-if="route.path.includes('/inspector/job/')"
+          class="absolute-left q-ml-md flex flex-center"
+          style="z-index: 10"
+        >
+          <q-icon
+            name="arrow_back_ios_new"
+            size="24px"
+            color="primary"
+            class="cursor-pointer text-weight-bold"
+            @click="goBack"
+          />
+        </div>
+
         <q-toolbar-title class="text-center text-weight-bold" style="font-size: 24px">
-          ข้อมูลการตรวจบ้าน
+          {{ headerTitle }}
         </q-toolbar-title>
       </q-toolbar>
       <q-separator color="blue" size="2px" class="q-mx-md" />
@@ -48,24 +62,50 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 const router = useRouter();
-const activeTab = ref('inspection');
-
 const route = useRoute();
-const hideHeader = computed(() => route.path.includes('/job/'));
+
+// ใช้ระบุว่า Tab ไหนกำลัง Active อยู่ (กรณีโหลดหน้าใหม่)
+const activeTab = computed(() => {
+  if (route.path.includes('/dashboard')) return 'inspection';
+  if (route.path.includes('/progress')) return 'progress';
+  return 'inspection';
+});
+
 const hideBottomBar = computed(() => route.path.includes('/job/'));
 
 function changeTab(tabName: string, path: string) {
-  activeTab.value = tabName;
   void router.push(path);
 }
+
+const goBack = () => {
+  router.back();
+};
+
+const headerTitle = computed(() => {
+  if (route.path === '/inspector/dashboard') {
+    return 'การตรวจบ้าน';
+  }
+  if (route.path.includes('/inspector/job/')) {
+    // สามารถเพิ่มเงื่อนไขแยกย่อยได้ เช่น ถ้าอยู่ในหน้า report
+    if (route.path.includes('/report')) return 'สรุปรายงาน';
+    if (route.path.includes('/inspection')) return 'ดำเนินการตรวจ';
+    return 'รายละเอียด';
+  }
+  return 'ระบบตรวจบ้าน';
+});
 </script>
 
 <style scoped>
 .q-footer {
   border-top: 1px solid #e0e0e0;
+}
+/* ทำให้ปุ่ม Back อยู่กลางแนวตั้ง */
+.absolute-left {
+  top: 50%;
+  transform: translateY(-50%);
 }
 </style>
