@@ -134,6 +134,20 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
+
+  {
+  path: '/contractor',
+  component: () => import('layouts/ContractorScreen.vue'),
+  redirect: '/contractor/repair-overview',
+  children: [
+    { path: 'repair-overview', component: () => import('pages/ContractorMainPage.vue'),           meta: { title: 'จุดที่ต้องแก้ไข' } },
+    //{ path: 'defect-list',     component: () => import('pages/RepairDefectListPage.vue'),          meta: { title: 'รายการ Defect' } },
+    //{ path: 'defect-list/:id', component: () => import('pages/RepairDefectListPage.vue'),          meta: { title: 'รายการ Defect' } },
+    //{ path: 'defect-detail/:id', component: () => import('pages/ContractorUpdateRepairPage.vue'), meta: { title: 'อัพเดตสถานะซ่อม' } },
+  ],
+  meta: { requiresAuth: false },
+},
+
   {
     path: '/:catchAll(.*)*',
     component: () => import('pages/ErrorNotFound.vue'),
