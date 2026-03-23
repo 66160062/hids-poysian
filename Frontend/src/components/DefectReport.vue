@@ -306,8 +306,9 @@
           <div
             class="text-center text-bold q-py-xs"
             style="
-              background: #1976d2 !important;
-              color: white !important;
+
+              background: #1976d2;
+              color: white;
               border-radius: 4px;
               font-size: 13px;
               margin-bottom: 8px;
@@ -578,14 +579,13 @@ const summaryChunks = computed(() => {
 }
 .pdf-page {
   width: 210mm;
-  min-height: 297mm;
+  height: 297mm;
   background: white;
   margin: 0 auto 20px auto;
   padding: 10mm;
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  position: relative;
 }
 .header-line {
   border-bottom: 1px solid #ccc;
