@@ -398,7 +398,6 @@ async function fetchDefects() {
   try {
     const res = await api.get(`/defects/round/${roundId}`);
     defects.value = res.data;
-    console.log('Defects loaded:', res.data);
   } catch (error) {
     console.error('Error fetching defects:', error);
   }
@@ -409,7 +408,6 @@ async function fetchSummary() {
     // ตรวจสอบ URL ของ API สรุปรายงานของคุณให้ถูกต้อง (ตัวอย่าง: /inspection-summary/round/...)
     const res = await api.get(`/inspection-summary-items/round/${roundId}`);
     summaryItems.value = res.data;
-    console.log('Summary data loaded:', res.data); // ลองดูใน Console ว่าข้อมูลมาไหม
   } catch (error) {
     console.error('Error fetching summary:', error);
   }

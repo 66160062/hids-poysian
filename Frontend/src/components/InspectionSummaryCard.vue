@@ -3,7 +3,7 @@
     <q-card-section class="q-pb-sm">
       <div class="row text-center">
         <div class="col">
-          <div class="text-caption text-grey-7">ประเภทห้องทั้งหมด</div>
+          <div class="text-caption text-grey-7">จำนวนห้องทั้งหมด</div>
           <div class="text-h6 text-primary text-weight-bold">{{ data.totalRooms }}</div>
         </div>
 

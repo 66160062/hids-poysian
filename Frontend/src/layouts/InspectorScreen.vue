@@ -1,6 +1,6 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header class="bg-white text-black" flat bordered>
+    <q-header v-if="!hideHeader" class="bg-white text-black" flat bordered>
       <q-toolbar class="justify-center q-py-md relative-position">
         <div
           v-if="route.path.includes('/inspector/job/')"
@@ -97,6 +97,8 @@ const headerTitle = computed(() => {
   }
   return 'ระบบตรวจบ้าน';
 });
+
+const hideHeader = computed(() => route.path.includes('/add-defect'));
 </script>
 
 <style scoped>
