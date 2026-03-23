@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -107,5 +107,44 @@ export class InspectionRoundsService {
       roundId: id,
     });
     return this.inspectionRoundsRepo.softRemove(round);
+  }
+
+  // --- สิ่งที่เพิ่มเข้ามา: ฟังก์ชันยืนยันการตรวจ ---
+  async confirmInspection(id: number) {
+    const round = await this.inspectionRoundsRepo.findOneByOrFail({
+      roundId: id,
+    });
+    round.inspectedAt = new Date(); // แสตมป์เวลาว่าตรวจเสร็จแล้ว
+    return this.inspectionRoundsRepo.save(round);
+  }
+
+  async confirmSummary(id: number) {
+    const round = await this.inspectionRoundsRepo.findOneByOrFail({
+      roundId: id,
+    });
+    round.summaryCompletedAt = new Date(); // แสตมป์เวลาว่าทำสรุปเสร็จแล้ว
+    return this.inspectionRoundsRepo.save(round);
+  }
+
+  async submit(id: number) {
+    const round = await this.inspectionRoundsRepo.findOneByOrFail({
+      roundId: id,
+    });
+
+    if (!round.inspectedAt) {
+      throw new BadRequestException(
+        'ไม่สามารถส่งอนุมัติได้ เนื่องจากยังไม่ได้ยืนยันผลการตรวจ Defect',
+      );
+    }
+
+    if (!round.summaryCompletedAt) {
+      throw new BadRequestException(
+        'ไม่สามารถส่งอนุมัติได้ เนื่องจากยังไม่ได้ยืนยันการสรุปรายงาน',
+      );
+    }
+
+    round.status = 'SUBMITTED';
+    round.submittedAt = new Date();
+    return this.inspectionRoundsRepo.save(round);
   }
 }
