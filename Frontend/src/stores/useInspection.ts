@@ -175,15 +175,10 @@ export const useInspectionStore = defineStore('inspection', () => {
     const list = filteredDefects.value;
     const pass = list.filter((d) => d.status === 'PASS').length;
     return {
-      // ประเภทห้องทั้งหมด = unique room (ไม่ใช่ unique roomName)
-      totalRooms: new Set(list.map((d) => d.template?.room?.roomId)).size,
-
-      // ประเภทงานทั้งหมด = unique defect_category
+      totalRooms: new Set(list.map((d) => d.template?.templateId)).size, // ✅ เปลี่ยนจาก roomId เป็น templateId
       totalJobs: new Set(
         list.flatMap((d) => d.subCategories.map((s) => s.category?.categoryId)).filter(Boolean),
       ).size,
-
-      // รายการทั้งหมด = จำนวน defect
       totalItems: list.length,
       pass,
       fail: list.length - pass,

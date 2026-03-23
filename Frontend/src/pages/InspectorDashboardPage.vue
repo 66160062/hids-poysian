@@ -24,10 +24,12 @@
           </div>
         </div>
 
-        <div v-if="isMonthlyView" class="row text-grey-7 q-mb-sm text-center">
-          <div class="col" v-for="dayName in dayLabels" :key="dayName">
-            <span style="font-size: 12px">{{ dayName }}</span>
+        <div v-if="isMonthlyView" class="row items-center justify-between q-mb-sm">
+          <q-btn flat round icon="chevron_left" @click="prevMonth" />
+          <div class="text-weight-bold">
+            {{ currentMonth.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' }) }}
           </div>
+          <q-btn flat round icon="chevron_right" @click="nextMonth" />
         </div>
 
         <div
@@ -61,12 +63,18 @@
                     : 'bg-white text-dark rounded-borders',
               ]"
               :style="[
-                !isMonthlyView && day.dateStr > todayStr
-                  ? { border: '1px solid #E0E0E0' }
-                  : { border: 'none' },
                 isMonthlyView
-                  ? { borderRadius: '12px', padding: '4px 0' }
-                  : { borderRadius: '14px' },
+                  ? {
+                      borderRadius: '12px',
+                      padding: '4px 0',
+                      border:
+                        day.hasDot && !day.isActive ? '2px solid #333' : '2px solid transparent',
+                    }
+                  : {
+                      borderRadius: '14px',
+                      border:
+                        !day.isActive && day.dateStr > todayStr ? '1px solid #E0E0E0' : 'none',
+                    },
               ]"
             >
               <div
@@ -82,7 +90,7 @@
                 {{ day.date }}
               </div>
               <div
-                v-if="day.hasDot"
+                v-if="day.hasDot && !isMonthlyView"
                 class="absolute-bottom"
                 style="
                   width: 6px;
@@ -342,7 +350,7 @@ async function fetchRounds() {
   loading.value = true;
   try {
     const endpoint = isMonthlyView.value
-      ? `/inspection-rounds/month/${inspectorId.value}`
+      ? `/inspection-rounds/month/${inspectorId.value}?date=${toLocalDateStr(currentMonth.value)}`
       : `/inspection-rounds/week/${inspectorId.value}`;
 
     const res = await api.get(endpoint);
@@ -365,6 +373,24 @@ function toLocalDateStr(date: Date): string {
 function toUTCDateStr(dateStr: string): string {
   if (!dateStr) return '';
   return String(dateStr).substring(0, 10);
+}
+
+const currentMonth = ref(new Date());
+
+function prevMonth() {
+  const d = new Date(currentMonth.value);
+  d.setMonth(d.getMonth() - 1);
+  currentMonth.value = d;
+  selectedDate.value = new Date(d.getFullYear(), d.getMonth(), 1);
+  void fetchRounds();
+}
+
+function nextMonth() {
+  const d = new Date(currentMonth.value);
+  d.setMonth(d.getMonth() + 1);
+  currentMonth.value = d;
+  selectedDate.value = new Date(d.getFullYear(), d.getMonth(), 1);
+  void fetchRounds();
 }
 
 onMounted(() => {
