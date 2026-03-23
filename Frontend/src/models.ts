@@ -26,6 +26,8 @@ export interface InspectionRound {
   scheduledDate: string;
   status: string;
   roundNumber: string;
+  inspectedAt?: string | null;
+  summaryCompletedAt?: string | null;
   teamMember?: { inspector?: { team?: { teamName: string; contactInfo: string } } };
   job: {
     projectName: string;
