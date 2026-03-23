@@ -25,14 +25,7 @@
     </q-page-container>
 
     <q-footer class="bg-white shadow-up-3">
-      <div
-        class="admin-footer-tabs"
-        ref="footerRef"
-        @pointerdown="onDragStart"
-        @pointermove="onDragMove"
-        @pointerup="onDragEnd"
-        @pointercancel="onDragEnd"
-      >
+      <div class="admin-footer-tabs">
         <div class="admin-tabs-inner">
           <template v-for="item in menuList" :key="item.name">
             <div
@@ -51,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
@@ -67,41 +60,12 @@ const menuList = [
   { name: 'settings', label: 'ตั้งค่า', icon: 'settings', link: '/admin/settings' },
 ];
 
-// --- Drag Scroll Logic ---
-const footerRef = ref<HTMLElement | null>(null);
-let isDragging = false;
-let dragStartX = 0;
-let scrollStartX = 0;
-let dragMoved = false;
-
-function onDragStart(e: PointerEvent) {
-  if (!footerRef.value) return;
-  isDragging = true;
-  dragMoved = false;
-  dragStartX = e.clientX;
-  scrollStartX = footerRef.value.scrollLeft;
-  footerRef.value.setPointerCapture(e.pointerId);
-}
-
-function onDragMove(e: PointerEvent) {
-  if (!isDragging || !footerRef.value) return;
-  const dx = e.clientX - dragStartX;
-  if (Math.abs(dx) > 5) dragMoved = true;
-  footerRef.value.scrollLeft = scrollStartX - dx;
-}
-
-function onDragEnd(e: PointerEvent) {
-  isDragging = false;
-  if (footerRef.value) footerRef.value.releasePointerCapture(e.pointerId);
-}
-
 function isActive(link: string) {
   if (link === '/admin') return route.path === '/admin';
   return route.path.startsWith(link);
 }
 
 async function handleTabClick(link: string) {
-  if (dragMoved) return; // cancel click if was dragging
   await router.push(link);
 }
 </script>
@@ -111,13 +75,9 @@ async function handleTabClick(link: string) {
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
-  cursor: grab;
   user-select: none;
   -webkit-overflow-scrolling: touch;
-}
-
-.admin-footer-tabs:active {
-  cursor: grabbing;
+  display: flex;
 }
 
 .admin-footer-tabs::-webkit-scrollbar {
@@ -130,6 +90,7 @@ async function handleTabClick(link: string) {
   gap: 4px;
   padding: 8px 12px;
   min-width: max-content;
+  flex: 1;
 }
 
 .admin-menu-tab {
@@ -145,6 +106,22 @@ async function handleTabClick(link: string) {
   transition: all 0.2s ease;
   min-height: 54px;
   gap: 2px;
+}
+
+@media (min-width: 600px) {
+  .admin-footer-tabs {
+    justify-content: center;
+  }
+  .admin-tabs-inner {
+    min-width: auto;
+    width: 100%;
+    max-width: 1024px;
+    justify-content: space-around;
+  }
+  .admin-menu-tab {
+    flex: 1;
+    max-width: 160px;
+  }
 }
 
 .admin-menu-tab:hover {

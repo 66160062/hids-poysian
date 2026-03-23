@@ -249,7 +249,7 @@ function getStatusTextColor(status: string) {
   position: relative;
   z-index: 2;
   background: white;
-  touch-action: none;
+  touch-action: pan-y;
   user-select: none;
   will-change: transform;
   cursor: grab;
