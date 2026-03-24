@@ -539,6 +539,15 @@ onMounted(async () => {
 
   const { data } = await api.get('/room-templates');
   templates.value = data;
+
+  const { roomId, subRoomId, floorId } = route.query;
+  if (roomId) {
+    form.value.roomId = Number(roomId);
+    if (subRoomId) form.value.subRoomId = Number(subRoomId);
+    if (floorId) form.value.floorId = Number(floorId);
+    void lookupTemplate();
+    step.value = 2;
+  }
 });
 </script>
 

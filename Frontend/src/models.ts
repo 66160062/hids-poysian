@@ -80,7 +80,7 @@ export interface Defect {
   template?: {
     templateId: number;
     room: { roomName: string; roomId: number };
-    subRoom: { roomName: string; roomId: number } | null;
+    subRoom: { roomName: string; subRoomId: number } | null;
     floor: { floorId: number; label: string };
   };
 }
