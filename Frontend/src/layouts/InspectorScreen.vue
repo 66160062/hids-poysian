@@ -89,14 +89,21 @@ const headerTitle = computed(() => {
   if (route.path === '/inspector/dashboard') {
     return 'การตรวจบ้าน';
   }
+
   if (route.path.includes('/inspector/job/')) {
-    // สามารถเพิ่มเงื่อนไขแยกย่อยได้ เช่น ถ้าอยู่ในหน้า report
     if (route.path.includes('/report')) return 'สรุปรายงาน';
+    if (route.path.includes('/room-defect')) {
+      return roomName.value;
+    }
     if (route.path.includes('/inspection')) return 'ดำเนินการตรวจ';
+
     return 'รายละเอียด';
   }
+
   return 'ระบบตรวจบ้าน';
 });
+
+const roomName = computed(() => (route.query.roomName as string) || 'รายการ Defect');
 
 const hideHeader = computed(() => route.path.includes('/add-defect'));
 </script>

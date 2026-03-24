@@ -1,16 +1,5 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header class="bg-white text-black">
-      <q-toolbar>
-        <q-btn flat round dense icon="arrow_back_ios" color="primary" @click="goBack" />
-        <q-toolbar-title class="text-center text-weight-bold text-subtitle1">
-          {{ roomName }}
-        </q-toolbar-title>
-        <div style="width: 32px"></div>
-      </q-toolbar>
-      <q-separator color="grey-3" />
-    </q-header>
-
     <q-page-container>
       <q-page class="q-pa-md bg-white">
         <!-- Filter button -->
@@ -188,7 +177,6 @@ import type { Defect } from 'src/models';
 
 const route = useRoute();
 const router = useRouter();
-const roomName = route.query.roomName as string;
 const groupKey = route.query.groupKey as string;
 
 // ── Store ─────────────────────────────────────────────────────
@@ -313,8 +301,6 @@ function toCardData(d: Defect) {
 }
 
 // ── Navigation ────────────────────────────────────────────────
-
-const goBack = () => router.back();
 
 import ActionFab from '../components/ActionFab.vue';
 const roundId = route.params.roundId as string;
