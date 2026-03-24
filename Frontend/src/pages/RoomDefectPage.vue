@@ -45,6 +45,7 @@
             :defect="toCardData(defect)"
           />
         </div>
+        <ActionFab @add="onAddDefectClick" />
       </q-page>
     </q-page-container>
 
@@ -314,4 +315,20 @@ function toCardData(d: Defect) {
 // ── Navigation ────────────────────────────────────────────────
 
 const goBack = () => router.back();
+
+import ActionFab from '../components/ActionFab.vue';
+const roundId = route.params.roundId as string;
+const onAddDefectClick = () => {
+  const group = store.groupedDefects.find((g) => g.groupKey === groupKey);
+  const defect = group?.defects[0];
+  void router.push({
+    name: 'addDefect',
+    params: { roundId },
+    query: {
+      roomId: defect?.template?.room?.roomId,
+      subRoomId: defect?.template?.subRoom?.subRoomId ?? '',
+      floorId: defect?.template?.floor?.floorId,
+    },
+  });
+};
 </script>

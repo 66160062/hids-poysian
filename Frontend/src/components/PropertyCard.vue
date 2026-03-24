@@ -3,6 +3,8 @@ import { useRouter } from 'vue-router';
 
 interface PropertyItem {
   roundId: number;
+  status: string;
+  roundNumber: string;
   job: {
     projectName: string;
     projectImageUrl?: string;
@@ -122,7 +124,8 @@ const apiUrl = import.meta.env.VITE_API_URL;
               font-size: 8px;
             "
           >
-            รอเข้าตรวจ
+            <div v-if="item.status == 'SCHEDULED'">รอเข้าตรวจ</div>
+            <div v-else-if="item.status === 'SUBMITTED'">รอการอนุมัติ</div>
           </q-badge>
         </div>
 

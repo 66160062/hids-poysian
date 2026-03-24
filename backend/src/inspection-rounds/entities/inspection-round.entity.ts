@@ -24,6 +24,12 @@ export class InspectionRound {
   @Column({ type: 'varchar', length: 50, default: 'SCHEDULED' })
   status: string;
 
+  @Column({ name: 'inspected_at', type: 'datetime', nullable: true })
+  inspectedAt: Date;
+
+  @Column({ name: 'summary_completed_at', type: 'datetime', nullable: true })
+  summaryCompletedAt: Date;
+
   @Column({ type: 'datetime', nullable: true })
   submittedAt: Date;
 

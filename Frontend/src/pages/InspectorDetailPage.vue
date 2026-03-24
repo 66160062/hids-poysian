@@ -5,28 +5,12 @@
       :style="{
         width: '100%',
         maxWidth: isMobile ? '430px' : '800px',
-        minHeight: '100vh',
+        height: '100%',
+        boxSizing: 'border-box',
         paddingBottom: '90px',
         boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
       }"
     >
-      <div class="bg-white relative-position" style="position: sticky; top: 0; z-index: 100">
-        <div class="absolute" style="left: 20px; bottom: 20px; z-index: 10">
-          <q-icon
-            name="arrow_back_ios_new"
-            size="24px"
-            color="primary"
-            class="cursor-pointer text-weight-bold"
-            @click="goBack"
-          />
-        </div>
-
-        <div class="text-center text-weight-bold q-pt-xl q-pb-md" style="font-size: 24px">
-          ข้อมูลการตรวจบ้าน
-        </div>
-        <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
-      </div>
-
       <div v-if="loading" class="flex flex-center col q-pa-xl">
         <q-spinner color="primary" size="40px" />
       </div>
@@ -61,7 +45,7 @@
               padding: 4px 10px;
             "
           >
-            รอเข้าตรวจ
+            {{ isSubmitted ? 'รอการอนุมัติ' : 'รอเข้าตรวจ' }}
           </q-badge>
         </div>
 
@@ -137,7 +121,16 @@
               </span>
             </div>
           </div>
-          <q-btn round outline color="primary" icon="phone_in_talk" size="md" />
+          <q-btn
+            round
+            outline
+            color="primary"
+            icon="phone_in_talk"
+            size="md"
+            tag="a"
+            :href="`tel:${jobData?.job?.customer?.phoneNumber}`"
+            :disable="!jobData?.job?.customer?.phoneNumber"
+          />
         </div>
 
         <q-separator color="primary" style="opacity: 0.5; height: 1px" class="q-my-md" />
@@ -168,88 +161,100 @@
           </div>
 
           <q-btn
-            unelevated
-            color="primary"
-            class="full-width q-mb-sm action-btn"
+            :disable="isSubmitted"
+            :outline="!isInspected"
+            :color="isInspected ? 'green' : 'blue'"
+            class="full-width q-py-sm q-mb-sm"
+            style="border-radius: 10px; border-width: 1.5px"
             no-caps
             @click="startInspection"
           >
-            <div class="row items-center justify-between full-width">
-              <span>เริ่มตรวจบ้าน</span>
-              <div class="circle-icon bg-white text-primary flex flex-center">
-                <q-icon name="chevron_right" size="18px" />
-              </div>
-            </div>
-          </q-btn>
-
-          <q-btn outline color="blue" class="full-width q-py-sm" @click="showReport = true">
             <div class="row full-width justify-between items-center q-px-sm">
-              <span class="text-weight-bold">ดูตัวอย่างรายงาน PDF</span>
+              <span class="text-weight-bold">{{
+                isInspected ? 'ดูข้อมูลการตรวจ Defect' : 'เริ่มตรวจบ้าน'
+              }}</span>
               <q-icon
-                name="chevron_right"
-                class="bg-blue text-white rounded-borders q-pa-xs"
-                size="18px"
-              />
-            </div>
-          </q-btn>
-
-          <q-btn outline color="blue" class="full-width q-py-sm" @click="exportPdf()">
-            <div class="row full-width justify-between items-center q-px-sm">
-              <span class="text-weight-bold">ปรินต์ PDF</span>
-              <q-icon
-                name="chevron_right"
-                class="bg-blue text-white rounded-borders q-pa-xs"
-                size="18px"
-              />
-            </div>
-          </q-btn>
-
-          <DefectReport
-            ref="reportComp"
-            :round="jobData"
-            :defects="defects"
-            :summaryItems="summaryItems"
-            style="position: absolute; left: -9999px; top: -9999px"
-          />
-          <!-- ปุ่ม print reporttttttttt -->
-          <!-- <q-btn
-            @click="router.push(`/inspection/job/${roundId}/report`)"
-            outline
-            color="blue"
-            class="full-width q-py-sm"
-          >
-            <div class="row full-width justify-between items-center q-px-sm">
-              <span class="text-weight-bold">สรุปรายงาน</span>
-              <q-icon
-                name="chevron_right"
-                class="bg-blue text-white rounded-borders q-pa-xs"
-                size="18px"
-              />
-            </div>
-          </q-btn> -->
-          <q-btn
-            :outline="!hasSummary"
-            :color="hasSummary ? 'green' : 'blue'"
-            class="full-width q-py-sm"
-            style="border-radius: 10px; border-width: 1.5px"
-            @click="router.push(`/inspector/job/${roundId}/report`)"
-          >
-            <div class="row full-width justify-between items-center q-px-sm">
-              <span class="text-weight-bold">สรุปรายงาน</span>
-              <q-icon
-                :name="hasSummary ? 'check_circle' : 'chevron_right'"
-                :class="hasSummary ? 'text-white' : 'bg-blue text-white rounded-borders q-pa-xs'"
+                :name="isInspected ? 'check_circle' : 'chevron_right'"
+                :class="isInspected ? 'text-white' : 'bg-blue text-white rounded-borders q-pa-xs'"
                 size="28px"
               />
             </div>
           </q-btn>
 
-          <q-dialog v-model="showReport" full-width full-height>
-            <q-card>
+          <q-btn
+            :disable="isSubmitted"
+            :outline="!isSummaryDone"
+            :color="isSummaryDone ? 'green' : 'blue'"
+            class="full-width q-py-sm q-mb-sm"
+            style="border-radius: 10px; border-width: 1.5px"
+            @click="router.push(`/inspector/job/${roundId}/report`)"
+          >
+            <div class="row full-width justify-between items-center q-px-sm">
+              <span class="text-weight-bold">{{
+                isSummaryDone ? 'สรุปรายงานเรียบร้อย' : 'สรุปรายงาน'
+              }}</span>
+              <q-icon
+                :name="isSummaryDone ? 'check_circle' : 'chevron_right'"
+                :class="isSummaryDone ? 'text-white' : 'bg-blue text-white rounded-borders q-pa-xs'"
+                size="28px"
+              />
+            </div>
+          </q-btn>
+
+          <q-btn
+            outline
+            color="blue"
+            class="full-width q-py-sm q-mb-sm"
+            style="border-radius: 10px; border-width: 1.5px"
+            @click="openReport(jobData.roundId)"
+          >
+            <div class="row full-width justify-between items-center q-px-sm">
+              <span class="text-weight-bold">ดูตัวอย่างรายงาน PDF</span>
+              <q-icon
+                name="chevron_right"
+                class="bg-blue text-white rounded-borders q-pa-xs"
+                size="28px"
+              />
+            </div>
+          </q-btn>
+
+          <div v-show="false">
+            <DefectReport
+              ref="reportComp"
+              :round="jobData"
+              :defects="defects"
+              :summaryItems="summaryItems"
+            />
+          </div>
+
+          <q-btn
+            outline
+            color="blue"
+            class="full-width q-py-sm q-mb-sm"
+            style="border-radius: 10px; border-width: 1.5px"
+            @click="exportPdf()"
+          >
+            <div class="row full-width justify-between items-center q-px-sm">
+              <span class="text-weight-bold">ปรินต์ PDF</span>
+              <q-icon
+                name="chevron_right"
+                class="bg-blue text-white rounded-borders q-pa-xs"
+                size="28px"
+              />
+            </div>
+          </q-btn>
+
+          <q-dialog
+            :model-value="activeReportRoundId !== null"
+            @update:model-value="closeReport"
+            full-width
+            full-height
+          >
+            <q-card v-if="activeReportRoundId">
               <q-bar class="bg-primary text-white">
-                <div>ตัวอย่างรายงาน Defect</div>
+                <div>ตัวอย่างรายงาน Defect (Round: {{ activeReportRoundId }})</div>
                 <q-space />
-                <q-btn dense flat icon="close" v-close-popup>
+                <q-btn dense flat icon="close" @click="closeReport">
                   <q-tooltip>ปิด</q-tooltip>
                 </q-btn>
               </q-bar>
@@ -261,7 +266,21 @@
           </q-dialog>
         </q-card>
 
-        <q-btn disable class="full-width q-mt-xl disabled-btn" label="ส่งอนุมัติการตรวจ" no-caps />
+        <q-btn
+          :disable="!canSubmitApproval"
+          :class="['full-width q-mt-xl', !canSubmitApproval ? 'disabled-btn' : 'shadow-2']"
+          :color="isSubmitted ? 'grey-5' : canSubmitApproval ? 'primary' : 'grey-4'"
+          :label="isSubmitted ? 'ส่งอนุมัติการตรวจเรียบร้อยแล้ว' : 'ส่งอนุมัติการตรวจ'"
+          no-caps
+          @click="onSubmit()"
+          style="
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 12px 0;
+            border-radius: 8px;
+          "
+        />
       </div>
       <div v-else class="text-center q-pa-xl col column justify-center text-grey-7">
         ไม่พบข้อมูลงานตรวจนี้
@@ -275,28 +294,54 @@ import { ref, computed, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
-import type { InspectionRound, InspectionSummaryItem } from 'src/models';
+import type { Defect, InspectionRound, InspectionSummaryItem } from 'src/models';
 import DefectReport from 'src/components/DefectReport.vue';
-const apiUrl = import.meta.env.VITE_API_URL;
 
+const apiUrl = import.meta.env.VITE_API_URL;
 const $q = useQuasar();
 const route = useRoute();
 const router = useRouter();
 
 const isMobile = computed(() => $q.screen.lt.md);
 const loading = ref(true);
-const jobData = ref<InspectionRound | null>(null);
-const summaryItems = ref<InspectionSummaryItem[] | []>([]);
+
+// 1. แก้อาการ Type Error โดยไม่ต้องพึ่ง any
+// (เชื่อม Type แจ้ง TS ว่ามี inspectedAt, summaryCompletedAt และ status เสริมเข้ามา)
+const jobData = ref<
+  | (InspectionRound & {
+      inspectedAt?: string;
+      summaryCompletedAt?: string;
+      status?: string;
+    })
+  | null
+>(null);
+
+const summaryItems = ref<InspectionSummaryItem[]>([]);
+
+// 2. แก้อาการ never[] ของ defects
+// (ถ้ามี Type ของ Defect ใน models แนะนำให้นำมาใส่แทน any[] ครับ)
+const defects = ref<Defect[]>([]);
+
+const reportComp = ref<InstanceType<typeof DefectReport> | null>(null);
 
 const roundId = route.params.roundId as string;
+const isSubmitting = ref(false);
+
+// === Computed Properties สถานะต่างๆ ===
+const isInspected = computed(() => !!jobData.value?.inspectedAt);
+const isSummaryDone = computed(() => !!jobData.value?.summaryCompletedAt);
+const isSubmitted = computed(() => jobData.value?.status === 'SUBMITTED');
+const canSubmitApproval = computed(
+  () => isInspected.value && isSummaryDone.value && !isSubmitted.value,
+);
 
 function exportPdf() {
   reportComp.value?.exportPdf();
 }
 
+// 3. ปรับปรุงระบบเปิด Google Maps
 const openGoogleMaps = () => {
   if (!jobData.value?.job) return;
-
   const job = jobData.value.job;
   const address = job.address;
 
@@ -314,24 +359,29 @@ const openGoogleMaps = () => {
 
   if (searchQuery.trim()) {
     const encodedQuery = encodeURIComponent(searchQuery);
+    // ใช้ Link Maps Official จะรองรับการเปิดแอปมือถือได้ดีกว่าครับ
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
     window.open(mapsUrl, '_blank');
   } else {
     alert('ไม่พบข้อมูลที่อยู่สำหรับนำทาง');
   }
 };
-const reportComp = ref<InstanceType<typeof DefectReport> | null>(null);
-const defects = ref([]);
 
-const showReport = ref(false);
-
-const hasSummary = ref(false);
-
-async function checkSummary() {
-  const res = await api.get(`/inspection-summary-items/round/${roundId}`);
-  hasSummary.value = res.data.length > 0;
+function formatDate(dateStr: string) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('th-TH', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 }
 
+function startInspection() {
+  void router.push(`/inspector/job/${roundId}/inspection`);
+}
+
+// === API Calls ===
 async function fetchJobDetails() {
   loading.value = true;
   try {
@@ -344,44 +394,81 @@ async function fetchJobDetails() {
   }
 }
 
-async function fetchSummaryItems() {
+async function fetchDefects() {
   try {
-    const res = await api.get(`/inspection-summary-items/round/${roundId}`);
-    summaryItems.value = Array.isArray(res.data) ? res.data : [];
-  } catch (e) {
-    console.error(e);
-    summaryItems.value = [];
+    const res = await api.get(`/defects/round/${roundId}`);
+    defects.value = res.data;
+  } catch (error) {
+    console.error('Error fetching defects:', error);
   }
 }
 
-function formatDate(dateStr: string) {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('th-TH', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+async function fetchSummary() {
+  try {
+    // ตรวจสอบ URL ของ API สรุปรายงานของคุณให้ถูกต้อง (ตัวอย่าง: /inspection-summary/round/...)
+    const res = await api.get(`/inspection-summary-items/round/${roundId}`);
+    summaryItems.value = res.data;
+  } catch (error) {
+    console.error('Error fetching summary:', error);
+  }
+}
+
+// === Action Functions ===
+
+async function executeSubmit() {
+  isSubmitting.value = true;
+  $q.loading.show();
+  try {
+    await api.patch(`/inspection-rounds/${roundId}/submit`);
+    await fetchJobDetails(); // รีเฟรชข้อมูล ดึงสถานะใหม่มาแสดง
+    $q.notify({ color: 'positive', message: 'ส่งอนุมัติเรียบร้อยแล้ว', position: 'top' });
+  } catch (error) {
+    console.error('Submit Error:', error);
+    $q.notify({
+      color: 'negative',
+      message: 'เกิดข้อผิดพลาดในการส่งข้อมูล',
+    });
+  } finally {
+    isSubmitting.value = false;
+    $q.loading.hide();
+  }
+}
+
+const onSubmit = () => {
+  $q.dialog({
+    title: 'ยืนยันการส่งอนุมัติ',
+    message: 'ข้อมูลครบถ้วนพร้อมยืมยันการส่งอนุมัติ ?',
+    ok: {
+      label: 'ยืนยัน',
+      color: 'primary',
+    },
+    cancel: {
+      label: 'ยกเลิก',
+      color: 'grey-7',
+      flat: true, // ทำให้ปุ่มยกเลิกไม่มีพื้นหลัง ดูเป็นปุ่มรอง
+    },
+    persistent: true,
+  }).onOk(() => {
+    void executeSubmit();
   });
-}
+};
 
-async function fetchDefects() {
-  const res = await api.get(`/defects/round/${roundId}`);
-  defects.value = res.data;
-}
+const activeReportRoundId = ref<number | null>(null);
 
-function startInspection() {
-  void router.push(`/inspector/job/${roundId}/inspection`);
-}
+// ฟังก์ชันสำหรับเปิดรายงาน
+const openReport = (roundId: number) => {
+  activeReportRoundId.value = roundId;
+};
 
-function goBack() {
-  router.back();
-}
+// ฟังก์ชันสำหรับปิด
+const closeReport = () => {
+  activeReportRoundId.value = null;
+};
 
 onMounted(() => {
   void fetchJobDetails();
   void fetchDefects();
-  void fetchSummaryItems();
-  void checkSummary();
+  void fetchSummary();
 });
 </script>
 
@@ -413,11 +500,5 @@ onMounted(() => {
 .disabled-btn {
   background-color: #dcdcdc !important;
   color: #757575 !important;
-  border-radius: 8px;
-  font-family: 'Inter', sans-serif;
-  font-weight: 600;
-  font-size: 16px;
-  padding: 12px 0;
-  pointer-events: none;
 }
 </style>

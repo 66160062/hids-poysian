@@ -1,6 +1,6 @@
 <template>
-  <q-page class="bg-grey-2 window-height column no-wrap">
-    <div class="relative-position flex flex-center col-auto bg-grey-3" style="height: 45vh">
+  <q-page class="column no-wrap" style="height: 100dvh; overflow: hidden">
+    <div class="relative-position flex flex-center col-auto bg-grey-3" style="height: 40vh">
       <q-btn
         flat
         round
@@ -42,7 +42,7 @@
 
     <div
       class="bg-white col q-pa-lg flex column shadow-up-2"
-      style="border-radius: 24px 24px 0 0; margin-top: -24px; z-index: 1"
+      style="border-radius: 24px 24px 0 0; margin-top: -24px; z-index: 1; overflow-y: auto"
     >
       <!-- Step 1: รายละเอียดห้อง -->
       <div v-if="step === 1" class="col column">
@@ -69,6 +69,7 @@
 
               <!-- ประเภทห้องย่อย -->
               <q-select
+                @update:model-value="onSubRoomChange"
                 outlined
                 dense
                 v-model="form.subRoomId"
@@ -113,7 +114,7 @@
         <div class="text-caption text-grey-7 q-mb-lg">กรุณากรอกรายละเอียดงาน</div>
         <div class="column q-gutter-y-md">
           <!-- ความรุนแรง -->
-          <div class="row no-wrap items-center">
+          <!-- <div class="row no-wrap items-center">
             <q-icon name="warning_amber" size="sm" color="primary" class="q-mr-sm" />
             <div class="col">
               <q-select
@@ -128,7 +129,7 @@
                 map-options
               />
             </div>
-          </div>
+          </div> -->
 
           <!-- ประเภทงาน -->
           <div class="row no-wrap items-center">
@@ -199,6 +200,25 @@
               />
             </div>
           </div>
+
+          <div class="row no-wrap items-center">
+            <div class="row no-wrap items-center justify-end" style="width: 100%">
+              <span
+                class="text-weight-bold"
+                :class="form.severity === 'Major' ? 'text-red' : 'text-orange'"
+                style="font-size: 15px"
+              >
+                {{ form.severity === 'Major' ? 'Major Defect' : 'Minor Defect' }}
+              </span>
+              <q-toggle
+                v-model="severityToggle"
+                :color="form.severity === 'Major' ? 'red' : 'orange'"
+                keep-color
+                @update:model-value="onSeverityToggle"
+                size="60px"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -237,12 +257,14 @@ import { useRouter, useRoute } from 'vue-router';
 import imageCompression from 'browser-image-compression';
 import { useInspectionStore } from 'src/stores/useInspection';
 import { api } from 'src/boot/axios';
+import { useQuasar } from 'quasar';
 
 const router = useRouter();
 const route = useRoute();
 const inspectionStore = useInspectionStore();
 const roundId = route.params.roundId as string;
 const step = ref<number>(1);
+const $q = useQuasar();
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -264,7 +286,7 @@ const form = ref<DefectForm>({
   subRoomId: null,
   floorId: null,
   templateId: null,
-  severity: '',
+  severity: 'Minor',
   jobType: null,
   defectTypes: [],
   note: '',
@@ -288,10 +310,17 @@ const roomOptions = computed(() => {
 
 const subRoomOptions = computed(() => {
   if (!form.value.roomId) return [];
-
   const seen = new Set<number>();
   return templates.value
-    .filter((t) => t.room.roomId === form.value.roomId && t.subRoom !== null)
+    .filter((t) => {
+      if (t.room.roomId !== form.value.roomId) return false;
+      if (t.subRoom === null) return false;
+      // ถ้าเลือก floor แล้ว ให้ filter ตาม floor ด้วย
+      if (form.value.floorId !== null) {
+        return t.floor.floorId === form.value.floorId;
+      }
+      return true;
+    })
     .filter((t) => {
       if (seen.has(t.subRoom!.subRoomId)) return false;
       seen.add(t.subRoom!.subRoomId);
@@ -304,7 +333,13 @@ const floorOptions = computed(() => {
   if (!form.value.roomId) return [];
   const seen = new Set<number>();
   return templates.value
-    .filter((t) => t.room.roomId === form.value.roomId)
+    .filter((t) => {
+      if (t.room.roomId !== form.value.roomId) return false;
+      if (form.value.subRoomId !== null) {
+        return t.subRoom?.subRoomId === form.value.subRoomId;
+      }
+      return true;
+    })
     .filter((t) => {
       if (seen.has(t.floor.floorId)) return false;
       seen.add(t.floor.floorId);
@@ -313,10 +348,15 @@ const floorOptions = computed(() => {
     .map((t) => ({ value: t.floor.floorId, label: t.floor.label }));
 });
 
-const severityOptions = [
-  { value: 'Major', label: 'Major' },
-  { value: 'Minor', label: 'Minor' },
-];
+const onSubRoomChange = () => {
+  form.value.floorId = null;
+  form.value.templateId = null;
+};
+
+// const severityOptions = [
+//   { value: 'Major', label: 'Major' },
+//   { value: 'Minor', label: 'Minor' },
+// ];
 
 // ── Category / SubCategory ────────────────────────────────────
 
@@ -399,12 +439,40 @@ const handleBack = () => {
 
 const handleNext = async () => {
   if (step.value === 1) {
+    if (!form.value.roomId) {
+      $q.notify({ message: 'กรุณาเลือกประเภทห้อง', color: 'negative', icon: 'warning' });
+      return;
+    }
+    if (!form.value.floorId) {
+      $q.notify({ message: 'กรุณาเลือกชั้น', color: 'negative', icon: 'warning' });
+      return;
+    }
+    if (!form.value.templateId) {
+      $q.notify({
+        message: 'ไม่พบห้องที่ตรงกับที่เลือก กรุณาเลือกใหม่',
+        color: 'negative',
+        icon: 'warning',
+      });
+      return;
+    }
     step.value = 2;
     return;
   }
 
-  if (!form.value.templateId) {
-    alert('ไม่พบห้องที่ตรงกับที่เลือก กรุณาเลือกใหม่');
+  if (!form.value.severity) {
+    $q.notify({ message: 'กรุณาเลือกความรุนแรง', color: 'negative', icon: 'warning' });
+    return;
+  }
+  if (!form.value.jobType) {
+    $q.notify({ message: 'กรุณาเลือกประเภทงาน', color: 'negative', icon: 'warning' });
+    return;
+  }
+  if (form.value.defectTypes.length === 0) {
+    $q.notify({
+      message: 'กรุณาเลือกประเภทตำหนิอย่างน้อย 1 รายการ',
+      color: 'negative',
+      icon: 'warning',
+    });
     return;
   }
 
@@ -427,12 +495,23 @@ const handleNext = async () => {
     }
 
     await inspectionStore.saveDefect(formData);
-
-    // refresh defects ในหน้า inspection
     await inspectionStore.fetchDefects(roundId);
 
-    alert('บันทึกข้อมูลสำเร็จ!');
-    router.back();
+    // reset เฉพาะ step 2 คง room info ไว้
+    form.value.severity = '';
+    form.value.jobType = null;
+    form.value.defectTypes = [];
+    form.value.note = '';
+    imagePreview.value = null;
+    selectedFile.value = null;
+    step.value = 1;
+
+    $q.notify({
+      message: 'บันทึกข้อมูลสำเร็จ!',
+      color: 'positive',
+      icon: 'check_circle',
+      timeout: 1500,
+    });
   } catch {
     alert('เกิดข้อผิดพลาดในการบันทึก');
   }
@@ -449,11 +528,26 @@ const templates = ref<
   }[]
 >([]);
 
+const severityToggle = ref(true); // true = Major, false = Minor
+
+const onSeverityToggle = (val: boolean) => {
+  form.value.severity = val ? 'Minor' : 'Major';
+};
+
 onMounted(async () => {
   void inspectionStore.fetchInspectionMasterData(roundId);
 
   const { data } = await api.get('/room-templates');
   templates.value = data;
+
+  const { roomId, subRoomId, floorId } = route.query;
+  if (roomId) {
+    form.value.roomId = Number(roomId);
+    if (subRoomId) form.value.subRoomId = Number(subRoomId);
+    if (floorId) form.value.floorId = Number(floorId);
+    void lookupTemplate();
+    step.value = 2;
+  }
 });
 </script>
 

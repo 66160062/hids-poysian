@@ -26,6 +26,8 @@ export interface InspectionRound {
   scheduledDate: string;
   status: string;
   roundNumber: string;
+  inspectedAt?: string | null;
+  summaryCompletedAt?: string | null;
   teamMember?: { inspector?: { team?: { teamName: string; contactInfo: string } } };
   job: {
     projectName: string;
@@ -78,7 +80,7 @@ export interface Defect {
   template?: {
     templateId: number;
     room: { roomName: string; roomId: number };
-    subRoom: { roomName: string; roomId: number } | null;
+    subRoom: { roomName: string; subRoomId: number } | null;
     floor: { floorId: number; label: string };
   };
 }

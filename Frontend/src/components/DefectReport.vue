@@ -306,7 +306,6 @@
           <div
             class="text-center text-bold q-py-xs"
             style="
-
               background: #1976d2;
               color: white;
               border-radius: 4px;

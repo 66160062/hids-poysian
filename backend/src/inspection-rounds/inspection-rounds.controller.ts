@@ -28,9 +28,37 @@ export class InspectionRoundsController {
     return this.inspectionRoundsService.findAll();
   }
 
+  @Get('week/:inspectorId')
+  findByWeek(@Param('inspectorId') inspectorId: string) {
+    return this.inspectionRoundsService.findByWeek(+inspectorId);
+  }
+
+  @Get('month/:inspectorId')
+  async getRoundsByMonth(
+    @Param('inspectorId') inspectorId: number,
+    @Query('date') dateString?: string,
+  ) {
+    return this.inspectionRoundsService.findByMonth(inspectorId, dateString);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.inspectionRoundsService.findOne(+id);
+  }
+
+  @Patch(':id/confirm-inspection')
+  confirmInspection(@Param('id') id: string) {
+    return this.inspectionRoundsService.confirmInspection(+id);
+  }
+
+  @Patch(':id/confirm-summary')
+  confirmSummary(@Param('id') id: string) {
+    return this.inspectionRoundsService.confirmSummary(+id);
+  }
+
+  @Patch(':id/submit')
+  submit(@Param('id') id: string) {
+    return this.inspectionRoundsService.submit(+id);
   }
 
   @Patch(':id')
@@ -44,18 +72,5 @@ export class InspectionRoundsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.inspectionRoundsService.remove(+id);
-  }
-
-  @Get('week/:inspectorId')
-  findByWeek(@Param('inspectorId') inspectorId: string) {
-    return this.inspectionRoundsService.findByWeek(+inspectorId);
-  }
-
-  @Get('month/:inspectorId')
-  async getRoundsByMonth(
-    @Param('inspectorId') inspectorId: number,
-    @Query('date') dateString?: string,
-  ) {
-    return this.inspectionRoundsService.findByMonth(inspectorId, dateString);
   }
 }

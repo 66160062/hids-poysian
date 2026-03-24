@@ -10,30 +10,26 @@
         boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
       }"
     >
-      <div class="bg-white" style="position: sticky; top: 0; z-index: 100;">
-        <div
-          class="text-center text-weight-bold q-pt-md q-pb-md"
-          style="font-size: 24px; "
-        >
-          ข้อมูลการตรวจบ้าน
-        </div>
-        <q-separator color="primary" class="q-mx-lg" style="height: 2px" />
-      </div>
-
       <div class="q-pa-lg" style="max-width: 600px; margin: 20px auto 0">
         <div class="row justify-between items-center q-mb-md">
           <div class="text-weight-bold" style="font-size: 16px">
             {{ isMonthlyView ? 'ตารางงานเดือนนี้' : 'ตารางงานสัปดาห์นี้' }}
           </div>
-          <div class="text-primary text-weight-bold" style="font-size: 13px; cursor: pointer" @click="toggleView">
+          <div
+            class="text-primary text-weight-bold"
+            style="font-size: 13px; cursor: pointer"
+            @click="toggleView"
+          >
             {{ isMonthlyView ? 'ดูตารางแบบสัปดาห์' : 'ดูตารางงานทั้งหมด' }}
           </div>
         </div>
 
-        <div v-if="isMonthlyView" class="row text-grey-7 q-mb-sm text-center">
-          <div class="col" v-for="dayName in dayLabels" :key="dayName">
-            <span style="font-size: 12px">{{ dayName }}</span>
+        <div v-if="isMonthlyView" class="row items-center justify-between q-mb-sm">
+          <q-btn flat round icon="chevron_left" @click="prevMonth" />
+          <div class="text-weight-bold">
+            {{ currentMonth.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' }) }}
           </div>
+          <q-btn flat round icon="chevron_right" @click="nextMonth" />
         </div>
 
         <div
@@ -48,7 +44,9 @@
             :style="
               isMonthlyView
                 ? 'width: 14.28%; padding: 2px;'
-                : 'min-width: 68px; border-radius: 14px; padding-top: 14px; height: ' + (day.isActive ? '100px' : '85px') + ';'
+                : 'min-width: 68px; border-radius: 14px; padding-top: 14px; height: ' +
+                  (day.isActive ? '100px' : '85px') +
+                  ';'
             "
           >
             <div v-if="day.isEmpty" style="height: 100%"></div>
@@ -62,14 +60,27 @@
                   ? 'bg-primary text-white shadow-3 rounded-borders'
                   : day.dateStr < todayStr
                     ? 'bg-grey-4 text-grey-6 rounded-borders'
-                    : 'bg-white text-dark rounded-borders'
+                    : 'bg-white text-dark rounded-borders',
               ]"
               :style="[
-                !isMonthlyView && day.dateStr > todayStr ? { border: '1px solid #E0E0E0' } : { border: 'none' },
-                isMonthlyView ? { borderRadius: '12px', padding: '4px 0' } : { borderRadius: '14px' }
+                isMonthlyView
+                  ? {
+                      borderRadius: '12px',
+                      padding: '4px 0',
+                      border:
+                        day.hasDot && !day.isActive ? '2px solid #333' : '2px solid transparent',
+                    }
+                  : {
+                      borderRadius: '14px',
+                      border:
+                        !day.isActive && day.dateStr > todayStr ? '1px solid #E0E0E0' : 'none',
+                    },
               ]"
             >
-              <div v-if="!isMonthlyView" style="font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500">
+              <div
+                v-if="!isMonthlyView"
+                style="font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500"
+              >
                 {{ day.label }}
               </div>
               <div
@@ -79,7 +90,7 @@
                 {{ day.date }}
               </div>
               <div
-                v-if="day.hasDot"
+                v-if="day.hasDot && !isMonthlyView"
                 class="absolute-bottom"
                 style="
                   width: 6px;
@@ -90,11 +101,7 @@
                   transform: translateX(-50%);
                 "
                 :class="
-                  day.isActive
-                    ? 'bg-white'
-                    : day.dateStr < todayStr
-                      ? 'bg-grey-5'
-                      : 'bg-dark'
+                  day.isActive ? 'bg-white' : day.dateStr < todayStr ? 'bg-grey-5' : 'bg-dark'
                 "
               ></div>
             </div>
@@ -343,7 +350,7 @@ async function fetchRounds() {
   loading.value = true;
   try {
     const endpoint = isMonthlyView.value
-      ? `/inspection-rounds/month/${inspectorId.value}`
+      ? `/inspection-rounds/month/${inspectorId.value}?date=${toLocalDateStr(currentMonth.value)}`
       : `/inspection-rounds/week/${inspectorId.value}`;
 
     const res = await api.get(endpoint);
@@ -366,6 +373,24 @@ function toLocalDateStr(date: Date): string {
 function toUTCDateStr(dateStr: string): string {
   if (!dateStr) return '';
   return String(dateStr).substring(0, 10);
+}
+
+const currentMonth = ref(new Date());
+
+function prevMonth() {
+  const d = new Date(currentMonth.value);
+  d.setMonth(d.getMonth() - 1);
+  currentMonth.value = d;
+  selectedDate.value = new Date(d.getFullYear(), d.getMonth(), 1);
+  void fetchRounds();
+}
+
+function nextMonth() {
+  const d = new Date(currentMonth.value);
+  d.setMonth(d.getMonth() + 1);
+  currentMonth.value = d;
+  selectedDate.value = new Date(d.getFullYear(), d.getMonth(), 1);
+  void fetchRounds();
 }
 
 onMounted(() => {
