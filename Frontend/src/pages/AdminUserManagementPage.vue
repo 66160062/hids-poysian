@@ -71,7 +71,8 @@
     </div>
 
     <!-- FAB Add Button -->
-    <q-page-sticky position="bottom-right" :offset="[16, 16]">
+    <q-page-sticky position="bottom-right" :offset="[16, 16]" class="q-gutter-y-sm column">
+      <q-btn fab icon="groups" color="secondary" @click="showTeamDialog = true" />
       <q-btn fab icon="add" color="primary" @click="openCreateDialog" />
     </q-page-sticky>
 
@@ -84,6 +85,9 @@
       :teamOptions="teamOptions"
       @save="onSaveUser"
     />
+
+    <!-- Team Management Dialog -->
+    <AdminTeamManagementDialog v-model="showTeamDialog" />
   </q-page>
 </template>
 
@@ -92,20 +96,14 @@ import { ref, computed, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
 import AdminUserCard from 'src/components/AdminUserCard.vue';
 import AdminUserFormDialog from 'src/components/AdminUserFormDialog.vue';
+import AdminTeamManagementDialog from 'src/components/AdminTeamManagementDialog.vue';
+import { useTeamStore } from 'src/stores/useTeam';
+import { useUserStore } from 'src/stores/useUser';
+import type { User } from 'src/models';
 
 const $q = useQuasar();
-
-export interface User {
-  id: number;
-  team_id: number | null;
-  full_name: string;
-  phone_number: string;
-  email: string;
-  line_id: string;
-  role: 'admin' | 'inspector';
-  image_url: string;
-  password?: string;
-}
+const teamStore = useTeamStore();
+const userStore = useUserStore();
 
 // Global Options
 const roleFilters = [
@@ -119,21 +117,19 @@ const roleOptions = [
   { label: 'ผู้ตรวจงาน (Inspector)', value: 'inspector' },
 ];
 
-const teamOptions = [
-  { label: 'ทีม A', value: 1 },
-  { label: 'ทีม B', value: 2 },
-];
+const teamOptions = computed(() => teamStore.teamOptions);
 
 // State
-const isLoading = ref(false);
-const usersList = ref<User[]>([]);
+const isLoading = computed(() => userStore.isLoading);
+const usersList = computed(() => userStore.users);
 const searchQuery = ref('');
 const activeRoleFilter = ref('all');
+const showTeamDialog = ref(false);
 
 // Computed filters
 const filteredUsers = computed(() => {
   return usersList.value.filter((user) => {
-    const matchName = user.full_name.toLowerCase().includes(searchQuery.value.toLowerCase());
+    const matchName = user.fullName.toLowerCase().includes(searchQuery.value.toLowerCase());
     const matchRole = activeRoleFilter.value === 'all' || user.role === activeRoleFilter.value;
     return matchName && matchRole;
   });
@@ -145,109 +141,29 @@ const isEditing = ref(false);
 const editingId = ref<number | null>(null);
 const formData = ref<Partial<User>>({});
 
-const defaultForm = (): Partial<User> => ({
-  full_name: '',
-  phone_number: '',
+const defaultForm = (): Partial<User> & { teamId?: number } => ({
+  fullName: '',
+  phoneNumber: '',
   email: '',
-  line_id: '',
+  lineId: '',
   role: 'inspector',
-  team_id: 1, // default select
-  image_url: '',
+  teamId: 1, // default select
+  imageUrl: '',
   password: '',
 });
-
-/* =========================================
-   BACKEND PREPARATION (Mocked Async Functions)
-   ========================================= */
-
-const fetchUsers = async () => {
-  isLoading.value = true;
-  try {
-    // TODO: Connect to backend API: await api.get('/users');
-    // Using timeout to simulate network request
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
-    usersList.value = [
-      {
-        id: 1,
-        team_id: null,
-        full_name: 'สมชาย ใจดี',
-        phone_number: '081-234-5678',
-        email: 'somchai@example.com',
-        line_id: 'somchai.jd',
-        role: 'admin',
-        image_url: 'https://cdn.quasar.dev/img/avatar1.jpg',
-      },
-      {
-        id: 2,
-        team_id: 1,
-        full_name: 'สมหญิง รักงาน',
-        phone_number: '089-876-5432',
-        email: 'somying@example.com',
-        line_id: 'somying.r',
-        role: 'inspector',
-        image_url: 'https://cdn.quasar.dev/img/avatar2.jpg',
-      },
-      {
-        id: 3,
-        team_id: 2,
-        full_name: 'วิศวกร เก่งมาก',
-        phone_number: '083-456-7890',
-        email: 'engineer@example.com',
-        line_id: 'eng.keng',
-        role: 'inspector',
-        image_url: 'https://cdn.quasar.dev/img/avatar3.jpg',
-      },
-    ];
-  } catch (error) {
-    console.error('Fetch users error:', error);
-    $q.notify({ type: 'negative', message: 'ดึงข้อมูลล้มเหลว' });
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-const createUser = async (payload: { form: Partial<User>; file: File | null }) => {
-  // TODO: Implement backend API call e.g. using FormData if file exists
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const f = payload.form;
-  const newUser: User = {
-    id: Date.now(),
-    team_id: f.team_id || null,
-    full_name: f.full_name || '',
-    phone_number: f.phone_number || '',
-    email: f.email || '',
-    line_id: f.line_id || '',
-    role: f.role || 'inspector',
-    image_url: f.image_url || '/project-images/unknown.jpg',
-  };
-  usersList.value.unshift(newUser);
-  $q.notify({ type: 'positive', message: 'เพิ่มผู้ใช้สำเร็จ', icon: 'check_circle' });
-};
-
-const updateUser = async (id: number, payload: { form: Partial<User>; file: File | null }) => {
-  // TODO: Implement backend API call e.g. api.put(`/users/${id}`, payload)
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const idx = usersList.value.findIndex((u) => u.id === id);
-  if (idx !== -1) {
-    usersList.value[idx] = { ...usersList.value[idx], ...payload.form } as User;
-  }
-  $q.notify({ type: 'positive', message: 'แก้ไขข้อมูลสำเร็จ', icon: 'check_circle' });
-};
-
-const deleteUser = async (id: number) => {
-  // TODO: Connect to backend API
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  usersList.value = usersList.value.filter((u) => u.id !== id);
-  $q.notify({ type: 'positive', message: 'ลบผู้ใช้สำเร็จ', icon: 'check_circle' });
-};
 
 /* =========================================
    UI HANDLERS
    ========================================= */
 
 onMounted(() => {
-  void fetchUsers();
+  userStore.fetchUsers().catch((err) => {
+    const error = err as Error & { response?: { data?: { message?: string } } };
+    console.error('Fetch users error:', error);
+    const msg = error?.response?.data?.message || error?.message || 'ไม่ทราบสาเหตุ';
+    $q.notify({ type: 'negative', message: `ดึงข้อมูลล้มเหลว: ${msg}` });
+  });
+  void teamStore.fetchTeams();
 });
 
 const openCreateDialog = () => {
@@ -260,18 +176,18 @@ const openCreateDialog = () => {
 const openEditDialog = (user: User) => {
   isEditing.value = true;
   editingId.value = user.id;
-  formData.value = { ...user };
+  formData.value = { ...user, teamId: user.team?.team_Id };
   showFormDialog.value = true;
 };
 
 const onSaveUser = async (payload: { form: Partial<User>; file: File | null }) => {
   const f = payload.form;
   if (
-    !f.full_name ||
-    !f.phone_number ||
+    !f.fullName ||
+    !f.phoneNumber ||
     !f.role ||
     (!isEditing.value && !f.password) ||
-    (f.role !== 'admin' && !f.team_id)
+    (f.role !== 'admin' && !f.teamId)
   ) {
     $q.notify({
       message: 'กรุณากรอกข้อมูลที่บังคับให้ครบถ้วน',
@@ -285,13 +201,18 @@ const onSaveUser = async (payload: { form: Partial<User>; file: File | null }) =
   try {
     $q.loading.show({ message: 'กำลังบันทึกข้อมูล...' });
     if (isEditing.value && editingId.value) {
-      await updateUser(editingId.value, payload);
+      await userStore.updateUser(editingId.value, payload);
+      $q.notify({ type: 'positive', message: 'แก้ไขข้อมูลสำเร็จ', icon: 'check_circle' });
     } else {
-      await createUser(payload);
+      await userStore.createUser(payload);
+      $q.notify({ type: 'positive', message: 'เพิ่มผู้ใช้สำเร็จ', icon: 'check_circle' });
     }
     showFormDialog.value = false;
-  } catch (error) {
+  } catch (err) {
+    const error = err as Error & { response?: { data?: { message?: string } } };
     console.error('Save user failed', error);
+    const msg = error?.response?.data?.message || error?.message || 'ไม่ทราบสาเหตุ';
+    $q.notify({ type: 'negative', message: `บันทึกข้อมูลไม่สำเร็จ: ${msg}` });
   } finally {
     $q.loading.hide();
   }
@@ -300,15 +221,20 @@ const onSaveUser = async (payload: { form: Partial<User>; file: File | null }) =
 const confirmDeleteUser = (user: User) => {
   $q.dialog({
     title: 'ยืนยันการลบ',
-    message: `คุณต้องการลบผู้ใช้ "${user.full_name}" ใช่หรือไม่?`,
+    message: `คุณต้องการลบผู้ใช้ "${user.fullName}" ใช่หรือไม่?`,
     cancel: true,
     persistent: true,
   }).onOk(() => {
     $q.loading.show({ message: 'กำลังลบข้อมูล...' });
-    void deleteUser(user.id)
-      .catch((error) => {
+    userStore.deleteUser(user.id)
+      .then(() => {
+        $q.notify({ type: 'positive', message: 'ลบผู้ใช้สำเร็จ', icon: 'check_circle' });
+      })
+      .catch((err) => {
+        const error = err as Error & { response?: { data?: { message?: string } } };
         console.error('Delete user failed', error);
-        $q.notify({ type: 'negative', message: 'ลบข้อมูลล้มเหลว' });
+        const msg = error?.response?.data?.message || error?.message || 'ไม่ทราบสาเหตุ';
+        $q.notify({ type: 'negative', message: `ลบข้อมูลล้มเหลว: ${msg}` });
       })
       .finally(() => {
         $q.loading.hide();
