@@ -16,9 +16,11 @@ export interface User {
   phoneNumber: string;
   email: string;
   lineId: string;
+  password?: string | undefined;
   role: UserRole | string;
-  createdAt: string;
-  deletedAt: string | null;
+  imageUrl?: string | undefined;
+  team?: Team | undefined;
+  teamId?: number | undefined;
 }
 
 export interface InspectionRound {
@@ -133,4 +135,11 @@ export interface RoomTemplate {
   roomType: string;
   floor: Floor;
   subRoom: SubRoom;
+}
+
+export interface Team {
+  team_Id: number;
+  team_name: string;
+  contact_info?: string;
+  logo_url?: string;
 }

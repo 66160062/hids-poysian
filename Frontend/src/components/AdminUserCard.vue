@@ -2,13 +2,13 @@
   <q-card flat bordered class="user-card">
     <q-card-section class="row items-start q-pa-sm">
       <q-avatar size="56px" class="q-mr-md bg-grey-3">
-        <img :src="user.image_url" v-if="user.image_url" />
+        <img :src="getImageUrl(user.imageUrl)" v-if="user.imageUrl" />
         <q-icon name="person" color="grey-5" v-else />
       </q-avatar>
 
       <div class="col">
         <div class="row items-center justify-between">
-          <div class="text-weight-bold text-subtitle1">{{ user.full_name }}</div>
+          <div class="text-weight-bold text-subtitle1">{{ user.fullName }}</div>
           <!-- Action Menu -->
           <q-btn flat round dense icon="more_vert" color="grey-7">
             <q-menu auto-close anchor="bottom right" self="top right">
@@ -41,24 +41,35 @@
             {{ user.role.toUpperCase() }}
           </q-chip>
           <q-chip
-            v-if="user.role !== 'admin' && user.team_id"
+            v-if="user.role !== 'admin' && (user.teamId || user.team?.team_Id)"
             dense
             color="grey-2"
             text-color="grey-8"
             class="text-caption q-ml-sm q-ma-none"
           >
-            ทีม {{ getTeamName(user.team_id) }}
+            ทีม {{ getTeamName(user.teamId || user.team?.team_Id) }}
           </q-chip>
         </div>
 
-        <!-- Contact Info -->
         <div class="text-caption text-grey-8 row items-center q-mt-sm">
-          <q-icon name="phone" size="xs" color="grey-6" class="q-mr-xs" />
-          {{ user.phone_number || '-' }}
+          <q-icon name="phone" size="xs" color="black" class="q-mr-xs" />
+          {{ user.phoneNumber || '-' }}
         </div>
         <div class="text-caption text-grey-8 row items-center q-mt-xs">
-          <q-icon name="email" size="xs" color="grey-6" class="q-mr-xs" />
+          <q-icon name="email" size="xs" color="blue-6" class="q-mr-xs" />
           <span class="ellipsis" style="max-width: 200px">{{ user.email || '-' }}</span>
+        </div>
+        <div class="text-caption text-grey-8 row items-center q-mt-xs">
+          <q-img
+            src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg"
+            width="18px"
+            height="18px"
+            class="q-mr-xs"
+            style="min-width: 18px"
+          />
+          <span class="ellipsis" style="max-width: 200px">
+            {{ user.lineId || '-' }}
+          </span>
         </div>
       </div>
     </q-card-section>
@@ -66,7 +77,13 @@
 </template>
 
 <script setup lang="ts">
-import type { User } from 'src/pages/AdminUserManagementPage.vue';
+import type { User } from 'src/models';
+
+const getImageUrl = (url?: string | null) => {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('blob:')) return url;
+  return `${import.meta.env.VITE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 interface Option {
   label: string;
@@ -86,7 +103,7 @@ const props = defineProps({
 
 defineEmits(['edit', 'delete']);
 
-const getTeamName = (teamId: number | null) => {
+const getTeamName = (teamId: number | null | undefined) => {
   const team = props.teamOptions.find((t) => t.value === teamId);
   return team ? team.label : 'ไม่ระบุ';
 };
