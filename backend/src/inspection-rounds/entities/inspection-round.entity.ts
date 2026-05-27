@@ -18,19 +18,19 @@ export class InspectionRound {
   @Column()
   roundNumber: number;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   scheduledDate: Date;
 
   @Column({ type: 'varchar', length: 50, default: 'SCHEDULED' })
   status: string;
 
-  @Column({ name: 'inspected_at', type: 'datetime', nullable: true })
+  @Column({ name: 'inspected_at', type: 'timestamp', nullable: true })
   inspectedAt: Date;
 
-  @Column({ name: 'summary_completed_at', type: 'datetime', nullable: true })
+  @Column({ name: 'summary_completed_at', type: 'timestamp', nullable: true })
   summaryCompletedAt: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   submittedAt: Date;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
@@ -39,16 +39,16 @@ export class InspectionRound {
   @Column({ type: 'varchar', length: 255, nullable: true })
   customerToken: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   customerTokenExpiredAt: Date;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   contractorToken: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   contractorTokenExpiredAt: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   approvedAt: Date;
 
   @CreateDateColumn()

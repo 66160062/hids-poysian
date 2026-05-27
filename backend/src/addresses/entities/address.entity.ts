@@ -16,7 +16,7 @@ export class Address {
   @Column({ type: 'varchar', length: 10 })
   floor: string;
 
-  @Column({ type: 'varchar', length: 10 })
+  @Column({ type: 'varchar', length: 50 })
   soi: string;
 
   @Column({ type: 'varchar', length: 255 })

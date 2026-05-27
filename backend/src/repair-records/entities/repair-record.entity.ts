@@ -23,7 +23,7 @@ export class RepairRecord {
   @Column({ name: 'file_size' })
   fileSize: number;
 
-  @Column({ name: 'repaired_at', type: 'datetime' })
+  @Column({ name: 'repaired_at', type: 'timestamp' })
   repairedAt: Date;
 
   @DeleteDateColumn({ name: 'deleted_at' })
