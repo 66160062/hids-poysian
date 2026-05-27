@@ -22,7 +22,12 @@ export class UsersService {
   }
 
   findAll() {
-    return this.usersRepository.find();
+    return this.usersRepository.find({
+      order: {
+        id: 'DESC',
+      },
+      relations: ['team'],
+    });
   }
 
   async findOne(id: number) {
