@@ -17,15 +17,19 @@ export class TeamsService {
   }
 
   findAll() {
-    return this.teamsRepo.find();
+    return this.teamsRepo.find({
+      order: {
+        team_Id: 'DESC',
+      },
+    });
   }
 
   findOne(id: number) {
-    return this.teamsRepo.findOneByOrFail({ teamId: id });
+    return this.teamsRepo.findOneByOrFail({ team_Id: id });
   }
 
   async update(id: number, updateTeamDto: UpdateTeamDto) {
-    const team = await this.teamsRepo.findOneByOrFail({ teamId: id });
+    const team = await this.teamsRepo.findOneByOrFail({ team_Id: id });
     Object.assign(team, updateTeamDto);
     return this.teamsRepo.save(team);
   }
