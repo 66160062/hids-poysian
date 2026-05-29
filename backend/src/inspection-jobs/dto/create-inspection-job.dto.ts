@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateInspectionJobDto {
   @ApiProperty({
@@ -68,10 +68,11 @@ export class CreateInspectionJobDto {
 
   @ApiProperty({
     description: 'สถานะของงาน',
-    example: 'draft',
-    default: 'draft',
+    enum: ['Draft', 'Active', 'Completed', 'Cancelled'],
+    default: 'Draft',
   })
   @IsString()
   @MaxLength(50)
+  @IsEnum(['Draft', 'Active', 'Completed', 'Cancelled'])
   status: string;
 }

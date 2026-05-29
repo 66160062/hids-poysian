@@ -18,4 +18,4 @@ import { HouseTypesModule } from 'src/house-types/house-types.module';
   providers: [InspectionJobsService],
   exports: [InspectionJobsService, TypeOrmModule],
 })
-export class InspectionJobsModule {}
+export class InspectionJobsModule { }
