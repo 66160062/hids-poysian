@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateInspectionJobDto } from './dto/create-inspection-job.dto';
 import { UpdateInspectionJobDto } from './dto/update-inspection-job.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -7,6 +7,7 @@ import { Repository } from 'typeorm';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { Address } from 'src/addresses/entities/address.entity';
 import { HouseType } from 'src/house-types/entities/house-type.entity';
+import { InspectionJobStatus } from './enums/inspection-job-status.enum';
 
 @Injectable()
 export class InspectionJobsService {
@@ -19,18 +20,27 @@ export class InspectionJobsService {
     private readonly addressesRepo: Repository<Address>,
     @InjectRepository(HouseType)
     private readonly houseTypesRepo: Repository<HouseType>,
-  ) {}
+  ) { }
 
   async create(createInspectionJobDto: CreateInspectionJobDto) {
-    const customer = await this.customersRepo.findOneByOrFail({
+    const customer = await this.customersRepo.findOneBy({
       customerId: createInspectionJobDto.customerId,
     });
-    const address = await this.addressesRepo.findOneByOrFail({
+    if (!customer)
+      throw new NotFoundException(`ไม่พบลูกค้า ID ${createInspectionJobDto.customerId}`);
+
+    const address = await this.addressesRepo.findOneBy({
       addressId: createInspectionJobDto.addressId,
     });
-    const houseType = await this.houseTypesRepo.findOneByOrFail({
+    if (!address)
+      throw new NotFoundException(`ไม่พบที่อยู่ ID ${createInspectionJobDto.addressId}`);
+
+    const houseType = await this.houseTypesRepo.findOneBy({
       house_type_id: createInspectionJobDto.houseTypeId,
     });
+    if (!houseType)
+      throw new NotFoundException(`ไม่พบประเภทบ้าน ID ${createInspectionJobDto.houseTypeId}`);
+
     const inspectionJob = this.inspectionsRepo.create({
       ...createInspectionJobDto,
       customer,
@@ -40,40 +50,65 @@ export class InspectionJobsService {
     return this.inspectionsRepo.save(inspectionJob);
   }
 
-  findAll() {
-    return this.inspectionsRepo.find({
+  async findAll(page = 1, limit = 10, status?: InspectionJobStatus) {
+    limit = Math.min(limit, 100);
+    const [data, total] = await this.inspectionsRepo.findAndCount({
       relations: ['customer', 'address', 'houseType'],
+      where: status ? { status } : {},
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { jobId: 'DESC' },
     });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
-  findOne(id: number) {
-    return this.inspectionsRepo.findOneOrFail({
+  async findOne(id: number) {
+    const job = await this.inspectionsRepo.findOne({
       where: { jobId: id },
       relations: ['customer', 'address', 'houseType'],
     });
+    if (!job) throw new NotFoundException(`ไม่พบงานตรวจ ID ${id}`);
+    return job;
   }
 
   async update(id: number, updateInspectionJobDto: UpdateInspectionJobDto) {
-    const inspectionJob = await this.inspectionsRepo.findOneByOrFail({
-      jobId: id,
-    });
+    const inspectionJob = await this.inspectionsRepo.findOneBy({ jobId: id });
+    if (!inspectionJob) throw new NotFoundException(`ไม่พบงานตรวจ ID ${id}`);
 
     if (updateInspectionJobDto.customerId) {
-      inspectionJob.customer = await this.customersRepo.findOneByOrFail({
+      const customer = await this.customersRepo.findOneBy({
         customerId: updateInspectionJobDto.customerId,
       });
+      if (!customer)
+        throw new NotFoundException(`ไม่พบลูกค้า ID ${updateInspectionJobDto.customerId}`);
+      inspectionJob.customer = customer;
     }
 
     if (updateInspectionJobDto.addressId) {
-      inspectionJob.address = await this.addressesRepo.findOneByOrFail({
+      const address = await this.addressesRepo.findOneBy({
         addressId: updateInspectionJobDto.addressId,
       });
+      if (!address)
+        throw new NotFoundException(`ไม่พบที่อยู่ ID ${updateInspectionJobDto.addressId}`);
+      inspectionJob.address = address;
     }
 
     if (updateInspectionJobDto.houseTypeId) {
-      inspectionJob.houseType = await this.houseTypesRepo.findOneByOrFail({
+      const houseType = await this.houseTypesRepo.findOneBy({
         house_type_id: updateInspectionJobDto.houseTypeId,
       });
+      if (!houseType)
+        throw new NotFoundException(`ไม่พบประเภทบ้าน ID ${updateInspectionJobDto.houseTypeId}`);
+      inspectionJob.houseType = houseType;
     }
 
     return this.inspectionsRepo.update(id, updateInspectionJobDto);

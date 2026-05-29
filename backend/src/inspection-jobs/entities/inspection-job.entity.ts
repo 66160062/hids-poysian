@@ -47,7 +47,7 @@ export class InspectionJob {
   })
   projectImageUrl: string;
 
-  @Column({ type: 'varchar', length: 50, default: 'draft' })
+  @Column({ type: 'varchar', length: 50, default: 'Active' })
   status: string;
 
   @CreateDateColumn()
