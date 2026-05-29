@@ -18,7 +18,7 @@
           <!-- Profile Image (Mock Upload) -->
           <div class="row items-center q-mb-md">
             <q-avatar size="64px" class="q-mr-md bg-grey-3">
-              <img :src="localForm.image_url || '/project-images/unknown.jpg'" />
+              <img :src="localForm.imageUrl && localForm.imageUrl.startsWith('blob:') ? localForm.imageUrl : getImageUrl(localForm.imageUrl) || '/project-images/unknown.jpg'" />
             </q-avatar>
             <div class="col">
               <div class="text-subtitle2 text-grey-8 q-mb-xs">
@@ -48,7 +48,7 @@
               ชื่อ-นามสกุล <span class="text-negative">*</span>
             </div>
             <q-input
-              v-model="localForm.full_name"
+              v-model="localForm.fullName"
               outlined
               dense
               filled
@@ -63,7 +63,7 @@
               เบอร์โทรศัพท์ <span class="text-negative">*</span>
             </div>
             <q-input
-              v-model="localForm.phone_number"
+              v-model="localForm.phoneNumber"
               outlined
               dense
               filled
@@ -93,12 +93,9 @@
           </div>
 
           <!-- Password -->
-          <div>
+          <div v-if="!isEditing">
             <div class="text-subtitle2 text-grey-8 q-mb-xs">
-              รหัสผ่าน <span class="text-negative" v-if="!isEditing">*</span>
-              <span class="text-grey-6 text-caption q-ml-sm" v-if="isEditing"
-                >(เว้นว่างไว้หากไม่ต้องการเปลี่ยน)</span
-              >
+              รหัสผ่าน <span class="text-negative">*</span>
             </div>
             <q-input
               v-model="localForm.password"
@@ -106,7 +103,7 @@
               outlined
               dense
               filled
-              :rules="isEditing ? undefined : [(val) => !!val || 'กรุณาระบุรหัสผ่าน']"
+              :rules="[(val) => !!val || 'กรุณาระบุรหัสผ่าน']"
               hide-bottom-space
             />
           </div>
@@ -114,7 +111,7 @@
           <!-- Line ID -->
           <div>
             <div class="text-subtitle2 text-grey-8 q-mb-xs">ไอดีไลน์</div>
-            <q-input v-model="localForm.line_id" outlined dense filled hide-bottom-space />
+            <q-input v-model="localForm.lineId" outlined dense filled hide-bottom-space />
           </div>
 
           <!-- Role -->
@@ -141,7 +138,7 @@
               ทีม <span class="text-negative">*</span>
             </div>
             <q-select
-              v-model="localForm.team_id"
+              v-model="localForm.teamId"
               :options="teamOptions"
               outlined
               dense
@@ -179,7 +176,13 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import type { User } from 'src/pages/AdminUserManagementPage.vue';
+import type { User } from 'src/models';
+
+const getImageUrl = (url?: string | null) => {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('blob:')) return url;
+  return `${import.meta.env.VITE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 interface Option {
   label: string;
@@ -233,19 +236,19 @@ watch(
   () => localForm.value.role,
   (newRole) => {
     if (newRole === 'admin') {
-      localForm.value.team_id = null;
+      localForm.value.teamId = undefined;
     }
   },
 );
 
 const onImageFileChange = (file: File | null) => {
   if (file) {
-    if (localForm.value.image_url && localForm.value.image_url.startsWith('blob:')) {
-      URL.revokeObjectURL(localForm.value.image_url);
+    if (localForm.value.imageUrl && localForm.value.imageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(localForm.value.imageUrl);
     }
-    localForm.value.image_url = URL.createObjectURL(file);
+    localForm.value.imageUrl = URL.createObjectURL(file);
   } else {
-    localForm.value.image_url = '';
+    localForm.value.imageUrl = '';
   }
 };
 
