@@ -121,6 +121,81 @@
         </q-card-section>
       </q-card>
 
+      <!-- Assign Inspector Section -->
+      <q-card flat bordered class="q-mb-md card-round">
+        <q-card-section>
+          <div class="row items-center justify-between q-mb-sm">
+            <div>
+              <div class="text-subtitle2 text-weight-bold">Assign Inspector</div>
+              <div class="text-caption text-grey-6">เลือกผู้ตรวจสำหรับโปรเจกต์นี้</div>
+            </div>
+            <q-icon name="engineering" color="primary" size="28px" />
+          </div>
+
+          <q-select
+            v-model="selectedInspectorIds"
+            :options="inspectorOptions"
+            option-label="name"
+            option-value="id"
+            label="Inspector"
+            multiple
+            emit-value
+            map-options
+            outlined
+            dense
+            use-chips
+            clearable
+          >
+            <template #option="scope">
+              <q-item v-bind="scope.itemProps">
+                <q-item-section avatar>
+                  <q-avatar color="primary" text-color="white" size="32px">
+                    {{ scope.opt.initials }}
+                  </q-avatar>
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>{{ scope.opt.name }}</q-item-label>
+                  <q-item-label caption>{{ scope.opt.role }}</q-item-label>
+                </q-item-section>
+              </q-item>
+            </template>
+          </q-select>
+
+          <div class="row justify-end q-mt-md">
+            <q-btn
+              unelevated
+              color="primary"
+              icon="person_add"
+              label="Assign"
+              class="assign-btn"
+              :disable="selectedInspectorIds.length === 0"
+              @click="openAssignDialog"
+            />
+          </div>
+
+          <q-separator class="q-my-md" />
+
+          <div class="text-caption text-grey-6 q-mb-xs">Inspector ที่ assign แล้ว</div>
+          <div v-if="assignedInspectors.length > 0" class="row q-col-gutter-xs">
+            <div v-for="inspector in assignedInspectors" :key="inspector.id" class="q-ma-xs">
+              <q-chip
+                color="primary"
+                text-color="white"
+                icon="verified_user"
+                removable
+                @remove="openUnassignDialog(inspector)"
+              >
+                {{ inspector.name }}
+              </q-chip>
+            </div>
+          </div>
+          <div v-else class="empty-assign-box row items-center">
+            <q-icon name="person_off" color="grey-5" size="20px" class="q-mr-sm" />
+            <span class="text-body2 text-grey-6">ยังไม่มี Inspector ที่ assign</span>
+          </div>
+        </q-card-section>
+      </q-card>
+
       <!-- รอบการตรวจ Section -->
       <div class="text-subtitle2 text-weight-bold q-mb-sm">รอบการตรวจ</div>
       <q-card flat bordered class="card-round">
@@ -203,6 +278,59 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
+    <q-dialog v-model="showAssignDialog" persistent>
+      <q-card class="confirm-card">
+        <q-card-section class="row items-center q-pb-sm">
+          <q-avatar icon="person_add" color="primary" text-color="white" class="q-mr-md" />
+          <div>
+            <div class="text-subtitle1 text-weight-bold">ยืนยัน Assign Inspector</div>
+            <div class="text-caption text-grey-6">{{ job.projectName }}</div>
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="text-body2 q-mb-sm">
+            ต้องการ assign Inspector ต่อไปนี้ให้โปรเจกต์นี้ใช่หรือไม่?
+          </div>
+          <div class="row q-col-gutter-xs">
+            <div v-for="inspector in pendingInspectors" :key="inspector.id" class="q-ma-xs">
+              <q-chip color="primary" text-color="white">
+                {{ inspector.name }}
+              </q-chip>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md q-pt-none">
+          <q-btn flat label="ยกเลิก" color="grey-7" v-close-popup />
+          <q-btn unelevated label="ยืนยัน" color="primary" @click="confirmAssign" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="showUnassignDialog" persistent>
+      <q-card class="confirm-card">
+        <q-card-section class="row items-center q-pb-sm">
+          <q-avatar icon="person_remove" color="negative" text-color="white" class="q-mr-md" />
+          <div>
+            <div class="text-subtitle1 text-weight-bold">ยืนยัน Unassign Inspector</div>
+            <div class="text-caption text-grey-6">{{ job.projectName }}</div>
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="text-body2">
+            ต้องการนำ {{ unassignTarget?.name }} ออกจากโปรเจกต์นี้ใช่หรือไม่?
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md q-pt-none">
+          <q-btn flat label="ยกเลิก" color="grey-7" v-close-popup />
+          <q-btn unelevated label="ยืนยัน" color="negative" @click="confirmUnassign" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -219,6 +347,30 @@ const workStore = useWorkListStore();
 
 const jobId = computed(() => Number(route.params.id));
 const isLoading = ref(true);
+
+type InspectorOption = {
+  id: number;
+  name: string;
+  role: string;
+  initials: string;
+};
+
+const inspectorOptions: InspectorOption[] = [
+  { id: 1, name: 'ณรงค์ชัย สารสุข', role: 'Senior Inspector', initials: 'ณ' },
+  { id: 2, name: 'นารากรณ์ สร้อยศรี', role: 'Inspector', initials: 'น' },
+  { id: 3, name: 'ธนพล อินทรชัย', role: 'Inspector', initials: 'ธ' },
+  { id: 4, name: 'อารีย์ วงศ์สว่าง', role: 'Inspector', initials: 'อ' },
+];
+
+const assignedInspectorIdsByJob = ref<Record<number, number[]>>({
+  1: [1, 2],
+  2: [3],
+  3: [2, 4],
+});
+const selectedInspectorIds = ref<number[]>([]);
+const showAssignDialog = ref(false);
+const showUnassignDialog = ref(false);
+const unassignTarget = ref<InspectorOption | null>(null);
 
 onMounted(async () => {
   try {
@@ -273,6 +425,16 @@ const job = computed(() => {
   };
 });
 
+const assignedInspectorIds = computed(() => assignedInspectorIdsByJob.value[jobId.value] ?? []);
+
+const assignedInspectors = computed(() =>
+  inspectorOptions.filter((inspector) => assignedInspectorIds.value.includes(inspector.id)),
+);
+
+const pendingInspectors = computed(() =>
+  inspectorOptions.filter((inspector) => selectedInspectorIds.value.includes(inspector.id)),
+);
+
 // Mock inspection rounds (empty = empty state UI)
 const inspectionRounds: {
   id: number;
@@ -311,6 +473,52 @@ const viewPlan = () => {
       position: 'top',
     });
   }
+};
+
+const openAssignDialog = () => {
+  if (selectedInspectorIds.value.length === 0) return;
+  showAssignDialog.value = true;
+};
+
+const confirmAssign = () => {
+  const nextIds = Array.from(new Set([...assignedInspectorIds.value, ...selectedInspectorIds.value]));
+  assignedInspectorIdsByJob.value = {
+    ...assignedInspectorIdsByJob.value,
+    [jobId.value]: nextIds,
+  };
+  selectedInspectorIds.value = [];
+  showAssignDialog.value = false;
+  $q.notify({
+    message: 'Assign Inspector เรียบร้อย',
+    color: 'positive',
+    icon: 'check_circle',
+    position: 'top',
+  });
+};
+
+const openUnassignDialog = (inspector: InspectorOption) => {
+  unassignTarget.value = inspector;
+  showUnassignDialog.value = true;
+};
+
+const confirmUnassign = () => {
+  if (!unassignTarget.value) return;
+
+  assignedInspectorIdsByJob.value = {
+    ...assignedInspectorIdsByJob.value,
+    [jobId.value]: assignedInspectorIds.value.filter((id) => id !== unassignTarget.value?.id),
+  };
+  selectedInspectorIds.value = selectedInspectorIds.value.filter(
+    (id) => id !== unassignTarget.value?.id,
+  );
+  showUnassignDialog.value = false;
+  $q.notify({
+    message: 'Unassign Inspector เรียบร้อย',
+    color: 'positive',
+    icon: 'check_circle',
+    position: 'top',
+  });
+  unassignTarget.value = null;
 };
 
 const onCreateRound = () => {
@@ -401,5 +609,24 @@ function getRoundStatusColor(status: string) {
   border-radius: 50px;
   height: 48px;
   font-size: 15px;
+}
+
+.assign-btn {
+  border-radius: 50px;
+  min-width: 120px;
+}
+
+.empty-assign-box {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px dashed #d8d8d8;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.confirm-card {
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  border-radius: 16px;
 }
 </style>
