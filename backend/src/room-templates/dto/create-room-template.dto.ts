@@ -14,5 +14,5 @@ export class CreateRoomTemplateDto {
 
   @ApiProperty({ example: '1' })
   @IsNumber()
-  floorId: number;
+  floorId!: number;
 }
