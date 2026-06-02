@@ -120,7 +120,7 @@
               <div class="row items-center q-mb-sm text-grey-7" style="font-size: 14px;">
                 <q-icon name="person_search" size="20px" class="q-mr-sm" />
                 <span class="q-mr-xs text-weight-medium">ผู้ตรวจสอบ:</span>
-                <span class="text-dark text-weight-medium" style="font-size: 15px;">{{ task.inspector || 'ไม่ระบุ' }}</span>
+                <span class="text-dark text-weight-medium" style="font-size: 15px;">{{ task.team || 'ไม่ระบุทีม' }}</span>
               </div>
             </q-card-section>
 
@@ -179,21 +179,22 @@ interface TaskItem {
   statusKey: string;
   type: string;
   area: number;
-  inspector: string;
-  date: string; // แนะนำให้เก็บเป็น ISO Date Format ในฐานข้อมูล
+  team: string;
+  customer: string;
+  date: string;
 }
 
 // ==========================================
 // 🎯 Mock Data (ปรับวันที่ให้เป็นรูปแบบสากลเพื่อการเรียงลำดับที่แม่นยำ)
 // ==========================================
 const tasks = ref<TaskItem[]>([
-  { id: 1, title: 'คอนโดบูรพาภิรมย์', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', statusKey: 'in_progress', type: 'คอนโด', area: 35, inspector: 'บารัก โกเมน', date: '2026-06-03T10:00:00Z' },
-  { id: 2, title: 'บ้านใหญ่พลังชล', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', statusKey: 'others', type: 'บ้านเดี่ยว', area: 150, inspector: 'ริชชี่ ชาช่า', date: '2026-06-02T10:00:00Z' },
-  { id: 3, title: 'บ้านใหม่ชลบุรี', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', statusKey: 'waiting', type: 'บ้านเดี่ยว', area: 120, inspector: 'ริชชี่ ชาช่า', date: '2026-01-24T10:00:00Z' },
-  { id: 4, title: 'แสนสิริ คอนโด', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', statusKey: 'others', type: 'คอนโด', area: 45, inspector: 'ริชชี่ ชาช่า', date: '2026-01-22T10:00:00Z' },
-  { id: 5, title: 'โครงการบุญเลิศ', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', statusKey: 'others', type: 'ทาวน์เฮาส์', area: 110, inspector: 'ริชชี่ ชาช่า', date: '2026-01-20T10:00:00Z' },
-  { id: 6, title: 'บ้านชลลดา', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', statusKey: 'in_progress', type: 'บ้านเดี่ยว', area: 200, inspector: 'สมชาย', date: '2026-01-18T10:00:00Z' },
-  { id: 7, title: 'บ้านริมทะเล', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', statusKey: 'waiting', type: 'บ้านเดี่ยว', area: 180, inspector: 'พีระ', date: '2026-01-17T10:00:00Z' },
+  { id: 1, title: 'คอนโดบูรพาภิรมย์', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', statusKey: 'in_progress', type: 'คอนโด', area: 35, team: 'บารัก โกเมน', customer: 'ลูกค้า ก', date: '2026-06-03T10:00:00Z' },
+  { id: 2, title: 'บ้านใหญ่พลังชล', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', statusKey: 'others', type: 'บ้านเดี่ยว', area: 150, team: 'TEAM-A', customer: 'ริชชี่ ชาช่า', date: '2026-06-02T10:00:00Z' },
+  { id: 3, title: 'บ้านใหม่ชลบุรี', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', statusKey: 'waiting', type: 'บ้านเดี่ยว', area: 120, team: 'TEAM-A', customer: 'ริชชี่ ชาช่า', date: '2026-01-24T10:00:00Z' },
+  { id: 4, title: 'แสนสิริ คอนโด', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', statusKey: 'others', type: 'คอนโด', area: 45, team: 'TEAM-B', customer: 'ริชชี่ ชาช่า', date: '2026-01-22T10:00:00Z' },
+  { id: 5, title: 'โครงการบุญเลิศ', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', statusKey: 'others', type: 'ทาวน์เฮาส์', area: 110, team: 'TEAM-C', customer: 'ริชชี่ ชาช่า', date: '2026-01-20T10:00:00Z' },
+  { id: 6, title: 'บ้านชลลดา', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', statusKey: 'in_progress', type: 'บ้านเดี่ยว', area: 200, team: 'TEAM-A', customer: 'สมชาย', date: '2026-01-18T10:00:00Z' },
+  { id: 7, title: 'บ้านริมทะเล', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', statusKey: 'waiting', type: 'บ้านเดี่ยว', area: 180, team: 'TEAM-B', customer: 'พีระ', date: '2026-01-17T10:00:00Z' },
 ]);
 
 // ==========================================
@@ -245,12 +246,13 @@ const filteredTasks = computed(() => {
   }
 
   // 3. กรองตามช่องค้นหา
-  if (searchTerm.value) {
+ if (searchTerm.value) {
     const term = searchTerm.value.toLowerCase();
     result = result.filter(
       (t) =>
         t.title.toLowerCase().includes(term) ||
-        (t.inspector && t.inspector.toLowerCase().includes(term))
+        (t.team && t.team.toLowerCase().includes(term)) ||
+        (t.customer && t.customer.toLowerCase().includes(term))
     );
   }
 

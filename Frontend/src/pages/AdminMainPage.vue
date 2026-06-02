@@ -134,22 +134,7 @@
 
         <q-separator />
 
-        <div class="q-pa-md">
-          <q-input
-            v-model="searchTerm"
-            dense
-            borderless
-            class="search-input"
-            placeholder="ค้นหารายงาน, งาน, หรือลูกค้า..."
-          >
-            <template v-slot:prepend>
-              <q-icon name="search" color="grey-5" />
-            </template>
-            <template v-slot:append>
-              <q-icon name="tune" color="grey-5" class="cursor-pointer" />
-            </template>
-          </q-input>
-        </div>
+
 
         <div class="task-list-container">
           <div
@@ -227,7 +212,7 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 
-const searchTerm = ref('');
+
 const router = useRouter();
 
 const dashboard = ref({
@@ -240,7 +225,7 @@ const dashboard = ref({
 });
 
 // ==========================================
-// 🎯 ระบบปฏิทินแบบใหม่
+// 🎯 ระบบปฏิทิน
 // ==========================================
 const today = new Date();
 const displayMonth = ref(today.getMonth());
@@ -316,7 +301,7 @@ const setToday = () => {
 };
 
 // ==========================================
-// 🎯 ข้อมูลรายการทำงาน (อัปเดต Interface แล้ว)
+// 🎯 ข้อมูลรายการทำงาน (เพิ่มฟิลด์ team และแก้ meta ให้แสดงชื่อทีม)
 // ==========================================
 interface TaskItem {
   id: number;
@@ -329,16 +314,18 @@ interface TaskItem {
   avatarBgClass: string;
   avatarTextColor: string;
   day: number;
+  team: string;      // <- เพิ่มชื่อทีม
+  customer: string;  // <- เพิ่มชื่อลูกค้า
 }
 
 const tasks = ref<TaskItem[]>([
-  { id: 1, title: 'คอนโดบูรพาภิรมย์', meta: 'บารัก โกเมน • วันนี้, 10:00 AM', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', icon: 'domain', avatarBgClass: 'bg-blue-1', avatarTextColor: 'primary', day: new Date().getDate() },
-  { id: 2, title: 'บ้านใหญ่พลังชล', meta: 'ริชชี่ ชาช่า • เมื่อวาน', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', icon: 'home', avatarBgClass: 'bg-green-1', avatarTextColor: 'positive', day: 3 },
-  { id: 3, title: 'บ้านใหม่ชลบุรี', meta: 'ริชชี่ ชาช่า • Jan 24', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', icon: 'home', avatarBgClass: 'bg-grey-2', avatarTextColor: 'grey-8', day: 8 },
-  { id: 4, title: 'แสนสิริ คอนโด', meta: 'ริชชี่ ชาช่า • Jan 22', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', icon: 'domain', avatarBgClass: 'bg-blue-1', avatarTextColor: 'primary', day: 12 },
-  { id: 5, title: 'โครงการบุญเลิศ', meta: 'ริชชี่ ชาช่า • Jan 20', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', icon: 'roofing', avatarBgClass: 'bg-purple-1', avatarTextColor: 'purple', day: 20 },
-  { id: 6, title: 'บ้านชลลดา', meta: 'สมชาย • Jan 18', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', icon: 'home', avatarBgClass: 'bg-green-1', avatarTextColor: 'positive', day: 18 },
-  { id: 7, title: 'บ้านริมทะเล', meta: 'พีระ • Jan 17', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', icon: 'home', avatarBgClass: 'bg-grey-2', avatarTextColor: 'grey-8', day: 17 },
+  { id: 1, title: 'คอนโดบูรพาภิรมย์', meta: 'TEAM-A • วันนี้, 10:00 AM', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', icon: 'domain', avatarBgClass: 'bg-blue-1', avatarTextColor: 'primary', day: new Date().getDate(), team: 'TEAM-A', customer: 'บารัก โกเมน' },
+  { id: 2, title: 'บ้านใหญ่พลังชล', meta: 'TEAM-A • เมื่อวาน', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', icon: 'home', avatarBgClass: 'bg-green-1', avatarTextColor: 'positive', day: 3, team: 'TEAM-A', customer: 'ริชชี่ ชาช่า' },
+  { id: 3, title: 'บ้านใหม่ชลบุรี', meta: 'TEAM-B • Jan 24', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', icon: 'home', avatarBgClass: 'bg-grey-2', avatarTextColor: 'grey-8', day: 8, team: 'TEAM-B', customer: 'ริชชี่ ชาช่า' },
+  { id: 4, title: 'แสนสิริ คอนโด', meta: 'TEAM-B • Jan 22', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', icon: 'domain', avatarBgClass: 'bg-blue-1', avatarTextColor: 'primary', day: 12, team: 'TEAM-B', customer: 'ริชชี่ ชาช่า' },
+  { id: 5, title: 'โครงการบุญเลิศ', meta: 'TEAM-C • Jan 20', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', icon: 'roofing', avatarBgClass: 'bg-purple-1', avatarTextColor: 'purple', day: 20, team: 'TEAM-C', customer: 'ริชชี่ ชาช่า' },
+  { id: 6, title: 'บ้านชลลดา', meta: 'TEAM-A • Jan 18', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', icon: 'home', avatarBgClass: 'bg-green-1', avatarTextColor: 'positive', day: 18, team: 'TEAM-A', customer: 'สมชาย' },
+  { id: 7, title: 'บ้านริมทะเล', meta: 'TEAM-B • Jan 17', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', icon: 'home', avatarBgClass: 'bg-grey-2', avatarTextColor: 'grey-8', day: 17, team: 'TEAM-B', customer: 'พีระ' },
 ]);
 
 const currentPage = ref(1);
@@ -544,7 +531,7 @@ function goToWorkList() {
   font-size: 11px;
 }
 .min-w-0 {
-  min-width: 0; /* ช่วยให้ text-overflow ellipsis ทำงานได้ดีเมื่ออยู่กับ flexbox */
+  min-width: 0;
 }
 .clickable {
   cursor: pointer;
