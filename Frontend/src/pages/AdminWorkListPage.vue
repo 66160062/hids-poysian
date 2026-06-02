@@ -1,30 +1,58 @@
-จัดให้แบบโค้ดเต็มครบจบในไฟล์เดียวเลยครับ!
-
-ผมได้นำเอาดีไซน์ตามเรฟรูปภาพทั้งหมดมารวมกัน (หน้า Header, ช่องค้นหา, ปุ่ม Filter สีฟ้าทรงแคปซูล และ **การ์ดงานที่มีไอคอนตรงประเภทบ้านและขนาดพื้นที่**) พร้อมทั้งใส่ฟังก์ชันแปลงวันที่ `formatDate` ให้เรียบร้อยครับ
-
-สามารถก๊อปปี้โค้ดด้านล่างนี้ไปวางทับไฟล์ **`AdminWorkPage.vue`** ได้เลยครับ 🚀
-
-```vue
 <template>
-  <q-page class="admin-work-page bg-white">
+  <q-page class="admin-work-page bg-grey-1">
     <div class="q-px-md q-pt-lg">
 
-      <div class="row q-mb-md">
+      <div class="row q-mb-sm">
         <q-input
           v-model="searchTerm"
           dense
           borderless
           rounded
-          placeholder="ค้นหา"
+          placeholder="ค้นหาโครงการ, ผู้ตรวจสอบ..."
           class="col search-input"
         >
           <template v-slot:prepend>
             <q-icon name="search" color="grey-6" />
           </template>
-          <template v-slot:append>
-            <q-icon name="tune" color="grey-6" class="cursor-pointer" />
-          </template>
         </q-input>
+      </div>
+
+      <div class="row q-col-gutter-sm q-mb-md">
+        <div class="col-6">
+          <q-select
+            v-model="selectedType"
+            :options="typeOptions"
+            dense
+            outlined
+            rounded
+            bg-color="white"
+            class="filter-select"
+            behavior="menu"
+          >
+            <template v-slot:prepend>
+              <q-icon name="home_work" size="18px" color="grey-6" />
+            </template>
+          </q-select>
+        </div>
+
+        <div class="col-6">
+          <q-select
+            v-model="sortOrder"
+            :options="sortOptions"
+            emit-value
+            map-options
+            dense
+            outlined
+            rounded
+            bg-color="white"
+            class="filter-select"
+            behavior="menu"
+          >
+            <template v-slot:prepend>
+              <q-icon name="sort" size="18px" color="grey-6" />
+            </template>
+          </q-select>
+        </div>
       </div>
 
       <div class="filter-container q-mb-md">
@@ -54,58 +82,58 @@
         </div>
       </div>
 
-      <q-separator color="grey-2" class="q-mb-md" />
-
       <div class="work-list-wrapper">
-        <div class="work-list q-gutter-y-md q-pb-xl">
+        <div v-if="filteredTasks.length === 0" class="text-center text-grey-6 q-pa-xl">
+          ไม่พบข้อมูลที่ค้นหา
+        </div>
+
+        <div v-else class="work-list q-gutter-y-md q-pb-xl">
           <q-card
-            v-for="work in filteredWorks"
-            :key="work.id"
+            v-for="task in filteredTasks"
+            :key="task.id"
             flat
             bordered
             class="work-card"
           >
             <q-card-section class="q-pa-md">
               <div class="row justify-between items-start q-mb-sm">
-                <div class="text-weight-bold text-dark ellipsis" style="font-size: 16px; max-width: 70%;">
-                  {{ work.title }}
+                <div class="text-weight-bold text-dark ellipsis" style="font-size: 16px; max-width: 65%;">
+                  {{ task.title }}
                 </div>
                 <q-badge
-                  :class="work.statusBgClass"
-                  :text-color="work.statusTextColor"
                   class="status-badge"
+                  :class="[task.statusBgClass, `text-${task.statusTextColor}`]"
                 >
-                  {{ work.status }}
+                  {{ task.status }}
                 </q-badge>
               </div>
 
               <div class="row q-gutter-x-sm q-mb-md">
-                <q-badge class="tag-badge bg-indigo-50 text-indigo-8">
-                  <q-icon :name="work.typeIcon || 'home'" size="14px" class="q-mr-xs" />
-                  {{ work.type }}
+                <q-badge color="indigo-1" text-color="grey-8" class="tag-badge">
+                  {{ task.type || 'คอนโด' }}
                 </q-badge>
-                <q-badge class="tag-badge bg-teal-50 text-teal-8">
-                  <q-icon name="straighten" size="14px" class="q-mr-xs" />
-                  {{ work.area }} ตร.ม.
+                <q-badge color="indigo-1" text-color="grey-8" class="tag-badge">
+                  {{ task.area || '0' }} ตร.ม.
                 </q-badge>
               </div>
 
-              <div class="row items-center q-mb-sm text-grey-7" style="font-size: 13px;">
-                <q-icon name="person" size="18px" class="q-mr-sm" />
-                <span class="text-dark text-weight-medium">{{ work.inspector || work.team || 'ไม่ระบุ' }}</span>
+              <div class="row items-center q-mb-sm text-grey-7" style="font-size: 14px;">
+                <q-icon name="person_search" size="20px" class="q-mr-sm" />
+                <span class="q-mr-xs text-weight-medium">ผู้ตรวจสอบ:</span>
+                <span class="text-dark text-weight-medium" style="font-size: 15px;">{{ task.inspector || 'ไม่ระบุ' }}</span>
               </div>
             </q-card-section>
 
             <q-separator color="grey-2" inset />
 
             <q-card-actions class="row justify-between items-center q-px-md q-py-sm">
-              <div class="text-grey-5 row items-center" style="font-size: 13px;">
-                <q-icon name="calendar_today" size="14px" class="q-mr-sm" />
-                {{ formatDate(work.date || work.scheduledDate) }}
+              <div class="row items-center text-grey-6" style="font-size: 13px;">
+                <q-icon name="calendar_today" size="16px" class="q-mr-sm" />
+                {{ formatDate(task.date) }}
               </div>
               <div class="row q-gutter-x-sm">
-                <q-btn flat round dense icon="visibility" color="grey-6" class="bg-grey-1 action-btn" @click="viewDetail(work)" />
-                <q-btn flat round dense icon="edit" color="grey-6" class="bg-grey-1 action-btn" @click="editWork(work)" />
+                <q-btn flat round dense icon="visibility" color="grey-8" class="bg-grey-2 action-btn" @click="viewDetail(task)" />
+                <q-btn flat round dense icon="edit" color="grey-8" class="bg-grey-2 action-btn" @click="editWork(task)" />
               </div>
             </q-card-actions>
           </q-card>
@@ -123,92 +151,53 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-// import { useWorkListStore } from '../stores/useWorkList'; // นำกลับมาใช้ได้ถ้าเชื่อม API แล้ว
 
 const router = useRouter();
 
+// ตัวแปรสำหรับค้นหาและกรอง
 const searchTerm = ref('');
 const activeFilter = ref('all');
+const selectedType = ref('ทั้งหมด'); // ตัวเลือกประเภทงาน
+const sortOrder = ref('desc');       // desc = ล่าสุด -> เก่า, asc = เก่า -> ล่าสุด
+
+// ตัวเลือกใน Dropdown
+const typeOptions = ['ทั้งหมด', 'คอนโด', 'บ้านเดี่ยว', 'ทาวน์เฮาส์'];
+const sortOptions = [
+  { label: 'ล่าสุด - เก่า', value: 'desc' },
+  { label: 'เก่า - ล่าสุด', value: 'asc' }
+];
 
 // ==========================================
-// 🎯 Interface สำหรับข้อมูลงาน
+// 🎯 Interface สำหรับข้อมูล TaskItem
 // ==========================================
-interface WorkItem {
+interface TaskItem {
   id: number;
   title: string;
-  type: string;
-  typeIcon: string;
-  area: number;
-  inspector: string;
-  team?: string;
-  date: string;
-  scheduledDate?: string;
   status: string;
-  statusKey: string;
   statusBgClass: string;
   statusTextColor: string;
+  statusKey: string;
+  type: string;
+  area: number;
+  inspector: string;
+  date: string; // แนะนำให้เก็บเป็น ISO Date Format ในฐานข้อมูล
 }
 
 // ==========================================
-// 🎯 ข้อมูลจำลอง (Mock Data) อิงตามรูปเรฟ
+// 🎯 Mock Data (ปรับวันที่ให้เป็นรูปแบบสากลเพื่อการเรียงลำดับที่แม่นยำ)
 // ==========================================
-const works = ref<WorkItem[]>([
-  {
-    id: 1,
-    title: 'บ้านใหญ่พลังชล',
-    type: 'คอนโด',
-    typeIcon: 'domain',
-    area: 33,
-    inspector: 'สมชาย ใจดี',
-    date: '2026-12-24T00:00:00Z',
-    status: 'กำลังดำเนินการ',
-    statusKey: 'in_progress',
-    statusBgClass: 'bg-orange-1',
-    statusTextColor: 'orange-9',
-  },
-  {
-    id: 2,
-    title: 'โครงการพฤกษา',
-    type: 'ทาวน์เฮาส์',
-    typeIcon: 'home_work',
-    area: 120,
-    inspector: 'นิภา สุขสวัสดิ์',
-    date: '2026-12-25T00:00:00Z',
-    status: 'กำลังดำเนินการ',
-    statusKey: 'in_progress',
-    statusBgClass: 'bg-orange-1',
-    statusTextColor: 'orange-9',
-  },
-  {
-    id: 3,
-    title: 'บ้านสมหวัง',
-    type: 'บ้านเดี่ยว',
-    typeIcon: 'home',
-    area: 150,
-    inspector: 'มานี รักบ้าน',
-    date: '2026-12-26T00:00:00Z',
-    status: 'รอดำเนินการ',
-    statusKey: 'waiting',
-    statusBgClass: 'bg-grey-2',
-    statusTextColor: 'grey-8',
-  },
-  {
-    id: 4,
-    title: 'บ้านชายเขา',
-    type: 'บ้านเดี่ยว',
-    typeIcon: 'home',
-    area: 200,
-    inspector: 'อรุณี ธรรมศิริ',
-    date: '2026-12-27T00:00:00Z',
-    status: 'รอดำเนินการ',
-    statusKey: 'waiting',
-    statusBgClass: 'bg-grey-2',
-    statusTextColor: 'grey-8',
-  }
+const tasks = ref<TaskItem[]>([
+  { id: 1, title: 'คอนโดบูรพาภิรมย์', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', statusKey: 'in_progress', type: 'คอนโด', area: 35, inspector: 'บารัก โกเมน', date: '2026-06-03T10:00:00Z' },
+  { id: 2, title: 'บ้านใหญ่พลังชล', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', statusKey: 'others', type: 'บ้านเดี่ยว', area: 150, inspector: 'ริชชี่ ชาช่า', date: '2026-06-02T10:00:00Z' },
+  { id: 3, title: 'บ้านใหม่ชลบุรี', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', statusKey: 'waiting', type: 'บ้านเดี่ยว', area: 120, inspector: 'ริชชี่ ชาช่า', date: '2026-01-24T10:00:00Z' },
+  { id: 4, title: 'แสนสิริ คอนโด', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', statusKey: 'others', type: 'คอนโด', area: 45, inspector: 'ริชชี่ ชาช่า', date: '2026-01-22T10:00:00Z' },
+  { id: 5, title: 'โครงการบุญเลิศ', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', statusKey: 'others', type: 'ทาวน์เฮาส์', area: 110, inspector: 'ริชชี่ ชาช่า', date: '2026-01-20T10:00:00Z' },
+  { id: 6, title: 'บ้านชลลดา', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', statusKey: 'in_progress', type: 'บ้านเดี่ยว', area: 200, inspector: 'สมชาย', date: '2026-01-18T10:00:00Z' },
+  { id: 7, title: 'บ้านริมทะเล', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', statusKey: 'waiting', type: 'บ้านเดี่ยว', area: 180, inspector: 'พีระ', date: '2026-01-17T10:00:00Z' },
 ]);
 
 // ==========================================
-// ฟังก์ชันจัดการวันที่ให้เป็นฟอร์แมต DD/MM/YYYY
+// ฟังก์ชันจัดการวันที่ให้แสดงผลสวยงาม (DD/MM/YYYY)
 // ==========================================
 function formatDate(dateStr?: string) {
   if (!dateStr) return 'ไม่ระบุวันที่';
@@ -219,60 +208,73 @@ function formatDate(dateStr?: string) {
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
   } catch {
-    return dateStr; // ถ้าแปลงไม่ได้ ให้โชว์ค่าเดิมไปก่อน
+    return dateStr;
   }
 }
 
 // ==========================================
-// ลอจิกการ Filter & Search
+// ลอจิก Filter & Search & Sort
 // ==========================================
 const filters = computed(() => {
   const counts = {
-    all: works.value.length,
-    in_progress: works.value.filter((w) => w.statusKey === 'in_progress').length,
-    waiting: works.value.filter((w) => w.statusKey === 'waiting').length,
-    others: works.value.filter((w) => w.statusKey === 'others').length,
+    all: tasks.value.length,
+    in_progress: tasks.value.filter((t) => t.statusKey === 'in_progress').length,
+    waiting: tasks.value.filter((t) => t.statusKey === 'waiting').length,
+    others: tasks.value.filter((t) => t.statusKey === 'others').length,
   };
 
   return [
     { label: 'ทั้งหมด', value: 'all', count: counts.all },
     { label: 'กำลังดำเนินการ', value: 'in_progress', count: counts.in_progress },
-    { label: 'รอดำเนินการ', value: 'waiting', count: counts.waiting },
-    { label: 'อื่นๆ', value: 'others', count: counts.others > 0 ? counts.others : undefined },
+    { label: 'รออนุมัติ', value: 'waiting', count: counts.waiting },
+    { label: 'เสร็จสิ้น', value: 'others', count: counts.others > 0 ? counts.others : undefined },
   ];
 });
 
-const filteredWorks = computed(() => {
-  let result = works.value;
+const filteredTasks = computed(() => {
+  let result = [...tasks.value];
 
-  // กรองตามปุ่มสถานะ
+  // 1. กรองตามปุ่มสถานะ
   if (activeFilter.value !== 'all') {
-    result = result.filter((w) => w.statusKey === activeFilter.value);
+    result = result.filter((t) => t.statusKey === activeFilter.value);
   }
 
-  // กรองตามช่องค้นหา
+  // 2. กรองตามประเภทบ้าน (Dropdown)
+  if (selectedType.value !== 'ทั้งหมด') {
+    result = result.filter((t) => t.type === selectedType.value);
+  }
+
+  // 3. กรองตามช่องค้นหา
   if (searchTerm.value) {
     const term = searchTerm.value.toLowerCase();
     result = result.filter(
-      (w) =>
-        w.title.toLowerCase().includes(term) ||
-        (w.inspector && w.inspector.toLowerCase().includes(term)) ||
-        (w.type && w.type.toLowerCase().includes(term)),
+      (t) =>
+        t.title.toLowerCase().includes(term) ||
+        (t.inspector && t.inspector.toLowerCase().includes(term))
     );
   }
+
+  // 4. เรียงลำดับตามวันที่ (Dropdown)
+  result.sort((a, b) => {
+    const dateA = new Date(a.date || 0).getTime();
+    const dateB = new Date(b.date || 0).getTime();
+
+    if (sortOrder.value === 'desc') {
+      return dateB - dateA; // ล่าสุด ไป เก่าสุด
+    } else {
+      return dateA - dateB; // เก่าสุด ไป ล่าสุด
+    }
+  });
 
   return result;
 });
 
-// ==========================================
-// ฟังก์ชันกดปุ่ม Action
-// ==========================================
-async function viewDetail(work: WorkItem) {
-  await router.push(`/admin/work/${work.id}`);
+async function viewDetail(task: TaskItem) {
+  await router.push(`/admin/work/${task.id}`);
 }
 
-async function editWork(work: WorkItem) {
-  await router.push(`/admin/work/create?editId=${work.id}`);
+async function editWork(task: TaskItem) {
+  await router.push(`/admin/work/create?editId=${task.id}`);
 }
 
 async function addNewWork() {
@@ -287,7 +289,6 @@ async function addNewWork() {
   min-height: 100vh;
 }
 
-/* ช่องค้นหาแบบใหม่ */
 .search-input {
   background-color: #ffffff;
   border: 1px solid #e0e0e0;
@@ -295,7 +296,17 @@ async function addNewWork() {
   height: 48px;
 }
 
-/* คอนเทนเนอร์ของปุ่ม Filter */
+/* ปรับแต่ง Dropdown */
+.filter-select :deep(.q-field__control) {
+  height: 42px;
+  min-height: 42px;
+  border: 1px solid #e0e0e0;
+}
+.filter-select :deep(.q-field__control:before),
+.filter-select :deep(.q-field__control:after) {
+  border: none !important; /* ซ่อนเส้นขอบ default ของ Quasar */
+}
+
 .filter-container {
   overflow: hidden;
   margin-left: -16px;
@@ -310,7 +321,6 @@ async function addNewWork() {
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* ปุ่ม Filter และ Badge */
 .filter-chip {
   min-width: fit-content;
   white-space: nowrap;
@@ -326,26 +336,26 @@ async function addNewWork() {
   border-radius: 12px;
 }
 
-/* =====================================
-   🎯 CSS สำหรับการ์ดงาน (Card)
-   ===================================== */
 .work-card {
   border-radius: 16px;
   border-color: #f0f0f0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
+
 .status-badge {
   font-weight: 600;
   font-size: 11px;
   padding: 6px 12px;
   border-radius: 20px;
 }
+
 .tag-badge {
-  font-weight: 600;
+  font-weight: 500;
   font-size: 12px;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
 }
+
 .action-btn {
   width: 36px;
   height: 36px;
