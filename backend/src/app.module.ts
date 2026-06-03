@@ -47,6 +47,7 @@ import { SubRoom } from './sub-rooms/entities/sub-room.entity';
 import { RoomsModule } from './rooms/rooms.module';
 import { Room } from './rooms/entities/room.entity';
 import { ConfigModule } from '@nestjs/config';
+import { DailyReportsModule } from './daily-reports/daily-reports.module';
 @Module({
   imports: [ConfigModule.forRoot(
     {
@@ -119,6 +120,7 @@ import { ConfigModule } from '@nestjs/config';
     FloorModule,
     SubRoomsModule,
     RoomsModule,
+    DailyReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
