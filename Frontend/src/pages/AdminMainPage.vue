@@ -1,6 +1,19 @@
 <template>
   <q-page class="admin-page bg-grey-1">
     <div class="q-px-md q-pt-md">
+      <!-- Loading Indicator -->
+      <q-inner-loading :showing="loading" label="กำลังโหลดข้อมูล..." />
+
+      <!-- Error Banner -->
+      <q-banner v-if="error" class="text-white bg-negative q-mb-md" rounded dense>
+        <template v-slot:avatar>
+          <q-icon name="error" color="white" />
+        </template>
+        {{ error }}
+        <template v-slot:action>
+          <q-btn flat label="ลองใหม่" @click="fetchAdminDashboard" />
+        </template>
+      </q-banner>
       <div class="row q-col-gutter-md q-mb-md">
         <div class="col-6">
           <q-card flat bordered class="stat-box relative-position overflow-hidden">
@@ -209,19 +222,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-
+import { api } from 'src/boot/axios';
+import type { AxiosResponse } from 'axios';
 
 const router = useRouter();
+const loading = ref<boolean>(false);
+const error = ref<string>('');
 
-const dashboard = ref({
-  totalProjects: 1500,
-  inProgress: 12,
-  singleHouse: 450,
-  townhouse: 380,
-  condo: 120,
-  construction: 85,
+// ==========================================
+// 🎯 Interface สำหรับ Dashboard Stats
+// ==========================================
+interface DashboardStats {
+  totalProjects: number;
+  inProgress: number;
+  singleHouse: number;
+  townhouse: number;
+  condo: number;
+  construction: number;
+}
+
+const dashboard = ref<DashboardStats>({
+  totalProjects: 0,
+  inProgress: 0,
+  singleHouse: 0,
+  townhouse: 0,
+  condo: 0,
+  construction: 0,
 });
 
 // ==========================================
@@ -276,28 +304,31 @@ const isToday = (date: number, isCurrentMonth: boolean) => {
          displayYear.value === t.getFullYear();
 };
 
-const prevMonth = () => {
+const prevMonth = (): void => {
   if (displayMonth.value === 0) {
     displayMonth.value = 11;
     displayYear.value--;
   } else {
     displayMonth.value--;
   }
+  void fetchAdminDashboard();
 };
 
-const nextMonth = () => {
+const nextMonth = (): void => {
   if (displayMonth.value === 11) {
     displayMonth.value = 0;
     displayYear.value++;
   } else {
     displayMonth.value++;
   }
+  void fetchAdminDashboard();
 };
 
-const setToday = () => {
+const setToday = (): void => {
   const t = new Date();
   displayMonth.value = t.getMonth();
   displayYear.value = t.getFullYear();
+  void fetchAdminDashboard();
 };
 
 // ==========================================
@@ -318,15 +349,7 @@ interface TaskItem {
   customer: string;  // <- เพิ่มชื่อลูกค้า
 }
 
-const tasks = ref<TaskItem[]>([
-  { id: 1, title: 'คอนโดบูรพาภิรมย์', meta: 'TEAM-A • วันนี้, 10:00 AM', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', icon: 'domain', avatarBgClass: 'bg-blue-1', avatarTextColor: 'primary', day: new Date().getDate(), team: 'TEAM-A', customer: 'บารัก โกเมน' },
-  { id: 2, title: 'บ้านใหญ่พลังชล', meta: 'TEAM-A • เมื่อวาน', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', icon: 'home', avatarBgClass: 'bg-green-1', avatarTextColor: 'positive', day: 3, team: 'TEAM-A', customer: 'ริชชี่ ชาช่า' },
-  { id: 3, title: 'บ้านใหม่ชลบุรี', meta: 'TEAM-B • Jan 24', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', icon: 'home', avatarBgClass: 'bg-grey-2', avatarTextColor: 'grey-8', day: 8, team: 'TEAM-B', customer: 'ริชชี่ ชาช่า' },
-  { id: 4, title: 'แสนสิริ คอนโด', meta: 'TEAM-B • Jan 22', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', icon: 'domain', avatarBgClass: 'bg-blue-1', avatarTextColor: 'primary', day: 12, team: 'TEAM-B', customer: 'ริชชี่ ชาช่า' },
-  { id: 5, title: 'โครงการบุญเลิศ', meta: 'TEAM-C • Jan 20', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', icon: 'roofing', avatarBgClass: 'bg-purple-1', avatarTextColor: 'purple', day: 20, team: 'TEAM-C', customer: 'ริชชี่ ชาช่า' },
-  { id: 6, title: 'บ้านชลลดา', meta: 'TEAM-A • Jan 18', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', icon: 'home', avatarBgClass: 'bg-green-1', avatarTextColor: 'positive', day: 18, team: 'TEAM-A', customer: 'สมชาย' },
-  { id: 7, title: 'บ้านริมทะเล', meta: 'TEAM-B • Jan 17', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', icon: 'home', avatarBgClass: 'bg-grey-2', avatarTextColor: 'grey-8', day: 17, team: 'TEAM-B', customer: 'พีระ' },
-]);
+const tasks = ref<TaskItem[]>([]);
 
 const currentPage = ref(1);
 const pageSize = 4;
@@ -336,8 +359,8 @@ const visibleTasks = computed(() => {
   return tasks.value.slice(start, start + pageSize);
 });
 
-function taskCountByDay(day: number) {
-  return tasks.value.filter((task) => task.day === day).length;
+function taskCountByDay(day: number): number {
+  return tasks.value.filter((task: TaskItem): boolean => task.day === day).length;
 }
 
 const selectedTask = ref<TaskItem | null>(null);
@@ -348,10 +371,53 @@ function openTaskDetail(task: TaskItem) {
   showTaskDialog.value = true;
 }
 
-function goToWorkList() {
+function goToWorkList(): void {
   showTaskDialog.value = false;
   void router.push('/admin/work');
 }
+
+// ==========================================
+// 🎯 API Integration — ดึงข้อมูล Dashboard จาก Backend
+// ==========================================
+interface DashboardApiResponse extends DashboardStats {
+  tasks: TaskItem[];
+}
+
+async function fetchAdminDashboard(): Promise<void> {
+  loading.value = true;
+  error.value = '';
+
+  try {
+    // สร้าง date parameter ตามเดือนที่แสดงบนปฏิทิน
+    const dateParam: string = `${displayYear.value}-${String(displayMonth.value + 1).padStart(2, '0')}-01`;
+    const res: AxiosResponse<DashboardApiResponse> = await api.get<DashboardApiResponse>('/admin/dashboard', {
+      params: { date: dateParam },
+    });
+    const data: DashboardApiResponse = res.data;
+
+    dashboard.value = {
+      totalProjects: data.totalProjects,
+      inProgress: data.inProgress,
+      singleHouse: data.singleHouse,
+      townhouse: data.townhouse,
+      condo: data.condo,
+      construction: data.construction,
+    };
+
+    if (Array.isArray(data.tasks)) {
+      tasks.value = data.tasks;
+    }
+  } catch (err: unknown) {
+    error.value = 'เกิดข้อผิดพลาดในการโหลดข้อมูล โปรดลองใหม่อีกครั้ง';
+    console.error('fetchAdminDashboard error:', err);
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted((): void => {
+  void fetchAdminDashboard();
+});
 </script>
 
 <style scoped>
