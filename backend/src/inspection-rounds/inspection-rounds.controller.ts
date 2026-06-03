@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Patch,
   Param,
@@ -61,6 +62,11 @@ export class InspectionRoundsController {
     return this.inspectionRoundsService.submit(+id);
   }
 
+  @Patch(':id/approve')
+  approve(@Param('id') id: string) {
+    return this.inspectionRoundsService.approveReport(+id);
+  }
+
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -72,5 +78,17 @@ export class InspectionRoundsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.inspectionRoundsService.remove(+id);
+  }
+}
+
+@Controller('projects')
+export class ProjectApprovalController {
+  constructor(
+    private readonly inspectionRoundsService: InspectionRoundsService,
+  ) {}
+
+  @Put(':id/approve')
+  approve(@Param('id') id: string) {
+    return this.inspectionRoundsService.approveReport(+id);
   }
 }
