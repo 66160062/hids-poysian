@@ -4,7 +4,7 @@ import { IsString, IsOptional } from 'class-validator';
 export class CreateTeamDto {
   @ApiProperty({ description: 'ชื่อทีม', example: 'WENAT Team A' })
   @IsString()
-  team_name: string;
+  team_name!: string;
 
   @ApiProperty({
     description: 'ลิงก์โลโก้',

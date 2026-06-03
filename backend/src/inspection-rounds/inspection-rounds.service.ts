@@ -147,4 +147,43 @@ export class InspectionRoundsService {
     round.submittedAt = new Date();
     return this.inspectionRoundsRepo.save(round);
   }
+
+  async approveReport(id: number) {
+    const round = await this.inspectionRoundsRepo.findOneOrFail({
+      where: { roundId: id },
+      relations: ['job', 'teamMember', 'teamMember.inspector'],
+    });
+
+    if (round.status !== 'SUBMITTED') {
+      throw new BadRequestException(
+        'Report must be submitted before approval',
+      );
+    }
+
+    round.status = 'APPROVED';
+    round.approvedAt = new Date();
+
+    const approvedRound = await this.inspectionRoundsRepo.save(round);
+    const notification = this.buildApprovalNotification(approvedRound);
+
+    return {
+      data: approvedRound,
+      notification,
+    };
+  }
+
+  private buildApprovalNotification(round: InspectionRound) {
+    return {
+      type: 'REPORT_APPROVED',
+      recipientUserId: round.teamMember?.inspector?.id ?? null,
+      title: 'Report approved',
+      message: `Inspection report #${round.roundId} has been approved.`,
+      payload: {
+        roundId: round.roundId,
+        jobId: round.job?.jobId ?? null,
+        status: round.status,
+        approvedAt: round.approvedAt,
+      },
+    };
+  }
 }

@@ -4,14 +4,14 @@ import { SummaryTemplateOption } from 'src/summary-template-options/entities/sum
 @Entity()
 export class SummaryTemplate {
   @PrimaryGeneratedColumn()
-  templateId: number;
+  templateId!: number;
 
   @Column({ length: 255 })
-  category: string;
+  category!: string;
 
   @Column({ length: 255 })
-  label: string;
+  label!: string;
 
   @OneToMany(() => SummaryTemplateOption, (option) => option.template)
-  options: SummaryTemplateOption[];
+  options!: SummaryTemplateOption[];
 }
