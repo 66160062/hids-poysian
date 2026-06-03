@@ -12,19 +12,19 @@ import { User } from 'src/users/entities/user.entity';
 @Entity('inspection_team_member')
 export class InspectionTeamMember {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => InspectionJob)
   @JoinColumn({ name: 'job_id' })
-  job: InspectionJob;
+  job!: InspectionJob;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'inspector_id' })
-  inspector: User;
+  inspector!: User;
 
   @CreateDateColumn({ name: 'assigned_at' })
-  assignedAt: Date;
+  assignedAt!: Date;
 
   @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date;
+  deletedAt!: Date;
 }

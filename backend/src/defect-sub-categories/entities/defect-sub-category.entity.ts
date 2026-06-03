@@ -9,12 +9,12 @@ import {
 @Entity('defect_sub_category')
 export class DefectSubCategory {
   @PrimaryGeneratedColumn()
-  subCategoryId: number;
+  subCategoryId!: number;
 
   @Column({ type: 'varchar', length: 255 })
-  name: string;
+  name!: string;
 
   @ManyToOne(() => DefectCategory, (category) => category.subCategories)
   @JoinColumn({ name: 'category_id' })
-  category: DefectCategory;
+  category!: DefectCategory;
 }

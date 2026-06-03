@@ -8,11 +8,11 @@ import {
 @Entity('house_type')
 export class HouseType {
   @PrimaryGeneratedColumn()
-  house_type_id: number;
+  house_type_id!: number;
 
   @Column({ type: 'varchar', length: 255 })
-  name: string;
+  name!: string;
 
   @DeleteDateColumn()
-  deleted_at: Date;
+  deleted_at!: Date;
 }

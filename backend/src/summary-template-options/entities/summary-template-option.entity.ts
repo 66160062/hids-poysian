@@ -10,18 +10,18 @@ import {
 @Entity()
 export class SummaryTemplateOption {
   @PrimaryGeneratedColumn()
-  optionId: number;
+  optionId!: number;
 
   @ManyToOne(() => SummaryTemplate)
   @JoinColumn({ name: 'template_id' })
-  template: SummaryTemplate;
+  template!: SummaryTemplate;
 
   @Column({ length: 255 })
-  value: string;
+  value!: string;
 
   @Column({ length: 255, nullable: true })
-  group: string; // เช่น "รูปแบบโครงสร้าง", "รายละเอียด"
+  group!: string; // เช่น "รูปแบบโครงสร้าง", "รายละเอียด"
 
   @Column({ length: 50, default: 'radio' })
-  type: string; // 'radio' หรือ 'checkbox'
+  type!: string; // 'radio' หรือ 'checkbox'
 }

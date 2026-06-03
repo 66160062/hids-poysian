@@ -6,5 +6,5 @@ export class CreateRoomDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
-  roomName: string;
+  roomName!: string;
 }

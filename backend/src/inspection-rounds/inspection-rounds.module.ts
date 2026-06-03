@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { InspectionRoundsService } from './inspection-rounds.service';
-import { InspectionRoundsController } from './inspection-rounds.controller';
+import {
+  InspectionRoundsController,
+  ProjectApprovalController,
+} from './inspection-rounds.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InspectionRound } from './entities/inspection-round.entity';
 import { InspectionJobsModule } from 'src/inspection-jobs/inspection-jobs.module';
@@ -12,7 +15,7 @@ import { InspectionTeamMembersModule } from 'src/inspection-team-members/inspect
     InspectionJobsModule,
     InspectionTeamMembersModule,
   ],
-  controllers: [InspectionRoundsController],
+  controllers: [InspectionRoundsController, ProjectApprovalController],
   providers: [InspectionRoundsService],
   exports: [InspectionRoundsService, TypeOrmModule],
 })

@@ -12,20 +12,20 @@ import { SummaryTemplateOption } from 'src/summary-template-options/entities/sum
 @Entity()
 export class InspectionSummaryItem {
   @PrimaryGeneratedColumn()
-  itemId: number;
+  itemId!: number;
 
   @ManyToOne(() => InspectionRound)
   @JoinColumn({ name: 'round_id' })
-  round: InspectionRound;
+  round!: InspectionRound;
 
   @ManyToOne(() => SummaryTemplate)
   @JoinColumn({ name: 'template_id' })
-  template: SummaryTemplate;
+  template!: SummaryTemplate;
 
   @ManyToOne(() => SummaryTemplateOption)
   @JoinColumn({ name: 'option_id' })
-  option: SummaryTemplateOption;
+  option!: SummaryTemplateOption;
 
   @Column({ type: 'text', nullable: true })
-  detailValue: string;
+  detailValue!: string;
 }

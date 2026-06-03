@@ -4,11 +4,11 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 @Entity('defect_category')
 export class DefectCategory {
   @PrimaryGeneratedColumn()
-  categoryId: number;
+  categoryId!: number;
 
   @Column({ type: 'varchar', length: 255 })
-  name: string;
+  name!: string;
 
   @OneToMany(() => DefectSubCategory, (sub) => sub.category)
-  subCategories: DefectSubCategory[];
+  subCategories!: DefectSubCategory[];
 }

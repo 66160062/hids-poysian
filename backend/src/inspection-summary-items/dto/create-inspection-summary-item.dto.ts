@@ -4,15 +4,15 @@ import { IsNumber, IsOptional, IsString } from 'class-validator';
 export class CreateInspectionSummaryItemDto {
   @ApiProperty({ example: 1 })
   @IsNumber()
-  roundId: number;
+  roundId!: number;
 
   @ApiProperty({ example: 1 })
   @IsNumber()
-  templateId: number;
+  templateId!: number;
 
   @ApiProperty({ example: 1 })
   @IsNumber()
-  optionId: number;
+  optionId!: number;
 
   @ApiProperty({ example: 'หมายเหตุเพิ่มเติม', required: false })
   @IsOptional()

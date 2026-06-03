@@ -11,40 +11,40 @@ import {
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  fullName: string;
+  fullName!: string;
 
   @Column()
-  phoneNumber: string;
+  phoneNumber!: string;
 
   @Column()
-  email: string;
+  email!: string;
 
   @Column()
-  lineId: string;
+  lineId!: string;
 
   @Column()
-  password: string;
+  password!: string;
 
   @Column()
-  role: string;
+  role!: string;
 
   @Column({
     type: 'varchar',
     length: 255,
     default: '/project-images/unknown.jpg',
   })
-  imageUrl: string;
+  imageUrl!: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @DeleteDateColumn()
-  deletedAt: Date;
+  deletedAt!: Date;
 
   @ManyToOne(() => Team)
   @JoinColumn({ name: 'team_id' })
-  team: Team;
+  team!: Team;
 }

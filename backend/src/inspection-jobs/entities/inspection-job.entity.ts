@@ -14,57 +14,57 @@ import {
 @Entity()
 export class InspectionJob {
   @PrimaryGeneratedColumn()
-  jobId: number;
+  jobId!: number;
 
   @Column({ type: 'varchar', length: 50 })
-  inspectionType: string;
+  inspectionType!: string;
 
   @Column({
     type: 'varchar',
     length: 255,
   })
-  projectName: string;
+  projectName!: string;
 
   @Column({
     type: 'varchar',
     length: 255,
   })
-  locationCoordinate: string;
+  locationCoordinate!: string;
 
   @Column({
     type: 'varchar',
     length: 255,
   })
-  housePlanUrl: string;
+  housePlanUrl!: string;
 
   @Column({ type: 'real' })
-  usableArea: number;
+  usableArea!: number;
 
   @Column({
     type: 'varchar',
     length: 255,
     default: '/project-images/unknown.jpg',
   })
-  projectImageUrl: string;
+  projectImageUrl!: string;
 
   @Column({ type: 'varchar', length: 50, default: 'Active' })
-  status: string;
+  status!: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @DeleteDateColumn()
-  deletedAt: Date;
+  deletedAt!: Date;
 
   @ManyToOne(() => Customer)
   @JoinColumn({ name: 'customer_id' })
-  customer: Customer;
+  customer!: Customer;
 
   @ManyToOne(() => Address)
   @JoinColumn({ name: 'address_id' })
-  address: Address;
+  address!: Address;
 
   @ManyToOne(() => HouseType)
   @JoinColumn({ name: 'house_type_id' })
-  houseType: HouseType;
+  houseType!: HouseType;
 }

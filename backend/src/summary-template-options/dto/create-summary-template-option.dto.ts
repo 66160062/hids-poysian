@@ -4,11 +4,11 @@ import { IsNumber, IsOptional, IsString } from 'class-validator';
 export class CreateSummaryTemplateOptionDto {
   @ApiProperty({ example: 1 })
   @IsNumber()
-  templateId: number;
+  templateId!: number;
 
   @ApiProperty({ example: 'ผนังก่ออิฐฉาบปูน' })
   @IsString()
-  value: string;
+  value!: string;
 
   @ApiProperty({ example: 'รูปแบบโครงสร้าง', required: false })
   @IsOptional()

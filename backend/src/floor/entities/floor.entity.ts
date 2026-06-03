@@ -3,7 +3,7 @@ import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 @Entity()
 export class Floor {
   @PrimaryGeneratedColumn()
-  floorId: number;
+  floorId!: number;
   @Column()
-  label: string;
+  label!: string;
 }

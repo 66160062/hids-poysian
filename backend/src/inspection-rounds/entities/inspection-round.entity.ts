@@ -13,55 +13,55 @@ import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspe
 @Entity('inspection_round')
 export class InspectionRound {
   @PrimaryGeneratedColumn()
-  roundId: number;
+  roundId!: number;
 
   @Column()
-  roundNumber: number;
+  roundNumber!: number;
 
   @Column({ type: 'timestamp', nullable: true })
-  scheduledDate: Date;
+  scheduledDate!: Date;
 
   @Column({ type: 'varchar', length: 50, default: 'SCHEDULED' })
-  status: string;
+  status!: string;
 
   @Column({ name: 'inspected_at', type: 'timestamp', nullable: true })
-  inspectedAt: Date;
+  inspectedAt!: Date;
 
   @Column({ name: 'summary_completed_at', type: 'timestamp', nullable: true })
-  summaryCompletedAt: Date;
+  summaryCompletedAt!: Date;
 
   @Column({ type: 'timestamp', nullable: true })
-  submittedAt: Date;
+  submittedAt!: Date;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  signatureImageUrl: string;
+  signatureImageUrl!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  customerToken: string;
+  customerToken!: string;
 
   @Column({ type: 'timestamp', nullable: true })
-  customerTokenExpiredAt: Date;
+  customerTokenExpiredAt!: Date;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  contractorToken: string;
+  contractorToken!: string;
 
   @Column({ type: 'timestamp', nullable: true })
-  contractorTokenExpiredAt: Date;
+  contractorTokenExpiredAt!: Date;
 
   @Column({ type: 'timestamp', nullable: true })
-  approvedAt: Date;
+  approvedAt!: Date;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @DeleteDateColumn()
-  deletedAt: Date;
+  deletedAt!: Date;
 
   @ManyToOne(() => InspectionJob)
   @JoinColumn({ name: 'job_id' })
-  job: InspectionJob;
+  job!: InspectionJob;
 
   @ManyToOne(() => InspectionTeamMember)
   @JoinColumn({ name: 'team_member_id' })
-  teamMember: InspectionTeamMember;
+  teamMember!: InspectionTeamMember;
 }
