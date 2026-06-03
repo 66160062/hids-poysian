@@ -1,6 +1,19 @@
 <template>
   <q-page class="admin-work-page bg-grey-1">
     <div class="q-px-md q-pt-lg">
+      <!-- Loading Indicator -->
+      <q-inner-loading :showing="loading" label="กำลังโหลดข้อมูล..." style="z-index: 100" />
+
+      <!-- Error Banner -->
+      <q-banner v-if="error" class="text-white bg-negative q-mb-md" rounded dense>
+        <template v-slot:avatar>
+          <q-icon name="error" color="white" />
+        </template>
+        {{ error }}
+        <template v-slot:action>
+          <q-btn flat label="ลองใหม่" @click="fetchWorkList" />
+        </template>
+      </q-banner>
 
       <div class="row q-mb-sm">
         <q-input
@@ -149,10 +162,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { api } from 'src/boot/axios';
+import type { AxiosResponse } from 'axios';
 
 const router = useRouter();
+const loading = ref<boolean>(false);
+const error = ref<string>('');
 
 // ตัวแปรสำหรับค้นหาและกรอง
 const searchTerm = ref('');
@@ -184,18 +201,7 @@ interface TaskItem {
   date: string;
 }
 
-// ==========================================
-// 🎯 Mock Data (ปรับวันที่ให้เป็นรูปแบบสากลเพื่อการเรียงลำดับที่แม่นยำ)
-// ==========================================
-const tasks = ref<TaskItem[]>([
-  { id: 1, title: 'คอนโดบูรพาภิรมย์', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', statusKey: 'in_progress', type: 'คอนโด', area: 35, team: 'บารัก โกเมน', customer: 'ลูกค้า ก', date: '2026-06-03T10:00:00Z' },
-  { id: 2, title: 'บ้านใหญ่พลังชล', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', statusKey: 'others', type: 'บ้านเดี่ยว', area: 150, team: 'TEAM-A', customer: 'ริชชี่ ชาช่า', date: '2026-06-02T10:00:00Z' },
-  { id: 3, title: 'บ้านใหม่ชลบุรี', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', statusKey: 'waiting', type: 'บ้านเดี่ยว', area: 120, team: 'TEAM-A', customer: 'ริชชี่ ชาช่า', date: '2026-01-24T10:00:00Z' },
-  { id: 4, title: 'แสนสิริ คอนโด', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', statusKey: 'others', type: 'คอนโด', area: 45, team: 'TEAM-B', customer: 'ริชชี่ ชาช่า', date: '2026-01-22T10:00:00Z' },
-  { id: 5, title: 'โครงการบุญเลิศ', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', statusKey: 'others', type: 'ทาวน์เฮาส์', area: 110, team: 'TEAM-C', customer: 'ริชชี่ ชาช่า', date: '2026-01-20T10:00:00Z' },
-  { id: 6, title: 'บ้านชลลดา', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', statusKey: 'in_progress', type: 'บ้านเดี่ยว', area: 200, team: 'TEAM-A', customer: 'สมชาย', date: '2026-01-18T10:00:00Z' },
-  { id: 7, title: 'บ้านริมทะเล', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', statusKey: 'waiting', type: 'บ้านเดี่ยว', area: 180, team: 'TEAM-B', customer: 'พีระ', date: '2026-01-17T10:00:00Z' },
-]);
+const tasks = ref<TaskItem[]>([]);
 
 // ==========================================
 // ฟังก์ชันจัดการวันที่ให้แสดงผลสวยงาม (DD/MM/YYYY)
@@ -271,17 +277,41 @@ const filteredTasks = computed(() => {
   return result;
 });
 
-async function viewDetail(task: TaskItem) {
+async function viewDetail(task: TaskItem): Promise<void> {
   await router.push(`/admin/work/${task.id}`);
 }
 
-async function editWork(task: TaskItem) {
+async function editWork(task: TaskItem): Promise<void> {
   await router.push(`/admin/work/create?editId=${task.id}`);
 }
 
-async function addNewWork() {
+async function addNewWork(): Promise<void> {
   await router.push('/admin/work/create');
 }
+
+// ==========================================
+// 🎯 API Integration — ดึงข้อมูลจาก Backend
+// ==========================================
+async function fetchWorkList(): Promise<void> {
+  loading.value = true;
+  error.value = '';
+  
+  try {
+    const res: AxiosResponse<TaskItem[]> = await api.get<TaskItem[]>('/admin/jobs');
+    if (Array.isArray(res.data)) {
+      tasks.value = res.data;
+    }
+  } catch (err: unknown) {
+    error.value = 'เกิดข้อผิดพลาดในการโหลดข้อมูล โปรดลองใหม่อีกครั้ง';
+    console.error('fetchWorkList error:', err);
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted((): void => {
+  void fetchWorkList();
+});
 </script>
 
 <style scoped>
