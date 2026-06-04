@@ -23,7 +23,7 @@ import { InspectionJobStatus } from './enums/inspection-job-status.enum';
 
 @Controller('inspection-jobs')
 export class InspectionJobsController {
-  constructor(private readonly inspectionJobsService: InspectionJobsService) { }
+  constructor(private readonly inspectionJobsService: InspectionJobsService) {}
 
   @Post()
   @ApiOperation({ summary: 'การตรวจใหม่' })
@@ -56,11 +56,14 @@ export class InspectionJobsController {
   findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
-    @Query('status',
-      new ParseEnumPipe(InspectionJobStatus, { optional: true })
-    ) status?: InspectionJobStatus
+    @Query('status', new ParseEnumPipe(InspectionJobStatus, { optional: true }))
+    status?: InspectionJobStatus,
   ) {
-    return this.inspectionJobsService.findAll(Number(page) || 1, Number(limit) || 10, status);
+    return this.inspectionJobsService.findAll(
+      Number(page) || 1,
+      Number(limit) || 10,
+      status,
+    );
   }
 
   @Get(':id')

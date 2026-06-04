@@ -11,8 +11,6 @@ import { UsersModule } from 'src/users/users.module';
     TypeOrmModule.forFeature([InspectionTeamMember]),
     InspectionJobsModule,
     UsersModule,
-    InspectionJobsModule,
-    UsersModule,
   ],
 
   controllers: [InspectionTeamMembersController],
