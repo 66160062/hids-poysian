@@ -49,6 +49,8 @@ import { Room } from './rooms/entities/room.entity';
 import { ConfigModule } from '@nestjs/config';
 import { DailyReportsModule } from './daily-reports/daily-reports.module';
 import { AdminModule } from './admin/admin.module';
+import { AssignmentsModule } from './assignments/assignments.module';
+import { Assignment } from './assignments/entities/assignment.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -91,6 +93,7 @@ import { AdminModule } from './admin/admin.module';
         Floor,
         SubRoom,
         Room,
+        Assignment,
       ],
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),
@@ -122,6 +125,7 @@ import { AdminModule } from './admin/admin.module';
     RoomsModule,
     DailyReportsModule,
     AdminModule,
+    AssignmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
