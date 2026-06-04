@@ -1,131 +1,193 @@
 <template>
   <q-page class="admin-page bg-grey-1">
-    <div class="q-px-md q-pt-sm">
-      <div class="row items-center justify-between q-mb-sm"></div>
+    <div class="q-px-md q-pt-md">
+      <!-- Loading Indicator -->
+      <q-inner-loading :showing="loading" label="กำลังโหลดข้อมูล..." />
 
-      <div class="row q-col-gutter-sm q-mb-sm">
+      <!-- Error Banner -->
+      <q-banner v-if="error" class="text-white bg-negative q-mb-md" rounded dense>
+        <template v-slot:avatar>
+          <q-icon name="error" color="white" />
+        </template>
+        {{ error }}
+        <template v-slot:action>
+          <q-btn flat label="ลองใหม่" @click="fetchAdminDashboard" />
+        </template>
+      </q-banner>
+      <div class="row q-col-gutter-md q-mb-md">
         <div class="col-6">
-          <q-card flat bordered class="stat-box">
-            <div class="row items-center q-gutter-sm">
-              <q-avatar size="30px" class="bg-blue-3 text-blue">
-                <q-icon name="assignment_turned_in" size="16px" />
-              </q-avatar>
-              <div class="text-caption text-grey-6">รวมโครงการ</div>
+          <q-card flat bordered class="stat-box relative-position overflow-hidden">
+            <div class="bg-blob blob-blue"></div>
+            <q-avatar size="36px" class="bg-blue-1 text-blue q-mb-sm" style="border-radius: 8px;">
+              <q-icon name="assignment_turned_in" size="20px" />
+            </q-avatar>
+            <div class="text-h4 text-weight-bold text-dark q-mb-xs">{{ dashboard.totalProjects.toLocaleString() }}</div>
+            <div class="text-caption text-grey-6" style="line-height: 1.2;">
+              โครงการทั้งหมด<br>ที่ได้รับการตรวจสอบ
             </div>
-            <div class="text-h5 text-weight-bold q-mt-xs">{{ dashboard.totalProjects }}</div>
           </q-card>
         </div>
         <div class="col-6">
-          <q-card flat bordered class="stat-box">
-            <div class="row items-center q-gutter-sm">
-              <q-avatar size="30px" class="bg-orange-3 text-orange">
-                <q-icon name="work" size="16px" />
-              </q-avatar>
-              <div class="text-caption text-grey-6">งานกำลังดำเนินการ</div>
+          <q-card flat bordered class="stat-box relative-position overflow-hidden">
+            <div class="bg-blob blob-orange"></div>
+            <div class="absolute-top-right q-pa-sm">
+              <div class="orange-dot"></div>
             </div>
-            <div class="text-h5 text-weight-bold q-mt-xs">{{ dashboard.inProgress }}</div>
+            <q-avatar size="36px" class="bg-orange-1 text-orange q-mb-sm" style="border-radius: 8px;">
+              <q-icon name="pending_actions" size="20px" />
+            </q-avatar>
+            <div class="text-h4 text-weight-bold text-dark q-mb-xs">{{ dashboard.inProgress }}</div>
+            <div class="text-caption text-grey-6" style="line-height: 1.2;">
+              ดำเนินงานอยู่
+            </div>
           </q-card>
         </div>
       </div>
 
-      <div class="row q-col-gutter-sm q-mb-sm">
-        <div class="col-4">
+      <div class="hide-scrollbar q-mb-md" style="overflow-x: auto; padding-bottom: 4px;">
+        <div class="row no-wrap q-gutter-x-sm">
           <q-card flat bordered class="mini-card">
-            <div class="label">บ้านเดี่ยว</div>
-            <div class="value">{{ dashboard.singleHouse }}</div>
+            <div class="row items-center q-mb-xs">
+              <div class="dot-indicator bg-blue q-mr-sm"></div>
+              <div class="text-grey-7" style="font-size: 13px;">บ้านเดี่ยว</div>
+            </div>
+            <div class="text-h5 text-weight-bold text-dark">{{ dashboard.singleHouse }}</div>
           </q-card>
-        </div>
-        <div class="col-4">
           <q-card flat bordered class="mini-card">
-            <div class="label">ทาวน์เฮาส์</div>
-            <div class="value">{{ dashboard.townhouse }}</div>
+            <div class="row items-center q-mb-xs">
+              <div class="dot-indicator bg-teal q-mr-sm"></div>
+              <div class="text-grey-7" style="font-size: 13px;">ทาวน์เฮาส์</div>
+            </div>
+            <div class="text-h5 text-weight-bold text-dark">{{ dashboard.townhouse }}</div>
           </q-card>
-        </div>
-        <div class="col-4">
           <q-card flat bordered class="mini-card">
-            <div class="label">คอนโด</div>
-            <div class="value">{{ dashboard.condo }}</div>
+            <div class="row items-center q-mb-xs">
+              <div class="dot-indicator bg-purple q-mr-sm"></div>
+              <div class="text-grey-7" style="font-size: 13px;">คอนโด</div>
+            </div>
+            <div class="text-h5 text-weight-bold text-dark">{{ dashboard.condo }}</div>
+          </q-card>
+          <q-card flat bordered class="mini-card">
+            <div class="row items-center q-mb-xs">
+              <div class="dot-indicator bg-orange q-mr-sm"></div>
+              <div class="text-grey-7" style="font-size: 13px;">งานก่อสร้าง</div>
+            </div>
+            <div class="text-h5 text-weight-bold text-dark">{{ dashboard.construction }}</div>
           </q-card>
         </div>
       </div>
 
-      <q-card flat bordered class="content-box q-mb-sm">
-        <div class="row items-center justify-between q-mb-xs">
-          <div class="text-weight-bold">ปฏิทินงาน</div>
-          <div class="text-caption">{{ currentMonthName }} {{ currentYear }}</div>
-        </div>
-        <div class="calendar-grid">
-          <div class="day-title" v-for="d in days" :key="d">{{ d }}</div>
-          <div
-            class="day-cell"
-            v-for="(day, index) in calendarDays"
-            :key="index"
-            :class="{
-              'text-grey-4': day === '',
-              'today-cell': day !== '' && day === currentDate.getDate(),
-              'empty-cell': day === '',
-            }"
-          >
-            <div v-if="day !== ''" class="day-content">
-              <span>{{ day }}</span>
-              <div
-                v-if="taskCountByDay(day) > 0"
-                class="dot"
-                :title="taskCountByDay(day) + ' งาน'"
-              ></div>
+      <q-card flat bordered class="calendar-card q-mb-md">
+        <div class="q-pa-md">
+          <div class="row items-center justify-between q-mb-md">
+            <div class="text-weight-bold text-h6" style="font-size: 16px;">ตารางรายเดือน</div>
+            <q-btn unelevated color="blue-1" text-color="primary" label="วันนี้" size="sm" class="today-btn" @click="setToday" />
+          </div>
+          <div class="row items-center justify-between">
+            <div class="row items-center text-dark text-weight-bold" style="font-size: 15px;">
+              <q-icon name="calendar_today" color="primary" size="20px" class="q-mr-sm" />
+              {{ currentMonthName }} {{ displayYear }}
+            </div>
+            <div class="row q-gutter-x-sm">
+              <q-btn outline round color="grey-4" text-color="dark" icon="chevron_left" size="sm" class="nav-btn" @click="prevMonth" />
+              <q-btn outline round color="grey-4" text-color="dark" icon="chevron_right" size="sm" class="nav-btn" @click="nextMonth" />
             </div>
           </div>
         </div>
-        <div class="text-caption text-grey-6 q-mt-xs">
-          สรุปงานวันนี้: มีงานเข้าระบบและต้องตรวจสอบ
+
+        <div class="calendar-header-grid">
+          <div class="day-name" v-for="d in daysEng" :key="d">{{ d }}</div>
         </div>
-        <div v-if="loading" class="text-caption text-primary q-mt-xs">กำลังโหลดข้อมูล...</div>
-        <div v-if="error" class="text-caption text-negative q-mt-xs">{{ error }}</div>
+
+        <div class="calendar-grid-wrapper">
+          <div class="calendar-grid-table">
+            <div
+              v-for="(day, index) in calendarDaysList"
+              :key="index"
+              class="cal-cell"
+              :class="{
+                'not-current-month': !day.isCurrentMonth,
+                'is-today': isToday(day.date, day.isCurrentMonth)
+              }"
+            >
+              <div class="date-number">{{ day.date }}</div>
+              <div
+                v-if="day.isCurrentMonth && taskCountByDay(day.date) > 0"
+                class="task-count-badge"
+              >
+                {{ taskCountByDay(day.date) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="calendar-footer row items-center justify-between">
+          <div class="text-caption text-weight-medium text-grey-8">ยอดรวมการตรวจสอบประจำวัน</div>
+          <div class="row items-center">
+            <div class="small-blue-dot q-mr-xs"></div>
+            <div class="text-caption text-grey-6">จำนวนงาน</div>
+          </div>
+        </div>
       </q-card>
 
-      <q-card flat bordered class="content-box q-mb-sm">
-        <div class="row items-center justify-between q-mb-xs">
-          <div class="text-weight-bold"><q-icon name="list" class="q-mr-xs" />งานล่าสุด</div>
-          <q-btn dense flat label="ดูทั้งหมด" color="primary" @click="goToWorkList" />
+      <q-card flat bordered class="work-list-card q-mb-md">
+        <div class="row items-center justify-between q-pa-md">
+          <div class="row items-center text-weight-bold text-dark" style="font-size: 16px;">
+            <q-icon name="playlist_add_check" color="primary" size="24px" class="q-mr-sm" />
+            รายการทำงาน
+          </div>
+          <div
+            class="text-primary text-weight-medium cursor-pointer"
+            style="font-size: 13px;"
+            @click="goToWorkList"
+          >
+            ดูทั้งหมด
+          </div>
         </div>
-        <q-input
-          v-model="searchTerm"
-          dense
-          outlined
-          rounded
-          placeholder="ค้นหางาน, ที่อยู่, ผู้รับผิดชอบ..."
-        />
-        <div class="task-list q-mt-sm">
+
+        <q-separator />
+
+
+
+        <div class="task-list-container">
           <div
             v-for="task in visibleTasks"
             :key="task.id"
-            class="task-item clickable"
+            class="task-item row items-center q-px-md q-py-sm clickable"
             @click="openTaskDetail(task)"
           >
-            <div>
-              <div class="task-title">{{ task.title }}</div>
-              <div class="task-meta">{{ task.meta }}</div>
+            <div class="q-mr-md">
+              <q-avatar size="48px" :class="task.avatarBgClass" :text-color="task.avatarTextColor">
+                <q-icon :name="task.icon" size="24px" />
+              </q-avatar>
             </div>
-            <q-chip dense :color="task.color" text-color="white">{{ task.status }}</q-chip>
+
+            <div class="col min-w-0">
+              <div class="text-weight-bold text-dark ellipsis" style="font-size: 14px;">{{ task.title }}</div>
+              <div class="text-grey-6 ellipsis" style="font-size: 12px; margin-top: 2px;">{{ task.meta }}</div>
+            </div>
+
+            <div class="q-pl-sm">
+              <q-badge
+                :class="task.statusBgClass"
+                :text-color="task.statusTextColor"
+                class="status-badge"
+              >
+                {{ task.status }}
+              </q-badge>
+            </div>
           </div>
         </div>
-        <div class="row items-center justify-between q-mt-sm">
+
+        <div class="row items-center justify-between q-pa-sm bg-grey-1" style="border-top: 1px solid #f0f0f0;">
           <q-btn
-            dense
-            flat
-            round
-            icon="chevron_left"
-            label="ก่อนหน้า"
+            dense flat round color="grey-7" icon="chevron_left"
             :disabled="currentPage === 1"
             @click="currentPage = Math.max(1, currentPage - 1)"
           />
-          <div class="text-caption">หน้า {{ currentPage }} / {{ totalPages }}</div>
+          <div class="text-caption text-grey-7">หน้า {{ currentPage }} / {{ totalPages }}</div>
           <q-btn
-            dense
-            flat
-            round
-            icon="chevron_right"
-            label="ถัดไป"
+            dense flat round color="grey-7" icon="chevron_right"
             :disabled="currentPage === totalPages"
             @click="currentPage = Math.min(totalPages, currentPage + 1)"
           />
@@ -138,7 +200,7 @@
         <q-card style="min-width: 320px; max-width: 90vw">
           <q-card-section class="row items-center justify-between">
             <div class="text-h6">รายละเอียดงาน</div>
-            <q-btn dense flat icon="close" @click="showTaskDialog = false" aria-label="Close" />
+            <q-btn dense flat icon="close" @click="showTaskDialog = false" />
           </q-card-section>
           <q-separator />
           <q-card-section>
@@ -147,9 +209,6 @@
             <div class="q-mb-sm">
               สถานะ: <strong>{{ selectedTask?.status }}</strong>
             </div>
-            <div class="text-body2 q-mb-xs">
-              ข้อมูลเพิ่มเติมเกี่ยวกับงานและการดำเนินการจะอยู่ในหน้านี้
-            </div>
           </q-card-section>
           <q-card-actions align="right">
             <q-btn flat label="ปิด" @click="showTaskDialog = false" />
@@ -157,129 +216,140 @@
           </q-card-actions>
         </q-card>
       </q-dialog>
+
     </div>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, onUnmounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-// import { api } from 'boot/axios';
+import { api } from 'src/boot/axios';
+import type { AxiosResponse } from 'axios';
 
-const searchTerm = ref('');
-const loading = ref(false);
-const error = ref('');
+const router = useRouter();
+const loading = ref<boolean>(false);
+const error = ref<string>('');
 
-const dashboard = ref({
-  totalProjects: 1500,
-  inProgress: 12,
-  singleHouse: 450,
-  townhouse: 380,
-  condo: 120,
-  monthSummary: 30,
+// ==========================================
+// 🎯 Interface สำหรับ Dashboard Stats
+// ==========================================
+interface DashboardStats {
+  totalProjects: number;
+  inProgress: number;
+  singleHouse: number;
+  townhouse: number;
+  condo: number;
+  construction: number;
+}
+
+const dashboard = ref<DashboardStats>({
+  totalProjects: 0,
+  inProgress: 0,
+  singleHouse: 0,
+  townhouse: 0,
+  condo: 0,
+  construction: 0,
 });
 
-const currentDate = ref(new Date());
-const days = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+// ==========================================
+// 🎯 ระบบปฏิทิน
+// ==========================================
+const today = new Date();
+const displayMonth = ref(today.getMonth());
+const displayYear = ref(today.getFullYear());
+
+const daysEng = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 const monthNamesThai = [
-  'มกราคม',
-  'กุมภาพันธ์',
-  'มีนาคม',
-  'เมษายน',
-  'พฤษภาคม',
-  'มิถุนายน',
-  'กรกฎาคม',
-  'สิงหาคม',
-  'กันยายน',
-  'ตุลาคม',
-  'พฤศจิกายน',
-  'ธันวาคม',
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
 ];
 
-const currentMonthName = computed(() => monthNamesThai[currentDate.value.getMonth()]);
-const currentYear = computed(() => currentDate.value.getFullYear());
+const currentMonthName = computed(() => monthNamesThai[displayMonth.value]);
 
-const daysInCurrentMonth = computed(() => {
-  const year = currentDate.value.getFullYear();
-  const month = currentDate.value.getMonth();
-  return new Date(year, month + 1, 0).getDate();
-});
+const calendarDaysList = computed(() => {
+  const year = displayYear.value;
+  const month = displayMonth.value;
 
-const firstWeekday = computed(() => {
-  const year = currentDate.value.getFullYear();
-  const month = currentDate.value.getMonth();
-  return new Date(year, month, 1).getDay();
-});
+  const firstDayObj = new Date(year, month, 1).getDay();
+  const startOffset = firstDayObj === 0 ? 6 : firstDayObj - 1;
 
-const calendarDays = computed(() => {
-  const cells: Array<number | ''> = [];
-  for (let i = 0; i < firstWeekday.value; i += 1) {
-    cells.push('');
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+  const daysArray = [];
+
+  for (let i = startOffset - 1; i >= 0; i--) {
+    daysArray.push({ date: daysInPrevMonth - i, isCurrentMonth: false });
   }
-  for (let day = 1; day <= daysInCurrentMonth.value; day += 1) {
-    cells.push(day);
+
+  for (let i = 1; i <= daysInMonth; i++) {
+    daysArray.push({ date: i, isCurrentMonth: true });
   }
-  return cells;
+
+  const totalCells = daysArray.length > 35 ? 42 : 35;
+  let nextDay = 1;
+  while (daysArray.length < totalCells) {
+    daysArray.push({ date: nextDay++, isCurrentMonth: false });
+  }
+
+  return daysArray;
 });
 
-const tasks = ref([
-  {
-    id: 1,
-    title: 'คอนโดพฤกษ์ภิรมย์',
-    meta: 'บารัค โกมุย · วันนี้, 10:00 AM',
-    status: 'กำลังดำเนินการ',
-    color: 'primary',
-    day: new Date().getDate(),
-  },
-  {
-    id: 2,
-    title: 'บ้านใหญ่พลังชล',
-    meta: 'รัชช์ ชาญ · เมื่อวาน',
-    status: 'เสร็จสิ้น',
-    color: 'positive',
-    day: 3,
-  },
-  {
-    id: 3,
-    title: 'บ้านใหม่ชลบุรี',
-    meta: 'รัชช์ ชาญ · Jan 24',
-    status: 'รอตรวจ',
-    color: 'warning',
-    day: 8,
-  },
-  {
-    id: 4,
-    title: 'แสนสิริ คอนโด',
-    meta: 'รัชช์ ชาญ · Jan 22',
-    status: 'เสร็จสิ้น',
-    color: 'positive',
-    day: 12,
-  },
-  {
-    id: 5,
-    title: 'โครงการบุญเลิศ',
-    meta: 'รัชช์ ชาญ · Jan 20',
-    status: 'เสร็จสิ้น',
-    color: 'positive',
-    day: 20,
-  },
-  {
-    id: 6,
-    title: 'บ้านชลลดา',
-    meta: 'สมชาย · Jan 18',
-    status: 'กำลังดำเนินการ',
-    color: 'primary',
-    day: 18,
-  },
-  {
-    id: 7,
-    title: 'บ้านริมทะเล',
-    meta: 'พีระ · Jan 17',
-    status: 'รอตรวจ',
-    color: 'warning',
-    day: 17,
-  },
-]);
+const isToday = (date: number, isCurrentMonth: boolean) => {
+  const t = new Date();
+  return isCurrentMonth &&
+         date === t.getDate() &&
+         displayMonth.value === t.getMonth() &&
+         displayYear.value === t.getFullYear();
+};
+
+const prevMonth = (): void => {
+  if (displayMonth.value === 0) {
+    displayMonth.value = 11;
+    displayYear.value--;
+  } else {
+    displayMonth.value--;
+  }
+  void fetchAdminDashboard();
+};
+
+const nextMonth = (): void => {
+  if (displayMonth.value === 11) {
+    displayMonth.value = 0;
+    displayYear.value++;
+  } else {
+    displayMonth.value++;
+  }
+  void fetchAdminDashboard();
+};
+
+const setToday = (): void => {
+  const t = new Date();
+  displayMonth.value = t.getMonth();
+  displayYear.value = t.getFullYear();
+  void fetchAdminDashboard();
+};
+
+// ==========================================
+// 🎯 ข้อมูลรายการทำงาน (เพิ่มฟิลด์ team และแก้ meta ให้แสดงชื่อทีม)
+// ==========================================
+interface TaskItem {
+  id: number;
+  title: string;
+  meta: string;
+  status: string;
+  statusBgClass: string;
+  statusTextColor: string;
+  icon: string;
+  avatarBgClass: string;
+  avatarTextColor: string;
+  day: number;
+  team: string;      // <- เพิ่มชื่อทีม
+  customer: string;  // <- เพิ่มชื่อลูกค้า
+}
+
+const tasks = ref<TaskItem[]>([]);
 
 const currentPage = ref(1);
 const pageSize = 4;
@@ -289,80 +359,65 @@ const visibleTasks = computed(() => {
   return tasks.value.slice(start, start + pageSize);
 });
 
-function taskCountByDay(day: number) {
-  return tasks.value.filter((task) => task.day === day).length;
+function taskCountByDay(day: number): number {
+  return tasks.value.filter((task: TaskItem): boolean => task.day === day).length;
 }
 
-const selectedTask = ref<null | {
-  id: number;
-  title: string;
-  meta: string;
-  status: string;
-  color: string;
-}>(null);
+const selectedTask = ref<TaskItem | null>(null);
 const showTaskDialog = ref(false);
-const router = useRouter();
 
-function openTaskDetail(task: {
-  id: number;
-  title: string;
-  meta: string;
-  status: string;
-  color: string;
-}) {
+function openTaskDetail(task: TaskItem) {
   selectedTask.value = task;
   showTaskDialog.value = true;
 }
 
-let timer: ReturnType<typeof setInterval>; // สร้างตัวแปรเก็บ ref ของ timer
-
-onMounted(() => {
-  timer = setInterval(() => {
-    currentDate.value = new Date();
-  }, 1000 * 60);
-});
-
-onUnmounted(() => {
-  clearInterval(timer); // เคลียร์ timer เมื่อปิดหน้านี้
-});
-
-function goToWorkList() {
+function goToWorkList(): void {
   showTaskDialog.value = false;
   void router.push('/admin/work');
 }
 
-// async function fetchAdminDashboard() {
-//   loading.value = true;
-//   error.value = '';
+// ==========================================
+// 🎯 API Integration — ดึงข้อมูล Dashboard จาก Backend
+// ==========================================
+interface DashboardApiResponse extends DashboardStats {
+  tasks: TaskItem[];
+}
 
-//   try {
-//     const res = await api.get('/admin/dashboard');
-//     const data = res.data;
+async function fetchAdminDashboard(): Promise<void> {
+  loading.value = true;
+  error.value = '';
 
-//     dashboard.value = {
-//       totalProjects: data.totalProjects ?? dashboard.value.totalProjects,
-//       inProgress: data.inProgress ?? dashboard.value.inProgress,
-//       singleHouse: data.singleHouse ?? dashboard.value.singleHouse,
-//       townhouse: data.townhouse ?? dashboard.value.townhouse,
-//       condo: data.condo ?? dashboard.value.condo,
-//       monthSummary: data.monthSummary ?? dashboard.value.monthSummary,
-//     };
+  try {
+    // สร้าง date parameter ตามเดือนที่แสดงบนปฏิทิน
+    const dateParam: string = `${displayYear.value}-${String(displayMonth.value + 1).padStart(2, '0')}-01`;
+    const res: AxiosResponse<DashboardApiResponse> = await api.get<DashboardApiResponse>('/admin/dashboard', {
+      params: { date: dateParam },
+    });
+    const data: DashboardApiResponse = res.data;
 
-//     if (Array.isArray(data.tasks) && data.tasks.length) {
-//       tasks.value = data.tasks;
-//     }
-//   } catch (err) {
-//     error.value = 'เกิดข้อผิดพลาดในการโหลดข้อมูล โปรดลองใหม่อีกครั้ง';
-//     console.error(err);
-//   } finally {
-//     loading.value = false;
-//   }
-// }
+    dashboard.value = {
+      totalProjects: data.totalProjects,
+      inProgress: data.inProgress,
+      singleHouse: data.singleHouse,
+      townhouse: data.townhouse,
+      condo: data.condo,
+      construction: data.construction,
+    };
 
-// onMounted(() => {
-//   void fetchAdminDashboard();
-// });
-//
+    if (Array.isArray(data.tasks)) {
+      tasks.value = data.tasks;
+    }
+  } catch (err: unknown) {
+    error.value = 'เกิดข้อผิดพลาดในการโหลดข้อมูล โปรดลองใหม่อีกครั้ง';
+    console.error('fetchAdminDashboard error:', err);
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted((): void => {
+  void fetchAdminDashboard();
+});
 </script>
 
 <style scoped>
@@ -371,101 +426,182 @@ function goToWorkList() {
   margin: 0 auto;
 }
 .stat-box {
-  border-radius: 12px;
+  border-radius: 16px;
   background: #fff;
-  border-color: #e8e8e8;
-  padding: 10px;
+  border-color: #f0f0f0;
+  padding: 16px;
+  height: 100%;
+}
+.bg-blob {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  bottom: -20px;
+  right: -20px;
+  opacity: 0.5;
+}
+.blob-blue { background: #e3f2fd; }
+.blob-orange { background: #fff3e0; }
+.orange-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ff9800;
 }
 .mini-card {
   border-radius: 12px;
   background: #fff;
-  border-color: #e8e8e8;
-  padding: 10px;
+  border-color: #f0f0f0;
+  padding: 16px;
+  min-width: 140px;
 }
-.label {
-  color: #757575;
-  font-size: 12px;
+.dot-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
-.value {
-  font-size: 20px;
-  font-weight: 700;
-}
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .content-box {
   border-radius: 12px;
   background: #fff;
   border-color: #e8e8e8;
   padding: 12px;
 }
-.calendar-grid {
+
+/* =====================================
+   🎯 CSS ปฏิทิน
+   ===================================== */
+.calendar-card {
+  border-radius: 12px;
+  background: #fff;
+  border-color: #e8e8e8;
+  overflow: hidden;
+}
+.today-btn {
+  border-radius: 6px;
+  font-weight: 600;
+  padding: 4px 12px;
+}
+.nav-btn {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  border-color: #e0e0e0;
+}
+.calendar-header-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-  margin-top: 8px;
+  border-top: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
+  background-color: #fcfcfc;
 }
-.day-title {
-  font-size: 10px;
-  font-weight: 700;
-  color: #616161;
+.day-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9e9e9e;
   text-align: center;
+  padding: 12px 0;
+  letter-spacing: 0.5px;
 }
-.day-cell {
-  min-height: 36px;
-  background: #fff;
-  border-radius: 6px;
-  border: 1px solid #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #424242;
-  font-size: 12px;
-  position: relative;
-  transition: all 0.2s ease;
+.calendar-grid-wrapper {
+  border-bottom: 1px solid #f0f0f0;
 }
-.day-cell.today-cell {
-  background: #e3f2fd;
-  border-color: #42a5f5;
-  color: #0d47a1;
-  font-weight: 700;
+.calendar-grid-table {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background-color: #f0f0f0;
+  gap: 1px;
 }
-.day-cell.empty-cell {
-  background: transparent;
-  border: none;
-}
-.day-content {
+.cal-cell {
+  background-color: #fff;
+  min-height: 60px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+}
+.cal-cell.not-current-month .date-number {
+  color: #bdbdbd;
+}
+.cal-cell.is-today {
+  background-color: #eef2ff;
+  border: 1px solid #2962ff;
+  margin: -1px;
+  z-index: 1;
+}
+.date-number {
+  font-size: 12px;
+  font-weight: 600;
+  color: #212121;
+}
+.task-count-badge {
+  align-self: flex-end;
+  background-color: #2962ff;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  box-shadow: 0 2px 4px rgba(41, 98, 255, 0.3);
 }
-.dot {
+.calendar-footer {
+  padding: 12px 16px;
+  background-color: #fafafa;
+}
+.small-blue-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #1976d2;
+  background-color: #2962ff;
 }
-.task-list {
-  margin-top: 8px;
+
+/* =====================================
+   🎯 CSS รายการทำงาน
+   ===================================== */
+.work-list-card {
+  border-radius: 12px;
+  background: #fff;
+  border-color: #e8e8e8;
+  overflow: hidden;
+}
+.search-input {
+  background-color: #f5f6f8;
+  border-radius: 24px;
+  padding: 0 16px;
+  height: 40px;
+  display: flex;
+  align-items: center;
 }
 .task-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
   border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s ease;
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
-.task-title {
+.task-item:last-child {
+  border-bottom: none;
+}
+.task-item:hover {
+  background: #fafafa;
+}
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
   font-weight: 600;
-}
-.task-meta {
   font-size: 11px;
-  color: #757575;
-  margin-top: 2px;
+}
+.min-w-0 {
+  min-width: 0;
 }
 .clickable {
   cursor: pointer;
 }
-.task-item:hover {
-  background: #f7f7f7;
-}
 </style>
+
+```
