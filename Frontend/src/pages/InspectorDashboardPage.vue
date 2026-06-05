@@ -230,6 +230,7 @@ import { useQuasar } from 'quasar';
 import { api } from 'src/boot/axios';
 import type { InspectionRound } from 'src/models';
 import PropertyCard from '../components/PropertyCard.vue';
+import { useAuthStore } from 'src/stores/useAuth.js';
 
 interface CalendarDay {
   isEmpty: boolean;
@@ -240,11 +241,13 @@ interface CalendarDay {
   hasDot?: boolean;
 }
 
+const authStore = useAuthStore();
+const inspectorId = ref(authStore.user?.id);
+
 const $q = useQuasar();
 const isMobile = computed(() => $q.screen.lt.md);
 
 const activeTab = ref('inspection');
-const inspectorId = ref(1);
 const loading = ref(false);
 const isMonthlyView = ref(false);
 const rounds = ref<InspectionRound[]>([]);
@@ -279,8 +282,8 @@ const calendarDays = computed<CalendarDay[]>(() => {
     });
   } else {
     const days: CalendarDay[] = [];
-    const year = today.getFullYear();
-    const month = today.getMonth();
+    const year = currentMonth.value.getFullYear();
+    const month = currentMonth.value.getMonth();
 
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
@@ -352,11 +355,12 @@ async function fetchRounds() {
     const endpoint = isMonthlyView.value
       ? `/inspection-rounds/month/${inspectorId.value}?date=${toLocalDateStr(currentMonth.value)}`
       : `/inspection-rounds/week/${inspectorId.value}`;
-
     const res = await api.get(endpoint);
     rounds.value = Array.isArray(res.data) ? res.data : [];
-  } catch (e) {
-    console.error(e);
+  } catch (e: unknown) {
+    if (e instanceof Error) {
+      console.log('Message:', e.message);
+    }
     rounds.value = [];
   } finally {
     loading.value = false;

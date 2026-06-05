@@ -57,6 +57,7 @@ export class InspectionRoundsService {
 
   async findByWeek(inspectorId: number) {
     const now = new Date();
+
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
@@ -65,13 +66,21 @@ export class InspectionRoundsService {
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
 
-    return this.inspectionRoundsRepo.find({
-      where: {
-        scheduledDate: Between(startOfWeek, endOfWeek),
-        teamMember: { inspector: { id: inspectorId } },
-      },
-      relations: ['job', 'job.customer', 'job.address', 'job.houseType'],
-    });
+    const query = this.inspectionRoundsRepo
+      .createQueryBuilder('round')
+      .leftJoinAndSelect('round.job', 'job')
+      .leftJoinAndSelect('job.customer', 'customer')
+      .leftJoinAndSelect('job.address', 'address')
+      .leftJoinAndSelect('job.houseType', 'houseType')
+      .leftJoinAndSelect('round.teamMember', 'teamMember')
+      .leftJoinAndSelect('teamMember.inspector', 'inspector')
+      .where('round.scheduledDate BETWEEN :start AND :end', {
+        start: startOfWeek,
+        end: endOfWeek,
+      })
+      .andWhere('inspector.id = :inspectorId', { inspectorId });
+
+    return query.getMany();
   }
 
   async findByMonth(inspectorId: number, dateString?: string) {
@@ -109,12 +118,11 @@ export class InspectionRoundsService {
     return this.inspectionRoundsRepo.softRemove(round);
   }
 
-  // --- สิ่งที่เพิ่มเข้ามา: ฟังก์ชันยืนยันการตรวจ ---
   async confirmInspection(id: number) {
     const round = await this.inspectionRoundsRepo.findOneByOrFail({
       roundId: id,
     });
-    round.inspectedAt = new Date(); // แสตมป์เวลาว่าตรวจเสร็จแล้ว
+    round.inspectedAt = new Date();
     return this.inspectionRoundsRepo.save(round);
   }
 
@@ -122,7 +130,7 @@ export class InspectionRoundsService {
     const round = await this.inspectionRoundsRepo.findOneByOrFail({
       roundId: id,
     });
-    round.summaryCompletedAt = new Date(); // แสตมป์เวลาว่าทำสรุปเสร็จแล้ว
+    round.summaryCompletedAt = new Date();
     return this.inspectionRoundsRepo.save(round);
   }
 
@@ -155,9 +163,7 @@ export class InspectionRoundsService {
     });
 
     if (round.status !== 'SUBMITTED') {
-      throw new BadRequestException(
-        'Report must be submitted before approval',
-      );
+      throw new BadRequestException('Report must be submitted before approval');
     }
 
     round.status = 'APPROVED';
