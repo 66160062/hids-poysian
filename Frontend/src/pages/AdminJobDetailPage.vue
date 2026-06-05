@@ -286,6 +286,7 @@
               label="Create Round"
               class="full-width submit-btn"
               no-caps
+              :loading="isSubmittingRound"
               @click="submitCreateRound"
             />
           </div>
@@ -299,48 +300,158 @@
 import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
-import { useWorkListStore } from '../stores/useWorkList';
+import { api } from 'src/boot/axios';
 import { useUserStore } from '../stores/useUser';
+
+interface AddressEntity {
+  houseNumber?: string;
+  floor?: string;
+  soi?: string;
+  subDistrict?: string;
+  district?: string;
+  province?: string;
+  postalCode?: string;
+}
+
+interface JobApiResponse {
+  jobId: number;
+  projectName: string;
+  usableArea: number;
+  housePlanUrl?: string;
+  projectImageUrl?: string;
+  customer?: { fullName?: string; phoneNumber?: string; email?: string; lineId?: string };
+  houseType?: { name?: string };
+  address?: AddressEntity;
+}
+
+interface RoundApiResponse {
+  roundId: number;
+  roundNumber: number;
+  scheduledDate: string;
+  status: string;
+  teamMember?: {
+    inspector?: { fullName?: string };
+  };
+}
+
+interface TeamMemberChip {
+  id: number;
+  fullName: string;
+}
 
 const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
-const workStore = useWorkListStore();
 const userStore = useUserStore();
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const jobId = computed(() => Number(route.params.id));
 const isLoading = ref(true);
+const isSubmittingRound = ref(false);
+const jobData = ref<JobApiResponse | null>(null);
+const jobTeamMembers = ref<TeamMemberChip[]>([]);
 
-onMounted(async () => {
+const formatAddress = (address?: AddressEntity) => {
+  if (!address) return '-';
+  const parts = [
+    address.houseNumber ? `เลขที่ ${address.houseNumber}` : '',
+    address.soi ? `ถ.${address.soi}` : '',
+    address.subDistrict ? `ต.${address.subDistrict}` : '',
+    address.district ? `อ.${address.district}` : '',
+    address.province ? `จ.${address.province}` : '',
+    address.postalCode ?? '',
+  ].filter(Boolean);
+  return parts.join(' ') || '-';
+};
+
+const formatRoundDate = (dateStr: string) => {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString('th-TH', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'Asia/Bangkok',
+  });
+};
+
+const mapRoundStatus = (status: string) => {
+  switch (status) {
+    case 'COMPLETED':
+    case 'APPROVED':
+      return 'เสร็จสิ้น';
+    case 'SUBMITTED':
+      return 'รออนุมัติ';
+    case 'SCHEDULED':
+    default:
+      return 'กำลังดำเนินการ';
+  }
+};
+
+const mapRoundToView = (round: RoundApiResponse) => {
+  const inspectorName = round.teamMember?.inspector?.fullName;
+  const inspectors = inspectorName
+    ? [inspectorName]
+    : jobTeamMembers.value.map((m) => m.fullName);
+
+  return {
+    id: round.roundId,
+    roundNumber: round.roundNumber,
+    date: formatRoundDate(round.scheduledDate),
+    status: mapRoundStatus(round.status),
+    inspectors,
+  };
+};
+
+async function fetchJobDetails() {
+  const { data } = await api.get<JobApiResponse>(`/inspection-jobs/${jobId.value}`);
+  jobData.value = data;
+}
+
+async function fetchTeamMembers() {
+  const { data } = await api.get<TeamMemberChip[]>(`/assignments/job/${jobId.value}`);
+  jobTeamMembers.value = data;
+}
+
+async function fetchRounds() {
+  const { data } = await api.get<RoundApiResponse[]>(`/daily-reports/${jobId.value}/rounds`);
+  return data;
+}
+
+function applyRounds(rounds: RoundApiResponse[]) {
+  inspectionRounds.value = rounds.map(mapRoundToView);
+}
+
+async function loadPageData() {
+  isLoading.value = true;
   try {
-    // Simulate Backend API fetch
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    await userStore.fetchUsers().catch((err) => console.error('Failed to fetch users:', err));
-    
-    // Pre-populate rounds based on jobId to feel realistic
-    if (jobId.value === 1) {
-      inspectionRounds.value = [
-        { id: 1, roundNumber: 1, date: '24/12/2026', status: 'กำลังดำเนินการ', inspectors: ['สมศักดิ์ รักตรวจ'] }
-      ];
-    } else if (jobId.value === 3) {
-      inspectionRounds.value = [
-        { id: 1, roundNumber: 1, date: '26/12/2026', status: 'กำลังดำเนินการ', inspectors: ['วิชัย ช่างทอง'] }
-      ];
-    } else if (jobId.value === 4) {
-      inspectionRounds.value = [
-        { id: 1, roundNumber: 1, date: '27/12/2026', status: 'เสร็จสิ้น', inspectors: ['ปรีชา วิศวกร'] }
-      ];
-    }
+    await Promise.all([fetchJobDetails(), fetchTeamMembers()]);
+    const rounds = await fetchRounds();
+    applyRounds(rounds);
+    await userStore.fetchUsers().catch((err) => {
+      console.warn('Failed to fetch users for inspector picker:', err);
+    });
+  } catch (error) {
+    console.error('Failed to load job detail:', error);
+    $q.notify({
+      message: 'ไม่สามารถโหลดข้อมูลงานได้',
+      color: 'negative',
+      icon: 'error',
+      position: 'top',
+    });
   } finally {
     isLoading.value = false;
   }
+}
+
+onMounted(() => {
+  void loadPageData();
 });
 
-// Find job from store
 const job = computed(() => {
-  const found = workStore.works.find((w) => w.id === jobId.value);
-  const base = found ?? workStore.works[0];
-  if (!base) {
+  const data = jobData.value;
+  if (!data) {
     return {
       projectName: '-',
       houseType: '-',
@@ -360,23 +471,26 @@ const job = computed(() => {
       statusKey: '',
     };
   }
+
+  const latestRound = inspectionRounds.value[inspectionRounds.value.length - 1];
+
   return {
-    projectName: base.title,
-    houseType: base.type,
-    area: base.area.replace(' ตร.ม.', ''),
-    appointmentDate: base.date,
-    address: base.address ?? `จ.ตัวเมือง: ${base.province ?? '-'}`,
-    customerName: base.customerName ?? '-',
-    customerPhone: base.customerPhone ?? '-',
-    customerEmail: base.customerEmail ?? '-',
-    coordName: base.coordName ?? '-',
-    coordPhone: base.coordPhone ?? '-',
-    coordEmail: base.coordEmail ?? '-',
-    coordLine: base.coordLine ?? '-',
-    housePlanImage: base.housePlanImage ?? null,
-    projectImage: base.projectImage ?? null,
-    status: base.status,
-    statusKey: base.statusKey,
+    projectName: data.projectName ?? '-',
+    houseType: data.houseType?.name ?? '-',
+    area: String(data.usableArea ?? '-'),
+    appointmentDate: latestRound?.date ?? '-',
+    address: formatAddress(data.address),
+    customerName: data.customer?.fullName ?? '-',
+    customerPhone: data.customer?.phoneNumber ?? '-',
+    customerEmail: data.customer?.email ?? '-',
+    coordName: '-',
+    coordPhone: '-',
+    coordEmail: '-',
+    coordLine: '-',
+    housePlanImage: data.housePlanUrl ? `${apiUrl}${data.housePlanUrl}` : null,
+    projectImage: data.projectImageUrl ? `${apiUrl}${data.projectImageUrl}` : null,
+    status: latestRound?.status ?? '-',
+    statusKey: '',
   };
 });
 
@@ -440,13 +554,12 @@ const inspectorOptions = computed(() => {
     return storeInspectors;
   }
 
-  // Default mock fallback inspectors if none fetched
-  return [
-    { label: 'สมศักดิ์ รักตรวจ', value: 101 },
-    { label: 'วิชัย ช่างทอง', value: 102 },
-    { label: 'มานะ ฝึกหัด', value: 103 },
-    { label: 'ปรีชา วิศวกร', value: 104 },
-  ];
+  const assignedInspectors = jobTeamMembers.value.map((m) => ({
+    label: m.fullName,
+    value: m.id,
+  }));
+
+  return assignedInspectors;
 });
 
 const filteredInspectorOptions = ref<{ label: string; value: number }[]>([]);
@@ -478,7 +591,7 @@ const onCreateRound = () => {
   showCreateRoundDialog.value = true;
 };
 
-const submitCreateRound = () => {
+const submitCreateRound = async () => {
   if (!scheduledDate.value) {
     $q.notify({
       message: 'กรุณาเลือกวันที่ตรวจ',
@@ -499,31 +612,61 @@ const submitCreateRound = () => {
     return;
   }
 
-  const dateFormatted = scheduledDate.value.split('-').reverse().join('/');
-  const nextRoundNum = inspectionRounds.value.length + 1;
+  isSubmittingRound.value = true;
+  try {
+    const assignedInspectorIds = new Set(jobTeamMembers.value.map((m) => m.id));
 
-  inspectionRounds.value.push({
-    id: Date.now(),
-    roundNumber: nextRoundNum,
-    date: dateFormatted,
-    status: 'กำลังดำเนินการ',
-    inspectors: selectedInspectors.value.map((i) => i.label),
-  });
+    for (const inspector of selectedInspectors.value) {
+      if (!assignedInspectorIds.has(inspector.value)) {
+        await api.post('/assignments', {
+          jobId: jobId.value,
+          inspectorId: inspector.value,
+        });
+        assignedInspectorIds.add(inspector.value);
+      }
+    }
 
-  $q.notify({
-    message: `สร้างรอบการตรวจที่ ${nextRoundNum} สำเร็จ`,
-    color: 'positive',
-    icon: 'check_circle',
-    position: 'top',
-  });
+    const primaryInspector = selectedInspectors.value[0];
+    if (!primaryInspector) return;
 
-  showCreateRoundDialog.value = false;
+    await api.post(`/daily-reports/${jobId.value}/rounds`, {
+      scheduledDate: scheduledDate.value,
+      inspectorId: primaryInspector.value,
+      status: 'SCHEDULED',
+    });
+
+    await fetchTeamMembers();
+    const rounds = await fetchRounds();
+    applyRounds(rounds);
+
+    const createdRound = inspectionRounds.value[inspectionRounds.value.length - 1];
+    $q.notify({
+      message: `สร้างรอบการตรวจที่ ${createdRound?.roundNumber ?? ''} สำเร็จ`,
+      color: 'positive',
+      icon: 'check_circle',
+      position: 'top',
+    });
+
+    showCreateRoundDialog.value = false;
+  } catch (error) {
+    console.error('Failed to create round:', error);
+    $q.notify({
+      message: 'ไม่สามารถสร้างรอบการตรวจได้ กรุณาลองใหม่อีกครั้ง',
+      color: 'negative',
+      icon: 'error',
+      position: 'top',
+    });
+  } finally {
+    isSubmittingRound.value = false;
+  }
 };
 
 function getRoundStatusColor(status: string) {
   switch (status) {
     case 'กำลังดำเนินการ':
       return 'orange-2';
+    case 'รออนุมัติ':
+      return 'blue-2';
     case 'เสร็จสิ้น':
       return 'green-2';
     default:
