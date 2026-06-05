@@ -30,8 +30,11 @@ export class InspectionRoundsController {
   }
 
   @Get('week/:inspectorId')
-  findByWeek(@Param('inspectorId') inspectorId: string) {
-    return this.inspectionRoundsService.findByWeek(+inspectorId);
+  findByWeek(
+    @Param('inspectorId') inspectorId: string,
+    @Query('date') dateString?: string,
+  ) {
+    return this.inspectionRoundsService.findByWeek(+inspectorId, dateString);
   }
 
   @Get('month/:inspectorId')
