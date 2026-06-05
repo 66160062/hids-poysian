@@ -57,21 +57,32 @@ export class InspectionRoundsService {
 
   async findByWeek(inspectorId: number) {
     const now = new Date();
+
+    // ดึงวันเริ่มต้นของสัปดาห์ (วันอาทิตย์) เวลา 00:00:00
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
 
+    // ดึงวันสุดท้ายของสัปดาห์ (วันเสาร์) เวลา 23:59:59
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
 
-    return this.inspectionRoundsRepo.find({
-      where: {
-        scheduledDate: Between(startOfWeek, endOfWeek),
-        teamMember: { inspector: { id: inspectorId } },
-      },
-      relations: ['job', 'job.customer', 'job.address', 'job.houseType'],
-    });
+    const query = this.inspectionRoundsRepo
+      .createQueryBuilder('round')
+      .leftJoinAndSelect('round.job', 'job')
+      .leftJoinAndSelect('job.customer', 'customer')
+      .leftJoinAndSelect('job.address', 'address')
+      .leftJoinAndSelect('job.houseType', 'houseType')
+      .leftJoinAndSelect('round.teamMember', 'teamMember')
+      .leftJoinAndSelect('teamMember.inspector', 'inspector')
+      .where('round.scheduledDate BETWEEN :start AND :end', {
+        start: startOfWeek,
+        end: endOfWeek,
+      })
+      .andWhere('inspector.id = :inspectorId', { inspectorId });
+
+    return query.getMany();
   }
 
   async findByMonth(inspectorId: number, dateString?: string) {
@@ -155,9 +166,7 @@ export class InspectionRoundsService {
     });
 
     if (round.status !== 'SUBMITTED') {
-      throw new BadRequestException(
-        'Report must be submitted before approval',
-      );
+      throw new BadRequestException('Report must be submitted before approval');
     }
 
     round.status = 'APPROVED';
