@@ -355,23 +355,13 @@ async function fetchRounds() {
     const endpoint = isMonthlyView.value
       ? `/inspection-rounds/month/${inspectorId.value}?date=${toLocalDateStr(currentMonth.value)}`
       : `/inspection-rounds/week/${inspectorId.value}`;
-
-    console.log('Fetching:', endpoint); // ดู URL ที่ยิงไป
-
     const res = await api.get(endpoint);
-
-    console.log('Response:', res.data); // ดูข้อมูลที่ได้กลับมา
     rounds.value = Array.isArray(res.data) ? res.data : [];
   } catch (e: unknown) {
-  if (e instanceof Error) {
-    console.log('Message:', e.message);
-  }
-  // axios error
-  const axiosError = e as { response?: { status?: number; data?: unknown }; config?: { url?: string } };
-  console.log('Status:', axiosError.response?.status);
-  console.log('Data:', axiosError.response?.data);
-  console.log('URL:', axiosError.config?.url);
-  rounds.value = [];
+    if (e instanceof Error) {
+      console.log('Message:', e.message);
+    }
+    rounds.value = [];
   } finally {
     loading.value = false;
   }
