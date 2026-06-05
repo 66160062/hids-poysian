@@ -58,12 +58,10 @@ export class InspectionRoundsService {
   async findByWeek(inspectorId: number) {
     const now = new Date();
 
-    // ดึงวันเริ่มต้นของสัปดาห์ (วันอาทิตย์) เวลา 00:00:00
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
 
-    // ดึงวันสุดท้ายของสัปดาห์ (วันเสาร์) เวลา 23:59:59
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
@@ -120,12 +118,11 @@ export class InspectionRoundsService {
     return this.inspectionRoundsRepo.softRemove(round);
   }
 
-  // --- สิ่งที่เพิ่มเข้ามา: ฟังก์ชันยืนยันการตรวจ ---
   async confirmInspection(id: number) {
     const round = await this.inspectionRoundsRepo.findOneByOrFail({
       roundId: id,
     });
-    round.inspectedAt = new Date(); // แสตมป์เวลาว่าตรวจเสร็จแล้ว
+    round.inspectedAt = new Date();
     return this.inspectionRoundsRepo.save(round);
   }
 
@@ -133,7 +130,7 @@ export class InspectionRoundsService {
     const round = await this.inspectionRoundsRepo.findOneByOrFail({
       roundId: id,
     });
-    round.summaryCompletedAt = new Date(); // แสตมป์เวลาว่าทำสรุปเสร็จแล้ว
+    round.summaryCompletedAt = new Date();
     return this.inspectionRoundsRepo.save(round);
   }
 
