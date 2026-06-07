@@ -57,6 +57,11 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'โปรไฟล์', icon: 'person' },
       },
       {
+        path: 'notifications',
+        component: () => import('pages/AdminNotificationsPage.vue'),
+        meta: { title: 'การแจ้งเตือน', icon: 'notifications' },
+      },
+      {
         path: 'users',
         component: () => import('pages/AdminUserManagementPage.vue'),
         meta: { title: 'จัดการผู้ใช้', icon: 'group' },

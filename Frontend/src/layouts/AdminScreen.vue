@@ -14,7 +14,14 @@
         </div>
         <q-space />
         <div class="row items-center">
-          <q-btn flat round icon="notifications_none" color="dark" aria-label="Notifications" />
+          <q-btn
+  flat
+  round
+  icon="notifications_none"
+  color="dark"
+  aria-label="Notifications"
+  @click="$router.push('/admin/notifications')"
+/>
           <q-avatar
             size="34px"
             class="bg-primary text-white q-ml-sm cursor-pointer"
@@ -52,7 +59,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-
 const route = useRoute();
 const router = useRouter();
 const currentTitle = computed(() => (route.meta.title as string) || 'Admin');
