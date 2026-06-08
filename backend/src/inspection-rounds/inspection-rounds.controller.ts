@@ -39,10 +39,10 @@ export class InspectionRoundsController {
 
   @Get('month/:inspectorId')
   async getRoundsByMonth(
-    @Param('inspectorId') inspectorId: number,
+    @Param('inspectorId') inspectorId: string,
     @Query('date') dateString?: string,
   ) {
-    return this.inspectionRoundsService.findByMonth(inspectorId, dateString);
+    return this.inspectionRoundsService.findByMonth(+inspectorId, dateString);
   }
 
   @Get(':id')
