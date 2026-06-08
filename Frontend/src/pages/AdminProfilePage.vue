@@ -137,10 +137,24 @@
               <q-btn
                 outline
                 color="red"
-                class="full-width bg-white"
+                class="full-width bg-white q-mb-md"
                 no-caps
                 style="border-radius: 8px; font-weight: 600;"
                 label="ปิดการใช้งานบัญชี"
+              />
+              <q-separator color="red-2" class="q-my-md" />
+              <div class="text-grey-7 q-mb-md" style="font-size: 11px; line-height: 1.5;">
+                ออกจากระบบและปิดเซสชั่นปัจจุบัน
+              </div>
+              <q-btn
+                outline
+                color="red"
+                class="full-width bg-white"
+                no-caps
+                style="border-radius: 8px; font-weight: 600;"
+                label="ออกจากระบบ"
+                icon="logout"
+                @click="logout"
               />
             </q-card>
           </div>
@@ -232,6 +246,25 @@ const saveChanges = () => {
     color: 'positive',
     icon: 'check_circle',
     position: 'top'
+  });
+};
+
+const logout = () => {
+  $q.dialog({
+    title: 'ยืนยันการออกจากระบบ',
+    message: 'คุณแน่ใจหรือว่าต้องการออกจากระบบ?',
+    cancel: true,
+    persistent: true
+  }).onOk(() => {
+    // Clear user data and redirect to login
+    localStorage.clear();
+    sessionStorage.clear();
+    void router.push('/login');
+    $q.notify({
+      message: 'ออกจากระบบเรียบร้อยแล้ว',
+      color: 'info',
+      position: 'top'
+    });
   });
 };
 </script>
