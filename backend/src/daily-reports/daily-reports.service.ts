@@ -100,6 +100,25 @@ export class DailyReportsService {
     });
   }
 
+  async findRoundsByJob(jobId: number) {
+    const job = await this.dataSource.getRepository(InspectionJob).findOneBy({
+      jobId,
+    });
+    if (!job) {
+      throw new NotFoundException(`ไม่พบ daily report ID ${jobId}`);
+    }
+
+    return this.dataSource.getRepository(InspectionRound).find({
+      where: { job: { jobId } },
+      relations: [
+        'teamMember',
+        'teamMember.inspector',
+        'teamMember.inspector.team',
+      ],
+      order: { roundNumber: 'ASC' },
+    });
+  }
+
   async createRound(jobId: number, createRoundDto: CreateDailyReportRoundDto) {
     const job = await this.dataSource.getRepository(InspectionJob).findOneBy({
       jobId,
