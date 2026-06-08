@@ -225,9 +225,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onActivated } from 'vue';
 import { useQuasar } from 'quasar';
 import { api } from 'src/boot/axios';
+import { useAuthStore } from 'src/stores/useAuth';
 import type { InspectionRound } from 'src/models';
 import PropertyCard from '../components/PropertyCard.vue';
 import { useAuthStore } from 'src/stores/useAuth.js';
@@ -245,9 +246,11 @@ const authStore = useAuthStore();
 const inspectorId = ref(authStore.user?.id);
 
 const $q = useQuasar();
+const authStore = useAuthStore();
 const isMobile = computed(() => $q.screen.lt.md);
 
 const activeTab = ref('inspection');
+const inspectorId = computed(() => authStore.currentUser?.id ?? 0);
 const loading = ref(false);
 const isMonthlyView = ref(false);
 const rounds = ref<InspectionRound[]>([]);
@@ -259,17 +262,19 @@ const dayLabels = ['อาทิตย์', 'จันทร์', 'อังค�
 const todayStr = computed(() => toLocalDateStr(new Date()));
 
 const calendarDays = computed<CalendarDay[]>(() => {
-  const today = new Date();
+  //const today = new Date();
 
   if (!isMonthlyView.value) {
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay());
+    const startOfWeek = new Date(selectedDate.value);
+    startOfWeek.setDate(selectedDate.value.getDate() - selectedDate.value.getDay());
 
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(startOfWeek);
       d.setDate(startOfWeek.getDate() + i);
       const dateStr = toLocalDateStr(d);
-      const hasRound = rounds.value.some((r) => toUTCDateStr(r.scheduledDate) === dateStr);
+      const hasRound = rounds.value.some(
+        (r) => toScheduledDateStr(r.scheduledDate) === dateStr,
+      );
 
       return {
         isEmpty: false,
@@ -296,7 +301,9 @@ const calendarDays = computed<CalendarDay[]>(() => {
     for (let d = 1; d <= lastDay.getDate(); d++) {
       const currentDate = new Date(year, month, d);
       const dateStr = toLocalDateStr(currentDate);
-      const hasRound = rounds.value.some((r) => toUTCDateStr(r.scheduledDate) === dateStr);
+      const hasRound = rounds.value.some(
+        (r) => toScheduledDateStr(r.scheduledDate) === dateStr,
+      );
 
       days.push({
         isEmpty: false,
@@ -313,21 +320,15 @@ const calendarDays = computed<CalendarDay[]>(() => {
 
 const selectedDayRounds = computed(() => {
   const selected = toLocalDateStr(selectedDate.value);
-  return rounds.value.filter((r) => toUTCDateStr(r.scheduledDate) === selected);
+  return rounds.value.filter((r) => toScheduledDateStr(r.scheduledDate) === selected);
 });
 
 const morningRounds = computed(() => {
-  return selectedDayRounds.value.filter((r) => {
-    const hour = new Date(r.scheduledDate).getUTCHours();
-    return hour < 12;
-  });
+  return selectedDayRounds.value.filter((r) => getBangkokHour(r.scheduledDate) < 12);
 });
 
 const afternoonRounds = computed(() => {
-  return selectedDayRounds.value.filter((r) => {
-    const hour = new Date(r.scheduledDate).getUTCHours();
-    return hour >= 12;
-  });
+  return selectedDayRounds.value.filter((r) => getBangkokHour(r.scheduledDate) >= 12);
 });
 
 const selectedDateLabel = computed(() => {
@@ -345,16 +346,25 @@ function toggleView() {
 
 function selectDay(day: CalendarDay) {
   if (!day.isEmpty && day.dateStr) {
-    selectedDate.value = new Date(day.dateStr);
+    selectedDate.value = new Date(`${day.dateStr}T12:00:00`);
   }
 }
 
 async function fetchRounds() {
+  if (!inspectorId.value) {
+    rounds.value = [];
+    return;
+  }
+
   loading.value = true;
   try {
+    const dateParam = isMonthlyView.value
+      ? toLocalDateStr(currentMonth.value)
+      : toLocalDateStr(selectedDate.value);
     const endpoint = isMonthlyView.value
-      ? `/inspection-rounds/month/${inspectorId.value}?date=${toLocalDateStr(currentMonth.value)}`
-      : `/inspection-rounds/week/${inspectorId.value}`;
+      ? `/inspection-rounds/month/${inspectorId.value}?date=${dateParam}`
+      : `/inspection-rounds/week/${inspectorId.value}?date=${dateParam}`;
+
     const res = await api.get(endpoint);
     rounds.value = Array.isArray(res.data) ? res.data : [];
   } catch (e: unknown) {
@@ -374,9 +384,19 @@ function toLocalDateStr(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-function toUTCDateStr(dateStr: string): string {
+function toScheduledDateStr(dateStr: string): string {
   if (!dateStr) return '';
-  return String(dateStr).substring(0, 10);
+  return new Date(dateStr).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+}
+
+function getBangkokHour(dateStr: string): number {
+  return Number(
+    new Date(dateStr).toLocaleString('en-US', {
+      timeZone: 'Asia/Bangkok',
+      hour: 'numeric',
+      hour12: false,
+    }),
+  );
 }
 
 const currentMonth = ref(new Date());
@@ -398,6 +418,10 @@ function nextMonth() {
 }
 
 onMounted(() => {
+  void fetchRounds();
+});
+
+onActivated(() => {
   void fetchRounds();
 });
 </script>

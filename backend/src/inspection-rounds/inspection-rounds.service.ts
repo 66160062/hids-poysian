@@ -3,9 +3,9 @@ import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InspectionRound } from './entities/inspection-round.entity';
-import { Between, Repository } from 'typeorm';
-import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
+import { Repository } from 'typeorm';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
+import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 
 @Injectable()
 export class InspectionRoundsService {
@@ -55,38 +55,23 @@ export class InspectionRoundsService {
     });
   }
 
-  async findByWeek(inspectorId: number) {
-    const now = new Date();
-
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
+  async findByWeek(inspectorId: number, dateString?: string) {
+    const baseDate = this.parseDateInput(dateString);
+    const startOfWeek = new Date(baseDate);
+    startOfWeek.setDate(baseDate.getDate() - baseDate.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
 
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
 
-    const query = this.inspectionRoundsRepo
-      .createQueryBuilder('round')
-      .leftJoinAndSelect('round.job', 'job')
-      .leftJoinAndSelect('job.customer', 'customer')
-      .leftJoinAndSelect('job.address', 'address')
-      .leftJoinAndSelect('job.houseType', 'houseType')
-      .leftJoinAndSelect('round.teamMember', 'teamMember')
-      .leftJoinAndSelect('teamMember.inspector', 'inspector')
-      .where('round.scheduledDate BETWEEN :start AND :end', {
-        start: startOfWeek,
-        end: endOfWeek,
-      })
-      .andWhere('inspector.id = :inspectorId', { inspectorId });
-
-    return query.getMany();
+    return this.findRoundsForInspector(inspectorId, startOfWeek, endOfWeek);
   }
 
   async findByMonth(inspectorId: number, dateString?: string) {
-    const targetDate = dateString ? new Date(dateString) : new Date();
+    const targetDate = this.parseDateInput(dateString);
     const year = targetDate.getFullYear();
-    const month = targetDate.getMonth(); // 0-11
+    const month = targetDate.getMonth();
 
     const startOfMonth = new Date(year, month, 1);
     startOfMonth.setHours(0, 0, 0, 0);
@@ -94,13 +79,44 @@ export class InspectionRoundsService {
     const endOfMonth = new Date(year, month + 1, 0);
     endOfMonth.setHours(23, 59, 59, 999);
 
-    return this.inspectionRoundsRepo.find({
-      where: {
-        scheduledDate: Between(startOfMonth, endOfMonth),
-        teamMember: { inspector: { id: inspectorId } },
-      },
-      relations: ['job', 'job.customer', 'job.address', 'job.houseType'],
-    });
+    return this.findRoundsForInspector(inspectorId, startOfMonth, endOfMonth);
+  }
+
+  private parseDateInput(dateString?: string): Date {
+    if (!dateString) return new Date();
+
+    const [year, month, day] = dateString.split('-').map(Number);
+    if (!year || !month || !day) return new Date(dateString);
+
+    return new Date(year, month - 1, day, 12, 0, 0, 0);
+  }
+
+  private findRoundsForInspector(
+    inspectorId: number,
+    start: Date,
+    end: Date,
+  ): Promise<InspectionRound[]> {
+    return this.inspectionRoundsRepo
+      .createQueryBuilder('round')
+      .leftJoinAndSelect('round.job', 'job')
+      .leftJoinAndSelect('job.customer', 'customer')
+      .leftJoinAndSelect('job.address', 'address')
+      .leftJoinAndSelect('job.houseType', 'houseType')
+      .leftJoin('round.teamMember', 'teamMember')
+      .leftJoin('teamMember.inspector', 'roundInspector')
+      .leftJoin(
+        InspectionTeamMember,
+        'jobAssignment',
+        'jobAssignment.job_id = job.jobId AND jobAssignment.deleted_at IS NULL',
+      )
+      .where('round.scheduledDate BETWEEN :start AND :end', { start, end })
+      .andWhere(
+        '(roundInspector.id = :inspectorId OR jobAssignment.inspector_id = :inspectorId)',
+        { inspectorId },
+      )
+      .andWhere('round.deleted_at IS NULL')
+      .orderBy('round.scheduledDate', 'ASC')
+      .getMany();
   }
 
   async update(id: number, updateInspectionRoundDto: UpdateInspectionRoundDto) {
