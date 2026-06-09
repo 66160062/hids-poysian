@@ -24,7 +24,7 @@ export class AddressesService {
   }
 
   update(id: number, updateAddressDto: UpdateAddressDto) {
-    return this.addressesRepo.update(id, updateAddressDto);
+    return this.addressesRepo.update({ addressId: id }, updateAddressDto);
   }
 
   remove(id: number) {

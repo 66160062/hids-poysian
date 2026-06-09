@@ -210,7 +210,15 @@
 import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
-import { useWorkListStore } from '../stores/useWorkList';
+import { useWorkListStore, type Work } from '../stores/useWorkList';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL as string;
+
+const getImageUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${API_BASE_URL}${path}`;
+};
 
 const route = useRoute();
 const router = useRouter();
@@ -222,8 +230,11 @@ const isLoading = ref(true);
 
 onMounted(async () => {
   try {
-    // Simulate Backend API fetch
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    if (!workStore.works.some(w => w.jobId === jobId.value)) {
+      await workStore.fetchJobs();
+    }
+  } catch (error) {
+    console.error('Failed to load job', error);
   } finally {
     isLoading.value = false;
   }
@@ -231,8 +242,7 @@ onMounted(async () => {
 
 // Find job from store
 const job = computed(() => {
-  const found = workStore.works.find((w) => w.id === jobId.value);
-  const base = found ?? workStore.works[0];
+  const base = workStore.works.find((w) => w.jobId === jobId.value);
   if (!base) {
     return {
       projectName: '-',
@@ -247,29 +257,45 @@ const job = computed(() => {
       coordPhone: '-',
       coordEmail: '-',
       coordLine: '-',
-      housePlanImage: null,
-      projectImage: null,
+      housePlanImage: null as string | null,
+      projectImage: null as string | null,
       status: '-',
       statusKey: '',
     };
   }
+
+  const formatAddress = (addr: Work['address']) => {
+    if (!addr) return '-';
+    
+    const parts = [];
+    if (addr.houseNumber) parts.push(`เลขที่ ${addr.houseNumber}`);
+    if (addr.floor && addr.floor !== '-' && addr.floor !== '') parts.push(`ชั้น ${addr.floor}`);
+    if (addr.soi && addr.soi !== '-' && addr.soi !== '') parts.push(`ซอย ${addr.soi}`);
+    if (addr.subDistrict) parts.push(`ต.${addr.subDistrict}`);
+    if (addr.district) parts.push(`อ.${addr.district}`);
+    if (addr.province) parts.push(`จ.${addr.province}`);
+    if (addr.postalCode) parts.push(`${addr.postalCode}`);
+    
+    return parts.length > 0 ? parts.join(' ') : '-';
+  };
+
   return {
-    projectName: base.title,
-    houseType: base.type,
-    area: base.area.replace(' ตร.ม.', ''),
-    appointmentDate: base.date,
-    address: base.address ?? `จ.ตัวเมือง: ${base.province ?? '-'}`,
-    customerName: base.customerName ?? '-',
-    customerPhone: base.customerPhone ?? '-',
-    customerEmail: base.customerEmail ?? '-',
-    coordName: base.coordName ?? '-',
-    coordPhone: base.coordPhone ?? '-',
-    coordEmail: base.coordEmail ?? '-',
-    coordLine: base.coordLine ?? '-',
-    housePlanImage: base.housePlanImage ?? null,
-    projectImage: base.projectImage ?? null,
-    status: base.status,
-    statusKey: base.statusKey,
+    projectName: base.projectName || '-',
+    houseType: base.houseType?.name || '-',
+    area: base.usableArea?.toString() || '-',
+    appointmentDate: base.createdAt ? new Date(base.createdAt).toLocaleDateString('th-TH') : '-',
+    address: formatAddress(base.address),
+    customerName: base.customer?.fullName || '-',
+    customerPhone: base.customer?.phoneNumber || '-',
+    customerEmail: base.customer?.email || '-',
+    coordName: base.contractor?.fullName || '-',
+    coordPhone: base.contractor?.phoneNumber || '-',
+    coordEmail: base.contractor?.email || '-',
+    coordLine: base.contractor?.companyName || '-', // Map companyName to coordLine since it was used as such
+    housePlanImage: getImageUrl(base.housePlanUrl),
+    projectImage: getImageUrl(base.projectImageUrl),
+    status: base.status || '-',
+    statusKey: base.status === 'Active' ? 'in_progress' : 'waiting',
   };
 });
 

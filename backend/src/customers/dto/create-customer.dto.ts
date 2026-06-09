@@ -7,14 +7,14 @@ export class CreateCustomerDto {
     example: 'สมชาย ใจดี',
   })
   @IsString()
-  full_name: string;
+  fullName: string;
 
   @ApiProperty({
     description: 'เบอร์โทรศัพท์',
     example: '0812345678',
   })
   @IsString()
-  phone_number: string;
+  phoneNumber: string;
 
   @ApiProperty({
     description: 'อีเมล',
@@ -28,5 +28,5 @@ export class CreateCustomerDto {
     example: '@somchai',
   })
   @IsString()
-  line_id: string;
+  lineId: string;
 }

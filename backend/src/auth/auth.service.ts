@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -41,7 +45,8 @@ export class AuthService {
       throw new BadRequestException('role is required');
     }
 
-    const expiresAt = Math.floor(Date.now() / 1000) + LINK_TOKEN_EXPIRES_IN_SECONDS;
+    const expiresAt =
+      Math.floor(Date.now() / 1000) + LINK_TOKEN_EXPIRES_IN_SECONDS;
     const payload = {
       project_id: projectId,
       role,

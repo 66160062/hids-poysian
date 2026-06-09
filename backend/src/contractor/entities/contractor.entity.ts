@@ -21,11 +21,11 @@ export class Contractor {
   email: string;
 
   @Column({ type: 'varchar', length: 255 })
-  comapanyName: string;
+  companyName: string;
 
   @CreateDateColumn()
   createdAt: Date;
 
   @DeleteDateColumn()
-  deleteAt: Date;
+  deletedAt: Date;
 }
