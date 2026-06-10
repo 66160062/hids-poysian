@@ -52,9 +52,14 @@ const routes: RouteRecordRaw[] = [
       },
 
       {
-        path: 'calendar',
-        component: () => import('pages/AdminMainPage.vue'),
-        meta: { title: 'ตารางงาน', icon: 'calendar_today' },
+        path: 'profile',
+        component: () => import('pages/AdminProfilePage.vue'),
+        meta: { title: 'โปรไฟล์', icon: 'person' },
+      },
+      {
+        path: 'notifications',
+        component: () => import('pages/AdminNotificationsPage.vue'),
+        meta: { title: 'การแจ้งเตือน', icon: 'notifications' },
       },
       {
         path: 'users',

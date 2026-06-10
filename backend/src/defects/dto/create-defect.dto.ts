@@ -12,12 +12,12 @@ export class CreateDefectDto {
   @ApiProperty({ description: 'รหัสรอบตรวจ', example: 1 })
   @Type(() => Number)
   @IsNumber()
-  roundId: number;
+  roundId!: number;
 
   @ApiProperty({ description: 'รหัส template ห้อง', example: 1 })
   @Type(() => Number)
   @IsNumber()
-  templateId: number;
+  templateId!: number;
 
   @Transform(({ value }: { value: string | string[] }) => {
     if (Array.isArray(value)) return value.map((v) => Number(v));
@@ -27,12 +27,12 @@ export class CreateDefectDto {
   })
   @IsArray()
   @IsNumber({}, { each: true })
-  subCategoryIds: number[];
+  subCategoryIds!: number[];
 
   @ApiProperty({ description: 'รหัสผู้ตรวจ', example: 1 })
   @Type(() => Number)
   @IsNumber()
-  inspectorId: number;
+  inspectorId!: number;
 
   @ApiProperty({
     description: 'รายละเอียด',
@@ -45,7 +45,7 @@ export class CreateDefectDto {
 
   @ApiProperty({ description: 'ความรุนแรง', example: 'Minor' })
   @IsString()
-  severity: string;
+  severity!: string;
 
   @ApiProperty({
     enum: DefectStatus,

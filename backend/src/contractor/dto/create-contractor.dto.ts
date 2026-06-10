@@ -4,12 +4,12 @@ import { IsOptional, IsString, MaxLength } from 'class-validator';
 export class CreateContractorDto {
   @ApiProperty({ description: 'ชื่อผู้รับเหมา', example: 'วรวิทย์' })
   @IsString()
-  fullName: string;
+  fullName!: string;
 
   @ApiProperty({ description: 'เบอร์โทรผู้รับเหมา', example: '0987654321' })
   @IsString()
   @MaxLength(15)
-  phoneNumber: string;
+  phoneNumber!: string;
 
   @ApiProperty({ description: 'อีเมล (ไม่บังคับ)', example: 'somchai@email.com', required: false })
   @IsString()

@@ -1,6 +1,19 @@
 <template>
   <q-page class="admin-work-page bg-grey-1">
     <div class="q-px-md q-pt-lg">
+      <!-- Loading Indicator -->
+      <q-inner-loading :showing="loading" label="กำลังโหลดข้อมูล..." style="z-index: 100" />
+
+      <!-- Error Banner -->
+      <q-banner v-if="error" class="text-white bg-negative q-mb-md" rounded dense>
+        <template v-slot:avatar>
+          <q-icon name="error" color="white" />
+        </template>
+        {{ error }}
+        <template v-slot:action>
+          <q-btn flat label="ลองใหม่" @click="fetchWorkList" />
+        </template>
+      </q-banner>
 
       <div class="row q-mb-sm">
         <q-input
@@ -154,16 +167,8 @@ const router = useRouter();
 const workStore = useWorkListStore();
 const houseTypeStore = useHouseTypeStore();
 
-onMounted(async () => {
-  try {
-    await Promise.all([
-      workStore.fetchJobs(),
-      houseTypeStore.fetchHouseTypes()
-    ]);
-  } catch (error) {
-    console.error('Failed to load data', error);
-  }
-});
+const loading = ref<boolean>(false);
+const error = ref<string>('');
 
 // ตัวแปรสำหรับค้นหาและกรอง
 const searchTerm = ref('');
@@ -299,17 +304,41 @@ const filteredTasks = computed(() => {
   return result;
 });
 
-async function viewDetail(task: TaskItem) {
+async function viewDetail(task: TaskItem): Promise<void> {
   await router.push(`/admin/work/${task.id}`);
 }
 
-async function editWork(task: TaskItem) {
+async function editWork(task: TaskItem): Promise<void> {
   await router.push(`/admin/work/create?editId=${task.id}`);
 }
 
-async function addNewWork() {
+async function addNewWork(): Promise<void> {
   await router.push('/admin/work/create');
 }
+
+// ==========================================
+// 🎯 API Integration — ดึงข้อมูลจาก Backend
+// ==========================================
+async function fetchWorkList(): Promise<void> {
+  loading.value = true;
+  error.value = '';
+  
+  try {
+    await Promise.all([
+      workStore.fetchJobs(),
+      houseTypeStore.fetchHouseTypes()
+    ]);
+  } catch (err: unknown) {
+    error.value = 'เกิดข้อผิดพลาดในการโหลดข้อมูล โปรดลองใหม่อีกครั้ง';
+    console.error('fetchWorkList error:', err);
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted((): void => {
+  void fetchWorkList();
+});
 </script>
 
 <style scoped>

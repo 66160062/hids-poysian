@@ -9,23 +9,23 @@ import {
 @Entity('contractor')
 export class Contractor {
   @PrimaryGeneratedColumn()
-  contractorId: number;
+  contractorId!: number;
 
   @Column({ type: 'varchar', length: 255 })
-  fullName: string;
+  fullName!: string;
 
   @Column({ type: 'varchar', length: 255 })
-  phoneNumber: string;
+  phoneNumber!: string;
 
   @Column({ type: 'varchar', length: 255 })
-  email: string;
+  email!: string;
 
   @Column({ type: 'varchar', length: 255 })
-  companyName: string;
+  companyName!: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @DeleteDateColumn()
-  deletedAt: Date;
+  deletedAt!: Date;
 }

@@ -1,52 +1,41 @@
 import {
   Controller,
-  Get,
   Post,
-  Body,
-  Patch,
-  Param,
+  Get,
   Delete,
+  Body,
+  Param,
+  ParseIntPipe,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { InspectionTeamMembersService } from './inspection-team-members.service';
 import { CreateInspectionTeamMemberDto } from './dto/create-inspection-team-member.dto';
-import { UpdateInspectionTeamMemberDto } from './dto/update-inspection-team-member.dto';
 
-@Controller('inspection-team-members')
+@ApiTags('assignments')
+@Controller('assignments')
 export class InspectionTeamMembersController {
   constructor(
     private readonly inspectionTeamMembersService: InspectionTeamMembersService,
   ) {}
 
   @Post()
-  create(@Body() createInspectionTeamMemberDto: CreateInspectionTeamMemberDto) {
-    return this.inspectionTeamMembersService.create(
-      createInspectionTeamMemberDto,
-    );
+  assign(@Body() dto: CreateInspectionTeamMemberDto) {
+    // เรียกใช้ฟังก์ชัน .create() ใน service ใหม่ (ซึ่งข้างในคือโค้ด assign ตัวเดิมของคุณ)
+    return this.inspectionTeamMembersService.create(dto);
   }
 
-  @Get()
-  findAll() {
-    return this.inspectionTeamMembersService.findAll();
+  @Get('job/:job_id')
+  findByJob(@Param('job_id', ParseIntPipe) jobId: number) {
+    return this.inspectionTeamMembersService.findByJob(jobId);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.inspectionTeamMembersService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateInspectionTeamMemberDto: UpdateInspectionTeamMemberDto,
-  ) {
-    return this.inspectionTeamMembersService.update(
-      +id,
-      updateInspectionTeamMemberDto,
-    );
+  @Get('project/:project_id')
+  findByProject(@Param('project_id', ParseIntPipe) projectId: number) {
+    return this.inspectionTeamMembersService.findByProject(projectId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.inspectionTeamMembersService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.inspectionTeamMembersService.remove(id);
   }
 }

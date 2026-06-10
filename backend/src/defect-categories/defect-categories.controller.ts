@@ -10,7 +10,7 @@ import {
 import { DefectCategoriesService } from './defect-categories.service';
 import { CreateDefectCategoryDto } from './dto/create-defect-category.dto';
 import { UpdateDefectCategoryDto } from './dto/update-defect-category.dto';
-import { ApiOperation } from '@nestjs/swagger/dist/decorators/api-operation.decorator';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('Defect-categories')
 export class DefectCategoriesController {

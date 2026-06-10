@@ -8,7 +8,7 @@ export class CreateUserDto {
     example: 'Triphop Tropphai',
   })
   @IsNotEmpty()
-  fullName: string;
+  fullName!: string;
 
   @ApiProperty({
     description: 'ไอดีทีม',
@@ -17,37 +17,37 @@ export class CreateUserDto {
   @Type(() => Number)
   @IsNotEmpty()
   @IsNumber()
-  teamId: number;
+  teamId!: number;
 
   @ApiProperty({
     description: 'เบอร์โทร',
     example: '0987654321',
   })
-  phoneNumber: string;
+  phoneNumber!: string;
 
   @ApiProperty({
     description: 'อีเมล',
     example: 'triphop@gmail.com',
   })
-  email: string;
+  email!: string;
 
   @ApiProperty({
     description: 'ไลน์ไอดี',
     example: 'Triphop007X',
   })
-  lineId: string;
+  lineId!: string;
 
   @ApiProperty({
     description: 'รหัสผ่าน',
     example: '123456789',
   })
-  password: string;
+  password!: string;
 
   @ApiProperty({
     description: 'ตำแหน่ง',
     example: 'inspector',
   })
-  role: string;
+  role!: string;
 
   @ApiProperty({
     type: 'string',
