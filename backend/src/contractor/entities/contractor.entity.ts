@@ -17,11 +17,11 @@ export class Contractor {
   @Column({ type: 'varchar', length: 255 })
   phoneNumber!: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  email!: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  email?: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  companyName!: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  companyName?: string;
 
   @CreateDateColumn()
   createdAt!: Date;

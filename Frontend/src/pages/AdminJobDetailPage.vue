@@ -354,7 +354,7 @@ const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
 const userStore = useUserStore();
-const apiUrl = import.meta.env.VITE_API_URL;
+
 
 const jobId = computed(() => Number(route.params.id));
 const isLoading = ref(true);
@@ -362,18 +362,7 @@ const isSubmittingRound = ref(false);
 const jobData = ref<JobApiResponse | null>(null);
 const jobTeamMembers = ref<TeamMemberChip[]>([]);
 
-const formatAddress = (address?: AddressEntity) => {
-  if (!address) return '-';
-  const parts = [
-    address.houseNumber ? `เลขที่ ${address.houseNumber}` : '',
-    address.soi ? `ถ.${address.soi}` : '',
-    address.subDistrict ? `ต.${address.subDistrict}` : '',
-    address.district ? `อ.${address.district}` : '',
-    address.province ? `จ.${address.province}` : '',
-    address.postalCode ?? '',
-  ].filter(Boolean);
-  return parts.join(' ') || '-';
-};
+
 
 const formatRoundDate = (dateStr: string) => {
   if (!dateStr) return '-';

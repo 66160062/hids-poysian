@@ -231,7 +231,6 @@ import { api } from 'src/boot/axios';
 import { useAuthStore } from 'src/stores/useAuth';
 import type { InspectionRound } from 'src/models';
 import PropertyCard from '../components/PropertyCard.vue';
-import { useAuthStore } from 'src/stores/useAuth.js';
 
 interface CalendarDay {
   isEmpty: boolean;
@@ -241,9 +240,6 @@ interface CalendarDay {
   isActive?: boolean;
   hasDot?: boolean;
 }
-
-const authStore = useAuthStore();
-const inspectorId = ref(authStore.user?.id);
 
 const $q = useQuasar();
 const authStore = useAuthStore();
