@@ -13,55 +13,55 @@ import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspe
 @Entity('inspection_round')
 export class InspectionRound {
   @PrimaryGeneratedColumn()
-  roundId: number;
+  roundId!: number;
 
   @Column()
-  roundNumber: number;
+  roundNumber!: number;
 
-  @Column({ type: 'datetime', nullable: true })
-  scheduledDate: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  scheduledDate!: Date;
 
   @Column({ type: 'varchar', length: 50, default: 'SCHEDULED' })
-  status: string;
+  status!: string;
 
-  @Column({ name: 'inspected_at', type: 'datetime', nullable: true })
-  inspectedAt: Date;
+  @Column({ name: 'inspected_at', type: 'timestamp', nullable: true })
+  inspectedAt!: Date;
 
-  @Column({ name: 'summary_completed_at', type: 'datetime', nullable: true })
-  summaryCompletedAt: Date;
+  @Column({ name: 'summary_completed_at', type: 'timestamp', nullable: true })
+  summaryCompletedAt!: Date;
 
-  @Column({ type: 'datetime', nullable: true })
-  submittedAt: Date;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  signatureImageUrl: string;
+  @Column({ type: 'timestamp', nullable: true })
+  submittedAt!: Date;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  customerToken: string;
-
-  @Column({ type: 'datetime', nullable: true })
-  customerTokenExpiredAt: Date;
+  signatureImageUrl!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  contractorToken: string;
+  customerToken!: string;
 
-  @Column({ type: 'datetime', nullable: true })
-  contractorTokenExpiredAt: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  customerTokenExpiredAt!: Date;
 
-  @Column({ type: 'datetime', nullable: true })
-  approvedAt: Date;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  contractorToken!: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  contractorTokenExpiredAt!: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  approvedAt!: Date;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @DeleteDateColumn()
-  deletedAt: Date;
+  deletedAt!: Date;
 
   @ManyToOne(() => InspectionJob)
   @JoinColumn({ name: 'job_id' })
-  job: InspectionJob;
+  job!: InspectionJob;
 
   @ManyToOne(() => InspectionTeamMember)
   @JoinColumn({ name: 'team_member_id' })
-  teamMember: InspectionTeamMember;
+  teamMember!: InspectionTeamMember;
 }

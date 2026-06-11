@@ -14,8 +14,21 @@
         </div>
         <q-space />
         <div class="row items-center">
-          <q-btn flat round icon="notifications_none" color="dark" aria-label="Notifications" />
-          <q-avatar size="34px" class="bg-primary text-white q-ml-sm">A</q-avatar>
+          <q-btn
+  flat
+  round
+  icon="notifications_none"
+  color="dark"
+  aria-label="Notifications"
+  @click="$router.push('/admin/notifications')"
+/>
+          <q-avatar
+            size="34px"
+            class="bg-primary text-white q-ml-sm cursor-pointer"
+            @click="$router.push('/admin/profile')"
+          >
+            A
+          </q-avatar>
         </div>
       </q-toolbar>
     </q-header>
@@ -46,16 +59,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-
 const route = useRoute();
 const router = useRouter();
 const currentTitle = computed(() => (route.meta.title as string) || 'Admin');
 const menuList = [
   { name: 'dashboard', label: 'หน้าหลัก', icon: 'home', link: '/admin' },
   { name: 'work', label: 'งาน', icon: 'business_center', link: '/admin/work' },
-  { name: 'calendar', label: 'ตารางงาน', icon: 'calendar_today', link: '/admin/calendar' },
   { name: 'users', label: 'จัดการผู้ใช้', icon: 'group', link: '/admin/users' },
-  { name: 'menu', label: 'หมวดหมู่งาน', icon: 'category', link: '/admin/menu' },
   { name: 'report', label: 'รายงาน', icon: 'bar_chart', link: '/admin/report' },
   { name: 'settings', label: 'ตั้งค่า', icon: 'settings', link: '/admin/settings' },
 ];

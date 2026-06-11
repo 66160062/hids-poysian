@@ -17,8 +17,13 @@
     "skipLibCheck": true,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
+    "ignoreDeprecations": "5.0",
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "types": [
+      "node",
+      "jest"
+    ]
   }
 }

@@ -159,7 +159,12 @@
                 <q-item-label class="text-weight-medium"
                   >รอบที่ {{ round.roundNumber }}</q-item-label
                 >
-                <q-item-label caption>{{ round.date }}</q-item-label>
+                <q-item-label caption class="column q-gutter-y-xs">
+                  <span>วันที่: {{ round.date }}</span>
+                  <span v-if="round.inspectors && round.inspectors.length" class="text-primary text-caption text-weight-medium">
+                    ผู้ตรวจ: {{ round.inspectors.join(', ') }}
+                  </span>
+                </q-item-label>
               </q-item-section>
               <q-item-section side>
                 <q-chip
@@ -203,6 +208,91 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
+    <!-- Create New Round Dialog -->
+    <q-dialog v-model="showCreateRoundDialog" transition-show="scale" transition-hide="scale">
+      <q-card class="create-round-card q-pa-lg">
+        <!-- Dialog Header -->
+        <div class="row items-center justify-between q-mb-md">
+          <div class="text-h6 text-weight-bold text-dark-blue">Create New Round</div>
+          <q-btn icon="close" flat round dense v-close-popup class="text-grey-6 close-dialog-btn" />
+        </div>
+
+        <!-- Inspection Date Field -->
+        <div class="q-mb-md">
+          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">Inspection Date</div>
+          <q-input
+            borderless
+            dense
+            readonly
+            :model-value="scheduledDate ? formatDateDisplay(scheduledDate) : ''"
+            placeholder="mm/dd/yyyy"
+            class="custom-input cursor-pointer"
+            @click="showDatePicker = true"
+          >
+            <template v-slot:prepend>
+              <q-icon name="calendar_month" color="primary" size="20px" class="q-ml-sm" />
+            </template>
+            
+            <q-popup-proxy v-model="showDatePicker" transition-show="scale" transition-hide="scale">
+              <q-date v-model="scheduledDate" mask="YYYY-MM-DD" @update:model-value="showDatePicker = false">
+                <div class="row items-center justify-end">
+                  <q-btn v-close-popup label="ปิด" color="primary" flat />
+                </div>
+              </q-date>
+            </q-popup-proxy>
+          </q-input>
+        </div>
+
+        <!-- Build Inspection Team Field -->
+        <div class="q-mb-lg">
+          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">Build Inspection Team</div>
+          <q-select
+            borderless
+            dense
+            multiple
+            use-chips
+            use-input
+            v-model="selectedInspectors"
+            :options="filteredInspectorOptions"
+            placeholder="Search and select team members..."
+            class="custom-select"
+            @filter="filterInspectors"
+            popup-content-class="custom-dropdown-popup"
+          >
+            <template v-slot:prepend>
+              <q-icon name="person_search" color="grey-6" size="20px" class="q-ml-sm" />
+            </template>
+          </q-select>
+          <div class="text-caption text-grey-5 q-mt-xs q-pl-sm font-sub">
+            Start typing to search for inspectors
+          </div>
+        </div>
+
+        <!-- Dialog Actions -->
+        <q-card-actions class="row q-col-gutter-x-md q-px-none q-pb-none q-mt-lg">
+          <div class="col-6">
+            <q-btn
+              outline
+              label="Cancel"
+              class="full-width cancel-btn"
+              no-caps
+              v-close-popup
+            />
+          </div>
+          <div class="col-6">
+            <q-btn
+              unelevated
+              label="Create Round"
+              class="full-width submit-btn"
+              no-caps
+              :loading="isSubmittingRound"
+              @click="submitCreateRound"
+            />
+          </div>
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -210,30 +300,158 @@
 import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
-import { useWorkListStore } from '../stores/useWorkList';
+import { api } from 'src/boot/axios';
+import { useUserStore } from '../stores/useUser';
+
+interface AddressEntity {
+  houseNumber?: string;
+  floor?: string;
+  soi?: string;
+  subDistrict?: string;
+  district?: string;
+  province?: string;
+  postalCode?: string;
+}
+
+interface JobApiResponse {
+  jobId: number;
+  projectName: string;
+  usableArea: number;
+  housePlanUrl?: string;
+  projectImageUrl?: string;
+  customer?: { fullName?: string; phoneNumber?: string; email?: string; lineId?: string };
+  houseType?: { name?: string };
+  address?: AddressEntity;
+}
+
+interface RoundApiResponse {
+  roundId: number;
+  roundNumber: number;
+  scheduledDate: string;
+  status: string;
+  teamMember?: {
+    inspector?: { fullName?: string };
+  };
+}
+
+interface TeamMemberChip {
+  id: number;
+  fullName: string;
+}
 
 const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
-const workStore = useWorkListStore();
+const userStore = useUserStore();
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const jobId = computed(() => Number(route.params.id));
 const isLoading = ref(true);
+const isSubmittingRound = ref(false);
+const jobData = ref<JobApiResponse | null>(null);
+const jobTeamMembers = ref<TeamMemberChip[]>([]);
 
-onMounted(async () => {
+const formatAddress = (address?: AddressEntity) => {
+  if (!address) return '-';
+  const parts = [
+    address.houseNumber ? `เลขที่ ${address.houseNumber}` : '',
+    address.soi ? `ถ.${address.soi}` : '',
+    address.subDistrict ? `ต.${address.subDistrict}` : '',
+    address.district ? `อ.${address.district}` : '',
+    address.province ? `จ.${address.province}` : '',
+    address.postalCode ?? '',
+  ].filter(Boolean);
+  return parts.join(' ') || '-';
+};
+
+const formatRoundDate = (dateStr: string) => {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString('th-TH', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'Asia/Bangkok',
+  });
+};
+
+const mapRoundStatus = (status: string) => {
+  switch (status) {
+    case 'COMPLETED':
+    case 'APPROVED':
+      return 'เสร็จสิ้น';
+    case 'SUBMITTED':
+      return 'รออนุมัติ';
+    case 'SCHEDULED':
+    default:
+      return 'กำลังดำเนินการ';
+  }
+};
+
+const mapRoundToView = (round: RoundApiResponse) => {
+  const inspectorName = round.teamMember?.inspector?.fullName;
+  const inspectors = inspectorName
+    ? [inspectorName]
+    : jobTeamMembers.value.map((m) => m.fullName);
+
+  return {
+    id: round.roundId,
+    roundNumber: round.roundNumber,
+    date: formatRoundDate(round.scheduledDate),
+    status: mapRoundStatus(round.status),
+    inspectors,
+  };
+};
+
+async function fetchJobDetails() {
+  const { data } = await api.get<JobApiResponse>(`/inspection-jobs/${jobId.value}`);
+  jobData.value = data;
+}
+
+async function fetchTeamMembers() {
+  const { data } = await api.get<TeamMemberChip[]>(`/assignments/job/${jobId.value}`);
+  jobTeamMembers.value = data;
+}
+
+async function fetchRounds() {
+  const { data } = await api.get<RoundApiResponse[]>(`/daily-reports/${jobId.value}/rounds`);
+  return data;
+}
+
+function applyRounds(rounds: RoundApiResponse[]) {
+  inspectionRounds.value = rounds.map(mapRoundToView);
+}
+
+async function loadPageData() {
+  isLoading.value = true;
   try {
-    // Simulate Backend API fetch
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    await Promise.all([fetchJobDetails(), fetchTeamMembers()]);
+    const rounds = await fetchRounds();
+    applyRounds(rounds);
+    await userStore.fetchUsers().catch((err) => {
+      console.warn('Failed to fetch users for inspector picker:', err);
+    });
+  } catch (error) {
+    console.error('Failed to load job detail:', error);
+    $q.notify({
+      message: 'ไม่สามารถโหลดข้อมูลงานได้',
+      color: 'negative',
+      icon: 'error',
+      position: 'top',
+    });
   } finally {
     isLoading.value = false;
   }
+}
+
+onMounted(() => {
+  void loadPageData();
 });
 
-// Find job from store
 const job = computed(() => {
-  const found = workStore.works.find((w) => w.id === jobId.value);
-  const base = found ?? workStore.works[0];
-  if (!base) {
+  const data = jobData.value;
+  if (!data) {
     return {
       projectName: '-',
       houseType: '-',
@@ -253,33 +471,37 @@ const job = computed(() => {
       statusKey: '',
     };
   }
+
+  const latestRound = inspectionRounds.value[inspectionRounds.value.length - 1];
+
   return {
-    projectName: base.title,
-    houseType: base.type,
-    area: base.area.replace(' ตร.ม.', ''),
-    appointmentDate: base.date,
-    address: base.address ?? `จ.ตัวเมือง: ${base.province ?? '-'}`,
-    customerName: base.customerName ?? '-',
-    customerPhone: base.customerPhone ?? '-',
-    customerEmail: base.customerEmail ?? '-',
-    coordName: base.coordName ?? '-',
-    coordPhone: base.coordPhone ?? '-',
-    coordEmail: base.coordEmail ?? '-',
-    coordLine: base.coordLine ?? '-',
-    housePlanImage: base.housePlanImage ?? null,
-    projectImage: base.projectImage ?? null,
-    status: base.status,
-    statusKey: base.statusKey,
+    projectName: data.projectName ?? '-',
+    houseType: data.houseType?.name ?? '-',
+    area: String(data.usableArea ?? '-'),
+    appointmentDate: latestRound?.date ?? '-',
+    address: formatAddress(data.address),
+    customerName: data.customer?.fullName ?? '-',
+    customerPhone: data.customer?.phoneNumber ?? '-',
+    customerEmail: data.customer?.email ?? '-',
+    coordName: '-',
+    coordPhone: '-',
+    coordEmail: '-',
+    coordLine: '-',
+    housePlanImage: data.housePlanUrl ? `${apiUrl}${data.housePlanUrl}` : null,
+    projectImage: data.projectImageUrl ? `${apiUrl}${data.projectImageUrl}` : null,
+    status: latestRound?.status ?? '-',
+    statusKey: '',
   };
 });
 
-// Mock inspection rounds (empty = empty state UI)
-const inspectionRounds: {
+// Reactive inspection rounds
+const inspectionRounds = ref<{
   id: number;
   roundNumber: number;
   date: string;
   status: string;
-}[] = [];
+  inspectors?: string[];
+}[]>([]);
 
 const goBack = async () => {
   await router.push('/admin/work');
@@ -313,14 +535,138 @@ const viewPlan = () => {
   }
 };
 
+// Dialog form state
+const showCreateRoundDialog = ref(false);
+const scheduledDate = ref('');
+const showDatePicker = ref(false);
+const selectedInspectors = ref<{ label: string; value: number }[]>([]);
+
+// Predefined inspector options list
+const inspectorOptions = computed(() => {
+  const storeInspectors = userStore.users
+    .filter((u) => u.role === 'inspector' || String(u.role).toLowerCase() === 'inspector')
+    .map((u) => ({
+      label: u.fullName,
+      value: u.id,
+    }));
+
+  if (storeInspectors.length > 0) {
+    return storeInspectors;
+  }
+
+  const assignedInspectors = jobTeamMembers.value.map((m) => ({
+    label: m.fullName,
+    value: m.id,
+  }));
+
+  return assignedInspectors;
+});
+
+const filteredInspectorOptions = ref<{ label: string; value: number }[]>([]);
+
+const filterInspectors = (val: string, update: (callback: () => void) => void) => {
+  update(() => {
+    const needle = val.toLowerCase().trim();
+    if (!needle) {
+      filteredInspectorOptions.value = inspectorOptions.value;
+    } else {
+      filteredInspectorOptions.value = inspectorOptions.value.filter(
+        (v) => v.label.toLowerCase().indexOf(needle) > -1
+      );
+    }
+  });
+};
+
+const formatDateDisplay = (dateStr: string) => {
+  if (!dateStr) return '';
+  const parts = dateStr.replace(/\//g, '-').split('-');
+  if (parts.length !== 3) return dateStr;
+  const [year, month, day] = parts;
+  return `${month}/${day}/${year}`;
+};
+
 const onCreateRound = () => {
-  // TODO: navigate to create inspection round
+  scheduledDate.value = '';
+  selectedInspectors.value = [];
+  showCreateRoundDialog.value = true;
+};
+
+const submitCreateRound = async () => {
+  if (!scheduledDate.value) {
+    $q.notify({
+      message: 'กรุณาเลือกวันที่ตรวจ',
+      color: 'warning',
+      icon: 'warning',
+      position: 'top',
+    });
+    return;
+  }
+
+  if (selectedInspectors.value.length === 0) {
+    $q.notify({
+      message: 'กรุณาเลือกทีมผู้ตรวจอย่างน้อย 1 คน',
+      color: 'warning',
+      icon: 'warning',
+      position: 'top',
+    });
+    return;
+  }
+
+  isSubmittingRound.value = true;
+  try {
+    const assignedInspectorIds = new Set(jobTeamMembers.value.map((m) => m.id));
+
+    for (const inspector of selectedInspectors.value) {
+      if (!assignedInspectorIds.has(inspector.value)) {
+        await api.post('/assignments', {
+          jobId: jobId.value,
+          inspectorId: inspector.value,
+        });
+        assignedInspectorIds.add(inspector.value);
+      }
+    }
+
+    const primaryInspector = selectedInspectors.value[0];
+    if (!primaryInspector) return;
+
+    await api.post(`/daily-reports/${jobId.value}/rounds`, {
+      scheduledDate: scheduledDate.value,
+      inspectorId: primaryInspector.value,
+      status: 'SCHEDULED',
+    });
+
+    await fetchTeamMembers();
+    const rounds = await fetchRounds();
+    applyRounds(rounds);
+
+    const createdRound = inspectionRounds.value[inspectionRounds.value.length - 1];
+    $q.notify({
+      message: `สร้างรอบการตรวจที่ ${createdRound?.roundNumber ?? ''} สำเร็จ`,
+      color: 'positive',
+      icon: 'check_circle',
+      position: 'top',
+    });
+
+    showCreateRoundDialog.value = false;
+  } catch (error) {
+    console.error('Failed to create round:', error);
+    $q.notify({
+      message: 'ไม่สามารถสร้างรอบการตรวจได้ กรุณาลองใหม่อีกครั้ง',
+      color: 'negative',
+      icon: 'error',
+      position: 'top',
+    });
+  } finally {
+    isSubmittingRound.value = false;
+  }
 };
 
 function getRoundStatusColor(status: string) {
   switch (status) {
     case 'กำลังดำเนินการ':
       return 'orange-2';
+    case 'รออนุมัติ':
+      return 'blue-2';
     case 'เสร็จสิ้น':
       return 'green-2';
     default:
@@ -401,5 +747,100 @@ function getRoundStatusColor(status: string) {
   border-radius: 50px;
   height: 48px;
   font-size: 15px;
+}
+
+/* Create Round Dialog styling matching the mockup precisely */
+.create-round-card {
+  border-radius: 24px !important;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.text-dark-blue {
+  color: #1E293B;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.close-dialog-btn {
+  font-size: 11px;
+}
+
+.field-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: #475569;
+  letter-spacing: 0.2px;
+}
+
+.font-sub {
+  font-size: 11px;
+  color: #64748B;
+}
+
+/* Custom Outlined Inputs with rounded edges and grey background */
+.custom-input, .custom-select {
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  background-color: #F8FAFC;
+  padding: 2px 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+.custom-input:hover, .custom-select:hover {
+  border-color: #CBD5E1;
+}
+
+.custom-input.q-field--focused, .custom-select.q-field--focused {
+  border-color: #3B82F6;
+  background-color: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+/* Customize Chips */
+.custom-select :deep(.q-chip) {
+  background: #E2E8F0;
+  color: #1E293B;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+/* Custom Buttons matching screenshot */
+.cancel-btn {
+  border: 1px solid #E2E8F0 !important;
+  color: #475569 !important;
+  border-radius: 50px !important;
+  font-weight: 600;
+  height: 48px;
+  font-size: 14px;
+}
+
+.cancel-btn:hover {
+  background-color: #F8FAFC !important;
+  border-color: #CBD5E1 !important;
+}
+
+.submit-btn {
+  background: #2563EB !important; /* Vibrant primary blue from the mockup */
+  color: white !important;
+  border-radius: 50px !important;
+  font-weight: 600;
+  height: 48px;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.submit-btn:hover {
+  background: #1D4ED8 !important;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+}
+
+/* Style the dropdown menu items */
+.custom-dropdown-popup {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #E2E8F0;
 }
 </style>

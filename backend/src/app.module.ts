@@ -46,12 +46,30 @@ import { Floor } from './floor/entities/floor.entity';
 import { SubRoom } from './sub-rooms/entities/sub-room.entity';
 import { RoomsModule } from './rooms/rooms.module';
 import { Room } from './rooms/entities/room.entity';
-
+import { ConfigModule } from '@nestjs/config';
+import { DailyReportsModule } from './daily-reports/daily-reports.module';
+import { AdminModule } from './admin/admin.module';
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     TypeOrmModule.forRoot({
-      type: 'sqlite',
-      database: 'hids.db',
+      // type: 'sqlite',
+      // database: 'hids.db',
+
+      // type: 'postgres',
+      // host: 'localhost',
+      // port: 5432,
+      // username: 'postgres',
+      // password: '1234',
+      // database: 'hids_db',
+      type: 'postgres',
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT || '5432'),
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_DATABASE,
       entities: [
         User,
         InspectionJob,
@@ -102,6 +120,8 @@ import { Room } from './rooms/entities/room.entity';
     FloorModule,
     SubRoomsModule,
     RoomsModule,
+    DailyReportsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Patch,
   Param,
@@ -29,16 +30,19 @@ export class InspectionRoundsController {
   }
 
   @Get('week/:inspectorId')
-  findByWeek(@Param('inspectorId') inspectorId: string) {
-    return this.inspectionRoundsService.findByWeek(+inspectorId);
+  findByWeek(
+    @Param('inspectorId') inspectorId: string,
+    @Query('date') dateString?: string,
+  ) {
+    return this.inspectionRoundsService.findByWeek(+inspectorId, dateString);
   }
 
   @Get('month/:inspectorId')
   async getRoundsByMonth(
-    @Param('inspectorId') inspectorId: number,
+    @Param('inspectorId') inspectorId: string,
     @Query('date') dateString?: string,
   ) {
-    return this.inspectionRoundsService.findByMonth(inspectorId, dateString);
+    return this.inspectionRoundsService.findByMonth(+inspectorId, dateString);
   }
 
   @Get(':id')
@@ -61,6 +65,11 @@ export class InspectionRoundsController {
     return this.inspectionRoundsService.submit(+id);
   }
 
+  @Patch(':id/approve')
+  approve(@Param('id') id: string) {
+    return this.inspectionRoundsService.approveReport(+id);
+  }
+
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -72,5 +81,17 @@ export class InspectionRoundsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.inspectionRoundsService.remove(+id);
+  }
+}
+
+@Controller('projects')
+export class ProjectApprovalController {
+  constructor(
+    private readonly inspectionRoundsService: InspectionRoundsService,
+  ) {}
+
+  @Put(':id/approve')
+  approve(@Param('id') id: string) {
+    return this.inspectionRoundsService.approveReport(+id);
   }
 }

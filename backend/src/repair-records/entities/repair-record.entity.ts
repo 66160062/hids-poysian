@@ -12,28 +12,28 @@ import {
 @Entity('repair_record')
 export class RepairRecord {
   @PrimaryGeneratedColumn({ name: 'repair_id' })
-  repairId: number;
+  repairId!: number;
 
   @Column({ type: 'text' })
-  description: string;
+  description!: string;
 
   @Column({ name: 'image_url', length: 255 })
-  imageUrl: string;
+  imageUrl!: string;
 
   @Column({ name: 'file_size' })
-  fileSize: number;
+  fileSize!: number;
 
-  @Column({ name: 'repaired_at', type: 'datetime' })
-  repairedAt: Date;
+  @Column({ name: 'repaired_at', type: 'timestamp' })
+  repairedAt!: Date;
 
   @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date;
+  deletedAt!: Date;
 
   @OneToOne(() => Defect)
   @JoinColumn({ name: 'defect_id' })
-  defect: Defect;
+  defect!: Defect;
 
   @ManyToOne(() => Contractor)
   @JoinColumn({ name: 'contractor_id' })
-  contractor: Contractor;
+  contractor!: Contractor;
 }

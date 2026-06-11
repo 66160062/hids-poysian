@@ -22,23 +22,23 @@ export enum DefectStatus {
 @Entity()
 export class Defect {
   @PrimaryGeneratedColumn()
-  defectId: number;
+  defectId!: number;
 
   @Column({ type: 'text', nullable: true, default: '-' })
-  description: string;
+  description!: string;
 
   @Column({ type: 'varchar', length: 50 })
-  severity: string;
+  severity!: string;
 
   @Column({
     type: 'varchar',
     length: 255,
     default: '/defect-images/unknown.jpg',
   })
-  imageUrl: string;
+  imageUrl!: string;
 
   @Column({ type: 'int', nullable: true })
-  imageFileSize: number;
+  imageFileSize!: number;
 
   @Column({
     type: 'varchar',
@@ -46,27 +46,27 @@ export class Defect {
     default: DefectStatus.PENDING_REPAIR,
     enum: DefectStatus,
   })
-  status: DefectStatus;
+  status!: DefectStatus;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @ManyToOne(() => InspectionRound)
   @JoinColumn({ name: 'round_id' })
-  round: InspectionRound;
+  round!: InspectionRound;
 
   @ManyToOne(() => RoomTemplate)
   @JoinColumn({ name: 'template_id' })
-  template: RoomTemplate;
+  template!: RoomTemplate;
 
   @ManyToMany(() => DefectSubCategory)
   @JoinTable({ name: 'defect_sub_category_map' })
-  subCategories: DefectSubCategory[];
+  subCategories!: DefectSubCategory[];
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'inspector_id' })
-  inspector: User;
+  inspector!: User;
 }
