@@ -1,8 +1,8 @@
 <template>
   <q-page class="admin-work-page bg-grey-1">
-    <div class="q-px-md q-pt-lg">
+    <div class="q-px-md q-pt-lg relative-position">
       <!-- Loading Indicator -->
-      <q-inner-loading :showing="loading" label="กำลังโหลดข้อมูล..." style="z-index: 100" />
+      <q-inner-loading :showing="loading" label="กำลังโหลดข้อมูล..." color="primary" style="z-index: 100" />
 
       <!-- Error Banner -->
       <q-banner v-if="error" class="text-white bg-negative q-mb-md" rounded dense>
@@ -96,13 +96,13 @@
       </div>
 
       <div class="work-list-wrapper">
-        <div v-if="filteredTasks.length === 0" class="text-center text-grey-6 q-pa-xl">
+        <div v-if="tasks.length === 0" class="text-center text-grey-6 q-pa-xl">
           ไม่พบข้อมูลที่ค้นหา
         </div>
 
-        <div v-else class="work-list q-gutter-y-md q-pb-xl">
+        <div v-else class="work-list q-gutter-y-md">
           <q-card
-            v-for="task in filteredTasks"
+            v-for="task in tasks"
             :key="task.id"
             flat
             bordered
@@ -147,18 +147,31 @@
             </q-card-actions>
           </q-card>
         </div>
+
+        <!-- Pagination -->
+        <div class="row justify-center q-mt-lg q-pb-xl" v-if="workStore.meta.totalPages > 1">
+          <q-pagination
+            v-model="currentPage"
+            :max="workStore.meta.totalPages"
+            :max-pages="5"
+            boundary-numbers
+            direction-links
+            color="primary"
+            @update:model-value="fetchWorkList"
+          />
+        </div>
       </div>
     </div>
 
     <q-page-sticky position="bottom-right" :offset="[18, 18]" style="z-index: 9999">
-      <q-btn fab icon="add" color="primary" @click="addNewWork" />
+      <q-btn fab icon="add" color="primary" @click="addNewWork" :class="{'fab-clicked': isFabClicked, 'fab-animate': !isFabClicked}" />
     </q-page-sticky>
 
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useWorkListStore } from '../stores/useWorkList';
 import { useHouseTypeStore } from '../stores/useHouseType';
@@ -184,6 +197,8 @@ const sortOptions = [
   { label: 'ล่าสุด - เก่า', value: 'desc' },
   { label: 'เก่า - ล่าสุด', value: 'asc' }
 ];
+
+const currentPage = ref(1);
 
 // ==========================================
 // 🎯 Interface สำหรับข้อมูล TaskItem
@@ -265,43 +280,18 @@ const filters = computed(() => {
   ];
 });
 
-const filteredTasks = computed(() => {
-  let result = [...tasks.value];
+let searchTimeout: ReturnType<typeof setTimeout>;
+watch(searchTerm, () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    currentPage.value = 1;
+    void fetchWorkList();
+  }, 500);
+});
 
-  // 1. กรองตามปุ่มสถานะ
-  if (activeFilter.value !== 'all') {
-    result = result.filter((t) => t.statusKey === activeFilter.value);
-  }
-
-  // 2. กรองตามประเภทบ้าน (Dropdown)
-  if (selectedType.value !== 'ทั้งหมด') {
-    result = result.filter((t) => t.type === selectedType.value);
-  }
-
-  // 3. กรองตามช่องค้นหา
- if (searchTerm.value) {
-    const term = searchTerm.value.toLowerCase();
-    result = result.filter(
-      (t) =>
-        t.title.toLowerCase().includes(term) ||
-        (t.team && t.team.toLowerCase().includes(term)) ||
-        (t.customer && t.customer.toLowerCase().includes(term))
-    );
-  }
-
-  // 4. เรียงลำดับตามวันที่ (Dropdown)
-  result.sort((a, b) => {
-    const dateA = new Date(a.date || 0).getTime();
-    const dateB = new Date(b.date || 0).getTime();
-
-    if (sortOrder.value === 'desc') {
-      return dateB - dateA; // ล่าสุด ไป เก่าสุด
-    } else {
-      return dateA - dateB; // เก่าสุด ไป ล่าสุด
-    }
-  });
-
-  return result;
+watch([activeFilter, selectedType, sortOrder], () => {
+  currentPage.value = 1;
+  void fetchWorkList();
 });
 
 async function viewDetail(task: TaskItem): Promise<void> {
@@ -312,8 +302,15 @@ async function editWork(task: TaskItem): Promise<void> {
   await router.push(`/admin/work/create?editId=${task.id}`);
 }
 
-async function addNewWork(): Promise<void> {
-  await router.push('/admin/work/create');
+const isFabClicked = ref(false);
+
+function addNewWork(): void {
+  isFabClicked.value = true;
+  setTimeout(() => {
+    void router.push('/admin/work/create');
+    // Reset state slightly after routing so it's clean when user comes back
+    setTimeout(() => { isFabClicked.value = false; }, 300);
+  }, 300);
 }
 
 // ==========================================
@@ -325,8 +322,15 @@ async function fetchWorkList(): Promise<void> {
   
   try {
     await Promise.all([
-      workStore.fetchJobs(),
-      houseTypeStore.fetchHouseTypes()
+      workStore.fetchJobs({
+        page: currentPage.value,
+        limit: 10,
+        status: activeFilter.value,
+        search: searchTerm.value,
+        type: selectedType.value,
+        sort: sortOrder.value
+      }),
+      houseTypeStore.houseTypes.length === 0 ? houseTypeStore.fetchHouseTypes() : Promise.resolve()
     ]);
   } catch (err: unknown) {
     error.value = 'เกิดข้อผิดพลาดในการโหลดข้อมูล โปรดลองใหม่อีกครั้ง';
@@ -409,10 +413,41 @@ onMounted((): void => {
 }
 
 .tag-badge {
-  font-weight: 500;
   font-size: 12px;
-  padding: 6px 14px;
-  border-radius: 20px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+/* ─── FAB Animation ────────────────────────────────────────── */
+.fab-animate {
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.fab-animate:hover {
+  transform: scale(1.1) rotate(90deg);
+}
+
+.fab-animate:active {
+  transform: scale(0.95);
+}
+
+.fab-clicked {
+  animation: pulse-once 0.3s ease-out forwards;
+}
+
+@keyframes pulse-once {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.8);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 20px rgba(25, 118, 210, 0);
+  }
 }
 
 .action-btn {

@@ -55,6 +55,13 @@ export const useWorkListStore = defineStore('workList', () => {
   const statusMeta = ref<StatusMeta[]>([]);
   const isLoading = ref(false);
 
+  const meta = ref({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 1
+  });
+
   const fetchStatusMeta = async () => {
     try {
       const response = await api.get('/inspection-jobs/statuses/meta');
@@ -65,14 +72,19 @@ export const useWorkListStore = defineStore('workList', () => {
     }
   };
 
-  const fetchJobs = async () => {
+  const fetchJobs = async (params: { page?: number, limit?: number, status?: string, search?: string, type?: string, sort?: string } = {}) => {
     isLoading.value = true;
     try {
-      const response = await api.get('/inspection-jobs');
+      const response = await api.get('/inspection-jobs', { params });
       // Backend returns { data: [...], meta: ... }
-      works.value = Array.isArray(response.data) 
-        ? response.data 
-        : (response.data.data || []);
+      if (response.data && response.data.meta) {
+        works.value = response.data.data;
+        meta.value = response.data.meta;
+      } else {
+        works.value = Array.isArray(response.data) 
+          ? response.data 
+          : (response.data.data || []);
+      }
       
       await fetchStatusMeta();
     } catch (error) {
@@ -122,5 +134,5 @@ export const useWorkListStore = defineStore('workList', () => {
     }
   };
 
-  return { works, statusMeta, isLoading, fetchJobs, fetchStatusMeta, createJob, removeJob, updateJob };
+  return { works, statusMeta, meta, isLoading, fetchJobs, fetchStatusMeta, createJob, removeJob, updateJob };
 });
