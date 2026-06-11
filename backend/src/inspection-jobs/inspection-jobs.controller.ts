@@ -72,13 +72,21 @@ export class InspectionJobsController {
   findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
-    @Query('status', new ParseEnumPipe(InspectionJobStatus, { optional: true }))
-    status?: InspectionJobStatus,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('type') type?: string,
+    @Query('sort') sort?: 'asc' | 'desc',
   ) {
+    // Treat 'all' as undefined
+    const parsedStatus = status === 'all' ? undefined : (status as InspectionJobStatus);
+
     return this.inspectionJobsService.findAll(
       Number(page) || 1,
       Number(limit) || 10,
-      status,
+      parsedStatus,
+      search,
+      type,
+      sort,
     );
   }
 
