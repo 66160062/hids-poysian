@@ -37,9 +37,9 @@ describe('LinkTokenGuard', () => {
   });
 
   it('returns 401 when token is missing, invalid, or expired', async () => {
-    await expect(guard.canActivate(createContext({ query: {} }))).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      guard.canActivate(createContext({ query: {} })),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
 
     authService.verifyLinkToken.mockRejectedValueOnce(new Error('jwt expired'));
 

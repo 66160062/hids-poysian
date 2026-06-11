@@ -2,39 +2,12 @@
   <q-page class="bg-grey-1">
     <!-- Header -->
     <div class="header-container bg-white q-px-md q-py-sm row items-center justify-between shadow-1 sticky-top">
-      <q-btn flat no-caps :label="currentStep === 1 ? 'ยกเลิก' : 'ย้อนกลับ'" color="primary"
-        :icon="currentStep === 2 ? 'arrow_back_ios_new' : undefined" @click="handleBack" />
+      <q-btn flat no-caps label="ย้อนกลับ" color="primary"
+        icon="arrow_back_ios_new" @click="handleBack" />
       <div class="text-subtitle1 text-weight-bold">
         {{ isEditMode ? 'แก้ไขงาน' : 'สร้างงานใหม่' }}
       </div>
       <div style="width: 80px"></div>
-    </div>
-
-    <!-- Step Indicator -->
-    <div v-if="!isEditMode" class="step-indicator bg-white q-px-lg q-py-sm shadow-1">
-      <div class="row items-center justify-center q-gutter-x-sm">
-        <!-- Step 1 -->
-        <div class="step-item row items-center q-gutter-x-xs">
-          <div class="step-circle" :class="currentStep >= 1 ? 'step-active' : 'step-inactive'">
-            <q-icon v-if="currentStep > 1" name="check" size="14px" />
-            <span v-else class="text-caption text-weight-bold">1</span>
-          </div>
-          <span class="text-caption" :class="currentStep >= 1 ? 'text-primary text-weight-bold' : 'text-grey-5'">
-            เลือกลูกค้า
-          </span>
-        </div>
-        <!-- Divider -->
-        <div class="step-line" :class="currentStep >= 2 ? 'step-line-active' : ''"></div>
-        <!-- Step 2 -->
-        <div class="step-item row items-center q-gutter-x-xs">
-          <div class="step-circle" :class="currentStep >= 2 ? 'step-active' : 'step-inactive'">
-            <span class="text-caption text-weight-bold">2</span>
-          </div>
-          <span class="text-caption" :class="currentStep >= 2 ? 'text-primary text-weight-bold' : 'text-grey-5'">
-            รายละเอียดงาน
-          </span>
-        </div>
-      </div>
     </div>
 
     <!-- Loading State -->
@@ -43,111 +16,59 @@
       <div class="text-grey-6 q-mt-md">กำลังโหลดข้อมูล...</div>
     </div>
 
-    <!-- ============================= -->
-    <!-- STEP 1: เลือก / สร้างลูกค้า -->
-    <!-- ============================= -->
-    <div v-else-if="currentStep === 1 && !isEditMode" class="form-container q-pa-md q-gutter-y-md pb-100">
-      <!-- Header Card -->
-      <div class="customer-step-header q-pa-md">
-        <div class="row items-center q-gutter-x-sm q-mb-xs">
-          <q-icon name="person_search" size="22px" color="primary" />
-          <div class="text-subtitle1 text-weight-bold text-grey-9">ค้นหาหรือสร้างลูกค้าใหม่</div>
-        </div>
-        <div class="text-caption text-grey-5">ค้นหาลูกค้าที่มีในระบบ หรือเพิ่มลูกค้าใหม่เพื่อสร้างงาน</div>
-      </div>
-
-      <!-- Search Bar -->
-      <q-input v-model="customerSearch" dense filled placeholder="ค้นหาชื่อหรือเบอร์โทรลูกค้า..." class="custom-input"
-        clearable @clear="customerSearch = ''">
-        <template #prepend>
-          <q-icon name="search" color="grey-5" />
-        </template>
-      </q-input>
-
-      <!-- Customer List -->
-      <div class="text-caption text-grey-5 q-mb-xs">ลูกค้าที่มีในระบบ</div>
-
-      <div v-if="filteredCustomers.length === 0" class="text-center q-py-xl">
-        <q-icon name="person_off" size="48px" color="grey-4" />
-        <div class="text-grey-5 q-mt-sm">ไม่พบลูกค้าที่ค้นหา</div>
-        <div class="text-caption text-grey-4">ลองค้นหาด้วยชื่อหรือเบอร์โทรศัพท์</div>
-      </div>
-
-      <q-card v-for="customer in filteredCustomers" :key="customer.id" flat bordered class="customer-card cursor-pointer"
-        :class="{ 'customer-card-selected': selectedCustomer?.id === customer.id }"
-        @click="selectCustomer(customer)">
-        <q-card-section class="row items-center q-pa-md q-gutter-x-md">
-          <q-avatar size="44px" :color="getAvatarColor(customer.id)" text-color="white" class="text-weight-bold">
-            {{ customer.name.charAt(0) }}
-          </q-avatar>
-          <div class="col">
-            <div class="text-subtitle2 text-weight-bold text-grey-9">{{ customer.name }}</div>
-            <div class="text-caption text-grey-5">
-              <q-icon name="phone" size="12px" class="q-mr-xs" />{{ customer.phone }}
-            </div>
-            <div v-if="customer.email" class="text-caption text-grey-5">
-              <q-icon name="email" size="12px" class="q-mr-xs" />{{ customer.email }}
-            </div>
-          </div>
-          <q-icon v-if="selectedCustomer?.id === customer.id" name="check_circle" color="primary" size="24px" />
-          <q-icon v-else name="radio_button_unchecked" color="grey-4" size="24px" />
-        </q-card-section>
-      </q-card>
-
-      <!-- Add New Customer Button -->
-      <q-card flat bordered class="customer-card-new cursor-pointer" @click="showNewCustomerDialog = true">
-        <q-card-section class="row items-center q-pa-md q-gutter-x-md">
-          <q-avatar size="44px" color="primary" text-color="white">
-            <q-icon name="person_add" size="22px" />
-          </q-avatar>
-          <div class="col">
-            <div class="text-subtitle2 text-weight-bold text-primary">เพิ่มลูกค้าใหม่</div>
-            <div class="text-caption text-grey-5">สร้างโปรไฟล์ลูกค้าใหม่ในระบบ</div>
-          </div>
-          <q-icon name="chevron_right" color="grey-4" size="24px" />
-        </q-card-section>
-      </q-card>
-    </div>
-
     <!-- ================================ -->
-    <!-- STEP 2: รายละเอียดงาน (and Edit) -->
+    <!-- FORM -->
     <!-- ================================ -->
     <div v-else-if="!isLoading" class="form-container q-pa-md q-gutter-y-lg pb-100">
 
-      <!-- Selected Customer Card (create mode only) -->
-      <div v-if="!isEditMode && selectedCustomer" class="selected-customer-banner q-pa-md">
-        <div class="row items-center q-gutter-x-sm">
-          <q-avatar size="36px" :color="getAvatarColor(selectedCustomer.id)" text-color="white"
-            class="text-weight-bold text-caption">
-            {{ selectedCustomer.name.charAt(0) }}
-          </q-avatar>
-          <div class="col">
-            <div class="text-caption text-grey-5">ลูกค้าที่เลือก</div>
-            <div class="text-subtitle2 text-weight-bold text-grey-9">{{ selectedCustomer.name }}</div>
-            <div class="text-caption text-grey-5">{{ selectedCustomer.phone }}</div>
+      <!-- ข้อมูลลูกค้า -->
+      <div class="section">
+        <div class="row items-center q-mb-sm text-primary justify-between">
+          <div class="row items-center">
+            <q-icon name="person_outline" size="20px" class="q-mr-sm" />
+            <div class="text-subtitle2 text-weight-bold">ข้อมูลลูกค้า</div>
           </div>
-          <q-btn flat round dense icon="edit" color="primary" size="sm" @click="currentStep = 1">
-            <q-tooltip>เปลี่ยนลูกค้า</q-tooltip>
-          </q-btn>
+          <q-btn v-if="!isEditMode && selectedCustomer" flat dense color="negative" size="sm" icon="close" label="ยกเลิกการเลือก" @click="clearSelectedCustomer" />
         </div>
-      </div>
+        
+        <!-- ค้นหาลูกค้า -->
+        <div v-if="!isEditMode && !selectedCustomer" class="q-mb-md relative-position">
+          <q-input v-model="customerSearch" dense filled placeholder="ค้นหาชื่อหรือเบอร์โทรลูกค้าที่มีในระบบ..." class="custom-input" clearable @clear="customerSearch = ''">
+            <template #prepend>
+              <q-icon name="search" color="grey-5" />
+            </template>
+          </q-input>
+          
+          <!-- รายการลูกค้าที่ค้นพบ -->
+          <q-list v-if="customerSearch && filteredCustomers.length > 0" bordered separator class="bg-white q-mt-xs" style="border-radius: 8px; max-height: 200px; overflow-y: auto; position: absolute; z-index: 10; width: 100%;">
+            <q-item v-for="customer in filteredCustomers" :key="customer.id" clickable v-ripple @click="selectCustomer(customer)">
+              <q-item-section avatar>
+                <q-avatar size="32px" :color="getAvatarColor(customer.id)" text-color="white">{{ customer.name.charAt(0) }}</q-avatar>
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>{{ customer.name }}</q-item-label>
+                <q-item-label caption>{{ customer.phone }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+          <div v-else-if="customerSearch && filteredCustomers.length === 0" class="text-center q-pa-sm text-grey-5 bg-white q-mt-xs" style="border-radius: 8px; border: 1px solid rgba(0, 0, 0, 0.12); position: absolute; z-index: 10; width: 100%;">
+            ไม่พบลูกค้าที่ค้นหา
+          </div>
+          <div class="row items-center justify-center q-my-sm">
+            <span class="text-grey-5 text-caption">หรือ กรอกข้อมูลลูกค้าใหม่ด้านล่าง</span>
+          </div>
+        </div>
 
-      <!-- ข้อมูลลูกค้า (Edit Mode) -->
-      <div v-if="isEditMode" class="section">
-        <div class="row items-center q-mb-sm text-primary">
-          <q-icon name="person_outline" size="20px" class="q-mr-sm" />
-          <div class="text-subtitle2 text-weight-bold">ข้อมูลลูกค้า</div>
-        </div>
-        <q-card flat bordered class="q-pa-md bg-white card-rounded">
+        <q-card flat bordered class="q-pa-md bg-white card-rounded" :class="{'bg-grey-1': selectedCustomer && !isEditMode}">
           <div class="column input-group">
             <q-input v-model="form.customerName" dense filled placeholder="ชื่อ-นามสกุล" class="custom-input"
-              :rules="[(val) => !!val || 'กรุณากรอกชื่อลูกค้า']" />
+              :rules="[(val) => !!val || 'กรุณากรอกชื่อลูกค้า']" :readonly="!!selectedCustomer && !isEditMode" />
             <q-input v-model="form.customerPhone" dense filled placeholder="เบอร์โทรศัพท์" class="custom-input"
               mask="###-###-####" :rules="[
                 (val) => !!val || 'กรุณากรอกเบอร์โทรศัพท์',
                 (val) => val.length === 12 || 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก',
-              ]" />
-            <q-input v-model="form.customerEmail" dense filled placeholder="อีเมล" class="custom-input" />
+              ]" :readonly="!!selectedCustomer && !isEditMode" />
+            <q-input v-model="form.customerEmail" dense filled placeholder="อีเมล (ไม่บังคับ)" class="custom-input" :readonly="!!selectedCustomer && !isEditMode" />
           </div>
         </q-card>
       </div>
@@ -160,13 +81,31 @@
         </div>
         <q-card flat bordered class="q-pa-md bg-white card-rounded">
           <div class="column input-group">
-            <q-input v-model="form.coordName" dense filled placeholder="ชื่อ-นามสกุล" class="custom-input" />
-            <q-input v-model="form.coordPhone" dense filled placeholder="เบอร์โทรศัพท์" class="custom-input"
+            <q-input v-model="form.contractorFullName" dense filled placeholder="ชื่อ-นามสกุล" class="custom-input" />
+            <q-input v-model="form.contractorPhoneNumber" dense filled placeholder="เบอร์โทรศัพท์" class="custom-input"
               mask="###-###-####" :rules="[
                 (val) => !val || val.length === 12 || 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก',
               ]" />
-            <q-input v-model="form.coordEmail" dense filled placeholder="อีเมล" class="custom-input" />
-            <q-input v-model="form.coordidLine" dense filled placeholder="ไอดีไลน์" class="custom-input" />
+            <q-input v-model="form.contractorEmail" dense filled placeholder="อีเมล" class="custom-input" />
+            <q-input v-model="form.contractorCompanyName" dense filled placeholder="ไอดีไลน์ หรือ ชื่อบริษัท" class="custom-input" />
+          </div>
+        </q-card>
+      </div>
+
+      <!-- ข้อมูลที่อยู่โครงการ -->
+      <div class="section">
+        <div class="row items-center q-mb-sm text-primary">
+          <q-icon name="location_on" size="20px" class="q-mr-sm" />
+          <div class="text-subtitle2 text-weight-bold">ข้อมูลที่อยู่โครงการ</div>
+        </div>
+        <q-card flat bordered class="q-pa-md bg-white card-rounded">
+          <div class="column input-group">
+            <q-input v-model="form.roomNumber" dense filled placeholder="เลขที่ห้อง/บ้านเลขที่" class="custom-input" />
+            <q-input v-model="form.floor" dense filled placeholder="ชั้น/ซอย" class="custom-input" />
+            <q-input v-model="form.province" dense filled placeholder="จังหวัด" class="custom-input" />
+            <q-input v-model="form.district" dense filled placeholder="เขต/อำเภอ" class="custom-input" />
+            <q-input v-model="form.subdistrict" dense filled placeholder="แขวง/ตำบล" class="custom-input" />
+            <q-input v-model="form.postalCode" dense filled placeholder="รหัสไปรษณีย์" class="custom-input" />
           </div>
         </q-card>
       </div>
@@ -181,13 +120,6 @@
           <div class="column input-group">
             <q-input v-model="form.projectName" dense filled placeholder="ชื่อโครงการ" class="custom-input"
               :rules="[(val) => !!val || 'กรุณากรอกชื่อโครงการ']" />
-            <q-input v-model="form.roomNumber" dense filled placeholder="เลขที่ห้อง/บ้านเลขที่" class="custom-input" />
-            <q-input v-model="form.floor" dense filled placeholder="ชั้น/ซอย" class="custom-input" />
-            <q-input v-model="form.province" dense filled placeholder="จังหวัด" class="custom-input" />
-            <q-input v-model="form.district" dense filled placeholder="เขต/อำเภอ" class="custom-input" />
-            <q-input v-model="form.subdistrict" dense filled placeholder="แขวง/ตำบล" class="custom-input" />
-            <q-input v-model="form.postalCode" dense filled placeholder="รหัสไปรษณีย์" class="custom-input" />
-
             <div class="row q-col-gutter-sm">
               <div class="col-6">
                 <q-input v-model="form.usableArea" dense filled placeholder="ขนาดพื้นที่(ตารางเมตร)"
@@ -219,7 +151,7 @@
               <template v-else>
                 <q-img :src="form.housePlanImage" class="full-height full-width" fit="cover" />
                 <q-btn round dense color="negative" icon="close" class="absolute-top-right q-ma-xs shadow-2" size="sm"
-                  @click.stop="form.housePlanImage = null" />
+                  @click.stop="() => { form.housePlanImage = null; form.housePlanImageFile = null; }" />
               </template>
             </q-card>
           </div>
@@ -248,7 +180,7 @@
               <template v-else>
                 <q-img :src="form.projectImage" class="full-height full-width" fit="cover" />
                 <q-btn round dense color="negative" icon="close" class="absolute-top-right q-ma-xs shadow-2" size="sm"
-                  @click.stop="form.projectImage = null" />
+                  @click.stop="() => { form.projectImage = null; form.projectImageFile = null; }" />
               </template>
             </q-card>
           </div>
@@ -268,43 +200,9 @@
     <!-- FOOTER BUTTONS               -->
     <!-- ============================= -->
     <div class="submit-footer" v-if="!isLoading">
-      <!-- Step 1: Next Button -->
-      <q-btn v-if="currentStep === 1 && !isEditMode" unelevated label="ถัดไป → กรอกรายละเอียดงาน" color="primary"
-        class="full-width text-weight-bold submit-btn custom-button" no-caps :disable="!selectedCustomer"
-        @click="proceedToStep2" />
-
-      <!-- Step 2: Submit Button -->
-      <q-btn v-else unelevated :label="isEditMode ? 'บันทึก' : 'สร้างงานใหม่'" color="primary"
+      <q-btn unelevated :label="isEditMode ? 'บันทึก' : 'สร้างงานใหม่'" color="primary"
         class="full-width text-weight-bold submit-btn custom-button" no-caps @click="onSubmit" />
     </div>
-
-    <!-- =============================== -->
-    <!-- DIALOG: สร้างลูกค้าใหม่         -->
-    <!-- =============================== -->
-    <q-dialog v-model="showNewCustomerDialog" persistent position="bottom">
-      <q-card class="new-customer-dialog">
-        <!-- Dialog Header -->
-        <div class="row items-center justify-between q-pa-md q-pb-sm">
-          <div class="text-subtitle1 text-weight-bold">เพิ่มลูกค้าใหม่</div>
-          <q-btn flat round dense icon="close" color="grey-6" @click="closeNewCustomerDialog" />
-        </div>
-        <q-separator />
-
-        <!-- Dialog Form -->
-        <q-card-section class="q-gutter-y-sm q-pt-md">
-          <q-input v-model="newCustomerForm.name" dense filled placeholder="ชื่อ-นามสกุล *" class="custom-input"
-            :error="newCustomerFormError.name" error-message="กรุณากรอกชื่อลูกค้า" />
-          <q-input v-model="newCustomerForm.phone" dense filled placeholder="เบอร์โทรศัพท์ *" class="custom-input"
-            mask="###-###-####" :error="newCustomerFormError.phone" error-message="กรุณากรอกเบอร์โทรให้ครบ 10 หลัก" />
-          <q-input v-model="newCustomerForm.email" dense filled placeholder="อีเมล (ไม่บังคับ)" class="custom-input" />
-        </q-card-section>
-
-        <q-card-actions class="q-px-md q-pb-md q-pt-sm">
-          <q-btn unelevated label="สร้างลูกค้า" color="primary" class="full-width text-weight-bold dialog-btn"
-            no-caps :loading="isCreatingCustomer" @click="createNewCustomer" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
   </q-page>
 </template>
 
@@ -313,11 +211,26 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useWorkListStore } from '../stores/useWorkList';
+import { useCustomerStore, type Customer } from '../stores/useCustomer';
+import { useAddressStore } from '../stores/useAddress';
+import { useContractorStore } from '../stores/useContractor';
+import { useHouseTypeStore } from '../stores/useHouseType';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL as string;
+const getImageUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  if (path.startsWith('http') || path.startsWith('blob:')) return path;
+  return `${API_BASE_URL}${path}`;
+};
 
 const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
 const workStore = useWorkListStore();
+const customerStore = useCustomerStore();
+const addressStore = useAddressStore();
+const contractorStore = useContractorStore();
+const houseTypeStore = useHouseTypeStore();
 
 // ─── Edit mode ────────────────────────────────────────────────────────────
 const editId = computed(() => {
@@ -326,43 +239,18 @@ const editId = computed(() => {
 });
 const isEditMode = computed(() => editId.value !== null);
 
-// ─── Step management ──────────────────────────────────────────────────────
-// Step 1 = เลือกลูกค้า, Step 2 = รายละเอียดงาน
-const currentStep = ref(1);
-
 const handleBack = () => {
-  if (isEditMode.value || currentStep.value === 1) {
-    router.back();
-  } else {
-    currentStep.value = 1;
-  }
+  router.back();
 };
 
-// ─── Customer Selection (Step 1) ─────────────────────────────────────────
-interface Customer {
-  id: number;
-  name: string;
-  phone: string;
-  email?: string;
-}
 
-// Mock customer list – replace with real API call
-const mockCustomers: Customer[] = [
-  { id: 1, name: 'สมชาย ใจดี', phone: '081-234-5678', email: 'somchai@email.com' },
-  { id: 2, name: 'มานี รักบ้าน', phone: '062-111-2222', email: 'manee@gmail.com' },
-  { id: 3, name: 'นิภา สุขสวัสดิ์', phone: '083-555-6666', email: 'nipha@hotmail.com' },
-  { id: 4, name: 'ชยันต์ วรรณโชติ', phone: '064-999-0000', email: 'chayan@company.com' },
-  { id: 5, name: 'อรุณี ธรรมศิริ', phone: '087-456-7890', email: 'arunee@gmail.com' },
-];
-
-const customers = ref<Customer[]>(mockCustomers);
 const customerSearch = ref('');
 const selectedCustomer = ref<Customer | null>(null);
 
 const filteredCustomers = computed(() => {
   const q = customerSearch.value.toLowerCase().trim();
-  if (!q) return customers.value;
-  return customers.value.filter(
+  if (!q) return customerStore.customers;
+  return customerStore.customers.filter(
     (c) => c.name.toLowerCase().includes(q) || c.phone.includes(q),
   );
 });
@@ -372,66 +260,17 @@ const getAvatarColor = (id: number) => avatarColors[id % avatarColors.length] ??
 
 const selectCustomer = (c: Customer) => {
   selectedCustomer.value = c;
+  form.customerName = c.name;
+  form.customerPhone = c.phone;
+  form.customerEmail = c.email || '';
+  customerSearch.value = '';
 };
 
-const proceedToStep2 = () => {
-  if (!selectedCustomer.value) return;
-  currentStep.value = 2;
-};
-
-// ─── New Customer Dialog ──────────────────────────────────────────────────
-const showNewCustomerDialog = ref(false);
-const isCreatingCustomer = ref(false);
-const newCustomerForm = reactive({ name: '', phone: '', email: '' });
-const newCustomerFormError = reactive({ name: false, phone: false });
-
-const closeNewCustomerDialog = () => {
-  showNewCustomerDialog.value = false;
-  newCustomerForm.name = '';
-  newCustomerForm.phone = '';
-  newCustomerForm.email = '';
-  newCustomerFormError.name = false;
-  newCustomerFormError.phone = false;
-};
-
-const createNewCustomer = async () => {
-  // Validate
-  newCustomerFormError.name = !newCustomerForm.name.trim();
-  newCustomerFormError.phone = !newCustomerForm.phone || newCustomerForm.phone.length !== 12;
-
-  if (newCustomerFormError.name || newCustomerFormError.phone) return;
-
-  isCreatingCustomer.value = true;
-  try {
-    // TODO: Replace with real API → await api.post('/customers', newCustomerForm)
-    await new Promise((resolve) => setTimeout(resolve, 700));
-
-    const newId = Date.now();
-    const created: Customer = {
-      id: newId,
-      name: newCustomerForm.name.trim(),
-      phone: newCustomerForm.phone,
-      email: newCustomerForm.email.trim() ,
-    };
-
-    customers.value.unshift(created);
-    selectedCustomer.value = created;
-
-    $q.notify({
-      message: `สร้างลูกค้า "${created.name}" สำเร็จ`,
-      color: 'positive',
-      position: 'top',
-      icon: 'check_circle',
-    });
-
-    closeNewCustomerDialog();
-    // Auto-proceed to step 2
-    currentStep.value = 2;
-  } catch {
-    $q.notify({ message: 'เกิดข้อผิดพลาดในการสร้างลูกค้า', color: 'negative', position: 'top' });
-  } finally {
-    isCreatingCustomer.value = false;
-  }
+const clearSelectedCustomer = () => {
+  selectedCustomer.value = null;
+  form.customerName = '';
+  form.customerPhone = '';
+  form.customerEmail = '';
 };
 
 // ─── Job Form ─────────────────────────────────────────────────────────────
@@ -439,10 +278,10 @@ const form = reactive({
   customerName: '',
   customerPhone: '',
   customerEmail: '',
-  coordName: '',
-  coordPhone: '',
-  coordEmail: '',
-  coordidLine: '',
+  contractorFullName: '',
+  contractorPhoneNumber: '',
+  contractorEmail: '',
+  contractorCompanyName: '',
   projectName: '',
   roomNumber: '',
   floor: '',
@@ -451,47 +290,54 @@ const form = reactive({
   subdistrict: '',
   postalCode: '',
   usableArea: '',
-  houseType: 'บ้านเดี่ยว',
+  houseType: 1 as number | string,
   housePlanImage: null as string | null,
   projectImage: null as string | null,
+  housePlanImageFile: null as File | null,
+  projectImageFile: null as File | null,
 });
 
-const houseTypeOptions = ['บ้านเดี่ยว', 'คอนโด', 'ทาวน์เฮาส์'];
+const houseTypeOptions = computed(() => houseTypeStore.houseTypes.map(ht => ({
+  label: ht.name,
+  value: ht.house_type_id
+})));
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const currentUploadType = ref<'housePlan' | 'projectPhoto' | null>(null);
 
 const isLoading = ref(false);
 
-// Pre-fill form on edit mode
 onMounted(async () => {
+  await customerStore.fetchCustomers();
+  await houseTypeStore.fetchHouseTypes();
+
   if (!editId.value) return;
 
   isLoading.value = true;
   try {
     await new Promise((resolve) => setTimeout(resolve, 600));
 
-    const existing = workStore.works.find((w) => w.id === editId.value);
+    const existing = workStore.works.find((w) => w.jobId === editId.value);
     if (!existing) return;
 
-    form.projectName = existing.title;
-    form.houseType = existing.type;
-    form.usableArea = existing.area.replace(' ตร.ม.', '');
-    form.roomNumber = existing.roomNumber ?? '';
-    form.floor = existing.floor ?? '';
-    form.district = existing.district ?? '';
-    form.subdistrict = existing.subdistrict ?? '';
-    form.postalCode = existing.postalCode ?? '';
-    form.province = existing.province ?? '';
-    form.customerName = existing.customerName ?? '';
-    form.customerPhone = existing.customerPhone ?? '';
-    form.customerEmail = existing.customerEmail ?? '';
-    form.coordName = existing.coordName ?? '';
-    form.coordPhone = existing.coordPhone ?? '';
-    form.coordEmail = existing.coordEmail ?? '';
-    form.coordidLine = existing.coordLine ?? '';
-    form.housePlanImage = existing.housePlanImage ?? null;
-    form.projectImage = existing.projectImage ?? null;
+    form.projectName = existing.projectName || '';
+    form.houseType = existing.houseType?.house_type_id || 1;
+    form.usableArea = existing.usableArea?.toString() || '';
+    form.roomNumber = existing.address?.houseNumber || '';
+    form.floor = existing.address?.floor || '';
+    form.district = existing.address?.district || '';
+    form.subdistrict = existing.address?.subDistrict || '';
+    form.postalCode = existing.address?.postalCode || '';
+    form.province = existing.address?.province || '';
+    form.customerName = existing.customer?.fullName || '';
+    form.customerPhone = existing.customer?.phoneNumber || '';
+    form.customerEmail = existing.customer?.email || '';
+    form.contractorFullName = existing.contractor?.fullName || '';
+    form.contractorPhoneNumber = existing.contractor?.phoneNumber || '';
+    form.contractorEmail = existing.contractor?.email || '';
+    form.contractorCompanyName = existing.contractor?.companyName || '';
+    form.housePlanImage = getImageUrl(existing.housePlanUrl);
+    form.projectImage = getImageUrl(existing.projectImageUrl);
   } finally {
     isLoading.value = false;
   }
@@ -509,30 +355,15 @@ const handleFileChange = (e: Event) => {
     const url = URL.createObjectURL(file);
     if (currentUploadType.value === 'housePlan') {
       form.housePlanImage = url;
+      form.housePlanImageFile = file;
     } else {
       form.projectImage = url;
+      form.projectImageFile = file;
     }
   }
 };
 
-// ─── Mock API ──────────────────────────────────────────────────────────────
-const createCustomerAPI = async (data: Record<string, unknown>) => {
-  console.log('Mock POST /customers', data);
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return { id: Math.floor(Math.random() * 1000) };
-};
 
-const createJobAPI = async (customerId: number, data: Record<string, unknown>) => {
-  console.log('Mock POST /jobs with customerId:', customerId, data);
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return { id: Math.floor(Math.random() * 1000) };
-};
-
-const updateJobAPI = async (jobId: number, data: Record<string, unknown>) => {
-  console.log('Mock PUT /jobs/', jobId, data);
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return true;
-};
 
 // ─── Submit ────────────────────────────────────────────────────────────────
 const isSubmitting = ref(false);
@@ -549,20 +380,7 @@ const onSubmit = async () => {
     return;
   }
 
-  // In create mode, customer must be selected
-  if (!isEditMode.value && !selectedCustomer.value) {
-    $q.notify({
-      message: 'กรุณาเลือกลูกค้าก่อนสร้างงาน',
-      color: 'negative',
-      position: 'top',
-      icon: 'warning',
-    });
-    currentStep.value = 1;
-    return;
-  }
-
-  // In edit mode, customer name/phone are required
-  if (isEditMode.value && (!form.customerName || !form.customerPhone)) {
+  if (!form.customerName || !form.customerPhone) {
     $q.notify({
       message: 'กรุณากรอกชื่อลูกค้าและเบอร์โทรศัพท์',
       color: 'negative',
@@ -572,12 +390,22 @@ const onSubmit = async () => {
     return;
   }
 
+  if (form.contractorFullName || form.contractorPhoneNumber || form.contractorEmail || form.contractorCompanyName) {
+    if (!form.contractorFullName || !form.contractorPhoneNumber) {
+      $q.notify({
+        message: 'กรุณากรอกชื่อและเบอร์โทรศัพท์ของผู้รับเหมา',
+        color: 'negative',
+        position: 'top',
+        icon: 'warning',
+      });
+      return;
+    }
+  }
+
   isSubmitting.value = true;
   $q.loading.show({ message: 'กำลังบันทึกข้อมูล...' });
 
   try {
-    const displayDate = 'ยังไม่กำหนด';
-    const displayArea = form.usableArea ? `${form.usableArea} ตร.ม.` : '-';
 
     const addressParts: string[] = [];
     if (form.roomNumber) addressParts.push(`เลขที่ ${form.roomNumber}`);
@@ -586,39 +414,66 @@ const onSubmit = async () => {
     if (form.district) addressParts.push(`ข./อ.${form.district}`);
     if (form.province) addressParts.push(`จ.${form.province}`);
     if (form.postalCode) addressParts.push(`${form.postalCode}`);
-    const fullAddress = addressParts.join(' ') || '-';
 
     if (isEditMode.value && editId.value) {
-      // Update
-      await updateJobAPI(editId.value, { ...form, displayDate, displayArea, fullAddress });
+      const existingJob = workStore.works.find((w) => w.jobId === editId.value);
+      
+      if (existingJob) {
+        if (existingJob.customer) {
+          await customerStore.updateCustomer(existingJob.customer.customerId, {
+            name: form.customerName,
+            phone: form.customerPhone,
+            email: form.customerEmail,
+          });
+        }
+        
+        if (existingJob.address) {
+          await addressStore.updateAddress(existingJob.address.addressId, {
+            roomNumber: form.roomNumber,
+            floor: form.floor,
+            province: form.province,
+            district: form.district,
+            subdistrict: form.subdistrict,
+            postalCode: form.postalCode,
+          });
+        }
 
-      const idx = workStore.works.findIndex((w) => w.id === editId.value);
-      if (idx !== -1) {
-        const original = workStore.works[idx]!;
-        workStore.works[idx] = {
-          ...original,
-          title: form.projectName,
-          type: form.houseType,
-          area: displayArea,
-          date: displayDate,
-          customerName: form.customerName,
-          customerPhone: form.customerPhone,
-          customerEmail: form.customerEmail,
-          coordName: form.coordName,
-          coordPhone: form.coordPhone,
-          coordEmail: form.coordEmail,
-          coordLine: form.coordidLine,
-          roomNumber: form.roomNumber,
-          floor: form.floor,
-          district: form.district,
-          subdistrict: form.subdistrict,
-          postalCode: form.postalCode,
-          province: form.province,
-          address: fullAddress,
-          housePlanImage: form.housePlanImage,
-          projectImage: form.projectImage,
-        };
+        let finalContractorId: number | null = existingJob.contractor?.contractorId || null;
+        if (form.contractorFullName && form.contractorPhoneNumber) {
+          if (finalContractorId) {
+            await contractorStore.updateContractor(finalContractorId, {
+              fullName: form.contractorFullName,
+              phoneNumber: form.contractorPhoneNumber,
+              email: form.contractorEmail,
+              companyName: form.contractorCompanyName,
+            });
+          } else {
+            const newContractor = await contractorStore.createContractor({
+              fullName: form.contractorFullName,
+              phoneNumber: form.contractorPhoneNumber,
+              email: form.contractorEmail,
+              companyName: form.contractorCompanyName,
+            });
+            finalContractorId = newContractor.contractorId;
+          }
+        }
+
+        const jobFormData = new FormData();
+        jobFormData.append('inspectionType', 'ตรวจ Defect');
+        jobFormData.append('houseTypeId', String(form.houseType));
+        jobFormData.append('projectName', form.projectName);
+        jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
+        if (finalContractorId) jobFormData.append('contractorId', String(finalContractorId));
+        if (form.projectImageFile) jobFormData.append('projectImageUrl', form.projectImageFile);
+        else if (form.projectImage === null) jobFormData.append('projectImageUrl', '');
+        
+        if (form.housePlanImageFile) jobFormData.append('housePlanUrl', form.housePlanImageFile);
+        else if (form.housePlanImage === null) jobFormData.append('housePlanUrl', '');
+        
+        await workStore.updateJob(editId.value, jobFormData);
       }
+      await workStore.fetchJobs();
+
       $q.notify({
         message: `แก้ไขงาน "${form.projectName}" สำเร็จ!`,
         color: 'positive',
@@ -627,50 +482,62 @@ const onSubmit = async () => {
       });
       await router.push(`/admin/work/${editId.value}`);
     } else {
-      // Create: use selectedCustomer
-      const cust = selectedCustomer.value!;
+      // 1. Create or Get Customer
+      let customerId: number;
+      if (selectedCustomer.value) {
+        customerId = selectedCustomer.value.id;
+      } else {
+        const newCust = await customerStore.createCustomer({
+          name: form.customerName,
+          phone: form.customerPhone,
+          email: form.customerEmail,
+          lineId: '',
+        });
+        customerId = newCust.id;
+      }
 
-      // 1. Call customer API (already exists – skip in real flow if customer was pre-existing)
-      const customerMockResponse = await createCustomerAPI({
-        name: cust.name,
-        phone: cust.phone,
-        email: cust.email,
-      });
-      const customerId = customerMockResponse.id;
-
-      // 2. Create job
-      await createJobAPI(customerId, {
-        projectName: form.projectName,
-        houseType: form.houseType,
-        appointmentDate: displayDate,
-      });
-
-      // 3. Update local store
-      workStore.addWork({
-        title: form.projectName,
-        type: form.houseType,
-        area: displayArea,
-        inspector: '-',
-        date: displayDate,
-        status: 'รอดำเนินการ',
-        statusKey: 'waiting',
-        customerName: cust.name,
-        customerPhone: cust.phone,
-        customerEmail: cust.email ?? '',
-        coordName: form.coordName,
-        coordPhone: form.coordPhone,
-        coordEmail: form.coordEmail,
-        coordLine: form.coordidLine,
+      // 2. Create Address
+      const addressId = await addressStore.createAddress({
         roomNumber: form.roomNumber,
         floor: form.floor,
+        province: form.province,
         district: form.district,
         subdistrict: form.subdistrict,
         postalCode: form.postalCode,
-        province: form.province,
-        address: fullAddress,
-        housePlanImage: form.housePlanImage,
-        projectImage: form.projectImage,
       });
+
+      let finalContractorId: number | null = null;
+      if (form.contractorFullName && form.contractorPhoneNumber) {
+        const newContractor = await contractorStore.createContractor({
+          fullName: form.contractorFullName,
+          phoneNumber: form.contractorPhoneNumber,
+          email: form.contractorEmail,
+          companyName: form.contractorCompanyName,
+        });
+        finalContractorId = newContractor.contractorId;
+      }
+
+      // 3. Create Job
+      const jobFormData = new FormData();
+      jobFormData.append('customerId', String(customerId));
+      jobFormData.append('addressId', String(addressId));
+      if (finalContractorId) jobFormData.append('contractorId', String(finalContractorId));
+      jobFormData.append('inspectionType', 'ตรวจ Defect');
+      jobFormData.append('houseTypeId', String(form.houseType));
+      jobFormData.append('projectName', form.projectName);
+      jobFormData.append('locationCoordinate', '-');
+      jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
+      jobFormData.append('status', 'Draft');
+
+      if (form.projectImageFile) {
+        jobFormData.append('projectImageUrl', form.projectImageFile);
+      }
+      if (form.housePlanImageFile) {
+        jobFormData.append('housePlanUrl', form.housePlanImageFile);
+      }
+
+      await workStore.createJob(jobFormData);
+      await workStore.fetchJobs();
 
       $q.notify({
         message: `สร้างงาน "${form.projectName}" สำเร็จ!`,

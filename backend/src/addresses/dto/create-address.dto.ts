@@ -4,7 +4,7 @@ import { IsString } from 'class-validator';
 export class CreateAddressDto {
   @ApiProperty({ description: 'บ้านเลขที่', example: '123' })
   @IsString()
-  house_number!: string;
+  houseNumber!: string;
 
   @ApiProperty({ description: 'ชั้น', example: '2' })
   @IsString()
@@ -16,7 +16,7 @@ export class CreateAddressDto {
 
   @ApiProperty({ description: 'ตำบล/แขวง', example: 'คลองเตยเหนือ' })
   @IsString()
-  sub_district!: string;
+  subDistrict!: string;
 
   @ApiProperty({ description: 'อำเภอ/เขต', example: 'วัฒนา' })
   @IsString()
@@ -28,5 +28,5 @@ export class CreateAddressDto {
 
   @ApiProperty({ description: 'รหัสไปรษณีย์', example: '10110' })
   @IsString()
-  postal_code!: string;
+  postalCode!: string;
 }

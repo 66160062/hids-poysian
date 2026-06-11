@@ -11,7 +11,7 @@ import { ContractorService } from './contractor.service';
 import { CreateContractorDto } from './dto/create-contractor.dto';
 import { UpdateContractorDto } from './dto/update-contractor.dto';
 
-@Controller('contractor')
+@Controller('contractors')
 export class ContractorController {
   constructor(private readonly contractorService: ContractorService) {}
 

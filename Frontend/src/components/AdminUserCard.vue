@@ -40,15 +40,7 @@
           >
             {{ user.role.toUpperCase() }}
           </q-chip>
-          <q-chip
-            v-if="user.role !== 'admin' && (user.teamId || user.team?.team_Id)"
-            dense
-            color="grey-2"
-            text-color="grey-8"
-            class="text-caption q-ml-sm q-ma-none"
-          >
-            ทีม {{ getTeamName(user.teamId || user.team?.team_Id) }}
-          </q-chip>
+          
         </div>
 
         <div class="text-caption text-grey-8 row items-center q-mt-sm">
@@ -85,28 +77,18 @@ const getImageUrl = (url?: string | null) => {
   return `${import.meta.env.VITE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
-interface Option {
-  label: string;
-  value: string | number;
-}
 
-const props = defineProps({
+
+defineProps({
   user: {
     type: Object as () => User,
     required: true,
-  },
-  teamOptions: {
-    type: Array as () => Option[],
-    default: () => [],
-  },
+  }
 });
 
 defineEmits(['edit', 'delete']);
 
-const getTeamName = (teamId: number | null | undefined) => {
-  const team = props.teamOptions.find((t) => t.value === teamId);
-  return team ? team.label : 'ไม่ระบุ';
-};
+
 </script>
 
 <style scoped>

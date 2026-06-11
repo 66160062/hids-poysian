@@ -1,6 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateInspectionJobDto {
   @ApiProperty({
@@ -10,6 +16,16 @@ export class CreateInspectionJobDto {
   @Type(() => Number)
   @IsNumber()
   customerId!: number;
+
+  @ApiProperty({
+    description: 'รหัสผู้รับเหมา (Contractor ID)',
+    example: 1,
+    required: false,
+  })
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  contractorId?: number;
 
   @ApiProperty({
     description: 'ประเภทการตรวจ',
@@ -44,12 +60,15 @@ export class CreateInspectionJobDto {
   locationCoordinate!: string;
 
   @ApiProperty({
-    description: 'ลิงก์ไฟล์แปลนบ้าน',
-    example: 'https://example.com/plan.pdf',
+    type: 'string',
+    format: 'binary',
+    description: 'ไฟล์แปลนบ้าน',
+    required: false,
   })
   @IsString()
+  @IsOptional()
   @MaxLength(255)
-  housePlanUrl!: string;
+  housePlanUrl?: string;
 
   @ApiProperty({ description: 'พื้นที่ใช้สอย (ตารางเมตร)', example: 150.5 })
   @Type(() => Number)

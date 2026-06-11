@@ -24,7 +24,7 @@ export class CustomersService {
   }
 
   update(id: number, updateCustomerDto: UpdateCustomerDto) {
-    return this.customersRepo.update(id, updateCustomerDto);
+    return this.customersRepo.update({ customerId: id }, updateCustomerDto);
   }
 
   remove(id: number) {

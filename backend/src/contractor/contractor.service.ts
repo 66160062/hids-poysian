@@ -10,9 +10,10 @@ export class ContractorService {
   constructor(
     @InjectRepository(Contractor)
     private readonly contractorRepo: Repository<Contractor>,
-  ) {}
+  ) { }
   async create(createContractorDto: CreateContractorDto) {
-    return await this.contractorRepo.save(createContractorDto);
+    const contractor = this.contractorRepo.create(createContractorDto);
+    return await this.contractorRepo.save(contractor);
   }
 
   async findAll() {
@@ -24,7 +25,7 @@ export class ContractorService {
   }
 
   async update(id: number, updateContractorDto: UpdateContractorDto) {
-    return await this.contractorRepo.update(id, updateContractorDto);
+    return await this.contractorRepo.update({ contractorId: id }, updateContractorDto);
   }
 
   async remove(id: number) {

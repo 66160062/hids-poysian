@@ -17,15 +17,15 @@ export class Contractor {
   @Column({ type: 'varchar', length: 255 })
   phoneNumber!: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  email!: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  email?: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  comapanyName!: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  comapanyName?: string;
 
   @CreateDateColumn()
   createdAt!: Date;
 
   @DeleteDateColumn()
-  deleteAt!: Date;
+  deletedAt!: Date;
 }

@@ -303,6 +303,14 @@ import { useQuasar } from 'quasar';
 import { api } from 'src/boot/axios';
 import { useUserStore } from '../stores/useUser';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL as string;
+
+const getImageUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${API_BASE_URL}${path}`;
+};
+
 interface AddressEntity {
   houseNumber?: string;
   floor?: string;
@@ -320,8 +328,11 @@ interface JobApiResponse {
   housePlanUrl?: string;
   projectImageUrl?: string;
   customer?: { fullName?: string; phoneNumber?: string; email?: string; lineId?: string };
+  contractor?: { fullName?: string; phoneNumber?: string; email?: string; companyName?: string };
   houseType?: { name?: string };
   address?: AddressEntity;
+  createdAt?: string;
+  status?: string;
 }
 
 interface RoundApiResponse {
@@ -343,7 +354,7 @@ const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
 const userStore = useUserStore();
-const apiUrl = import.meta.env.VITE_API_URL;
+
 
 const jobId = computed(() => Number(route.params.id));
 const isLoading = ref(true);
@@ -351,18 +362,7 @@ const isSubmittingRound = ref(false);
 const jobData = ref<JobApiResponse | null>(null);
 const jobTeamMembers = ref<TeamMemberChip[]>([]);
 
-const formatAddress = (address?: AddressEntity) => {
-  if (!address) return '-';
-  const parts = [
-    address.houseNumber ? `เลขที่ ${address.houseNumber}` : '',
-    address.soi ? `ถ.${address.soi}` : '',
-    address.subDistrict ? `ต.${address.subDistrict}` : '',
-    address.district ? `อ.${address.district}` : '',
-    address.province ? `จ.${address.province}` : '',
-    address.postalCode ?? '',
-  ].filter(Boolean);
-  return parts.join(' ') || '-';
-};
+
 
 const formatRoundDate = (dateStr: string) => {
   if (!dateStr) return '-';
@@ -465,32 +465,47 @@ const job = computed(() => {
       coordPhone: '-',
       coordEmail: '-',
       coordLine: '-',
-      housePlanImage: null,
-      projectImage: null,
+      housePlanImage: null as string | null,
+      projectImage: null as string | null,
       status: '-',
       statusKey: '',
     };
   }
 
+  const formatAddressStr = (addr?: AddressEntity) => {
+    if (!addr) return '-';
+    
+    const parts = [];
+    if (addr.houseNumber) parts.push(`เลขที่ ${addr.houseNumber}`);
+    if (addr.floor && addr.floor !== '-' && addr.floor !== '') parts.push(`ชั้น ${addr.floor}`);
+    if (addr.soi && addr.soi !== '-' && addr.soi !== '') parts.push(`ซอย ${addr.soi}`);
+    if (addr.subDistrict) parts.push(`ต.${addr.subDistrict}`);
+    if (addr.district) parts.push(`อ.${addr.district}`);
+    if (addr.province) parts.push(`จ.${addr.province}`);
+    if (addr.postalCode) parts.push(`${addr.postalCode}`);
+    
+    return parts.length > 0 ? parts.join(' ') : '-';
+  };
+
   const latestRound = inspectionRounds.value[inspectionRounds.value.length - 1];
 
   return {
-    projectName: data.projectName ?? '-',
-    houseType: data.houseType?.name ?? '-',
-    area: String(data.usableArea ?? '-'),
-    appointmentDate: latestRound?.date ?? '-',
-    address: formatAddress(data.address),
-    customerName: data.customer?.fullName ?? '-',
-    customerPhone: data.customer?.phoneNumber ?? '-',
-    customerEmail: data.customer?.email ?? '-',
-    coordName: '-',
-    coordPhone: '-',
-    coordEmail: '-',
-    coordLine: '-',
-    housePlanImage: data.housePlanUrl ? `${apiUrl}${data.housePlanUrl}` : null,
-    projectImage: data.projectImageUrl ? `${apiUrl}${data.projectImageUrl}` : null,
-    status: latestRound?.status ?? '-',
-    statusKey: '',
+    projectName: data.projectName || '-',
+    houseType: data.houseType?.name || '-',
+    area: data.usableArea?.toString() || '-',
+    appointmentDate: latestRound?.date || (data.createdAt ? new Date(data.createdAt).toLocaleDateString('th-TH') : '-'),
+    address: formatAddressStr(data.address),
+    customerName: data.customer?.fullName || '-',
+    customerPhone: data.customer?.phoneNumber || '-',
+    customerEmail: data.customer?.email || '-',
+    coordName: data.contractor?.fullName || '-',
+    coordPhone: data.contractor?.phoneNumber || '-',
+    coordEmail: data.contractor?.email || '-',
+    coordLine: data.contractor?.companyName || '-', 
+    housePlanImage: getImageUrl(data.housePlanUrl),
+    projectImage: getImageUrl(data.projectImageUrl),
+    status: latestRound?.status || data.status || '-',
+    statusKey: (latestRound?.status || data.status) === 'Active' ? 'in_progress' : 'waiting',
   };
 });
 
