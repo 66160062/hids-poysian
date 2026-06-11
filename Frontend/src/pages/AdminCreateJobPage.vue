@@ -100,11 +100,11 @@
         </div>
         <q-card flat bordered class="q-pa-md bg-white card-rounded">
           <div class="column input-group">
-            <q-input v-model="form.roomNumber" dense filled placeholder="เลขที่ห้อง/บ้านเลขที่" class="custom-input" />
+            <q-input v-model="form.houseNumber" dense filled placeholder="เลขที่ห้อง/บ้านเลขที่" class="custom-input" />
             <q-input v-model="form.floor" dense filled placeholder="ชั้น/ซอย" class="custom-input" />
             <q-input v-model="form.province" dense filled placeholder="จังหวัด" class="custom-input" />
             <q-input v-model="form.district" dense filled placeholder="เขต/อำเภอ" class="custom-input" />
-            <q-input v-model="form.subdistrict" dense filled placeholder="แขวง/ตำบล" class="custom-input" />
+            <q-input v-model="form.subDistrict" dense filled placeholder="ตำบล/แขวง" class="custom-input" />
             <q-input v-model="form.postalCode" dense filled placeholder="รหัสไปรษณีย์" class="custom-input" />
           </div>
         </q-card>
@@ -283,11 +283,11 @@ const form = reactive({
   contractorEmail: '',
   contractorCompanyName: '',
   projectName: '',
-  roomNumber: '',
+  houseNumber: '',
   floor: '',
   province: '',
   district: '',
-  subdistrict: '',
+  subDistrict: '',
   postalCode: '',
   usableArea: '',
   houseType: 1 as number | string,
@@ -323,12 +323,12 @@ onMounted(async () => {
     form.projectName = existing.projectName || '';
     form.houseType = existing.houseType?.house_type_id || 1;
     form.usableArea = existing.usableArea?.toString() || '';
-    form.roomNumber = existing.address?.houseNumber || '';
+    form.houseNumber = existing.address?.houseNumber || '';
     form.floor = existing.address?.floor || '';
-    form.district = existing.address?.district || '';
-    form.subdistrict = existing.address?.subDistrict || '';
-    form.postalCode = existing.address?.postalCode || '';
     form.province = existing.address?.province || '';
+    form.district = existing.address?.district || '';
+    form.subDistrict = existing.address?.subDistrict || '';
+    form.postalCode = existing.address?.postalCode || '';
     form.customerName = existing.customer?.fullName || '';
     form.customerPhone = existing.customer?.phoneNumber || '';
     form.customerEmail = existing.customer?.email || '';
@@ -408,10 +408,10 @@ const onSubmit = async () => {
   try {
 
     const addressParts: string[] = [];
-    if (form.roomNumber) addressParts.push(`เลขที่ ${form.roomNumber}`);
+    if (form.houseNumber) addressParts.push(`เลขที่ ${form.houseNumber}`);
     if (form.floor && form.floor !== '-') addressParts.push(`ชั้น ${form.floor}`);
-    if (form.subdistrict) addressParts.push(`ข./ต.${form.subdistrict}`);
-    if (form.district) addressParts.push(`ข./อ.${form.district}`);
+    if (form.subDistrict) addressParts.push(`ต.${form.subDistrict}`);
+    if (form.district) addressParts.push(`อ.${form.district}`);
     if (form.province) addressParts.push(`จ.${form.province}`);
     if (form.postalCode) addressParts.push(`${form.postalCode}`);
 
@@ -429,11 +429,11 @@ const onSubmit = async () => {
         
         if (existingJob.address) {
           await addressStore.updateAddress(existingJob.address.addressId, {
-            roomNumber: form.roomNumber,
+            houseNumber: form.houseNumber,
             floor: form.floor,
             province: form.province,
             district: form.district,
-            subdistrict: form.subdistrict,
+            subDistrict: form.subDistrict,
             postalCode: form.postalCode,
           });
         }
@@ -462,6 +462,7 @@ const onSubmit = async () => {
         jobFormData.append('inspectionType', 'ตรวจ Defect');
         jobFormData.append('houseTypeId', String(form.houseType));
         jobFormData.append('projectName', form.projectName);
+        jobFormData.append('locationCoordinate', '');
         jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
         if (finalContractorId) jobFormData.append('contractorId', String(finalContractorId));
         if (form.projectImageFile) jobFormData.append('projectImageUrl', form.projectImageFile);
@@ -498,11 +499,11 @@ const onSubmit = async () => {
 
       // 2. Create Address
       const addressId = await addressStore.createAddress({
-        roomNumber: form.roomNumber,
+        houseNumber: form.houseNumber,
         floor: form.floor,
         province: form.province,
         district: form.district,
-        subdistrict: form.subdistrict,
+        subDistrict: form.subDistrict,
         postalCode: form.postalCode,
       });
 
@@ -525,7 +526,7 @@ const onSubmit = async () => {
       jobFormData.append('inspectionType', 'ตรวจ Defect');
       jobFormData.append('houseTypeId', String(form.houseType));
       jobFormData.append('projectName', form.projectName);
-      jobFormData.append('locationCoordinate', '-');
+      jobFormData.append('locationCoordinate', '');
       jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
       jobFormData.append('status', 'Draft');
 

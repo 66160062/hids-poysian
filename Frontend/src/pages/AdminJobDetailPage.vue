@@ -653,6 +653,7 @@ const submitCreateRound = async () => {
     await fetchTeamMembers();
     const rounds = await fetchRounds();
     applyRounds(rounds);
+    await fetchJobDetails();
 
     const createdRound = inspectionRounds.value[inspectionRounds.value.length - 1];
     $q.notify({

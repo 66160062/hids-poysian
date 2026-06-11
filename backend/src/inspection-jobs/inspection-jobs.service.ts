@@ -71,15 +71,45 @@ export class InspectionJobsService {
     return this.inspectionsRepo.save(inspectionJob);
   }
 
-  async findAll(page = 1, limit = 10, status?: InspectionJobStatus) {
+  async findAll(
+    page = 1,
+    limit = 10,
+    status?: InspectionJobStatus,
+    search?: string,
+    type?: string,
+    sort?: 'asc' | 'desc',
+  ) {
     limit = Math.min(limit, 100);
-    const [data, total] = await this.inspectionsRepo.findAndCount({
-      relations: ['customer', 'address', 'houseType', 'contractor'],
-      where: status ? { status } : {},
-      skip: (page - 1) * limit,
-      take: limit,
-      order: { jobId: 'DESC' },
-    });
+    const query = this.inspectionsRepo
+      .createQueryBuilder('job')
+      .leftJoinAndSelect('job.customer', 'customer')
+      .leftJoinAndSelect('job.address', 'address')
+      .leftJoinAndSelect('job.houseType', 'houseType')
+      .leftJoinAndSelect('job.contractor', 'contractor');
+
+    if (status && status !== 'all' as unknown) {
+      query.andWhere('job.status = :status', { status });
+    }
+
+    if (type && type !== 'ทั้งหมด') {
+      query.andWhere('houseType.name = :type', { type });
+    }
+
+    if (search) {
+      query.andWhere(
+        '(LOWER(job.projectName) LIKE LOWER(:search) OR LOWER(customer.fullName) LIKE LOWER(:search))',
+        { search: `%${search}%` }
+      );
+    }
+
+    query
+      .addSelect(`CASE WHEN job.status = 'Draft' THEN 0 ELSE 1 END`, 'status_order')
+      .orderBy('status_order', 'ASC')
+      .addOrderBy('job.jobId', sort === 'asc' ? 'ASC' : 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [data, total] = await query.getManyAndCount();
 
     return {
       data,
