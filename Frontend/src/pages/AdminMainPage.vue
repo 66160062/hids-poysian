@@ -349,7 +349,15 @@ interface TaskItem {
   customer: string;  // <- เพิ่มชื่อลูกค้า
 }
 
-const tasks = ref<TaskItem[]>([]);
+const tasks = ref<TaskItem[]>([
+  { id: 1, title: 'คอนโดบูรพาภิรมย์', meta: 'TEAM-A • วันนี้, 10:00 AM', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', icon: 'domain', avatarBgClass: 'bg-blue-1', avatarTextColor: 'primary', day: new Date().getDate(), team: 'TEAM-A', customer: 'บารัก โกเมน' },
+  { id: 2, title: 'บ้านใหญ่พลังชล', meta: 'TEAM-A • เมื่อวาน', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', icon: 'home', avatarBgClass: 'bg-green-1', avatarTextColor: 'positive', day: 3, team: 'TEAM-A', customer: 'ริชชี่ ชาช่า' },
+  { id: 3, title: 'บ้านใหม่ชลบุรี', meta: 'TEAM-B • Jan 24', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', icon: 'home', avatarBgClass: 'bg-grey-2', avatarTextColor: 'grey-8', day: 8, team: 'TEAM-B', customer: 'ริชชี่ ชาช่า' },
+  { id: 4, title: 'แสนสิริ คอนโด', meta: 'TEAM-B • Jan 22', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', icon: 'domain', avatarBgClass: 'bg-blue-1', avatarTextColor: 'primary', day: 12, team: 'TEAM-B', customer: 'ริชชี่ ชาช่า' },
+  { id: 5, title: 'โครงการบุญเลิศ', meta: 'TEAM-C • Jan 20', status: 'เสร็จสิ้น', statusBgClass: 'bg-green-1', statusTextColor: 'positive', icon: 'roofing', avatarBgClass: 'bg-purple-1', avatarTextColor: 'purple', day: 20, team: 'TEAM-C', customer: 'ริชชี่ ชาช่า' },
+  { id: 6, title: 'บ้านชลลดา', meta: 'TEAM-A • Jan 18', status: 'กำลังดำเนินการ', statusBgClass: 'bg-blue-1', statusTextColor: 'primary', icon: 'home', avatarBgClass: 'bg-green-1', avatarTextColor: 'positive', day: 18, team: 'TEAM-A', customer: 'สมชาย' },
+  { id: 7, title: 'บ้านริมทะเล', meta: 'TEAM-B • Jan 17', status: 'รออนุมัติ', statusBgClass: 'bg-orange-1', statusTextColor: 'orange-8', icon: 'home', avatarBgClass: 'bg-grey-2', avatarTextColor: 'grey-8', day: 17, team: 'TEAM-B', customer: 'พีระ' },
+]);
 
 const currentPage = ref(1);
 const pageSize = 4;
@@ -404,9 +412,6 @@ async function fetchAdminDashboard(): Promise<void> {
       construction: data.construction,
     };
 
-    if (Array.isArray(data.tasks)) {
-      tasks.value = data.tasks;
-    }
   } catch (err: unknown) {
     error.value = 'เกิดข้อผิดพลาดในการโหลดข้อมูล โปรดลองใหม่อีกครั้ง';
     console.error('fetchAdminDashboard error:', err);

@@ -21,7 +21,7 @@ export class Contractor {
   email?: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  companyName?: string;
+  comapanyName?: string;
 
   @CreateDateColumn()
   createdAt!: Date;
