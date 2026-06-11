@@ -3,22 +3,22 @@ import { api } from 'src/boot/axios';
 
 export const useAddressStore = defineStore('address', () => {
   const createAddress = async (payload: {
-    roomNumber: string;
+    houseNumber: string;
     floor: string;
     province: string;
     district: string;
-    subdistrict: string;
+    subDistrict: string;
     postalCode: string;
   }) => {
     try {
       const response = await api.post('/addresses', {
-        houseNumber: payload.roomNumber || '-',
-        floor: payload.floor || '-',
-        soi: '-',
-        subDistrict: payload.subdistrict || '-',
-        district: payload.district || '-',
-        province: payload.province || '-',
-        postalCode: payload.postalCode || '-',
+        houseNumber: payload.houseNumber || '',
+        floor: payload.floor || '',
+        soi: '',
+        subDistrict: payload.subDistrict || '',
+        district: payload.district || '',
+        province: payload.province || '',
+        postalCode: payload.postalCode || '',
       });
       return response.data.addressId || response.data.id || 1;
     } catch (error) {
@@ -28,22 +28,22 @@ export const useAddressStore = defineStore('address', () => {
   };
 
   const updateAddress = async (id: number, payload: {
-    roomNumber: string;
+    houseNumber: string;
     floor: string;
     province: string;
     district: string;
-    subdistrict: string;
+    subDistrict: string;
     postalCode: string;
   }) => {
     try {
       const response = await api.patch(`/addresses/${id}`, {
-        houseNumber: payload.roomNumber || '-',
-        floor: payload.floor || '-',
-        soi: '-',
-        subDistrict: payload.subdistrict || '-',
-        district: payload.district || '-',
-        province: payload.province || '-',
-        postalCode: payload.postalCode || '-',
+        houseNumber: payload.houseNumber || '',
+        floor: payload.floor || '',
+        soi: '',
+        subDistrict: payload.subDistrict || '',
+        district: payload.district || '',
+        province: payload.province || '',
+        postalCode: payload.postalCode || '',
       });
       return response.data;
     } catch (error) {

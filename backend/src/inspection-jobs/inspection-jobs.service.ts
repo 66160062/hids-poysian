@@ -103,7 +103,9 @@ export class InspectionJobsService {
     }
 
     query
-      .orderBy('job.jobId', sort === 'asc' ? 'ASC' : 'DESC')
+      .addSelect(`CASE WHEN job.status = 'Draft' THEN 0 ELSE 1 END`, 'status_order')
+      .orderBy('status_order', 'ASC')
+      .addOrderBy('job.jobId', sort === 'asc' ? 'ASC' : 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 

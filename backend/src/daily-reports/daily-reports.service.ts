@@ -148,6 +148,10 @@ export class DailyReportsService {
         status: createRoundDto.status ?? 'SCHEDULED',
       });
 
+      // Update job status to Active when a round is created
+      job.status = 'Active';
+      await manager.getRepository(InspectionJob).save(job);
+
       return manager.getRepository(InspectionRound).save(round);
     });
   }
