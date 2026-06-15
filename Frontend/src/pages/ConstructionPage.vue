@@ -113,11 +113,11 @@
 
       <div class="q-px-lg q-mb-md">
         <div class="row justify-between items-end">
-          <div class="text-weight-bold" style="font-size: 16px">รายการงานตรวจ</div>
+          <div class="text-weight-bold" style="font-size: 16px">รายการงานก่อสร้าง</div>
           <div class="text-weight-bold" style="font-size: 15px">วันที่ {{ selectedDateLabel }}</div>
         </div>
         <div class="text-grey-6 q-mt-xs" style="font-size: 12px">
-          สรุป: ตรวจบ้าน {{ selectedDayRounds.length }} 
+          สรุป: มี {{ selectedDayRounds.length }} งานในวันที่เลือก
         </div>
       </div>
 
@@ -127,7 +127,7 @@
 
       <div v-else class="q-px-lg q-mb-xl">
         <div v-if="selectedDayRounds.length === 0" class="text-center text-grey q-pa-xl">
-          ไม่มีงานตรวจในวันนี้
+          ไม่มีงานในวันนี้
         </div>
 
         <template v-else>
@@ -156,70 +156,6 @@
           </div>
         </template>
       </div>
-
-      <div class="fixed-bottom row justify-center" style="pointer-events: none; z-index: 100">
-        <div
-          class="bg-white row items-center"
-          :style="{
-            width: '100%',
-            maxWidth: isMobile ? '430px' : '800px',
-            height: '75px',
-            pointerEvents: 'auto',
-            boxShadow: '0 -4px 15px rgba(0, 0, 0, 0.05)',
-            borderTop: '1px solid #eee',
-          }"
-        >
-          <div
-            @click="activeTab = 'inspection'"
-            class="col column items-center justify-center relative-position cursor-pointer h-full"
-            style="height: 100%"
-          >
-            <div
-              v-if="activeTab === 'inspection'"
-              class="absolute-top bg-primary"
-              style="height: 4px; width: 100%"
-            ></div>
-            <q-icon
-              name="engineering"
-              size="28px"
-              :color="activeTab === 'inspection' ? 'primary' : 'grey-5'"
-              class="q-mb-xs"
-            />
-            <div
-              class="text-weight-bold"
-              :class="activeTab === 'inspection' ? 'text-primary' : 'text-grey-5'"
-              style="font-size: 12px"
-            >
-              การตรวจบ้าน
-            </div>
-          </div>
-
-          <div
-            @click="activeTab = 'progress'"
-            class="col column items-center justify-center relative-position cursor-pointer h-full"
-            style="height: 100%"
-          >
-            <div
-              v-if="activeTab === 'progress'"
-              class="absolute-top bg-primary"
-              style="height: 4px; width: 100%"
-            ></div>
-            <q-icon
-              name="assignment_turned_in"
-              size="28px"
-              :color="activeTab === 'progress' ? 'primary' : 'grey-5'"
-              class="q-mb-xs"
-            />
-            <div
-              class="text-weight-bold"
-              :class="activeTab === 'progress' ? 'text-primary' : 'text-grey-5'"
-              style="font-size: 12px"
-            >
-              การตรวจความคืบหน้า
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </q-page>
 </template>
@@ -230,7 +166,7 @@ import { useQuasar } from 'quasar';
 import { api } from 'src/boot/axios';
 import { useAuthStore } from 'src/stores/useAuth';
 import type { InspectionRound } from 'src/models';
-import PropertyCard from '../components/PropertyCard.vue';
+import PropertyCard from 'src/components/PropertyCard.vue';
 
 interface CalendarDay {
   isEmpty: boolean;
@@ -245,21 +181,17 @@ const $q = useQuasar();
 const authStore = useAuthStore();
 const isMobile = computed(() => $q.screen.lt.md);
 
-const activeTab = ref('inspection');
-const inspectorId = computed(() => authStore.currentUser?.id ?? 0);
 const loading = ref(false);
 const isMonthlyView = ref(false);
 const rounds = ref<InspectionRound[]>([]);
 const selectedDate = ref(new Date());
+const currentMonth = ref(new Date());
 
 const dayLabels = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
 
-// วันที่ปัจจุบันสำหรับเทียบเป็นอดีต/ปัจจุบัน/อนาคต ในปฏิทิน
 const todayStr = computed(() => toLocalDateStr(new Date()));
 
 const calendarDays = computed<CalendarDay[]>(() => {
-  //const today = new Date();
-
   if (!isMonthlyView.value) {
     const startOfWeek = new Date(selectedDate.value);
     startOfWeek.setDate(selectedDate.value.getDate() - selectedDate.value.getDay());
@@ -281,37 +213,38 @@ const calendarDays = computed<CalendarDay[]>(() => {
         hasDot: hasRound,
       };
     });
-  } else {
-    const days: CalendarDay[] = [];
-    const year = currentMonth.value.getFullYear();
-    const month = currentMonth.value.getMonth();
-
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startPadding = firstDay.getDay();
-
-    for (let i = 0; i < startPadding; i++) {
-      days.push({ isEmpty: true, dateStr: `empty-${i}` });
-    }
-
-    for (let d = 1; d <= lastDay.getDate(); d++) {
-      const currentDate = new Date(year, month, d);
-      const dateStr = toLocalDateStr(currentDate);
-      const hasRound = rounds.value.some(
-        (r) => toScheduledDateStr(r.scheduledDate) === dateStr,
-      );
-
-      days.push({
-        isEmpty: false,
-        label: dayLabels[currentDate.getDay()] ?? '',
-        date: d,
-        dateStr: dateStr,
-        isActive: dateStr === toLocalDateStr(selectedDate.value),
-        hasDot: hasRound,
-      });
-    }
-    return days;
   }
+
+  const days: CalendarDay[] = [];
+  const year = currentMonth.value.getFullYear();
+  const month = currentMonth.value.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startPadding = firstDay.getDay();
+
+  for (let i = 0; i < startPadding; i++) {
+    days.push({ isEmpty: true, dateStr: `empty-${i}` });
+  }
+
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const currentDate = new Date(year, month, d);
+    const dateStr = toLocalDateStr(currentDate);
+    const hasRound = rounds.value.some(
+      (r) => toScheduledDateStr(r.scheduledDate) === dateStr,
+    );
+
+    days.push({
+      isEmpty: false,
+      label: dayLabels[currentDate.getDay()] ?? '',
+      date: d,
+      dateStr: dateStr,
+      isActive: dateStr === toLocalDateStr(selectedDate.value),
+      hasDot: hasRound,
+    });
+  }
+
+  return days;
 });
 
 const selectedDayRounds = computed(() => {
@@ -346,33 +279,6 @@ function selectDay(day: CalendarDay) {
   }
 }
 
-async function fetchRounds() {
-  if (!inspectorId.value) {
-    rounds.value = [];
-    return;
-  }
-
-  loading.value = true;
-  try {
-    const dateParam = isMonthlyView.value
-      ? toLocalDateStr(currentMonth.value)
-      : toLocalDateStr(selectedDate.value);
-    const endpoint = isMonthlyView.value
-      ? `/inspection-rounds/month/${inspectorId.value}?date=${dateParam}`
-      : `/inspection-rounds/week/${inspectorId.value}?date=${dateParam}`;
-
-    const res = await api.get(endpoint);
-    rounds.value = Array.isArray(res.data) ? res.data : [];
-  } catch (e: unknown) {
-    if (e instanceof Error) {
-      console.log('Message:', e.message);
-    }
-    rounds.value = [];
-  } finally {
-    loading.value = false;
-  }
-}
-
 function toLocalDateStr(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -395,8 +301,6 @@ function getBangkokHour(dateStr: string): number {
   );
 }
 
-const currentMonth = ref(new Date());
-
 function prevMonth() {
   const d = new Date(currentMonth.value);
   d.setMonth(d.getMonth() - 1);
@@ -411,6 +315,34 @@ function nextMonth() {
   currentMonth.value = d;
   selectedDate.value = new Date(d.getFullYear(), d.getMonth(), 1);
   void fetchRounds();
+}
+
+async function fetchRounds() {
+  const inspectorId = authStore.currentUser?.id ?? 0;
+  if (!inspectorId) {
+    rounds.value = [];
+    return;
+  }
+
+  loading.value = true;
+  try {
+    const dateParam = isMonthlyView.value
+      ? toLocalDateStr(currentMonth.value)
+      : toLocalDateStr(selectedDate.value);
+    const endpoint = isMonthlyView.value
+      ? `/inspection-rounds/month/${inspectorId}?date=${dateParam}`
+      : `/inspection-rounds/week/${inspectorId}?date=${dateParam}`;
+
+    const res = await api.get(endpoint);
+    rounds.value = Array.isArray(res.data) ? res.data : [];
+  } catch (e: unknown) {
+    if (e instanceof Error) {
+      console.error('fetchRounds error:', e.message);
+    }
+    rounds.value = [];
+  } finally {
+    loading.value = false;
+  }
 }
 
 onMounted(() => {
