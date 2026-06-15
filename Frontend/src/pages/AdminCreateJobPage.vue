@@ -19,8 +19,56 @@
     <!-- ================================ -->
     <!-- FORM -->
     <!-- ================================ -->
+    <!-- ประเภทงาน -->
     <div v-else-if="!isLoading" class="form-container q-pa-md q-gutter-y-lg pb-100">
+      <div class="section q-mb-lg">
+        <div class="row items-center q-mb-sm text-primary">
+          <q-icon name="category" size="20px" class="q-mr-sm" />
+          <div class="text-subtitle2 text-weight-bold">ประเภทงาน</div>
+        </div>
 
+        <div class="row q-col-gutter-md">
+          <div class="col-6">
+            <q-card
+              flat
+              bordered
+              class="cursor-pointer transition-all h-100"
+              :class="form.jobType === 'defect' ? 'bg-teal-1 border-teal' : 'bg-white'"
+              @click="form.jobType = 'defect'"
+            >
+              <q-card-section class="column items-center text-center q-pa-md">
+                <q-avatar
+                  :color="form.jobType === 'defect' ? 'teal' : 'grey-3'"
+                  :text-color="form.jobType === 'defect' ? 'white' : 'grey-6'"
+                  icon="home_work"
+                  class="q-mb-sm"
+                />
+                <div class="text-weight-bold" :class="form.jobType === 'defect' ? 'text-teal-9' : 'text-grey-8'">งานตรวจบ้าน</div>
+              </q-card-section>
+            </q-card>
+          </div>
+
+          <div class="col-6">
+            <q-card
+              flat
+              bordered
+              class="cursor-pointer transition-all h-100"
+              :class="form.jobType === 'construction' ? 'bg-orange-1 border-orange' : 'bg-white'"
+              @click="form.jobType = 'construction'"
+            >
+              <q-card-section class="column items-center text-center q-pa-md">
+                <q-avatar
+                  :color="form.jobType === 'construction' ? 'orange' : 'grey-3'"
+                  :text-color="form.jobType === 'construction' ? 'white' : 'grey-6'"
+                  icon="construction"
+                  class="q-mb-sm"
+                />
+                <div class="text-weight-bold" :class="form.jobType === 'construction' ? 'text-orange-9' : 'text-grey-8'">งานตรวจก่อสร้าง</div>
+              </q-card-section>
+            </q-card>
+          </div>
+        </div>
+      </div>
       <!-- ข้อมูลลูกค้า -->
       <div class="section">
         <div class="row items-center q-mb-sm text-primary justify-between">
@@ -30,7 +78,7 @@
           </div>
           <q-btn v-if="!isEditMode && selectedCustomer" flat dense color="negative" size="sm" icon="close" label="ยกเลิกการเลือก" @click="clearSelectedCustomer" />
         </div>
-        
+
         <!-- ค้นหาลูกค้า -->
         <div v-if="!isEditMode && !selectedCustomer" class="q-mb-md relative-position">
           <q-input v-model="customerSearch" dense filled placeholder="ค้นหาชื่อหรือเบอร์โทรลูกค้าที่มีในระบบ..." class="custom-input" clearable @clear="customerSearch = ''">
@@ -38,7 +86,7 @@
               <q-icon name="search" color="grey-5" />
             </template>
           </q-input>
-          
+
           <!-- รายการลูกค้าที่ค้นพบ -->
           <q-list v-if="customerSearch && filteredCustomers.length > 0" bordered separator class="bg-white q-mt-xs" style="border-radius: 8px; max-height: 200px; overflow-y: auto; position: absolute; z-index: 10; width: 100%;">
             <q-item v-for="customer in filteredCustomers" :key="customer.id" clickable v-ripple @click="selectCustomer(customer)">
@@ -275,6 +323,7 @@ const clearSelectedCustomer = () => {
 
 // ─── Job Form ─────────────────────────────────────────────────────────────
 const form = reactive({
+  jobType: '',
   customerName: '',
   customerPhone: '',
   customerEmail: '',
@@ -417,7 +466,7 @@ const onSubmit = async () => {
 
     if (isEditMode.value && editId.value) {
       const existingJob = workStore.works.find((w) => w.jobId === editId.value);
-      
+
       if (existingJob) {
         if (existingJob.customer) {
           await customerStore.updateCustomer(existingJob.customer.customerId, {
@@ -426,7 +475,7 @@ const onSubmit = async () => {
             email: form.customerEmail,
           });
         }
-        
+
         if (existingJob.address) {
           await addressStore.updateAddress(existingJob.address.addressId, {
             houseNumber: form.houseNumber,
@@ -467,10 +516,10 @@ const onSubmit = async () => {
         if (finalContractorId) jobFormData.append('contractorId', String(finalContractorId));
         if (form.projectImageFile) jobFormData.append('projectImageUrl', form.projectImageFile);
         else if (form.projectImage === null) jobFormData.append('projectImageUrl', '');
-        
+
         if (form.housePlanImageFile) jobFormData.append('housePlanUrl', form.housePlanImageFile);
         else if (form.housePlanImage === null) jobFormData.append('housePlanUrl', '');
-        
+
         await workStore.updateJob(editId.value, jobFormData);
       }
       await workStore.fetchJobs();
