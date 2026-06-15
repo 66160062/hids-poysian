@@ -68,7 +68,7 @@ const handleLogin = async () => {
     const role = auth.user?.role;
 
     if (role === 'inspector') {
-      await router.push('/inspector/dashboard');
+      await router.push('/inspector/Inspectsdashboard');
     } else if (role === 'admin') {
       await router.push('/admin');
     } else if (role === 'customer') {

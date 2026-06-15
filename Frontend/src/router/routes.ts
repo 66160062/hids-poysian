@@ -108,7 +108,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('layouts/InspectorScreen.vue'),
     children: [
       {
-        path: 'dashboard',
+        path: 'Inspectsdashboard',
         component: () => import('pages/InspectorDashboardPage.vue'),
         meta: { title: 'การตรวจบ้าน' },
       },
@@ -136,6 +136,11 @@ const routes: RouteRecordRaw[] = [
         path: 'job/:roundId/inspection/add-defect',
         name: 'addDefect',
         component: () => import('pages/AddDefectPage.vue'),
+      },
+      {
+        path: 'Consdashboard',
+        component: () => import('pages/ConstructionPage.vue'),
+        meta: { title: 'ตรวจก่อสร้าง' },
       },
     ],
   },
