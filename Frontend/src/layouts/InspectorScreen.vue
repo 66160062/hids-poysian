@@ -32,7 +32,7 @@
         <div
           class="column items-center cursor-pointer"
           :class="activeTab === 'inspection' ? 'text-blue' : 'text-grey-5'"
-          @click="changeTab('inspection', '/inspector/dashboard')"
+          @click="changeTab('inspection', '/inspector/Inspectsdashboard')"
         >
           <q-icon name="engineering" size="32px" />
           <div class="text-caption text-weight-bold">การตรวจบ้าน</div>
@@ -46,10 +46,10 @@
         <div
           class="column items-center cursor-pointer"
           :class="activeTab === 'progress' ? 'text-blue' : 'text-grey-5'"
-          @click="changeTab('progress', '/inspector/progress')"
+          @click="changeTab('progress', '/inspector/Consdashboard')"
         >
           <q-icon name="assignment_turned_in" size="32px" />
-          <div class="text-caption text-weight-bold">การตรวจความคืบหน้า</div>
+          <div class="text-caption text-weight-bold">การตรวจก่อสร้าง</div>
           <div
             v-if="activeTab === 'progress'"
             class="bg-blue q-mt-xs"
@@ -71,7 +71,7 @@ const route = useRoute();
 // ใช้ระบุว่า Tab ไหนกำลัง Active อยู่ (กรณีโหลดหน้าใหม่)
 const activeTab = computed(() => {
   if (route.path.includes('/dashboard')) return 'inspection';
-  if (route.path.includes('/progress')) return 'progress';
+  if (route.path.includes('/progress') || route.path.includes('/Consdashboard')) return 'progress';
   return 'inspection';
 });
 
@@ -86,7 +86,7 @@ const goBack = () => {
 };
 
 const headerTitle = computed(() => {
-  if (route.path === '/inspector/dashboard') {
+  if (route.path === '/inspector/Inspectsdashboard') {
     return 'การตรวจบ้าน';
   }
 
@@ -98,6 +98,10 @@ const headerTitle = computed(() => {
     if (route.path.includes('/inspection')) return 'ดำเนินการตรวจ';
 
     return 'รายละเอียด';
+  }
+
+  if (route.path === '/inspector/Consdashboard') {
+    return 'การตรวจก่อสร้าง';
   }
 
   return 'ระบบตรวจบ้าน';
