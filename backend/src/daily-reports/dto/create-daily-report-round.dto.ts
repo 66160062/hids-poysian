@@ -4,7 +4,8 @@ import { IsDate, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateDailyReportRoundDto {
   @ApiProperty({
-    description: 'Inspection team member ID. If omitted, the latest member for the job is used.',
+    description:
+      'Inspection team member ID. If omitted, the latest member for the job is used.',
     example: 1,
     required: false,
   })
@@ -14,7 +15,8 @@ export class CreateDailyReportRoundDto {
   teamMemberId?: number;
 
   @ApiProperty({
-    description: 'Inspector user ID. Used to create a team member when teamMemberId is omitted.',
+    description:
+      'Inspector user ID. Used to create a team member when teamMemberId is omitted.',
     example: 1,
     required: false,
   })

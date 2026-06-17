@@ -1,13 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Defect } from './entities/defect.entity';
 import { CreateDefectDto } from './dto/create-defect.dto';
 import { UpdateDefectDto } from './dto/update-defect.dto';
+import { ContractorUpdateDefectDto } from './dto/contractor-update-defect.dto';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { RoomTemplate } from 'src/room-templates/entities/room-template.entity';
 import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub-category.entity';
 import { User } from 'src/users/entities/user.entity';
+import { DefectStatus } from './entities/defect.entity';
+import { Contractor } from 'src/contractor/entities/contractor.entity';
 
 @Injectable()
 export class DefectsService {
@@ -81,6 +84,38 @@ export class DefectsService {
   ) {
     const defect = await this.defectsRepo.findOneByOrFail({ defectId: id });
     Object.assign(defect, updateDefectDto);
+    return this.defectsRepo.save(defect);
+  }
+
+  async contractorUpdate(
+    contractorUpdateDto: ContractorUpdateDefectDto & {
+      contractorImageUrl?: string;
+      contractorImageFileSize?: number;
+    },
+  ) {
+    const defect = await this.defectsRepo.findOneOrFail({
+      where: { defectId: contractorUpdateDto.defectId },
+      relations: ['round', 'round.job', 'round.job.contractor'],
+    });
+
+    const assignedContractorId = defect.round?.job?.contractor?.contractorId;
+    if (assignedContractorId !== contractorUpdateDto.contractorId) {
+      throw new ForbiddenException('Contractor cannot update this defect');
+    }
+
+    defect.status = DefectStatus.FIXED;
+    defect.contractorNote = contractorUpdateDto.note ?? defect.contractorNote;
+    defect.updatedBy = {
+      contractorId: contractorUpdateDto.contractorId,
+    } as Contractor;
+
+    if (contractorUpdateDto.contractorImageUrl) {
+      defect.contractorImageUrl = contractorUpdateDto.contractorImageUrl;
+      defect.contractorImageFileSize =
+        contractorUpdateDto.contractorImageFileSize ??
+        defect.contractorImageFileSize;
+    }
+
     return this.defectsRepo.save(defect);
   }
 

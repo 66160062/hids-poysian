@@ -2,6 +2,7 @@ import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { RoomTemplate } from 'src/room-templates/entities/room-template.entity';
 import { User } from 'src/users/entities/user.entity';
+import { Contractor } from 'src/contractor/entities/contractor.entity';
 import {
   Column,
   Entity,
@@ -15,6 +16,7 @@ import {
 } from 'typeorm';
 export enum DefectStatus {
   PENDING_REPAIR = 'PENDING_REPAIR',
+  FIXED = 'Fixed',
   REJECTED = 'REJECTED',
   PASS = 'PASS',
 }
@@ -39,6 +41,15 @@ export class Defect {
 
   @Column({ type: 'int', nullable: true })
   imageFileSize!: number;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  contractorImageUrl!: string;
+
+  @Column({ type: 'int', nullable: true })
+  contractorImageFileSize!: number;
+
+  @Column({ type: 'text', nullable: true })
+  contractorNote!: string;
 
   @Column({
     type: 'varchar',
@@ -69,4 +80,8 @@ export class Defect {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'inspector_id' })
   inspector!: User;
+
+  @ManyToOne(() => Contractor, { nullable: true })
+  @JoinColumn({ name: 'updated_by' })
+  updatedBy!: Contractor;
 }
