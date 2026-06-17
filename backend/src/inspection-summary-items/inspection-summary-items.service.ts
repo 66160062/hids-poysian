@@ -47,21 +47,21 @@ export class InspectionSummaryItemsService {
 
   findAll() {
     return this.itemsRepo.find({
-      relations: ['round', 'template', 'option'],
+      relations: ['round', 'template', 'option', 'refItem'],
     });
   }
 
   findOne(id: number) {
     return this.itemsRepo.findOneOrFail({
       where: { itemId: id },
-      relations: ['round', 'template', 'option'],
+      relations: ['round', 'template', 'option', 'refItem'],
     });
   }
 
   findByRound(roundId: number) {
     return this.itemsRepo.find({
       where: { round: { roundId } },
-      relations: ['template', 'option'],
+      relations: ['template', 'option', 'refItem'],
     });
   }
 

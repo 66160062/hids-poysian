@@ -5,6 +5,7 @@ import { Customer } from 'src/customers/entities/customer.entity';
 import { HouseType } from 'src/house-types/entities/house-type.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
+import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { User } from 'src/users/entities/user.entity';
 import { DataSource, EntityManager, Repository } from 'typeorm';
@@ -156,10 +157,89 @@ export class DailyReportsService {
     });
   }
 
+  async cloneLatestRound(jobId: number) {
+    const job = await this.dataSource.getRepository(InspectionJob).findOneBy({
+      jobId,
+    });
+    if (!job) {
+      throw new NotFoundException(`à¹„à¸¡à¹ˆà¸žà¸š daily report ID ${jobId}`);
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const latestRound = await this.findLatestRound(manager, jobId);
+      if (!latestRound) {
+        const firstRound = await manager.getRepository(InspectionRound).save(
+          manager.getRepository(InspectionRound).create({
+            job,
+            teamMember: await this.resolveTeamMember(manager, job, {}),
+            roundNumber: 1,
+            status: 'SCHEDULED',
+          }),
+        );
+
+        job.status = 'Active';
+        await manager.getRepository(InspectionJob).save(job);
+
+        return {
+          round: firstRound,
+          items: [],
+        };
+      }
+
+      const clonedRound = await manager.getRepository(InspectionRound).save(
+        manager.getRepository(InspectionRound).create({
+          job,
+          teamMember: latestRound.teamMember,
+          roundNumber: latestRound.roundNumber + 1,
+          scheduledDate: latestRound.scheduledDate,
+          status: 'SCHEDULED',
+        }),
+      );
+
+      const latestItems = await manager
+        .getRepository(InspectionSummaryItem)
+        .find({
+          where: { round: { roundId: latestRound.roundId } },
+          relations: ['template', 'option'],
+        });
+
+      const clonedItems = await manager.getRepository(InspectionSummaryItem).save(
+        latestItems.map((item) =>
+          manager.getRepository(InspectionSummaryItem).create({
+            round: clonedRound,
+            template: item.template,
+            option: item.option,
+            refItem: { itemId: item.itemId } as InspectionSummaryItem,
+            detailValue: item.detailValue,
+          }),
+        ),
+      );
+
+      job.status = 'Active';
+      await manager.getRepository(InspectionJob).save(job);
+
+      return {
+        round: clonedRound,
+        items: clonedItems,
+      };
+    });
+  }
+
+  private findLatestRound(manager: EntityManager, jobId: number) {
+    return manager.getRepository(InspectionRound).findOne({
+      where: { job: { jobId } },
+      relations: ['teamMember', 'teamMember.inspector'],
+      order: { roundNumber: 'DESC' },
+    });
+  }
+
   private async resolveTeamMember(
     manager: EntityManager,
     job: InspectionJob,
-    createRoundDto: CreateDailyReportRoundDto,
+    createRoundDto: Pick<
+      CreateDailyReportRoundDto,
+      'teamMemberId' | 'inspectorId'
+    >,
   ) {
     if (createRoundDto.teamMemberId) {
       const teamMember = await manager

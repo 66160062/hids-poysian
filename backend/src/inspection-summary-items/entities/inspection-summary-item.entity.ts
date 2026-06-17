@@ -4,6 +4,7 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  RelationId,
 } from 'typeorm';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { SummaryTemplate } from 'src/summary-templates/entities/summary-template.entity';
@@ -25,6 +26,13 @@ export class InspectionSummaryItem {
   @ManyToOne(() => SummaryTemplateOption)
   @JoinColumn({ name: 'option_id' })
   option!: SummaryTemplateOption;
+
+  @ManyToOne(() => InspectionSummaryItem, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'ref_item_id' })
+  refItem?: InspectionSummaryItem | null;
+
+  @RelationId((item: InspectionSummaryItem) => item.refItem)
+  refItemId?: number | null;
 
   @Column({ type: 'text', nullable: true })
   detailValue!: string;
