@@ -11,12 +11,20 @@ export class CreateContractorDto {
   @MaxLength(15)
   phoneNumber!: string;
 
-  @ApiProperty({ description: 'อีเมล (ไม่บังคับ)', example: 'somchai@email.com', required: false })
+  @ApiProperty({
+    description: 'อีเมล (ไม่บังคับ)',
+    example: 'somchai@email.com',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   email?: string;
 
-  @ApiProperty({ description: 'ชื่อบริษัท (ไม่บังคับ)', example: 'ifbuu จำกัด', required: false })
+  @ApiProperty({
+    description: 'ชื่อบริษัท (ไม่บังคับ)',
+    example: 'ifbuu จำกัด',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   companyName?: string;

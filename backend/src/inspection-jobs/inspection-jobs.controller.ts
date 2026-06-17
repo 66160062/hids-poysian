@@ -78,7 +78,8 @@ export class InspectionJobsController {
     @Query('sort') sort?: 'asc' | 'desc',
   ) {
     // Treat 'all' as undefined
-    const parsedStatus = status === 'all' ? undefined : (status as InspectionJobStatus);
+    const parsedStatus =
+      status === 'all' ? undefined : (status as InspectionJobStatus);
 
     return this.inspectionJobsService.findAll(
       Number(page) || 1,

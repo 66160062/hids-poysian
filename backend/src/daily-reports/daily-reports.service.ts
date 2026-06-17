@@ -30,7 +30,9 @@ export class DailyReportsService {
       this.customersRepo.findOneBy({
         customerId: createDailyReportDto.customerId,
       }),
-      this.addressesRepo.findOneBy({ addressId: createDailyReportDto.addressId }),
+      this.addressesRepo.findOneBy({
+        addressId: createDailyReportDto.addressId,
+      }),
       this.houseTypesRepo.findOneBy({
         house_type_id: createDailyReportDto.houseTypeId,
       }),
@@ -90,7 +92,9 @@ export class DailyReportsService {
         scheduledDate: createDailyReportDto.scheduledDate,
         status: createDailyReportDto.roundStatus ?? 'SCHEDULED',
       });
-      const savedRound = await manager.getRepository(InspectionRound).save(round);
+      const savedRound = await manager
+        .getRepository(InspectionRound)
+        .save(round);
 
       return {
         job: savedJob,

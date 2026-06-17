@@ -87,7 +87,7 @@ export class InspectionJobsService {
       .leftJoinAndSelect('job.houseType', 'houseType')
       .leftJoinAndSelect('job.contractor', 'contractor');
 
-    if (status && status !== 'all' as unknown) {
+    if (status && status !== ('all' as unknown)) {
       query.andWhere('job.status = :status', { status });
     }
 
@@ -98,12 +98,15 @@ export class InspectionJobsService {
     if (search) {
       query.andWhere(
         '(LOWER(job.projectName) LIKE LOWER(:search) OR LOWER(customer.fullName) LIKE LOWER(:search))',
-        { search: `%${search}%` }
+        { search: `%${search}%` },
       );
     }
 
     query
-      .addSelect(`CASE WHEN job.status = 'Draft' THEN 0 ELSE 1 END`, 'status_order')
+      .addSelect(
+        `CASE WHEN job.status = 'Draft' THEN 0 ELSE 1 END`,
+        'status_order',
+      )
       .orderBy('status_order', 'ASC')
       .addOrderBy('job.jobId', sort === 'asc' ? 'ASC' : 'DESC')
       .skip((page - 1) * limit)
@@ -185,7 +188,8 @@ export class InspectionJobsService {
     if (updateInspectionJobDto.projectName !== undefined)
       inspectionJob.projectName = updateInspectionJobDto.projectName;
     if (updateInspectionJobDto.locationCoordinate !== undefined)
-      inspectionJob.locationCoordinate = updateInspectionJobDto.locationCoordinate;
+      inspectionJob.locationCoordinate =
+        updateInspectionJobDto.locationCoordinate;
     if (updateInspectionJobDto.housePlanUrl !== undefined)
       inspectionJob.housePlanUrl = updateInspectionJobDto.housePlanUrl;
     if (updateInspectionJobDto.usableArea !== undefined)
@@ -200,12 +204,42 @@ export class InspectionJobsService {
 
   async getStatusMetadata() {
     const statuses = [
-      { key: InspectionJobStatus.Draft, label: 'แบบร่าง', bgClass: 'bg-grey-2', textColor: 'grey-8' },
-      { key: InspectionJobStatus.Active, label: 'กำลังดำเนินการ', bgClass: 'bg-blue-1', textColor: 'primary' },
-      { key: InspectionJobStatus.Pending, label: 'รออนุมัติ', bgClass: 'bg-orange-1', textColor: 'orange-8' },
-      { key: InspectionJobStatus.Completed, label: 'เสร็จสิ้น', bgClass: 'bg-green-1', textColor: 'positive' },
-      { key: InspectionJobStatus.Locked, label: 'ล็อค', bgClass: 'bg-red-1', textColor: 'negative' },
-      { key: InspectionJobStatus.Cancelled, label: 'ยกเลิก', bgClass: 'bg-red-1', textColor: 'negative' },
+      {
+        key: InspectionJobStatus.Draft,
+        label: 'แบบร่าง',
+        bgClass: 'bg-grey-2',
+        textColor: 'grey-8',
+      },
+      {
+        key: InspectionJobStatus.Active,
+        label: 'กำลังดำเนินการ',
+        bgClass: 'bg-blue-1',
+        textColor: 'primary',
+      },
+      {
+        key: InspectionJobStatus.Pending,
+        label: 'รออนุมัติ',
+        bgClass: 'bg-orange-1',
+        textColor: 'orange-8',
+      },
+      {
+        key: InspectionJobStatus.Completed,
+        label: 'เสร็จสิ้น',
+        bgClass: 'bg-green-1',
+        textColor: 'positive',
+      },
+      {
+        key: InspectionJobStatus.Locked,
+        label: 'ล็อค',
+        bgClass: 'bg-red-1',
+        textColor: 'negative',
+      },
+      {
+        key: InspectionJobStatus.Cancelled,
+        label: 'ยกเลิก',
+        bgClass: 'bg-red-1',
+        textColor: 'negative',
+      },
     ];
 
     const countsQuery = await this.inspectionsRepo

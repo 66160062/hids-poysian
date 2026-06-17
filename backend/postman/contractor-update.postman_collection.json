@@ -1,0 +1,118 @@
+{
+  "info": {
+    "name": "Contractor Update Defect",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Contractor update defect - success",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "defectId",
+              "value": "1",
+              "type": "text"
+            },
+            {
+              "key": "contractorId",
+              "value": "1",
+              "type": "text"
+            },
+            {
+              "key": "note",
+              "value": "Repaired and sealed the cracked area.",
+              "type": "text"
+            },
+            {
+              "key": "file",
+              "type": "file",
+              "src": []
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/defects/contractor-update",
+          "host": ["{{baseUrl}}"],
+          "path": ["defects", "contractor-update"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is Fixed', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().status).to.eql('Fixed');",
+              "});",
+              "",
+              "pm.test('saves contractor update metadata', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.contractorNote).to.eql('Repaired and sealed the cracked area.');",
+              "  pm.expect(json.contractorImageUrl).to.be.a('string');",
+              "  pm.expect(json.updatedAt).to.be.a('string');",
+              "  pm.expect(json.updatedBy.contractorId).to.eql(1);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contractor update defect - forbidden for another contractor",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "defectId",
+              "value": "1",
+              "type": "text"
+            },
+            {
+              "key": "contractorId",
+              "value": "999",
+              "type": "text"
+            },
+            {
+              "key": "note",
+              "value": "Should be rejected.",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/defects/contractor-update",
+          "host": ["{{baseUrl}}"],
+          "path": ["defects", "contractor-update"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('rejects another contractor', function () {",
+              "  pm.response.to.have.status(403);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    }
+  ]
+}

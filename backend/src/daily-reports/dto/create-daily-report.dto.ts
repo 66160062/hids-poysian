@@ -35,7 +35,10 @@ export class CreateDailyReportDto {
   @MaxLength(50)
   inspectionType: string;
 
-  @ApiProperty({ description: 'Project name', example: 'หมู่บ้านแสนสุข วิลเลจ' })
+  @ApiProperty({
+    description: 'Project name',
+    example: 'หมู่บ้านแสนสุข วิลเลจ',
+  })
   @IsString()
   @MaxLength(255)
   projectName: string;

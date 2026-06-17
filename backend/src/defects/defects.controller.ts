@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Patch,
+  Put,
   Param,
   Delete,
   UseInterceptors,
@@ -13,6 +14,7 @@ import {
 import { DefectsService } from './defects.service';
 import { CreateDefectDto } from './dto/create-defect.dto';
 import { UpdateDefectDto } from './dto/update-defect.dto';
+import { ContractorUpdateDefectDto } from './dto/contractor-update-defect.dto';
 import { ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -60,6 +62,32 @@ export class DefectsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.defectsService.findOne(+id);
+  }
+
+  @Put('contractor-update')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './uploads/defects',
+        filename: (req, file, cb) => {
+          const uniqueFileName = uuidv4() + extname(file.originalname);
+          cb(null, uniqueFileName);
+        },
+      }),
+    }),
+  )
+  contractorUpdate(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() contractorUpdateDto: ContractorUpdateDefectDto,
+  ) {
+    return this.defectsService.contractorUpdate({
+      ...contractorUpdateDto,
+      ...(file && {
+        contractorImageUrl: '/uploads/defects/' + file.filename,
+        contractorImageFileSize: file.size,
+      }),
+    });
   }
 
   @Patch(':id')
