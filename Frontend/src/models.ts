@@ -105,6 +105,8 @@ export interface InspectionSummaryItem {
   itemId: number;
   template: SummaryTemplate;
   option: SummaryTemplateOption;
+  refItemId?: number | null;
+  refItem?: Pick<InspectionSummaryItem, 'itemId'> | null;
   detailValue?: string;
 }
 
