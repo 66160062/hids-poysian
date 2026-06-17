@@ -149,6 +149,7 @@
               clickable
               v-ripple
               class="q-py-md"
+              @click="openRoundReview(round)"
             >
               <q-item-section avatar>
                 <q-avatar color="primary" text-color="white" size="36px">
@@ -175,6 +176,7 @@
                 >
                   {{ round.status }}
                 </q-chip>
+                <q-icon name="chevron_right" color="grey-5" class="q-mt-xs" />
               </q-item-section>
             </q-item>
           </q-list>
@@ -293,6 +295,215 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Review Round / Defect Dialog -->
+    <q-dialog v-model="showRoundReviewDialog" maximized transition-show="slide-up" transition-hide="slide-down">
+      <q-card class="bg-grey-1 column no-wrap full-height">
+        <q-toolbar class="bg-white shadow-1">
+          <q-btn flat round dense icon="close" v-close-popup />
+          <q-toolbar-title class="text-subtitle1 text-weight-bold">
+            ตรวจรอบที่ {{ selectedRound?.roundNumber ?? '-' }}
+          </q-toolbar-title>
+          <q-btn
+            unelevated
+            color="positive"
+            icon="verified"
+            :label="approvalButtonLabel"
+            no-caps
+            :disable="!canApproveSelectedRound"
+            :loading="isApprovingRound"
+            @click="confirmApproveRound"
+          />
+        </q-toolbar>
+
+        <q-card-section class="review-dialog-content col q-pa-md">
+          <div class="row q-col-gutter-md">
+            <div class="col-12 col-md-5">
+              <q-card flat bordered class="card-round review-panel">
+                <q-card-section class="row items-center justify-between">
+                  <div>
+                    <div class="text-subtitle2 text-weight-bold">รายการ Defect</div>
+                    <div class="text-caption text-grey-6">
+                      {{ roundDefects.length }} รายการ
+                    </div>
+                  </div>
+                  <q-chip v-if="selectedRound" dense :color="getRoundStatusColor(selectedRound.status)" text-color="dark">
+                    {{ selectedRound.status }}
+                  </q-chip>
+                </q-card-section>
+                <q-separator />
+
+                <div v-if="isLoadingRoundDefects" class="column items-center q-pa-xl">
+                  <q-spinner color="primary" size="32px" />
+                  <div class="text-caption text-grey-6 q-mt-sm">กำลังโหลด defect...</div>
+                </div>
+
+                <q-card-section v-else-if="roundDefectsError" class="column items-center q-py-xl">
+                  <q-icon name="error_outline" size="48px" color="negative" />
+                  <div class="text-body2 text-negative q-mt-sm text-center">{{ roundDefectsError }}</div>
+                  <q-btn
+                    flat
+                    color="primary"
+                    icon="refresh"
+                    label="ลองใหม่"
+                    class="q-mt-sm"
+                    no-caps
+                    @click="retryFetchRoundDefects"
+                  />
+                </q-card-section>
+
+                <q-card-section v-else-if="roundDefects.length === 0" class="column items-center q-py-xl">
+                  <q-icon name="fact_check" size="48px" color="grey-4" />
+                  <div class="text-body2 text-grey-6 q-mt-sm text-center">ไม่พบรายการ defect ในรอบนี้</div>
+                  <div class="text-caption text-grey-5 q-mt-xs text-center">
+                    หากเป็นรอบที่รออนุมัติ ให้ตรวจสอบว่า inspector ได้บันทึก defect แล้วหรือไม่
+                  </div>
+                </q-card-section>
+
+                <q-list v-else separator>
+                  <q-item
+                    v-for="defect in roundDefects"
+                    :key="defect.defectId"
+                    clickable
+                    v-ripple
+                    :active="selectedDefect?.defectId === defect.defectId"
+                    active-class="bg-blue-1 text-primary"
+                    @click="selectDefect(defect)"
+                  >
+                    <q-item-section avatar>
+                      <q-avatar rounded size="52px" color="grey-2">
+                        <q-img v-if="defect.imageUrl" :src="getImageUrl(defect.imageUrl) ?? ''" fit="cover" />
+                        <q-icon v-else name="image_not_supported" color="grey-5" />
+                      </q-avatar>
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label class="text-weight-medium ellipsis">
+                        #{{ defect.defectId }} {{ getDefectRoomLabel(defect) }}
+                      </q-item-label>
+                      <q-item-label caption lines="2">
+                        {{ defect.description || '-' }}
+                      </q-item-label>
+                      <div class="row q-gutter-xs q-mt-xs">
+                        <q-chip dense size="sm" :color="defect.severity === 'Major' ? 'red-1' : 'orange-1'" text-color="dark">
+                          {{ defect.severity }}
+                        </q-chip>
+                        <q-chip dense size="sm" color="grey-2" text-color="dark">
+                          {{ defect.status }}
+                        </q-chip>
+                      </div>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-card>
+            </div>
+
+            <div class="col-12 col-md-7">
+              <q-card flat bordered class="card-round review-panel">
+                <q-card-section v-if="!selectedDefect" class="column items-center q-py-xl">
+                  <q-icon name="edit_note" size="56px" color="grey-4" />
+                  <div class="text-body2 text-grey-6 q-mt-sm text-center">
+                    {{ roundDefectsError ? 'ยังแก้ไขไม่ได้เพราะโหลด defect ไม่สำเร็จ' : 'เลือกรายการ defect เพื่อแก้ไข' }}
+                  </div>
+                </q-card-section>
+
+                <template v-else>
+                  <q-card-section>
+                    <div class="row items-center justify-between q-mb-md">
+                      <div>
+                        <div class="text-subtitle2 text-weight-bold">
+                          แก้ไข Defect #{{ selectedDefect.defectId }}
+                        </div>
+                        <div class="text-caption text-grey-6">{{ getDefectRoomLabel(selectedDefect) }}</div>
+                      </div>
+                      <q-btn
+                        flat
+                        round
+                        icon="open_in_full"
+                        color="primary"
+                        :disable="!selectedDefect.imageUrl"
+                        @click="viewDefectImage"
+                      />
+                    </div>
+
+                    <div class="column q-gutter-md">
+                      <q-input
+                        outlined
+                        dense
+                        type="textarea"
+                        rows="4"
+                        v-model="defectEditForm.description"
+                        label="รายละเอียด defect"
+                      />
+
+                      <q-select
+                        outlined
+                        dense
+                        emit-value
+                        map-options
+                        v-model="defectEditForm.severity"
+                        :options="severityOptions"
+                        label="ความรุนแรง"
+                      />
+
+                      <q-select
+                        outlined
+                        dense
+                        emit-value
+                        map-options
+                        v-model="defectEditForm.status"
+                        :options="defectStatusOptions"
+                        label="สถานะ"
+                      />
+
+                      <q-select
+                        outlined
+                        dense
+                        multiple
+                        use-chips
+                        emit-value
+                        map-options
+                        v-model="defectEditForm.subCategoryIds"
+                        :options="defectSubCategoryOptions"
+                        :loading="isLoadingDefectMaster"
+                        label="ประเภทตำหนิ"
+                      />
+
+                      <q-file
+                        outlined
+                        dense
+                        clearable
+                        accept="image/*"
+                        v-model="defectEditForm.file"
+                        label="เปลี่ยนรูป defect"
+                      >
+                        <template #prepend>
+                          <q-icon name="image" />
+                        </template>
+                      </q-file>
+                    </div>
+                  </q-card-section>
+
+                  <q-separator />
+
+                  <q-card-actions align="right" class="q-pa-md">
+                    <q-btn flat color="grey-7" label="ยกเลิก" no-caps @click="resetSelectedDefectForm" />
+                    <q-btn
+                      unelevated
+                      color="primary"
+                      icon="save"
+                      label="บันทึก"
+                      no-caps
+                      :loading="isSavingDefect"
+                      @click="saveDefectChanges"
+                    />
+                  </q-card-actions>
+                </template>
+              </q-card>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -302,6 +513,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { api } from 'src/boot/axios';
 import { useUserStore } from '../stores/useUser';
+import type { Defect } from 'src/models';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 
@@ -345,6 +557,25 @@ interface RoundApiResponse {
   };
 }
 
+interface RoundView {
+  id: number;
+  roundNumber: number;
+  date: string;
+  status: string;
+  statusKey: string;
+  inspectors?: string[];
+}
+
+interface DefectCategoryOption {
+  label: string;
+  value: number;
+}
+
+type AdminDefect = Defect & {
+  inspector?: { id?: number; fullName?: string };
+  round?: { roundId?: number };
+};
+
 interface TeamMemberChip {
   id: number;
   fullName: string;
@@ -359,8 +590,43 @@ const userStore = useUserStore();
 const jobId = computed(() => Number(route.params.id));
 const isLoading = ref(true);
 const isSubmittingRound = ref(false);
+const isLoadingRoundDefects = ref(false);
+const isSavingDefect = ref(false);
+const isApprovingRound = ref(false);
+const isLoadingDefectMaster = ref(false);
 const jobData = ref<JobApiResponse | null>(null);
 const jobTeamMembers = ref<TeamMemberChip[]>([]);
+const roundDefects = ref<AdminDefect[]>([]);
+const roundDefectsError = ref('');
+const selectedRound = ref<RoundView | null>(null);
+const selectedDefect = ref<AdminDefect | null>(null);
+const defectSubCategoryOptions = ref<DefectCategoryOption[]>([]);
+const showRoundReviewDialog = ref(false);
+
+const defectEditForm = ref<{
+  description: string;
+  severity: string;
+  status: string;
+  subCategoryIds: number[];
+  file: File | null;
+}>({
+  description: '',
+  severity: 'Minor',
+  status: 'PENDING_REPAIR',
+  subCategoryIds: [],
+  file: null,
+});
+
+const severityOptions = [
+  { label: 'Minor', value: 'Minor' },
+  { label: 'Major', value: 'Major' },
+];
+
+const defectStatusOptions = [
+  { label: 'รอซ่อม', value: 'PENDING_REPAIR' },
+  { label: 'ผ่าน', value: 'PASS' },
+  { label: 'ปฏิเสธ', value: 'REJECTED' },
+];
 
 
 
@@ -400,6 +666,7 @@ const mapRoundToView = (round: RoundApiResponse) => {
     roundNumber: round.roundNumber,
     date: formatRoundDate(round.scheduledDate),
     status: mapRoundStatus(round.status),
+    statusKey: round.status,
     inspectors,
   };
 };
@@ -421,6 +688,31 @@ async function fetchRounds() {
 
 function applyRounds(rounds: RoundApiResponse[]) {
   inspectionRounds.value = rounds.map(mapRoundToView);
+}
+
+async function fetchDefectMasterData() {
+  if (defectSubCategoryOptions.value.length > 0) return;
+
+  isLoadingDefectMaster.value = true;
+  try {
+    const { data } = await api.get<
+      { subCategoryId: number; name: string; category?: { name?: string } }[]
+    >('/defect-sub-categories');
+    defectSubCategoryOptions.value = data.map((item) => ({
+      value: item.subCategoryId,
+      label: item.category?.name ? `${item.category.name} - ${item.name}` : item.name,
+    }));
+  } catch (error) {
+    console.error('Failed to load defect master data:', error);
+    $q.notify({
+      message: 'โหลดประเภท defect ไม่สำเร็จ',
+      color: 'negative',
+      icon: 'error',
+      position: 'top',
+    });
+  } finally {
+    isLoadingDefectMaster.value = false;
+  }
 }
 
 async function loadPageData() {
@@ -515,8 +807,14 @@ const inspectionRounds = ref<{
   roundNumber: number;
   date: string;
   status: string;
+  statusKey: string;
   inspectors?: string[];
 }[]>([]);
+
+const canApproveSelectedRound = computed(() => selectedRound.value?.statusKey === 'SUBMITTED');
+const approvalButtonLabel = computed(() =>
+  selectedRound.value?.statusKey === 'APPROVED' ? 'อนุมัติแล้ว' : 'อนุมัติ',
+);
 
 const goBack = async () => {
   await router.push('/admin/work');
@@ -549,6 +847,165 @@ const viewPlan = () => {
     });
   }
 };
+
+const viewDefectImage = () => {
+  if (!selectedDefect.value?.imageUrl) return;
+  currentImageUrl.value = getImageUrl(selectedDefect.value.imageUrl) ?? selectedDefect.value.imageUrl;
+  showImageDialog.value = true;
+};
+
+function getDefectRoomLabel(defect: AdminDefect) {
+  const floor = defect.template?.floor?.label;
+  const room = defect.template?.room?.roomName;
+  const subRoom = defect.template?.subRoom?.roomName;
+  return [floor, room, subRoom].filter(Boolean).join(' / ') || 'ไม่ระบุห้อง';
+}
+
+async function openRoundReview(round: RoundView) {
+  selectedRound.value = round;
+  selectedDefect.value = null;
+  roundDefects.value = [];
+  roundDefectsError.value = '';
+  showRoundReviewDialog.value = true;
+
+  await Promise.all([fetchRoundDefects(round.id), fetchDefectMasterData()]);
+}
+
+async function fetchRoundDefects(roundId: number) {
+  isLoadingRoundDefects.value = true;
+  roundDefectsError.value = '';
+  try {
+    const { data } = await api.get<AdminDefect[]>(`/defects/round/${roundId}`);
+    roundDefects.value = data;
+    if (data.length > 0) {
+      selectDefect(data[0]!);
+    }
+  } catch (error) {
+    console.error('Failed to load round defects:', error);
+    roundDefects.value = [];
+    selectedDefect.value = null;
+    roundDefectsError.value = 'โหลดรายการ defect ไม่สำเร็จ';
+    $q.notify({
+      message: 'โหลดรายการ defect ไม่สำเร็จ',
+      color: 'negative',
+      icon: 'error',
+      position: 'top',
+    });
+  } finally {
+    isLoadingRoundDefects.value = false;
+  }
+}
+
+function retryFetchRoundDefects() {
+  if (!selectedRound.value) return;
+  void fetchRoundDefects(selectedRound.value.id);
+}
+
+function selectDefect(defect: AdminDefect) {
+  selectedDefect.value = defect;
+  defectEditForm.value = {
+    description: defect.description || '',
+    severity: defect.severity || 'Minor',
+    status: defect.status || 'PENDING_REPAIR',
+    subCategoryIds: defect.subCategories?.map((item) => item.subCategoryId) ?? [],
+    file: null,
+  };
+}
+
+function resetSelectedDefectForm() {
+  if (selectedDefect.value) {
+    selectDefect(selectedDefect.value);
+  }
+}
+
+async function saveDefectChanges() {
+  if (!selectedDefect.value) return;
+
+  isSavingDefect.value = true;
+  try {
+    const formData = new FormData();
+    formData.append('description', defectEditForm.value.description || '-');
+    formData.append('severity', defectEditForm.value.severity);
+    formData.append('status', defectEditForm.value.status);
+    defectEditForm.value.subCategoryIds.forEach((id) => {
+      formData.append('subCategoryIds', String(id));
+    });
+    if (defectEditForm.value.file) {
+      formData.append('file', defectEditForm.value.file);
+    }
+
+    await api.patch(`/defects/${selectedDefect.value.defectId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    if (selectedRound.value) {
+      await fetchRoundDefects(selectedRound.value.id);
+      const updated = roundDefects.value.find((d) => d.defectId === selectedDefect.value?.defectId);
+      if (updated) selectDefect(updated);
+    }
+
+    $q.notify({
+      message: 'บันทึก defect สำเร็จ',
+      color: 'positive',
+      icon: 'check_circle',
+      position: 'top',
+    });
+  } catch (error) {
+    console.error('Failed to update defect:', error);
+    $q.notify({
+      message: 'บันทึก defect ไม่สำเร็จ',
+      color: 'negative',
+      icon: 'error',
+      position: 'top',
+    });
+  } finally {
+    isSavingDefect.value = false;
+  }
+}
+
+function confirmApproveRound() {
+  if (!selectedRound.value) return;
+
+  $q.dialog({
+    title: 'ยืนยันการอนุมัติ',
+    message: `ต้องการอนุมัติรอบที่ ${selectedRound.value.roundNumber} ใช่ไหม?`,
+    ok: { label: 'อนุมัติ', color: 'positive' },
+    cancel: { label: 'ยกเลิก', flat: true, color: 'grey-7' },
+    persistent: true,
+  }).onOk(() => {
+    void approveSelectedRound();
+  });
+}
+
+async function approveSelectedRound() {
+  if (!selectedRound.value) return;
+
+  isApprovingRound.value = true;
+  try {
+    await api.patch(`/inspection-rounds/${selectedRound.value.id}/approve`);
+    const rounds = await fetchRounds();
+    applyRounds(rounds);
+    const updatedRound = inspectionRounds.value.find((round) => round.id === selectedRound.value?.id);
+    selectedRound.value = updatedRound ?? null;
+
+    $q.notify({
+      message: 'อนุมัติรอบตรวจเรียบร้อยแล้ว',
+      color: 'positive',
+      icon: 'verified',
+      position: 'top',
+    });
+  } catch (error) {
+    console.error('Failed to approve round:', error);
+    $q.notify({
+      message: 'อนุมัติไม่สำเร็จ กรุณาตรวจสอบว่าส่งอนุมัติจาก inspector แล้ว',
+      color: 'negative',
+      icon: 'error',
+      position: 'top',
+    });
+  } finally {
+    isApprovingRound.value = false;
+  }
+}
 
 // Dialog form state
 const showCreateRoundDialog = ref(false);
@@ -701,6 +1158,17 @@ function getRoundStatusColor(status: string) {
 .detail-content {
   max-width: 600px;
   margin: 0 auto;
+}
+
+.review-dialog-content {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  overflow-y: auto;
+}
+
+.review-panel {
+  min-height: 280px;
 }
 
 .card-round {
