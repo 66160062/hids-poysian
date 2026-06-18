@@ -214,11 +214,7 @@
               />
             </div>
           </q-btn>
-
-          <!-- PDF and Report preview buttons removed -->
         </q-card>
-
-        <!-- Push button to the bottom -->
         <q-space />
 
         <q-btn
