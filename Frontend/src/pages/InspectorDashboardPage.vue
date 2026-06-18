@@ -157,69 +157,6 @@
         </template>
       </div>
 
-      <div class="fixed-bottom row justify-center" style="pointer-events: none; z-index: 100">
-        <div
-          class="bg-white row items-center"
-          :style="{
-            width: '100%',
-            maxWidth: isMobile ? '430px' : '800px',
-            height: '75px',
-            pointerEvents: 'auto',
-            boxShadow: '0 -4px 15px rgba(0, 0, 0, 0.05)',
-            borderTop: '1px solid #eee',
-          }"
-        >
-          <div
-            @click="activeTab = 'inspection'"
-            class="col column items-center justify-center relative-position cursor-pointer h-full"
-            style="height: 100%"
-          >
-            <div
-              v-if="activeTab === 'inspection'"
-              class="absolute-top bg-primary"
-              style="height: 4px; width: 100%"
-            ></div>
-            <q-icon
-              name="engineering"
-              size="28px"
-              :color="activeTab === 'inspection' ? 'primary' : 'grey-5'"
-              class="q-mb-xs"
-            />
-            <div
-              class="text-weight-bold"
-              :class="activeTab === 'inspection' ? 'text-primary' : 'text-grey-5'"
-              style="font-size: 12px"
-            >
-              การตรวจบ้าน
-            </div>
-          </div>
-
-          <div
-            @click="activeTab = 'progress'"
-            class="col column items-center justify-center relative-position cursor-pointer h-full"
-            style="height: 100%"
-          >
-            <div
-              v-if="activeTab === 'progress'"
-              class="absolute-top bg-primary"
-              style="height: 4px; width: 100%"
-            ></div>
-            <q-icon
-              name="assignment_turned_in"
-              size="28px"
-              :color="activeTab === 'progress' ? 'primary' : 'grey-5'"
-              class="q-mb-xs"
-            />
-            <div
-              class="text-weight-bold"
-              :class="activeTab === 'progress' ? 'text-primary' : 'text-grey-5'"
-              style="font-size: 12px"
-            >
-              การตรวจความคืบหน้า
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </q-page>
 </template>
@@ -245,7 +182,6 @@ const $q = useQuasar();
 const authStore = useAuthStore();
 const isMobile = computed(() => $q.screen.lt.md);
 
-const activeTab = ref('inspection');
 const inspectorId = computed(() => authStore.currentUser?.id ?? 0);
 const loading = ref(false);
 const isMonthlyView = ref(false);
