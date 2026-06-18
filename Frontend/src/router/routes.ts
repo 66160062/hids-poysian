@@ -123,6 +123,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'การตรวจ' },
       },
       {
+        path: 'job/:roundId/construction-inspect',
+        name: 'constructionInspect',
+        component: () => import('pages/ConstructionInspectPage.vue'),
+        meta: { title: 'ตรวจก่อสร้าง' },
+      },
+      {
         path: 'job/:roundId/report',
         component: () => import('pages/InspectionReportPage.vue'),
         meta: { title: 'รายงาน' },

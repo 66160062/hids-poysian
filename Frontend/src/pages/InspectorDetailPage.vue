@@ -319,7 +319,11 @@ function formatDate(dateStr: string) {
 }
 
 function startInspection() {
-  void router.push(`/inspector/job/${roundId}/inspection`);
+  if (isConstruction(jobData.value?.job?.inspectionType)) {
+    void router.push(`/inspector/job/${roundId}/construction-inspect`);
+  } else {
+    void router.push(`/inspector/job/${roundId}/inspection`);
+  }
 }
 
 // === API Calls ===
