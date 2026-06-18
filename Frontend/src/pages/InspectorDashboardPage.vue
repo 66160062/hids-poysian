@@ -39,7 +39,12 @@
 
       <div v-else class="q-px-lg q-mb-xl">
         <div v-if="filteredDayRounds.length === 0" class="text-center text-grey q-pa-xl">
-          ไม่มีงานตรวจในวันนี้
+          <div class="text-h6 text-weight-medium">ไม่มีงานตรวจบ้านในวันนี้</div>
+          <div v-if="selectedDayRounds.length > 0" class="text-body2 q-mt-sm text-warning" style="font-family: 'Inter', 'Noto Sans Thai', sans-serif;">
+            แต่วันนี้มี <span class="text-weight-bold">งานตรวจก่อสร้าง</span>
+            <br />
+            กดที่เมนูด้านล่างเพื่อสลับโหมด
+          </div>
         </div>
 
         <template v-else>
