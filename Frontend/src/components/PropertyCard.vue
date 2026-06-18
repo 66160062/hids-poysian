@@ -82,7 +82,7 @@ const isConstruction = (type?: string) => type === 'Construction' || type === 'à
 </script>
 
 <template>
-  <q-card v-if="item && item.job" flat bordered class="q-mb-md property-card q-mx-auto">
+  <q-card v-if="item && item.job" flat bordered class="q-mb-md property-card q-mx-auto cursor-pointer" @click="goToInspectionInfo(item.roundId)" v-ripple>
     <q-card-section class="row no-wrap items-stretch" style="padding: 16px">
       <div class="col-auto column" style="padding-right: 16px">
         <q-img
@@ -217,12 +217,11 @@ const isConstruction = (type?: string) => type === 'Construction' || type === 'à
             no-caps
             @click.stop="openGoogleMaps"
           />
-          <q-btn
-            flat
-            round
-            icon="chevron_right"
+          <q-icon
+            name="chevron_right"
             color="primary"
-            @click="goToInspectionInfo(item.roundId)"
+            size="28px"
+            class="q-mr-xs"
           />
         </div>
       </div>
