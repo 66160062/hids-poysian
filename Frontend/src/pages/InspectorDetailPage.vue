@@ -34,19 +34,37 @@
           >
             {{ jobData.job.projectName }}
           </div>
-          <q-badge
-            color="warning"
-            text-color="black"
-            style="
-              border-radius: 99px;
-              font-family: 'Inter', sans-serif;
-              font-weight: 500;
-              font-size: 10px;
-              padding: 4px 10px;
-            "
-          >
-            {{ isSubmitted ? 'รอการอนุมัติ' : 'รอเข้าตรวจ' }}
-          </q-badge>
+          <div class="row items-center q-gutter-x-sm">
+            <q-badge
+              v-if="isDefect(jobData.job?.inspectionType)"
+              color="primary"
+              outline
+              label="การตรวจบ้าน"
+              class="q-px-sm q-py-xs"
+              style="font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 500; border-radius: 4px;"
+            />
+            <q-badge
+              v-else-if="isConstruction(jobData.job?.inspectionType)"
+              color="warning"
+              outline
+              label="การตรวจก่อสร้าง"
+              class="q-px-sm q-py-xs"
+              style="font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 500; border-radius: 4px;"
+            />
+            <q-badge
+              color="warning"
+              text-color="black"
+              style="
+                border-radius: 99px;
+                font-family: 'Inter', sans-serif;
+                font-weight: 500;
+                font-size: 10px;
+                padding: 4px 10px;
+              "
+            >
+              {{ isSubmitted ? 'รอการอนุมัติ' : 'รอเข้าตรวจ' }}
+            </q-badge>
+          </div>
         </div>
 
         <div
@@ -171,7 +189,9 @@
           >
             <div class="row full-width justify-between items-center q-px-sm">
               <span class="text-weight-bold">{{
-                isInspected ? 'ดูข้อมูลการตรวจ Defect' : 'เริ่มตรวจบ้าน'
+                isInspected
+                  ? (isConstruction(jobData.job?.inspectionType) ? 'ดูข้อมูลการตรวจก่อสร้าง' : 'ดูข้อมูลการตรวจ Defect')
+                  : (isConstruction(jobData.job?.inspectionType) ? 'เริ่มตรวจก่อสร้าง' : 'เริ่มตรวจบ้าน')
               }}</span>
               <q-icon
                 :name="isInspected ? 'check_circle' : 'chevron_right'"
@@ -201,69 +221,7 @@
             </div>
           </q-btn>
 
-          <q-btn
-            outline
-            color="blue"
-            class="full-width q-py-sm q-mb-sm"
-            style="border-radius: 10px; border-width: 1.5px"
-            @click="openReport(jobData.roundId)"
-          >
-            <div class="row full-width justify-between items-center q-px-sm">
-              <span class="text-weight-bold">ดูตัวอย่างรายงาน PDF</span>
-              <q-icon
-                name="chevron_right"
-                class="bg-blue text-white rounded-borders q-pa-xs"
-                size="28px"
-              />
-            </div>
-          </q-btn>
-
-          <div v-show="false">
-            <DefectReport
-              ref="reportComp"
-              :round="jobData"
-              :defects="defects"
-              :summaryItems="summaryItems"
-            />
-          </div>
-
-          <q-btn
-            outline
-            color="blue"
-            class="full-width q-py-sm q-mb-sm"
-            style="border-radius: 10px; border-width: 1.5px"
-            @click="exportPdf()"
-          >
-            <div class="row full-width justify-between items-center q-px-sm">
-              <span class="text-weight-bold">ปรินต์ PDF</span>
-              <q-icon
-                name="chevron_right"
-                class="bg-blue text-white rounded-borders q-pa-xs"
-                size="28px"
-              />
-            </div>
-          </q-btn>
-
-          <q-dialog
-            :model-value="activeReportRoundId !== null"
-            @update:model-value="closeReport"
-            full-width
-            full-height
-          >
-            <q-card v-if="activeReportRoundId">
-              <q-bar class="bg-primary text-white">
-                <div>ตัวอย่างรายงาน Defect (Round: {{ activeReportRoundId }})</div>
-                <q-space />
-                <q-btn dense flat icon="close" @click="closeReport">
-                  <q-tooltip>ปิด</q-tooltip>
-                </q-btn>
-              </q-bar>
-
-              <q-card-section class="q-pa-none">
-                <DefectReport :round="jobData" :defects="defects" :summaryItems="summaryItems" />
-              </q-card-section>
-            </q-card>
-          </q-dialog>
+          <!-- PDF and Report preview buttons removed -->
         </q-card>
 
         <q-btn
@@ -294,8 +252,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
-import type { Defect, InspectionRound, InspectionSummaryItem } from 'src/models';
-import DefectReport from 'src/components/DefectReport.vue';
+import type { InspectionRound } from 'src/models';
 
 const apiUrl = import.meta.env.VITE_API_URL;
 const $q = useQuasar();
@@ -304,6 +261,9 @@ const router = useRouter();
 
 const isMobile = computed(() => $q.screen.lt.md);
 const loading = ref(true);
+
+const isDefect = (type?: string) => type === 'Defect' || type === 'ตรวจ Defect';
+const isConstruction = (type?: string) => type === 'Construction' || type === 'ตรวจก่อสร้าง';
 
 // 1. แก้อาการ Type Error โดยไม่ต้องพึ่ง any
 // (เชื่อม Type แจ้ง TS ว่ามี inspectedAt, summaryCompletedAt และ status เสริมเข้ามา)
@@ -316,14 +276,6 @@ const jobData = ref<
   | null
 >(null);
 
-const summaryItems = ref<InspectionSummaryItem[]>([]);
-
-// 2. แก้อาการ never[] ของ defects
-// (ถ้ามี Type ของ Defect ใน models แนะนำให้นำมาใส่แทน any[] ครับ)
-const defects = ref<Defect[]>([]);
-
-const reportComp = ref<InstanceType<typeof DefectReport> | null>(null);
-
 const roundId = route.params.roundId as string;
 const isSubmitting = ref(false);
 
@@ -334,10 +286,6 @@ const isSubmitted = computed(() => jobData.value?.status === 'SUBMITTED');
 const canSubmitApproval = computed(
   () => isInspected.value && isSummaryDone.value && !isSubmitted.value,
 );
-
-function exportPdf() {
-  reportComp.value?.exportPdf();
-}
 
 // 3. ปรับปรุงระบบเปิด Google Maps
 const openGoogleMaps = () => {
@@ -394,25 +342,6 @@ async function fetchJobDetails() {
   }
 }
 
-async function fetchDefects() {
-  try {
-    const res = await api.get(`/defects/round/${roundId}`);
-    defects.value = res.data;
-  } catch (error) {
-    console.error('Error fetching defects:', error);
-  }
-}
-
-async function fetchSummary() {
-  try {
-    // ตรวจสอบ URL ของ API สรุปรายงานของคุณให้ถูกต้อง (ตัวอย่าง: /inspection-summary/round/...)
-    const res = await api.get(`/inspection-summary-items/round/${roundId}`);
-    summaryItems.value = res.data;
-  } catch (error) {
-    console.error('Error fetching summary:', error);
-  }
-}
-
 // === Action Functions ===
 
 async function executeSubmit() {
@@ -453,22 +382,8 @@ const onSubmit = () => {
   });
 };
 
-const activeReportRoundId = ref<number | null>(null);
-
-// ฟังก์ชันสำหรับเปิดรายงาน
-const openReport = (roundId: number) => {
-  activeReportRoundId.value = roundId;
-};
-
-// ฟังก์ชันสำหรับปิด
-const closeReport = () => {
-  activeReportRoundId.value = null;
-};
-
 onMounted(() => {
   void fetchJobDetails();
-  void fetchDefects();
-  void fetchSummary();
 });
 </script>
 
