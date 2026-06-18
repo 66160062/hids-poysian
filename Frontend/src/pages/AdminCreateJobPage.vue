@@ -369,6 +369,7 @@ onMounted(async () => {
     const existing = workStore.works.find((w) => w.jobId === editId.value);
     if (!existing) return;
 
+    form.jobType = existing.inspectionType === 'ตรวจก่อสร้าง' ? 'construction' : 'defect';
     form.projectName = existing.projectName || '';
     form.houseType = existing.houseType?.house_type_id || 1;
     form.usableArea = existing.usableArea?.toString() || '';
@@ -410,6 +411,7 @@ const handleFileChange = (e: Event) => {
       form.projectImageFile = file;
     }
   }
+  target.value = '';
 };
 
 
@@ -508,7 +510,8 @@ const onSubmit = async () => {
         }
 
         const jobFormData = new FormData();
-        jobFormData.append('inspectionType', 'ตรวจ Defect');
+        const inspectionTypeStr = form.jobType === 'construction' ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
+        jobFormData.append('inspectionType', inspectionTypeStr);
         jobFormData.append('houseTypeId', String(form.houseType));
         jobFormData.append('projectName', form.projectName);
         jobFormData.append('locationCoordinate', '');
@@ -572,7 +575,8 @@ const onSubmit = async () => {
       jobFormData.append('customerId', String(customerId));
       jobFormData.append('addressId', String(addressId));
       if (finalContractorId) jobFormData.append('contractorId', String(finalContractorId));
-      jobFormData.append('inspectionType', 'ตรวจ Defect');
+      const inspectionTypeStr = form.jobType === 'construction' ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
+      jobFormData.append('inspectionType', inspectionTypeStr);
       jobFormData.append('houseTypeId', String(form.houseType));
       jobFormData.append('projectName', form.projectName);
       jobFormData.append('locationCoordinate', '');
