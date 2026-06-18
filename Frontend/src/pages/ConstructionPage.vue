@@ -41,7 +41,7 @@
         <div v-if="filteredDayRounds.length === 0" class="text-center text-grey q-pa-xl">
           <div class="text-h6 text-weight-medium">ไม่มีงานตรวจก่อสร้างในวันนี้</div>
           <div v-if="selectedDayRounds.length > 0" class="text-body2 q-mt-sm text-primary" style="font-family: 'Inter', 'Noto Sans Thai', sans-serif;">
-            แต่วันนี้มี <span class="text-weight-bold">งานตรวจบ้าน</span>
+            วันนี้มี <span class="text-weight-bold">งานตรวจบ้าน</span>
             <br />
             กดที่เมนูด้านล่างเพื่อสลับโหมด
           </div>
