@@ -8,6 +8,7 @@ interface PropertyItem {
   job: {
     projectName: string;
     projectImageUrl?: string;
+    inspectionType?: string;
     address?: {
       houseNumber?: string;
       soi?: string;
@@ -75,6 +76,9 @@ const openGoogleMaps = () => {
 };
 
 const apiUrl = import.meta.env.VITE_API_URL;
+
+const isDefect = (type?: string) => type === 'Defect' || type === 'ตรวจ Defect';
+const isConstruction = (type?: string) => type === 'Construction' || type === 'ตรวจก่อสร้าง';
 </script>
 
 <template>
@@ -95,16 +99,36 @@ const apiUrl = import.meta.env.VITE_API_URL;
 
       <div class="col column justify-between min-w-0">
         <div class="row items-start justify-between no-wrap q-mb-xs">
-          <div
-            class="text-primary ellipsis col q-pr-sm"
-            style="
-              font-family: 'Inter', sans-serif;
-              font-weight: 500;
-              font-size: 14px;
-              line-height: 1.2;
-            "
-          >
-            {{ item.job.projectName }}
+          <div class="column col q-pr-sm">
+            <div
+              class="text-primary ellipsis"
+              style="
+                font-weight: 500;
+                font-size: 14px;
+                line-height: 1.2;
+              "
+            >
+              {{ item.job.projectName }}
+            </div>
+            <!-- Inspection Type Badge -->
+            <div class="q-mt-xs">
+              <q-badge
+                v-if="isDefect(item.job?.inspectionType)"
+                color="primary"
+                outline
+                label="การตรวจบ้าน"
+                class="q-px-sm"
+                style="font-size: 10px; font-weight: 500; border-radius: 4px;"
+              />
+              <q-badge
+                v-else-if="isConstruction(item.job?.inspectionType)"
+                color="warning"
+                outline
+                label="การตรวจก่อสร้าง"
+                class="q-px-sm"
+                style="font-size: 10px; font-weight: 500; border-radius: 4px;"
+              />
+            </div>
           </div>
 
           <q-badge
@@ -119,7 +143,6 @@ const apiUrl = import.meta.env.VITE_API_URL;
               align-items: center;
               justify-content: center;
               border-radius: 99px;
-              font-family: 'Inter', sans-serif;
               font-weight: 500;
               font-size: 8px;
             "
@@ -132,7 +155,6 @@ const apiUrl = import.meta.env.VITE_API_URL;
         <div
           class="text-grey-7"
           style="
-            font-family: 'Inter', sans-serif;
             font-weight: 300;
             font-style: italic;
             font-size: 8px;
@@ -153,7 +175,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
 
         <div
           class="q-mt-xs text-dark"
-          style="font-family: 'Inter', sans-serif; font-weight: 500; font-size: 10px"
+          style="font-weight: 500; font-size: 10px"
         >
           <span class="text-primary">ประเภทที่อยู่:</span>
           <span>
@@ -167,7 +189,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
             <q-icon name="person_outline" color="primary" size="14px" />
             <span
               class="text-primary"
-              style="font-family: 'Inter', sans-serif; font-weight: 500; font-size: 12px"
+              style="font-weight: 500; font-size: 12px"
             >
               {{ item.job.customer?.fullName || 'ไม่ระบุชื่อ' }}
             </span>
@@ -176,7 +198,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
             <q-icon name="phone_in_talk" color="primary" size="14px" />
             <span
               class="text-dark"
-              style="font-family: 'Inter', sans-serif; font-weight: 500; font-size: 12px"
+              style="font-weight: 500; font-size: 12px"
             >
               {{ item.job.customer?.phoneNumber || 'ไม่ระบุเบอร์โทร' }}
             </span>
@@ -191,7 +213,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
             label="นำทาง"
             size="sm"
             class="nav-button"
-            style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500"
+            style="font-size: 12px; font-weight: 500"
             no-caps
             @click.stop="openGoogleMaps"
           />
@@ -210,6 +232,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
 
 <style scoped>
 .property-card {
+  font-family: 'Inter', 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, sans-serif;
   width: 100%;
   min-height: 150px;
   height: auto;
