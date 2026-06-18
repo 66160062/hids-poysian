@@ -369,7 +369,7 @@ onMounted(async () => {
     const existing = workStore.works.find((w) => w.jobId === editId.value);
     if (!existing) return;
 
-    form.jobType = existing.inspectionType === 'ตรวจก่อสร้าง' ? 'construction' : 'defect';
+    form.jobType = (existing.inspectionType === 'Construction' || existing.inspectionType === 'ตรวจก่อสร้าง') ? 'construction' : 'defect';
     form.projectName = existing.projectName || '';
     form.houseType = existing.houseType?.house_type_id || 1;
     form.usableArea = existing.usableArea?.toString() || '';
@@ -510,7 +510,7 @@ const onSubmit = async () => {
         }
 
         const jobFormData = new FormData();
-        const inspectionTypeStr = form.jobType === 'construction' ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
+        const inspectionTypeStr = form.jobType === 'construction' ? 'Construction' : 'Defect';
         jobFormData.append('inspectionType', inspectionTypeStr);
         jobFormData.append('houseTypeId', String(form.houseType));
         jobFormData.append('projectName', form.projectName);
@@ -575,7 +575,7 @@ const onSubmit = async () => {
       jobFormData.append('customerId', String(customerId));
       jobFormData.append('addressId', String(addressId));
       if (finalContractorId) jobFormData.append('contractorId', String(finalContractorId));
-      const inspectionTypeStr = form.jobType === 'construction' ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
+      const inspectionTypeStr = form.jobType === 'construction' ? 'Construction' : 'Defect';
       jobFormData.append('inspectionType', inspectionTypeStr);
       jobFormData.append('houseTypeId', String(form.houseType));
       jobFormData.append('projectName', form.projectName);
