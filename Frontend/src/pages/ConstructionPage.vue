@@ -11,102 +11,14 @@
       }"
     >
       <div class="q-pa-lg" style="max-width: 600px; margin: 20px auto 0">
-        <div class="row justify-between items-center q-mb-md">
-          <div class="text-weight-bold" style="font-size: 16px">
-            {{ isMonthlyView ? 'ตารางงานเดือนนี้' : 'ตารางงานสัปดาห์นี้' }}
-          </div>
-          <div
-            class="text-primary text-weight-bold"
-            style="font-size: 13px; cursor: pointer"
-            @click="toggleView"
-          >
-            {{ isMonthlyView ? 'ดูตารางแบบสัปดาห์' : 'ดูตารางงานทั้งหมด' }}
-          </div>
-        </div>
-
-        <div v-if="isMonthlyView" class="row items-center justify-between q-mb-sm">
-          <q-btn flat round icon="chevron_left" @click="prevMonth" />
-          <div class="text-weight-bold">
-            {{ currentMonth.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' }) }}
-          </div>
-          <q-btn flat round icon="chevron_right" @click="nextMonth" />
-        </div>
-
-        <div
-          class="hide-scrollbar"
-          :class="isMonthlyView ? 'row wrap' : 'row no-wrap q-gutter-x-sm items-start'"
-          :style="isMonthlyView ? '' : 'overflow-x: auto; padding: 10px 0'"
-        >
-          <div
-            v-for="(day, index) in calendarDays"
-            :key="day.dateStr || index"
-            :class="isMonthlyView ? '' : 'column items-center relative-position'"
-            :style="
-              isMonthlyView
-                ? 'width: 14.28%; padding: 2px;'
-                : 'min-width: 68px; border-radius: 14px; padding-top: 14px; height: ' +
-                  (day.isActive ? '100px' : '85px') +
-                  ';'
-            "
-          >
-            <div v-if="day.isEmpty" style="height: 100%"></div>
-
-            <div
-              v-else
-              class="column items-center relative-position full-width full-height cursor-pointer"
-              @click="selectDay(day)"
-              :class="[
-                day.isActive
-                  ? 'bg-primary text-white shadow-3 rounded-borders'
-                  : day.dateStr < todayStr
-                    ? 'bg-grey-4 text-grey-6 rounded-borders'
-                    : 'bg-white text-dark rounded-borders',
-              ]"
-              :style="[
-                isMonthlyView
-                  ? {
-                      borderRadius: '12px',
-                      padding: '4px 0',
-                      border:
-                        day.hasDot && !day.isActive ? '2px solid #333' : '2px solid transparent',
-                    }
-                  : {
-                      borderRadius: '14px',
-                      border:
-                        !day.isActive && day.dateStr > todayStr ? '1px solid #E0E0E0' : 'none',
-                    },
-              ]"
-            >
-              <div
-                v-if="!isMonthlyView"
-                style="font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500"
-              >
-                {{ day.label }}
-              </div>
-              <div
-                class="text-weight-bold q-mt-xs"
-                style="font-family: 'Inter', sans-serif; font-size: 24px; line-height: 1"
-              >
-                {{ day.date }}
-              </div>
-              <div
-                v-if="day.hasDot && !isMonthlyView"
-                class="absolute-bottom"
-                style="
-                  width: 6px;
-                  height: 6px;
-                  border-radius: 50%;
-                  margin-bottom: 14px;
-                  left: 50%;
-                  transform: translateX(-50%);
-                "
-                :class="
-                  day.isActive ? 'bg-white' : day.dateStr < todayStr ? 'bg-grey-5' : 'bg-dark'
-                "
-              ></div>
-            </div>
-          </div>
-        </div>
+        <InspectorCalendar
+          :rounds="rounds"
+          :selectedDate="selectedDate"
+          :isMonthlyView="isMonthlyView"
+          @update:selectedDate="selectedDate = $event"
+          @update:isMonthlyView="onMonthlyViewChange"
+          @monthChanged="onMonthChanged"
+        />
       </div>
 
       <q-separator color="primary" class="q-mx-lg q-mb-lg" style="height: 2px" />
@@ -117,7 +29,7 @@
           <div class="text-weight-bold" style="font-size: 15px">วันที่ {{ selectedDateLabel }}</div>
         </div>
         <div class="text-grey-6 q-mt-xs" style="font-size: 12px">
-          สรุป: มี {{ selectedDayRounds.length }} งานในวันที่เลือก
+          สรุป: มี {{ filteredDayRounds.length }} งานในวันที่เลือก
         </div>
       </div>
 
@@ -126,7 +38,7 @@
       </div>
 
       <div v-else class="q-px-lg q-mb-xl">
-        <div v-if="selectedDayRounds.length === 0" class="text-center text-grey q-pa-xl">
+        <div v-if="filteredDayRounds.length === 0" class="text-center text-grey q-pa-xl">
           ไม่มีงานในวันนี้
         </div>
 
@@ -167,16 +79,9 @@ import { api } from 'src/boot/axios';
 import { useAuthStore } from 'src/stores/useAuth';
 import type { InspectionRound } from 'src/models';
 import PropertyCard from 'src/components/PropertyCard.vue';
+import InspectorCalendar from 'src/components/InspectorCalendar.vue';
 
-interface CalendarDay {
-  isEmpty: boolean;
-  label?: string;
-  date?: number;
-  dateStr: string;
-  isActive?: boolean;
-  hasDot?: boolean;
-}
-
+// ── Plugins & State ───────────────────────────────────────────
 const $q = useQuasar();
 const authStore = useAuthStore();
 const isMobile = computed(() => $q.screen.lt.md);
@@ -187,77 +92,24 @@ const rounds = ref<InspectionRound[]>([]);
 const selectedDate = ref(new Date());
 const currentMonth = ref(new Date());
 
-const dayLabels = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
-
-const todayStr = computed(() => toLocalDateStr(new Date()));
-
-const calendarDays = computed<CalendarDay[]>(() => {
-  if (!isMonthlyView.value) {
-    const startOfWeek = new Date(selectedDate.value);
-    startOfWeek.setDate(selectedDate.value.getDate() - selectedDate.value.getDay());
-
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(startOfWeek);
-      d.setDate(startOfWeek.getDate() + i);
-      const dateStr = toLocalDateStr(d);
-      const hasRound = rounds.value.some(
-        (r) => toScheduledDateStr(r.scheduledDate) === dateStr,
-      );
-
-      return {
-        isEmpty: false,
-        label: dayLabels[i] ?? '',
-        date: d.getDate(),
-        dateStr: dateStr,
-        isActive: dateStr === toLocalDateStr(selectedDate.value),
-        hasDot: hasRound,
-      };
-    });
-  }
-
-  const days: CalendarDay[] = [];
-  const year = currentMonth.value.getFullYear();
-  const month = currentMonth.value.getMonth();
-
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const startPadding = firstDay.getDay();
-
-  for (let i = 0; i < startPadding; i++) {
-    days.push({ isEmpty: true, dateStr: `empty-${i}` });
-  }
-
-  for (let d = 1; d <= lastDay.getDate(); d++) {
-    const currentDate = new Date(year, month, d);
-    const dateStr = toLocalDateStr(currentDate);
-    const hasRound = rounds.value.some(
-      (r) => toScheduledDateStr(r.scheduledDate) === dateStr,
-    );
-
-    days.push({
-      isEmpty: false,
-      label: dayLabels[currentDate.getDay()] ?? '',
-      date: d,
-      dateStr: dateStr,
-      isActive: dateStr === toLocalDateStr(selectedDate.value),
-      hasDot: hasRound,
-    });
-  }
-
-  return days;
-});
-
+// ── Computed: filter only Construction rounds ─────────────────
 const selectedDayRounds = computed(() => {
   const selected = toLocalDateStr(selectedDate.value);
   return rounds.value.filter((r) => toScheduledDateStr(r.scheduledDate) === selected);
 });
 
+const filteredDayRounds = computed(() => {
+  return selectedDayRounds.value.filter(
+    (r) => r.job?.inspectionType === 'Construction' || r.job?.inspectionType === 'ตรวจก่อสร้าง',
+  );
+});
+
 const morningRounds = computed(() => {
-  return selectedDayRounds.value.filter((r) => getBangkokHour(r.scheduledDate) < 12);
+  return filteredDayRounds.value.filter((r) => getBangkokHour(r.scheduledDate) < 12);
 });
 
 const afternoonRounds = computed(() => {
-  return selectedDayRounds.value.filter((r) => getBangkokHour(r.scheduledDate) >= 12);
+  return filteredDayRounds.value.filter((r) => getBangkokHour(r.scheduledDate) >= 12);
 });
 
 const selectedDateLabel = computed(() => {
@@ -268,56 +120,19 @@ const selectedDateLabel = computed(() => {
   });
 });
 
-function toggleView() {
-  isMonthlyView.value = !isMonthlyView.value;
+// ── Calendar Event Handlers ───────────────────────────────────
+function onMonthlyViewChange(value: boolean): void {
+  isMonthlyView.value = value;
   void fetchRounds();
 }
 
-function selectDay(day: CalendarDay) {
-  if (!day.isEmpty && day.dateStr) {
-    selectedDate.value = new Date(`${day.dateStr}T12:00:00`);
-  }
-}
-
-function toLocalDateStr(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function toScheduledDateStr(dateStr: string): string {
-  if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
-}
-
-function getBangkokHour(dateStr: string): number {
-  return Number(
-    new Date(dateStr).toLocaleString('en-US', {
-      timeZone: 'Asia/Bangkok',
-      hour: 'numeric',
-      hour12: false,
-    }),
-  );
-}
-
-function prevMonth() {
-  const d = new Date(currentMonth.value);
-  d.setMonth(d.getMonth() - 1);
-  currentMonth.value = d;
-  selectedDate.value = new Date(d.getFullYear(), d.getMonth(), 1);
+function onMonthChanged(date: Date): void {
+  currentMonth.value = date;
   void fetchRounds();
 }
 
-function nextMonth() {
-  const d = new Date(currentMonth.value);
-  d.setMonth(d.getMonth() + 1);
-  currentMonth.value = d;
-  selectedDate.value = new Date(d.getFullYear(), d.getMonth(), 1);
-  void fetchRounds();
-}
-
-async function fetchRounds() {
+// ── Data Fetching ─────────────────────────────────────────────
+async function fetchRounds(): Promise<void> {
   const inspectorId = authStore.currentUser?.id ?? 0;
   if (!inspectorId) {
     rounds.value = [];
@@ -345,6 +160,30 @@ async function fetchRounds() {
   }
 }
 
+// ── Helpers ───────────────────────────────────────────────────
+function toLocalDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function toScheduledDateStr(dateStr: string): string {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+}
+
+function getBangkokHour(dateStr: string): number {
+  return Number(
+    new Date(dateStr).toLocaleString('en-US', {
+      timeZone: 'Asia/Bangkok',
+      hour: 'numeric',
+      hour12: false,
+    }),
+  );
+}
+
+// ── Lifecycle ─────────────────────────────────────────────────
 onMounted(() => {
   void fetchRounds();
 });
@@ -353,13 +192,3 @@ onActivated(() => {
   void fetchRounds();
 });
 </script>
-
-<style scoped>
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-</style>
