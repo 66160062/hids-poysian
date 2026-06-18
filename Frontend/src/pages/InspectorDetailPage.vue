@@ -1,13 +1,12 @@
 <template>
   <q-page class="bg-grey-3 row justify-center">
     <div
-      class="bg-white relative-position column"
+      class="bg-white relative-position column modern-font"
       :style="{
         width: '100%',
         maxWidth: isMobile ? '430px' : '800px',
-        height: '100%',
+        minHeight: '100vh',
         boxSizing: 'border-box',
-        paddingBottom: '90px',
         boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
       }"
     >
@@ -15,7 +14,7 @@
         <q-spinner color="primary" size="40px" />
       </div>
 
-      <div v-else-if="jobData" class="q-px-lg q-pb-xl col column">
+      <div v-else-if="jobData" class="q-px-lg q-pb-md col column">
         <q-img
           :src="
             jobData.job.projectImageUrl
@@ -30,7 +29,7 @@
         <div class="row items-center justify-between no-wrap q-mb-xs">
           <div
             class="text-primary text-weight-bold ellipsis"
-            style="font-family: 'Inter', sans-serif; font-size: 20px"
+            style="font-size: 20px"
           >
             {{ jobData.job.projectName }}
           </div>
@@ -41,7 +40,7 @@
               outline
               label="การตรวจบ้าน"
               class="q-px-sm q-py-xs"
-              style="font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 500; border-radius: 4px;"
+              style="font-size: 10px; font-weight: 500; border-radius: 4px;"
             />
             <q-badge
               v-else-if="isConstruction(jobData.job?.inspectionType)"
@@ -49,14 +48,13 @@
               outline
               label="การตรวจก่อสร้าง"
               class="q-px-sm q-py-xs"
-              style="font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 500; border-radius: 4px;"
+              style="font-size: 10px; font-weight: 500; border-radius: 4px;"
             />
             <q-badge
               color="warning"
               text-color="black"
               style="
                 border-radius: 99px;
-                font-family: 'Inter', sans-serif;
                 font-weight: 500;
                 font-size: 10px;
                 padding: 4px 10px;
@@ -70,7 +68,6 @@
         <div
           class="text-grey-6 q-mb-md"
           style="
-            font-family: 'Inter', sans-serif;
             font-size: 10px;
             font-weight: 300;
             line-height: 1.4;
@@ -91,7 +88,7 @@
               <q-icon name="home" color="primary" size="18px" />
               <span
                 class="text-dark"
-                style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500"
+                style="font-size: 12px; font-weight: 500"
               >
                 : {{ jobData.job.houseType?.name || '-' }}
                 {{ jobData.job.address?.floor ? jobData.job.address.floor + ' ชั้น' : '' }}
@@ -101,7 +98,7 @@
               <q-icon name="open_in_full" color="primary" size="18px" />
               <span
                 class="text-dark"
-                style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500"
+                style="font-size: 12px; font-weight: 500"
               >
                 : {{ jobData.job.usableArea || '-' }} ตร.ม.
               </span>
@@ -116,7 +113,7 @@
           <div class="column q-gutter-y-sm">
             <div
               class="text-primary text-weight-bold"
-              style="font-family: 'Inter', sans-serif; font-size: 14px"
+              style="font-size: 14px"
             >
               {{ jobData.job.customer?.fullName || 'ไม่ระบุชื่อลูกค้า' }}
             </div>
@@ -124,7 +121,7 @@
               <q-icon name="phone_in_talk" color="primary" size="18px" />
               <span
                 class="text-dark"
-                style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500"
+                style="font-size: 12px; font-weight: 500"
               >
                 : {{ jobData.job.customer?.phoneNumber || '-' }}
               </span>
@@ -133,7 +130,7 @@
               <q-icon name="mail_outline" color="primary" size="18px" />
               <span
                 class="text-dark"
-                style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500"
+                style="font-size: 12px; font-weight: 500"
               >
                 : {{ jobData.job.customer?.email || '-' }}
               </span>
@@ -157,7 +154,6 @@
           <div class="row items-center justify-between q-mb-xs">
             <div
               style="
-                font-family: 'Inter', sans-serif;
                 font-size: 14px;
                 font-weight: 600;
                 color: #333;
@@ -166,14 +162,14 @@
               รายงานการตรวจ
               <span class="text-primary">ครั้งที่ {{ jobData.roundNumber || 1 }}</span>
             </div>
-            <div class="text-primary" style="font-family: 'Inter', sans-serif; font-size: 11px">
+            <div class="text-primary" style="font-size: 11px">
               {{ formatDate(jobData.scheduledDate) }}
             </div>
           </div>
 
           <div
             class="text-grey-6 q-mb-md"
-            style="font-family: 'Inter', sans-serif; font-size: 10px"
+            style="font-size: 10px"
           >
             ผู้ตรวจ: {{ jobData.teamMember?.inspector?.team?.teamName || 'ทีมวิศวกร' }}
           </div>
@@ -182,8 +178,7 @@
             :disable="isSubmitted"
             :outline="!isInspected"
             :color="isInspected ? 'green' : 'blue'"
-            class="full-width q-py-sm q-mb-sm"
-            style="border-radius: 10px; border-width: 1.5px"
+            class="full-width q-py-sm q-mb-sm action-btn"
             no-caps
             @click="startInspection"
           >
@@ -205,8 +200,7 @@
             :disable="isSubmitted"
             :outline="!isSummaryDone"
             :color="isSummaryDone ? 'green' : 'blue'"
-            class="full-width q-py-sm q-mb-sm"
-            style="border-radius: 10px; border-width: 1.5px"
+            class="full-width q-py-sm action-btn"
             @click="router.push(`/inspector/job/${roundId}/report`)"
           >
             <div class="row full-width justify-between items-center q-px-sm">
@@ -220,23 +214,22 @@
               />
             </div>
           </q-btn>
-
-          <!-- PDF and Report preview buttons removed -->
         </q-card>
+        <q-space />
 
         <q-btn
           :disable="!canSubmitApproval"
-          :class="['full-width q-mt-xl', !canSubmitApproval ? 'disabled-btn' : 'shadow-2']"
+          :class="['full-width', !canSubmitApproval ? 'disabled-btn' : 'shadow-2']"
           :color="isSubmitted ? 'grey-5' : canSubmitApproval ? 'primary' : 'grey-4'"
           :label="isSubmitted ? 'ส่งอนุมัติการตรวจเรียบร้อยแล้ว' : 'ส่งอนุมัติการตรวจ'"
           no-caps
           @click="onSubmit()"
           style="
-            font-family: 'Inter', sans-serif;
             font-size: 16px;
             font-weight: 600;
-            padding: 12px 0;
+            padding: 14px 0;
             border-radius: 8px;
+            margin-top: 24px;
           "
         />
       </div>
@@ -388,14 +381,18 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.modern-font {
+  font-family: 'Inter', 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
 .report-card {
   border-radius: 8px;
   border-color: #e0e0e0;
 }
 
 .action-btn {
-  border-radius: 8px;
-  font-family: 'Inter', sans-serif;
+  border-radius: 10px;
+  border-width: 1.5px;
   font-weight: 500;
   font-size: 14px;
   padding: 8px 16px;
