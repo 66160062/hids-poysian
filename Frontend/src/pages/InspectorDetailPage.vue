@@ -178,44 +178,44 @@
             :disable="isSubmitted"
             :outline="!isInspected"
             :color="isInspected ? 'green' : 'blue'"
-            class="full-width q-py-sm q-mb-sm action-btn"
+            class="full-width q-mb-sm action-btn"
             no-caps
+            align="between"
             @click="startInspection"
           >
-            <div class="row full-width justify-between items-center q-px-sm">
-              <span class="text-weight-bold">{{
-                isInspected
-                  ? (isConstruction(jobData.job?.inspectionType) ? 'ดูข้อมูลการตรวจก่อสร้าง' : 'ดูข้อมูลการตรวจ Defect')
-                  : (isConstruction(jobData.job?.inspectionType) ? 'เริ่มตรวจก่อสร้าง' : 'เริ่มตรวจบ้าน')
-              }}</span>
-              <q-icon
-                :name="isInspected ? 'check_circle' : 'chevron_right'"
-                :class="isInspected ? 'text-white' : 'bg-blue text-white rounded-borders q-pa-xs'"
-                size="28px"
-              />
-            </div>
+            <span class="text-weight-bold q-ml-sm">{{
+              isInspected
+                ? (isConstruction(jobData.job?.inspectionType) ? 'ดูข้อมูลการตรวจก่อสร้าง' : 'ดูข้อมูลการตรวจ Defect')
+                : (isConstruction(jobData.job?.inspectionType) ? 'เริ่มตรวจก่อสร้าง' : 'เริ่มตรวจบ้าน')
+            }}</span>
+            <q-icon
+              :name="isInspected ? 'check_circle' : 'chevron_right'"
+              :class="isInspected ? 'text-white' : 'bg-blue text-white rounded-borders'"
+              size="24px"
+              style="padding: 2px;"
+            />
           </q-btn>
 
           <q-btn
             :disable="isSubmitted"
             :outline="!isSummaryDone"
             :color="isSummaryDone ? 'green' : 'blue'"
-            class="full-width q-py-sm action-btn"
+            class="full-width action-btn"
+            no-caps
+            align="between"
             @click="router.push(`/inspector/job/${roundId}/report`)"
           >
-            <div class="row full-width justify-between items-center q-px-sm">
-              <span class="text-weight-bold">{{
-                isSummaryDone ? 'สรุปรายงานเรียบร้อย' : 'สรุปรายงาน'
-              }}</span>
-              <q-icon
-                :name="isSummaryDone ? 'check_circle' : 'chevron_right'"
-                :class="isSummaryDone ? 'text-white' : 'bg-blue text-white rounded-borders q-pa-xs'"
-                size="28px"
-              />
-            </div>
+            <span class="text-weight-bold q-ml-sm">{{
+              isSummaryDone ? 'สรุปรายงานเรียบร้อย' : 'สรุปรายงาน'
+            }}</span>
+            <q-icon
+              :name="isSummaryDone ? 'check_circle' : 'chevron_right'"
+              :class="isSummaryDone ? 'text-white' : 'bg-blue text-white rounded-borders'"
+              size="24px"
+              style="padding: 2px;"
+            />
           </q-btn>
         </q-card>
-        <q-space />
 
         <q-btn
           :disable="!canSubmitApproval"
