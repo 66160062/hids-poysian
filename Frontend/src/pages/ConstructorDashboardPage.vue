@@ -29,7 +29,7 @@
           <div class="text-weight-bold" style="font-size: 15px">วันที่ {{ selectedDateLabel }}</div>
         </div>
         <div class="text-grey-6 q-mt-xs" style="font-size: 12px">
-          สรุป: มี {{ filteredDayRounds.length }} งานในวันที่เลือก
+          สรุป: ตรวจก่อสร้าง {{ filteredDayRounds.length }} งาน
         </div>
       </div>
 

@@ -94,12 +94,22 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
-    path: '/admin/work/:id',
+    path: '/admin/work/ins/:id',
     component: () => import('layouts/FullScreen.vue'),
     children: [
       {
         path: '',
-        component: () => import('pages/AdminJobDetailPage.vue'),
+        component: () => import('pages/AdminJobInsDetailPage.vue'),
+      },
+    ],
+  },
+  {
+    path: '/admin/work/cons/:id',
+    component: () => import('layouts/FullScreen.vue'),
+    children: [
+      {
+        path: '',
+        component: () => import('pages/AdminJobConsDetailPage.vue'),
       },
     ],
   },
@@ -145,7 +155,7 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: 'Consdashboard',
-        component: () => import('pages/ConstructionPage.vue'),
+        component: () => import('pages/ConstructorDashboardPage.vue'),
         meta: { title: 'ตรวจก่อสร้าง' },
       },
     ],
