@@ -197,6 +197,7 @@
           </q-btn>
 
           <q-btn
+            v-if="!isConstruction(jobData.job?.inspectionType)"
             :disable="isSubmitted"
             :outline="!isSummaryDone"
             :color="isSummaryDone ? 'green' : 'blue'"
@@ -276,9 +277,16 @@ const isSubmitting = ref(false);
 const isInspected = computed(() => !!jobData.value?.inspectedAt);
 const isSummaryDone = computed(() => !!jobData.value?.summaryCompletedAt);
 const isSubmitted = computed(() => jobData.value?.status === 'SUBMITTED');
-const canSubmitApproval = computed(
-  () => isInspected.value && isSummaryDone.value && !isSubmitted.value,
-);
+const canSubmitApproval = computed(() => {
+  if (isSubmitted.value) return false;
+  if (!isInspected.value) return false;
+  
+  if (isConstruction(jobData.value?.job?.inspectionType)) {
+    return true; // Construction only requires inspection to be done
+  }
+  
+  return isSummaryDone.value; // Defect requires summary to be done
+});
 
 // 3. ปรับปรุงระบบเปิด Google Maps
 const openGoogleMaps = () => {
