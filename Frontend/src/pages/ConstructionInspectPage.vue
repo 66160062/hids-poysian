@@ -142,13 +142,12 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 
 const $q = useQuasar();
-const route = useRoute();
 const router = useRouter();
-const roundId = route.params.roundId;
+// const roundId = route.params.roundId;
 
 const form = ref({
   startTime: '',

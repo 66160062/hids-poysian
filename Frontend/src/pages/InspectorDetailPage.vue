@@ -256,8 +256,8 @@ const router = useRouter();
 const isMobile = computed(() => $q.screen.lt.md);
 const loading = ref(true);
 
-const isDefect = (type?: string) => type === 'Defect' || type === 'ตรวจ Defect';
-const isConstruction = (type?: string) => type === 'Construction' || type === 'ตรวจก่อสร้าง';
+const isDefect = (type?: string) => type === 'DEFECT_INSPECTION' || type === 'Defect' || type === 'ตรวจ Defect';
+const isConstruction = (type?: string) => type === 'CONSTRUCTION_INSPECTION' || type === 'Construction' || type === 'ตรวจก่อสร้าง';
 
 // 1. แก้อาการ Type Error โดยไม่ต้องพึ่ง any
 // (เชื่อม Type แจ้ง TS ว่ามี inspectedAt, summaryCompletedAt และ status เสริมเข้ามา)
