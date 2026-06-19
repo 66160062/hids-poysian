@@ -207,17 +207,19 @@ export class DailyReportsService {
           relations: ['template', 'option'],
         });
 
-      const clonedItems = await manager.getRepository(InspectionSummaryItem).save(
-        latestItems.map((item) =>
-          manager.getRepository(InspectionSummaryItem).create({
-            round: clonedRound,
-            template: item.template,
-            option: item.option,
-            refItem: { itemId: item.itemId } as InspectionSummaryItem,
-            detailValue: item.detailValue,
-          }),
-        ),
-      );
+      const clonedItems = await manager
+        .getRepository(InspectionSummaryItem)
+        .save(
+          latestItems.map((item) =>
+            manager.getRepository(InspectionSummaryItem).create({
+              round: clonedRound,
+              template: item.template,
+              option: item.option,
+              refItem: { itemId: item.itemId } as InspectionSummaryItem,
+              detailValue: item.detailValue,
+            }),
+          ),
+        );
 
       job.status = 'Active';
       await manager.getRepository(InspectionJob).save(job);
