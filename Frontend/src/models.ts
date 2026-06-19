@@ -79,12 +79,9 @@ export interface Defect {
     name: string;
     category?: { name: string; categoryId: number };
   }[];
-  template?: {
-    templateId: number;
-    room: { roomName: string; roomId: number };
-    subRoom: { roomName: string; subRoomId: number } | null;
-    floor: { floorId: number; label: string };
-  };
+  room?: { roomName: string; roomId: number };
+  subRoom?: { roomName: string; subRoomId: number } | null;
+  floor?: { floorId: number; label: string };
 }
 
 export interface SummaryTemplateOption {

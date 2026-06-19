@@ -939,9 +939,9 @@ const viewDefectImage = () => {
 };
 
 function getDefectRoomLabel(defect: AdminDefect) {
-  const floor = defect.template?.floor?.label;
-  const room = defect.template?.room?.roomName;
-  const subRoom = defect.template?.subRoom?.roomName;
+  const floor = defect.floor?.label;
+  const room = defect.room?.roomName;
+  const subRoom = defect.subRoom?.roomName;
   return [floor, room, subRoom].filter(Boolean).join(' / ') || 'ไม่ระบุห้อง';
 }
 

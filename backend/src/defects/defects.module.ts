@@ -6,7 +6,6 @@ import { DefectSubCategoriesModule } from 'src/defect-sub-categories/defect-sub-
 import { InspectionRoundsModule } from 'src/inspection-rounds/inspection-rounds.module';
 import { UsersModule } from 'src/users/users.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { RoomTemplatesModule } from 'src/room-templates/room-templates.module';
 
 @Module({
   imports: [
@@ -14,7 +13,6 @@ import { RoomTemplatesModule } from 'src/room-templates/room-templates.module';
     DefectSubCategoriesModule,
     InspectionRoundsModule,
     UsersModule,
-    RoomTemplatesModule,
   ],
   controllers: [DefectsController],
   providers: [DefectsService],
