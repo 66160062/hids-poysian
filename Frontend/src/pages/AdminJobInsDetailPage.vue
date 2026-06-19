@@ -246,9 +246,52 @@
           </q-input>
         </div>
 
-        <!-- Build Inspection Team Field -->
+        <!-- Select Team vs Individuals Toggle -->
+        <div class="q-mb-md">
+          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">รูปแบบการมอบหมายงาน</div>
+          <q-btn-toggle
+            v-model="assignmentMode"
+            spread
+            no-caps
+            rounded
+            unelevated
+            toggle-color="primary"
+            color="white"
+            text-color="grey-8"
+            :options="[
+              {label: 'มอบหมายให้ทีม (Team)', value: 'team'},
+              {label: 'มอบหมายรายบุคคล', value: 'individual'}
+            ]"
+            class="q-mb-md border-grey"
+            style="border: 1px solid #e0e0e0"
+          />
+        </div>
+
+        <!-- Select Team -->
+        <div v-if="assignmentMode === 'team'" class="q-mb-lg">
+          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">เลือกทีม (Team)</div>
+          <q-select
+            borderless
+            dense
+            v-model="selectedTeam"
+            :options="teamStore.teamOptions"
+            placeholder="ค้นหาและเลือกทีม..."
+            class="custom-select"
+            popup-content-class="custom-dropdown-popup"
+            emit-value
+            map-options
+          >
+            <template v-slot:prepend>
+              <q-icon name="groups" color="grey-6" size="20px" class="q-ml-sm" />
+            </template>
+          </q-select>
+        </div>
+
+        <!-- Build Inspection Team Field (Always show for additional inspectors, or primary if individual mode) -->
         <div class="q-mb-lg">
-          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">Build Inspection Team</div>
+          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">
+            {{ assignmentMode === 'team' ? 'ผู้ตรวจเพิ่มเติม (ถ้ามี)' : 'เลือกผู้ตรวจ (รายบุคคล)' }}
+          </div>
           <q-select
             borderless
             dense
@@ -513,6 +556,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { api } from 'src/boot/axios';
 import { useUserStore } from '../stores/useUser';
+import { useTeamStore } from '../stores/useTeam';
 import type { Defect } from 'src/models';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
@@ -555,6 +599,10 @@ interface RoundApiResponse {
   teamMember?: {
     inspector?: { fullName?: string };
   };
+  teamMembers?: {
+    inspector?: { fullName?: string };
+    team?: { team_name?: string };
+  }[];
 }
 
 interface RoundView {
@@ -656,10 +704,25 @@ const mapRoundStatus = (status: string) => {
 };
 
 const mapRoundToView = (round: RoundApiResponse) => {
-  const inspectorName = round.teamMember?.inspector?.fullName;
-  const inspectors = inspectorName
-    ? [inspectorName]
-    : jobTeamMembers.value.map((m) => m.fullName);
+  let inspectors: string[] = [];
+  
+  if (round.teamMembers && round.teamMembers.length > 0) {
+    inspectors = round.teamMembers.map(member => {
+      if (member.team?.team_name) {
+        return `[ทีม] ${member.team.team_name}`;
+      } else if (member.inspector?.fullName) {
+        return member.inspector.fullName;
+      }
+      return 'ไม่ระบุชื่อ';
+    });
+  } else if (round.teamMember?.inspector?.fullName) {
+    // Fallback for old data structure if any
+    inspectors = [round.teamMember.inspector.fullName];
+  } else if (jobTeamMembers.value.length > 0) {
+    inspectors = jobTeamMembers.value.map((m) => m.fullName);
+  } else {
+    inspectors = ['ไม่ระบุ'];
+  }
 
   return {
     id: round.roundId,
@@ -718,7 +781,11 @@ async function fetchDefectMasterData() {
 async function loadPageData() {
   isLoading.value = true;
   try {
-    await Promise.all([fetchJobDetails(), fetchTeamMembers()]);
+    await Promise.all([
+      fetchJobDetails(), 
+      fetchTeamMembers(),
+      teamStore.fetchTeams() // ดึงข้อมูลทีม
+    ]);
     const rounds = await fetchRounds();
     applyRounds(rounds);
     await userStore.fetchUsers().catch((err) => {
@@ -1011,7 +1078,11 @@ async function approveSelectedRound() {
 const showCreateRoundDialog = ref(false);
 const scheduledDate = ref('');
 const showDatePicker = ref(false);
+const assignmentMode = ref<'team' | 'individual'>('team');
+const selectedTeam = ref<number | null>(null);
 const selectedInspectors = ref<{ label: string; value: number }[]>([]);
+
+const teamStore = useTeamStore();
 
 // Predefined inspector options list
 const inspectorOptions = computed(() => {
@@ -1060,6 +1131,8 @@ const formatDateDisplay = (dateStr: string) => {
 const onCreateRound = () => {
   scheduledDate.value = '';
   selectedInspectors.value = [];
+  selectedTeam.value = null;
+  assignmentMode.value = 'team';
   showCreateRoundDialog.value = true;
 };
 
@@ -1074,9 +1147,19 @@ const submitCreateRound = async () => {
     return;
   }
 
-  if (selectedInspectors.value.length === 0) {
+  if (assignmentMode.value === 'team' && !selectedTeam.value && selectedInspectors.value.length === 0) {
     $q.notify({
-      message: 'กรุณาเลือกทีมผู้ตรวจอย่างน้อย 1 คน',
+      message: 'กรุณาเลือกทีม หรือ ผู้ตรวจอย่างน้อย 1 คน',
+      color: 'warning',
+      icon: 'warning',
+      position: 'top',
+    });
+    return;
+  }
+
+  if (assignmentMode.value === 'individual' && selectedInspectors.value.length === 0) {
+    $q.notify({
+      message: 'กรุณาเลือกผู้ตรวจอย่างน้อย 1 คน',
       color: 'warning',
       icon: 'warning',
       position: 'top',
@@ -1086,26 +1169,45 @@ const submitCreateRound = async () => {
 
   isSubmittingRound.value = true;
   try {
-    const assignedInspectorIds = new Set(jobTeamMembers.value.map((m) => m.id));
+    // 1. สร้างรอบการตรวจ โดยอิงจากโหมด
+    interface RoundPayload {
+      scheduledDate: string;
+      status: string;
+      teamId?: number;
+      inspectorId?: number;
+    }
 
-    for (const inspector of selectedInspectors.value) {
-      if (!assignedInspectorIds.has(inspector.value)) {
-        await api.post('/assignments', {
-          jobId: jobId.value,
-          inspectorId: inspector.value,
-        });
-        assignedInspectorIds.add(inspector.value);
+    const roundPayload: RoundPayload = {
+      scheduledDate: scheduledDate.value,
+      status: 'SCHEDULED',
+    };
+
+    if (assignmentMode.value === 'team' && selectedTeam.value) {
+      roundPayload.teamId = selectedTeam.value;
+    } else if (selectedInspectors.value.length > 0) {
+      // ถ้าไม่มีทีมให้เอาคนแรกเป็นตัวแทนสร้างรอบ
+      const firstInspector = selectedInspectors.value[0];
+      if (firstInspector) {
+        roundPayload.inspectorId = firstInspector.value;
       }
     }
 
-    const primaryInspector = selectedInspectors.value[0];
-    if (!primaryInspector) return;
+    await api.post(`/daily-reports/${jobId.value}/rounds`, roundPayload);
 
-    await api.post(`/daily-reports/${jobId.value}/rounds`, {
-      scheduledDate: scheduledDate.value,
-      inspectorId: primaryInspector.value,
-      status: 'SCHEDULED',
-    });
+    // 2. ดึงรอบที่เพิ่งถูกสร้างขึ้นมา (backend สร้างไปที่ล่าสุดแล้ว)
+    // สำหรับคนที่เหลือ ให้ยิงเข้า /assignments เพื่อผูกกับรอบนั้น (ซึ่ง Backend ผูกกับรอบล่าสุดให้)
+    let extraInspectors = selectedInspectors.value;
+    if (assignmentMode.value === 'individual' || (!selectedTeam.value && assignmentMode.value === 'team')) {
+      // ตัดคนแรกออก เพราะถูกส่งไปสร้างรอบแล้ว
+      extraInspectors = selectedInspectors.value.slice(1);
+    }
+
+    for (const inspector of extraInspectors) {
+      await api.post('/assignments', {
+        jobId: jobId.value,
+        inspectorId: inspector.value,
+      });
+    }
 
     await fetchTeamMembers();
     const rounds = await fetchRounds();

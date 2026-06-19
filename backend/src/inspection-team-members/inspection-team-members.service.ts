@@ -7,9 +7,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InspectionTeamMember } from './entities/inspection-team-member.entity';
 import { CreateInspectionTeamMemberDto } from './dto/create-inspection-team-member.dto';
+import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { User } from 'src/users/entities/user.entity';
 import { InspectionJobStatus } from 'src/inspection-jobs/enums/inspection-job-status.enum';
+import { Team } from 'src/teams/entities/team.entity';
 
 export const JOB_STATUSES_BLOCKING_UNASSIGN: InspectionJobStatus[] = [
   InspectionJobStatus.Locked,
@@ -32,8 +34,12 @@ export class InspectionTeamMembersService {
     private readonly teamsRepo: Repository<InspectionTeamMember>,
     @InjectRepository(InspectionJob)
     private readonly jobsRepo: Repository<InspectionJob>,
+    @InjectRepository(InspectionRound)
+    private readonly roundsRepo: Repository<InspectionRound>,
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
+    @InjectRepository(Team)
+    private readonly teamRepo: Repository<Team>,
   ) {}
 
   // เปลี่ยนชื่อจาก assign -> create (ล้อตามชื่อเดิมของเพื่อนใน controller) แต่ไส้ในเป็นของคุณเป๊ะๆ
@@ -43,35 +49,76 @@ export class InspectionTeamMembersService {
       throw new NotFoundException(`ไม่พบงานตรวจ ID ${dto.jobId}`);
     }
 
-    const inspector = await this.usersRepo.findOne({
-      where: { id: dto.inspectorId },
+    const round = await this.roundsRepo.findOne({
+      where: { job: { jobId: dto.jobId } },
+      order: { roundNumber: 'DESC' },
     });
-    if (!inspector) {
-      throw new NotFoundException(`ไม่พบผู้ตรวจ ID ${dto.inspectorId}`);
+    
+    if (!round) {
+      throw new NotFoundException(`ไม่พบรอบการตรวจสำหรับงาน ID ${dto.jobId}`);
+    }
+
+    if (!dto.inspectorId && !dto.teamId) {
+      throw new BadRequestException('ต้องระบุผู้ตรวจหรือทีมอย่างน้อยหนึ่งอย่าง');
+    }
+
+    let inspector: User | null = null;
+    let teamEntity: Team | null = null;
+
+    if (dto.inspectorId) {
+      inspector = await this.usersRepo.findOne({
+        where: { id: dto.inspectorId },
+      });
+      if (!inspector) {
+        throw new NotFoundException(`ไม่พบผู้ตรวจ ID ${dto.inspectorId}`);
+      }
+    }
+
+    if (dto.teamId) {
+      teamEntity = await this.teamRepo.findOne({
+        where: { team_Id: dto.teamId },
+      });
+      if (!teamEntity) {
+        throw new NotFoundException(`ไม่พบทีม ID ${dto.teamId}`);
+      }
     }
 
     const duplicate = await this.teamsRepo.findOne({
       where: {
-        job: { jobId: dto.jobId },
-        inspector: { id: dto.inspectorId },
+        round: { roundId: round.roundId },
+        inspector: inspector ? { id: inspector.id } : undefined,
+        team: teamEntity ? { team_Id: teamEntity.team_Id } : undefined,
       },
     });
+
     if (duplicate) {
       throw new BadRequestException(
-        'ผู้ตรวจคนนี้ถูกมอบหมายในงานนี้แล้ว ไม่สามารถมอบหมายซ้ำได้',
+        'การมอบหมายนี้ถูกสร้างในรอบนี้แล้ว ไม่สามารถมอบหมายซ้ำได้',
       );
     }
 
-    const team = this.teamsRepo.create({ job, inspector });
-    return this.teamsRepo.save(team);
+    const teamMember = this.teamsRepo.create({
+      round,
+      inspector,
+      team: teamEntity,
+    });
+    return this.teamsRepo.save(teamMember);
   }
 
   async findByJob(jobId: number): Promise<InspectorChip[]> {
     await this.assertJobExists(jobId);
-    const rows = await this.teamsRepo.find({
+    
+    const latestRound = await this.roundsRepo.findOne({
       where: { job: { jobId } },
-      relations: ['inspector'],
-      order: { assignedAt: 'ASC' }, // หากใน Entity ของเพื่อนไม่มีฟิลด์ assignedAt ให้เปลี่ยนคำนี้เป็น createdAt นะครับ
+      order: { roundNumber: 'DESC' },
+    });
+
+    if (!latestRound) return [];
+
+    const rows = await this.teamsRepo.find({
+      where: { round: { roundId: latestRound.roundId } },
+      relations: ['inspector', 'team'],
+      order: { assignedAt: 'ASC' }, 
     });
     return rows.map((row) => this.toInspectorChip(row));
   }
@@ -83,17 +130,17 @@ export class InspectionTeamMembersService {
   async remove(id: number) {
     const assignment = await this.teamsRepo.findOne({
       where: { id },
-      relations: ['job'],
+      relations: ['round'],
     });
     if (!assignment) {
       throw new NotFoundException(`ไม่พบการมอบหมาย ID ${id}`);
     }
 
-    const status = assignment.job
+    const status = assignment.round
       .status as (typeof JOB_STATUSES_BLOCKING_UNASSIGN)[number];
     if (JOB_STATUSES_BLOCKING_UNASSIGN.includes(status)) {
       throw new BadRequestException(
-        `ไม่สามารถยกเลิกการมอบหมายได้ เนื่องจากงานอยู่ในสถานะ ${assignment.job.status} (ระบบล็อก)`,
+        `ไม่สามารถยกเลิกการมอบหมายได้ เนื่องจากงานอยู่ในสถานะ ${assignment.round.status} (ระบบล็อก)`,
       );
     }
 
@@ -109,13 +156,26 @@ export class InspectionTeamMembersService {
   }
 
   private toInspectorChip(row: InspectionTeamMember): InspectorChip {
-    const { inspector } = row;
+    const { inspector, team } = row;
+    
+    // If it's a team assignment without an inspector
+    if (!inspector && team) {
+      return {
+        assignmentId: row.id,
+        id: team.team_Id,
+        fullName: team.team_name,
+        info: `ทีมงาน · ${team.contact_info || 'ไม่มีข้อมูลติดต่อ'}`,
+        imageUrl: team.logo_url || '/project-images/unknown.jpg',
+      };
+    }
+
+    // Default to inspector if exists
     return {
       assignmentId: row.id,
-      id: inspector.id,
-      fullName: inspector.fullName,
-      info: `${inspector.role} · ${inspector.phoneNumber}`,
-      imageUrl: inspector.imageUrl,
+      id: inspector!.id,
+      fullName: inspector!.fullName,
+      info: `${inspector!.role} · ${inspector!.phoneNumber}`,
+      imageUrl: inspector!.imageUrl,
     };
   }
 }

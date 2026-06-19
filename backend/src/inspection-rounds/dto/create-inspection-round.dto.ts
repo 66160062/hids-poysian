@@ -7,9 +7,10 @@ export class CreateInspectionRoundDto {
   @IsNumber()
   jobId!: number;
 
-  @ApiProperty({ description: 'รหัสสมาชิกทีม', example: 1 })
+  @ApiProperty({ description: 'รหัสสมาชิกทีม', example: 1, required: false })
+  @IsOptional()
   @IsNumber()
-  teamMemberId!: number;
+  teamMemberId?: number;
 
   @ApiProperty({ description: 'รอบที่', example: 1 })
   @IsNumber()

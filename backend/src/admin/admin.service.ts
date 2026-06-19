@@ -87,9 +87,10 @@ export class AdminService {
         'job',
         'job.customer',
         'job.houseType',
-        'teamMember',
-        'teamMember.inspector',
-        'teamMember.inspector.team',
+        'teamMembers',
+        'teamMembers.inspector',
+        'teamMembers.inspector.team',
+        'teamMembers.team',
       ],
       order: {
         scheduledDate: 'ASC',
@@ -112,8 +113,11 @@ export class AdminService {
         );
 
         // ดึงชื่อทีม (strip sensitive data — ไม่ส่ง password ของ inspector)
+        const firstTeamMember = round.teamMembers?.[0];
         const teamName: string =
-          round.teamMember?.inspector?.team?.team_name ?? 'ยังไม่ระบุทีม';
+          firstTeamMember?.team?.team_name ??
+          firstTeamMember?.inspector?.team?.team_name ?? 
+          'ยังไม่ระบุทีม';
 
         // ดึงชื่อลูกค้า
         const customerName: string =
@@ -191,9 +195,10 @@ export class AdminService {
     const allRounds: InspectionRound[] = await this.roundsRepo.find({
       relations: [
         'job',
-        'teamMember',
-        'teamMember.inspector',
-        'teamMember.inspector.team',
+        'teamMembers',
+        'teamMembers.inspector',
+        'teamMembers.inspector.team',
+        'teamMembers.team',
       ],
       order: {
         scheduledDate: 'DESC',
@@ -261,8 +266,11 @@ export class AdminService {
         }
 
         // ข้อมูลทีม
+        const firstTeamMember = latestRound?.teamMembers?.[0];
         const teamName: string =
-          latestRound?.teamMember?.inspector?.team?.team_name ?? 'ไม่ระบุทีม';
+          firstTeamMember?.team?.team_name ??
+          firstTeamMember?.inspector?.team?.team_name ?? 
+          'ไม่ระบุทีม';
 
         // วันที่จัดรูปแบบให้ Frontend ใช้งานง่าย (ISO String)
         // ถ้ามีรอบนัดหมายให้ใช้วันที่นั้น ถ้ายังไม่มีให้ใช้วันที่สร้างงานแทน

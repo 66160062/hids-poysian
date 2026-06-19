@@ -533,7 +533,10 @@ const onSubmit = async () => {
         position: 'top',
         icon: 'check_circle',
       });
-      await router.push(`/admin/work/${editId.value}`);
+      const redirectPath = form.inspectionType === 'ตรวจก่อสร้าง' 
+        ? `/admin/work/cons/${editId.value}`
+        : `/admin/work/ins/${editId.value}`;
+      await router.push(redirectPath);
     } else {
       // 1. Create or Get Customer
       let customerId: number;

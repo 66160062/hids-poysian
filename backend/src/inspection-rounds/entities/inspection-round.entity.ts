@@ -6,6 +6,7 @@ import {
   DeleteDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
@@ -61,7 +62,6 @@ export class InspectionRound {
   @JoinColumn({ name: 'job_id' })
   job!: InspectionJob;
 
-  @ManyToOne(() => InspectionTeamMember)
-  @JoinColumn({ name: 'team_member_id' })
-  teamMember!: InspectionTeamMember;
+  @OneToMany(() => InspectionTeamMember, (teamMember) => teamMember.round)
+  teamMembers!: InspectionTeamMember[];
 }
