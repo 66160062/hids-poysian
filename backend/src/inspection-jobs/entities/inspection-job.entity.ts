@@ -10,7 +10,9 @@ import {
   DeleteDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
+import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 
 @Entity()
 export class InspectionJob {
@@ -74,4 +76,7 @@ export class InspectionJob {
   @ManyToOne(() => Contractor, { nullable: true })
   @JoinColumn({ name: 'contractor_id' })
   contractor!: Contractor;
+
+  @OneToMany(() => InspectionRound, (round) => round.job)
+  rounds!: InspectionRound[];
 }

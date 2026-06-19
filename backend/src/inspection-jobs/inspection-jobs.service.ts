@@ -85,7 +85,8 @@ export class InspectionJobsService {
       .leftJoinAndSelect('job.customer', 'customer')
       .leftJoinAndSelect('job.address', 'address')
       .leftJoinAndSelect('job.houseType', 'houseType')
-      .leftJoinAndSelect('job.contractor', 'contractor');
+      .leftJoinAndSelect('job.contractor', 'contractor')
+      .leftJoinAndSelect('job.rounds', 'rounds');
 
     if (status && status !== ('all' as unknown)) {
       query.andWhere('job.status = :status', { status });

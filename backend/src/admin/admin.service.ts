@@ -97,51 +97,92 @@ export class AdminService {
       },
     });
 
+    const calendarEvents: number[] = rounds
+      .filter((round: InspectionRound): boolean => round.scheduledDate !== null)
+      .map((round: InspectionRound): number => {
+        const d = new Date(round.scheduledDate);
+        return !isNaN(d.getTime())
+          ? parseInt(d.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'Asia/Bangkok' }), 10)
+          : 0;
+      })
+      .filter(day => day > 0);
+
     // ========================================
-    // 3. แปลง InspectionRound → DashboardTaskItem
+    // 3. ดึง 15 งานที่ถูกสร้างล่าสุด
+    // ========================================
+    const recentJobs: InspectionJob[] = await this.jobsRepo.find({
+      relations: [
+        'customer',
+        'houseType',
+        'rounds',
+        'rounds.teamMembers',
+        'rounds.teamMembers.inspector',
+        'rounds.teamMembers.inspector.team',
+        'rounds.teamMembers.team',
+      ],
+      order: {
+        createdAt: 'DESC',
+      },
+      take: 15,
+    });
+
+    // ========================================
+    // 4. แปลง InspectionJob → DashboardTaskItem
     //    พร้อม Map สีและไอคอนตาม Design ของ Frontend
     // ========================================
-    const tasks: DashboardTaskItem[] = rounds
-      .filter((round: InspectionRound): boolean => round.scheduledDate !== null)
-      .map((round: InspectionRound): DashboardTaskItem => {
-        // กำหนดสถานะแสดงผลและสีตามสถานะรอบตรวจ
-        const statusMapping = this.mapRoundStatus(round.status);
+    const tasks: DashboardTaskItem[] = recentJobs.map((job: InspectionJob): DashboardTaskItem => {
+      // ค้นหารอบตรวจล่าสุดเพื่อดึงข้อมูล (เรียงจาก id มากไปน้อย)
+      let latestRound: InspectionRound | null = null;
+      if (job.rounds && job.rounds.length > 0) {
+        const sortedRounds = [...job.rounds].sort((a, b) => b.roundId - a.roundId);
+        latestRound = sortedRounds[0];
+      }
 
-        // กำหนดไอคอนตามประเภทบ้าน
-        const iconMapping = this.mapHouseTypeIcon(
-          round.job?.houseType?.name ?? '',
-        );
+      // กำหนดสถานะแสดงผลและสี (ใช้สถานะรอบตรวจ ถ้าไม่มีใช้สถานะงาน)
+      const statusMapping = latestRound ? this.mapRoundStatus(latestRound.status) : this.mapJobStatus(job.status);
 
-        // ดึงชื่อทีม (strip sensitive data — ไม่ส่ง password ของ inspector)
-        const firstTeamMember = round.teamMembers?.[0];
+        const iconMapping = this.mapHouseTypeIcon(job.houseType?.name ?? '');
+
+        // ดึงชื่อทีม
+        const firstTeamMember = latestRound?.teamMembers?.[0];
         const teamName: string =
           firstTeamMember?.team?.team_name ??
           firstTeamMember?.inspector?.team?.team_name ?? 
           'ยังไม่ระบุทีม';
 
         // ดึงชื่อลูกค้า
-        const customerName: string =
-          round.job?.customer?.fullName ?? 'ยังไม่ระบุลูกค้า';
+        const customerName: string = job.customer?.fullName ?? 'ยังไม่ระบุลูกค้า';
 
         // แปลง scheduledDate เป็น Date object อย่างปลอดภัย
-        // (PostgreSQL อาจส่งกลับเป็น string หรือ Date ขึ้นกับ driver)
-        const scheduledDate: Date = new Date(round.scheduledDate);
+        // แปลงวันที่อ้างอิง: ถ้ามีรอบตรวจใช้วันที่นัดหมาย, ถ้าไม่มีใช้วันที่สร้างงาน
+        const referenceDate: Date = latestRound?.scheduledDate
+          ? new Date(latestRound.scheduledDate)
+          : new Date(job.createdAt);
 
-        // สร้าง meta text แสดงชื่อทีมและเวลา
-        const timeStr: string = !isNaN(scheduledDate.getTime())
-          ? scheduledDate.toLocaleTimeString('th-TH', {
+        // วันที่จัดรูปแบบให้ Frontend ใช้งานง่าย
+        const dateStr = !isNaN(referenceDate.getTime()) 
+          ? referenceDate.toLocaleDateString('th-TH', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+              timeZone: 'Asia/Bangkok'
+            })
+          : 'ยังไม่ระบุวันที่';
+
+        const timeStr: string = !isNaN(referenceDate.getTime())
+          ? referenceDate.toLocaleTimeString('th-TH', {
               hour: '2-digit',
               minute: '2-digit',
               timeZone: 'Asia/Bangkok',
             })
           : '';
 
-        const meta: string = `${teamName} • ${timeStr || 'ยังไม่ระบุเวลา'}`;
+        const meta: string = `${dateStr} • ${timeStr || 'ยังไม่ระบุเวลา'}`;
 
         // ดึงวันที่ตาม timezone ไทย (UTC+7) เพื่อให้ตรงกับปฏิทินของ Frontend
-        const dayOfMonth: number = !isNaN(scheduledDate.getTime())
+        const dayOfMonth: number = !isNaN(referenceDate.getTime())
           ? parseInt(
-              scheduledDate.toLocaleDateString('en-US', {
+              referenceDate.toLocaleDateString('en-US', {
                 day: 'numeric',
                 timeZone: 'Asia/Bangkok',
               }),
@@ -150,8 +191,10 @@ export class AdminService {
           : 0;
 
         return {
-          id: round.roundId,
-          title: round.job?.projectName ?? 'ไม่ระบุโครงการ',
+          id: latestRound?.roundId ?? job.jobId,
+          jobId: job.jobId ?? 0,
+          inspectionType: job.inspectionType ?? '',
+          title: job.projectName ?? 'ไม่ระบุโครงการ',
           meta,
           status: statusMapping.displayStatus,
           statusBgClass: statusMapping.statusBgClass,
@@ -163,8 +206,7 @@ export class AdminService {
           team: teamName,
           customer: customerName,
         };
-      })
-      .filter((task: DashboardTaskItem): boolean => task.day > 0);
+      });
 
     return {
       totalProjects,
@@ -173,6 +215,7 @@ export class AdminService {
       townhouse,
       condo,
       construction,
+      calendarEvents,
       tasks,
     };
   }
@@ -299,31 +342,60 @@ export class AdminService {
   /**
    * Map สถานะของ InspectionRound → สีและข้อความที่ Frontend ต้องใช้
    */
-  private mapRoundStatus(roundStatus: string): {
+  private mapRoundStatus(status: string): {
     displayStatus: string;
     statusBgClass: string;
     statusTextColor: string;
   } {
-    switch (roundStatus) {
-      case 'SUBMITTED':
-        return {
-          displayStatus: 'รออนุมัติ',
-          statusBgClass: 'bg-orange-1',
-          statusTextColor: 'orange-8',
-        };
-      case 'COMPLETED':
-        return {
-          displayStatus: 'เสร็จสิ้น',
-          statusBgClass: 'bg-green-1',
-          statusTextColor: 'positive',
-        };
-      case 'SCHEDULED':
-      default:
-        return {
-          displayStatus: 'กำลังดำเนินการ',
-          statusBgClass: 'bg-blue-1',
-          statusTextColor: 'primary',
-        };
+    if (status === 'COMPLETED') {
+      return {
+        displayStatus: 'เสร็จสิ้น',
+        statusBgClass: 'bg-green-1',
+        statusTextColor: 'positive',
+      };
+    } else if (status === 'SUBMITTED') {
+      return {
+        displayStatus: 'รออนุมัติ',
+        statusBgClass: 'bg-orange-1',
+        statusTextColor: 'orange-8',
+      };
+    } else {
+      return {
+        displayStatus: 'กำลังดำเนินการ',
+        statusBgClass: 'bg-blue-1',
+        statusTextColor: 'primary',
+      };
+    }
+  }
+
+  /**
+   * Map สถานะของ InspectionJob → สีและข้อความที่ Frontend ต้องใช้ (กรณีที่ยังไม่มีรอบนัดหมาย)
+   */
+  private mapJobStatus(status: string) {
+    if (status === 'Active') {
+      return {
+        displayStatus: 'กำลังดำเนินการ',
+        statusBgClass: 'bg-blue-1',
+        statusTextColor: 'primary',
+      };
+    } else if (status === 'Completed') {
+      return {
+        displayStatus: 'เสร็จสิ้น',
+        statusBgClass: 'bg-green-1',
+        statusTextColor: 'positive',
+      };
+    } else if (status === 'Cancelled') {
+      return {
+        displayStatus: 'ยกเลิก',
+        statusBgClass: 'bg-red-1',
+        statusTextColor: 'negative',
+      };
+    } else {
+      return {
+        displayStatus: 'ร่าง (Draft)',
+        statusBgClass: 'bg-grey-2',
+        statusTextColor: 'grey-8',
+      };
     }
   }
 

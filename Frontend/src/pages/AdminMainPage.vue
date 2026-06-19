@@ -336,6 +336,8 @@ const setToday = (): void => {
 // ==========================================
 interface TaskItem {
   id: number;
+  jobId: number;
+  inspectionType: string;
   title: string;
   meta: string;
   status: string;
@@ -352,23 +354,30 @@ interface TaskItem {
 const tasks = ref<TaskItem[]>([]);
 
 const currentPage = ref(1);
-const pageSize = 4;
-const totalPages = computed(() => Math.max(1, Math.ceil(tasks.value.length / pageSize)));
+const pageSize = 5;
+const totalPages = computed(() => {
+  const pages = Math.ceil(tasks.value.length / pageSize);
+  // จำกัดไม่เกิน 3 หน้า
+  return Math.min(Math.max(1, pages), 3);
+});
 const visibleTasks = computed(() => {
   const start = (currentPage.value - 1) * pageSize;
   return tasks.value.slice(start, start + pageSize);
 });
 
+// อาเรย์เก็บวันที่ (1-31) ที่มีงานนัดหมายในเดือนนั้น
+const calendarEvents = ref<number[]>([]);
+
 function taskCountByDay(day: number): number {
-  return tasks.value.filter((task: TaskItem): boolean => task.day === day).length;
+  return calendarEvents.value.filter((d: number): boolean => d === day).length;
 }
 
 const selectedTask = ref<TaskItem | null>(null);
 const showTaskDialog = ref(false);
 
 function openTaskDetail(task: TaskItem) {
-  selectedTask.value = task;
-  showTaskDialog.value = true;
+  const prefix = task.inspectionType === 'CONSTRUCTION_INSPECTION' || task.inspectionType === 'ตรวจก่อสร้าง' ? 'cons' : 'ins';
+  void router.push(`/admin/work/${prefix}/${task.jobId}`);
 }
 
 function goToWorkList(): void {
@@ -380,6 +389,7 @@ function goToWorkList(): void {
 // 🎯 API Integration — ดึงข้อมูล Dashboard จาก Backend
 // ==========================================
 interface DashboardApiResponse extends DashboardStats {
+  calendarEvents: number[];
   tasks: TaskItem[];
 }
 
@@ -403,6 +413,12 @@ async function fetchAdminDashboard(): Promise<void> {
       condo: data.condo,
       construction: data.construction,
     };
+
+    if (data.calendarEvents && Array.isArray(data.calendarEvents)) {
+      calendarEvents.value = data.calendarEvents;
+    } else {
+      calendarEvents.value = [];
+    }
 
     if (data.tasks && Array.isArray(data.tasks)) {
       tasks.value = data.tasks;
