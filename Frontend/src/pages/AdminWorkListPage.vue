@@ -211,6 +211,7 @@ interface TaskItem {
   statusTextColor: string;
   statusKey: string;
   type: string;
+  inspectionType: string;
   area: number;
   team: string;
   customer: string;
@@ -237,6 +238,7 @@ const tasks = computed<TaskItem[]>(() => {
       statusBgClass: meta.bgClass,
       statusTextColor: meta.textColor,
       statusKey: meta.key,
+      inspectionType: work.inspectionType || '',
       type: work.houseType?.name || 'ไม่ระบุ',
       area: work.usableArea || 0,
       team: 'ไม่ระบุทีม', // Currently backend Work interface doesn't have team
@@ -267,7 +269,7 @@ function formatDate(dateStr?: string) {
 // ==========================================
 const filters = computed(() => {
   const allCount = workStore.statusMeta.reduce((sum, meta) => sum + meta.count, 0);
-  
+
   const dynamicFilters = workStore.statusMeta.map(meta => ({
     label: meta.label,
     value: meta.key,
@@ -295,7 +297,11 @@ watch([activeFilter, selectedType, sortOrder], () => {
 });
 
 async function viewDetail(task: TaskItem): Promise<void> {
-  await router.push(`/admin/work/${task.id}`);
+  if (task.inspectionType === 'ตรวจ Defect') {
+    await router.push(`/admin/work/ins/${task.id}`);
+  } else {
+    await router.push(`/admin/work/cons/${task.id}`);
+  }
 }
 
 async function editWork(task: TaskItem): Promise<void> {
@@ -319,7 +325,7 @@ function addNewWork(): void {
 async function fetchWorkList(): Promise<void> {
   loading.value = true;
   error.value = '';
-  
+
   try {
     await Promise.all([
       workStore.fetchJobs({
