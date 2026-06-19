@@ -77,8 +77,8 @@ const openGoogleMaps = () => {
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
-const isDefect = (type?: string) => type === 'Defect' || type === 'ตรวจ Defect';
-const isConstruction = (type?: string) => type === 'Construction' || type === 'ตรวจก่อสร้าง';
+const isDefect = (type?: string) => type === 'DEFECT_INSPECTION' || type === 'Defect' || type === 'ตรวจ Defect';
+const isConstruction = (type?: string) => type === 'CONSTRUCTION_INSPECTION' || type === 'Construction' || type === 'ตรวจก่อสร้าง';
 </script>
 
 <template>

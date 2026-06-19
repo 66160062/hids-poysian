@@ -6,6 +6,7 @@ import { InspectionRound } from './entities/inspection-round.entity';
 import { Repository } from 'typeorm';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class InspectionRoundsService {
@@ -16,6 +17,8 @@ export class InspectionRoundsService {
     private readonly inspectionJobsRepo: Repository<InspectionJob>,
     @InjectRepository(InspectionTeamMember)
     private readonly teamMembersRepo: Repository<InspectionTeamMember>,
+    @InjectRepository(User)
+    private readonly usersRepo: Repository<User>,
   ) {}
 
   async create(createInspectionRoundDto: CreateInspectionRoundDto) {
@@ -23,17 +26,22 @@ export class InspectionRoundsService {
       jobId: createInspectionRoundDto.jobId,
     });
 
-    const teamMember = await this.teamMembersRepo.findOneByOrFail({
-      id: createInspectionRoundDto.teamMemberId,
-    });
-
     const round = this.inspectionRoundsRepo.create({
       ...createInspectionRoundDto,
       job,
-      teamMember,
     });
 
-    return this.inspectionRoundsRepo.save(round);
+    const savedRound = await this.inspectionRoundsRepo.save(round);
+
+    if (createInspectionRoundDto.teamMemberId) {
+      const teamMember = await this.teamMembersRepo.findOneByOrFail({
+        id: createInspectionRoundDto.teamMemberId,
+      });
+      teamMember.round = savedRound;
+      await this.teamMembersRepo.save(teamMember);
+    }
+
+    return savedRound;
   }
 
   findAll() {
@@ -48,9 +56,10 @@ export class InspectionRoundsService {
         'job.address',
         'job.customer',
         'job.houseType',
-        'teamMember',
-        'teamMember.inspector',
-        'teamMember.inspector.team',
+        'teamMembers',
+        'teamMembers.inspector',
+        'teamMembers.inspector.team',
+        'teamMembers.team',
       ],
     });
   }
@@ -91,28 +100,30 @@ export class InspectionRoundsService {
     return new Date(year, month - 1, day, 12, 0, 0, 0);
   }
 
-  private findRoundsForInspector(
+  private async findRoundsForInspector(
     inspectorId: number,
     start: Date,
     end: Date,
   ): Promise<InspectionRound[]> {
+    const inspector = await this.usersRepo.findOne({
+      where: { id: inspectorId },
+      relations: ['team'],
+    });
+    const teamId = inspector?.team?.team_Id || null;
+
     return this.inspectionRoundsRepo
       .createQueryBuilder('round')
       .leftJoinAndSelect('round.job', 'job')
       .leftJoinAndSelect('job.customer', 'customer')
       .leftJoinAndSelect('job.address', 'address')
       .leftJoinAndSelect('job.houseType', 'houseType')
-      .leftJoin('round.teamMember', 'teamMember')
-      .leftJoin('teamMember.inspector', 'roundInspector')
-      .leftJoin(
-        InspectionTeamMember,
-        'jobAssignment',
-        'jobAssignment.job_id = job.jobId AND jobAssignment.deleted_at IS NULL',
-      )
+      .leftJoin('round.teamMembers', 'teamMembers')
+      .leftJoin('teamMembers.inspector', 'roundInspector')
+      .leftJoin('teamMembers.team', 'roundTeam')
       .where('round.scheduledDate BETWEEN :start AND :end', { start, end })
       .andWhere(
-        '(roundInspector.id = :inspectorId OR jobAssignment.inspector_id = :inspectorId)',
-        { inspectorId },
+        '(roundInspector.id = :inspectorId OR (roundTeam.team_Id = :teamId AND :teamId IS NOT NULL))',
+        { inspectorId, teamId },
       )
       .andWhere('round.deleted_at IS NULL')
       .orderBy('round.scheduledDate', 'ASC')
@@ -175,7 +186,7 @@ export class InspectionRoundsService {
   async approveReport(id: number) {
     const round = await this.inspectionRoundsRepo.findOneOrFail({
       where: { roundId: id },
-      relations: ['job', 'teamMember', 'teamMember.inspector'],
+      relations: ['job', 'teamMembers', 'teamMembers.inspector'],
     });
 
     if (round.status !== 'SUBMITTED') {
@@ -195,9 +206,10 @@ export class InspectionRoundsService {
   }
 
   private buildApprovalNotification(round: InspectionRound) {
+    const primaryInspectorId = round.teamMembers?.[0]?.inspector?.id ?? null;
     return {
       type: 'REPORT_APPROVED',
-      recipientUserId: round.teamMember?.inspector?.id ?? null,
+      recipientUserId: primaryInspectorId,
       title: 'Report approved',
       message: `Inspection report #${round.roundId} has been approved.`,
       payload: {

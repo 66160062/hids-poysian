@@ -231,6 +231,17 @@ const tasks = computed<TaskItem[]>(() => {
       key: 'others'
     };
 
+    // ค้นหารอบตรวจที่มีสถานะกำลังดำเนินการ (SCHEDULED หรือ Active)
+    let latestActiveRoundDate = work.createdAt;
+    if (work.rounds && work.rounds.length > 0) {
+      // เรียงรอบตรวจตาม id หรือวันที่สร้างจากมากไปน้อยเพื่อเอารอบล่าสุด
+      const sortedRounds = [...work.rounds].sort((a, b) => b.roundId - a.roundId);
+      const activeRound = sortedRounds.find(r => r.status === 'SCHEDULED' || r.status === 'Active');
+      if (activeRound && activeRound.scheduledDate) {
+        latestActiveRoundDate = activeRound.scheduledDate;
+      }
+    }
+
     return {
       id: work.jobId,
       title: work.projectName || 'ไม่ระบุชื่อโครงการ',
@@ -243,7 +254,7 @@ const tasks = computed<TaskItem[]>(() => {
       area: work.usableArea || 0,
       team: 'ไม่ระบุทีม', // Currently backend Work interface doesn't have team
       customer: work.customer?.fullName || 'ไม่ระบุลูกค้า',
-      date: work.createdAt || new Date().toISOString()
+      date: latestActiveRoundDate || new Date().toISOString()
     };
   });
 });

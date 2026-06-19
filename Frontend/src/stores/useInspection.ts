@@ -32,14 +32,14 @@ export interface GroupedDefectItem {
 
 // ── Helpers: ดึงค่าจาก nested Defect object ─────────────────
 
-const getFloorLabel = (d: Defect) => d.template?.floor?.label ?? 'ไม่ระบุชั้น';
+const getFloorLabel = (d: Defect) => d.floor?.label ?? 'ไม่ระบุชั้น';
 
 const getRoomName = (d: Defect) =>
-  d.template?.subRoom?.roomName ?? // ห้องย่อย (ละเอียดกว่า)
-  d.template?.room?.roomName ?? // fallback ประเภทห้อง
+  d.subRoom?.roomName ?? // ห้องย่อย (ละเอียดกว่า)
+  d.room?.roomName ?? // fallback ประเภทห้อง
   'ไม่ระบุห้อง';
 
-const getRoomType = (d: Defect) => d.template?.room?.roomName ?? 'ไม่ระบุประเภท';
+const getRoomType = (d: Defect) => d.room?.roomName ?? 'ไม่ระบุประเภท';
 
 const SEVERITY_LABEL: Record<string, string> = {
   Major: 'Major',
@@ -141,7 +141,7 @@ export const useInspectionStore = defineStore('inspection', () => {
         map.set(key, {
           groupKey: key,
           roomName: buildGroupLabel(defect),
-          roomId: defect.template?.room?.roomId ?? defect.defectId,
+          roomId: defect.room?.roomId ?? defect.defectId,
           floorLabel: getFloorLabel(defect),
           roomType: getRoomType(defect),
           severity: defect.severity,
@@ -175,7 +175,7 @@ export const useInspectionStore = defineStore('inspection', () => {
     const list = filteredDefects.value;
     const pass = list.filter((d) => d.status === 'PASS').length;
     return {
-      totalRooms: new Set(list.map((d) => d.template?.templateId)).size, // ✅ เปลี่ยนจาก roomId เป็น templateId
+      totalRooms: new Set(list.map((d) => d.room?.roomId)).size, // ✅ เปลี่ยนจาก templateId เป็น roomId
       totalJobs: new Set(
         list.flatMap((d) => d.subCategories.map((s) => s.category?.categoryId)).filter(Boolean),
       ).size,

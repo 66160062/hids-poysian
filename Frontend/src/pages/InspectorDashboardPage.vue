@@ -107,7 +107,7 @@ const selectedDayRounds = computed(() => {
 
 const filteredDayRounds = computed(() => {
   return selectedDayRounds.value.filter(
-    (r) => r.job?.inspectionType === 'Defect' || r.job?.inspectionType === 'ตรวจ Defect',
+    (r) => r.job?.inspectionType === 'DEFECT_INSPECTION' || r.job?.inspectionType === 'Defect' || r.job?.inspectionType === 'ตรวจ Defect',
   );
 });
 
