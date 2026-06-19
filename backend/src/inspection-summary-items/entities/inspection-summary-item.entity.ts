@@ -27,7 +27,10 @@ export class InspectionSummaryItem {
   @JoinColumn({ name: 'option_id' })
   option!: SummaryTemplateOption;
 
-  @ManyToOne(() => InspectionSummaryItem, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => InspectionSummaryItem, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'ref_item_id' })
   refItem?: InspectionSummaryItem | null;
 

@@ -29,7 +29,9 @@ export class DailyReportsController {
   }
 
   @Get(':id/clone')
-  @ApiOperation({ summary: 'Clone latest daily report round with summary items' })
+  @ApiOperation({
+    summary: 'Clone latest daily report round with summary items',
+  })
   cloneLatestRound(@Param('id') id: string) {
     return this.dailyReportsService.cloneLatestRound(+id);
   }
