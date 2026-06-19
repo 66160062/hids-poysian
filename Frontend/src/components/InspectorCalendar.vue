@@ -242,12 +242,12 @@ const calendarDays = computed<CalendarDay[]>(() => {
 // ── Helpers ───────────────────────────────────────────────────
 function isDefectType(type: string | undefined): boolean {
   if (!type) return false;
-  return type === 'Defect' || type === 'ตรวจ Defect';
+  return type === 'DEFECT_INSPECTION' || type === 'Defect' || type === 'ตรวจ Defect';
 }
 
 function isConstructionType(type: string | undefined): boolean {
   if (!type) return false;
-  return type === 'Construction' || type === 'ตรวจก่อสร้าง';
+  return type === 'CONSTRUCTION_INSPECTION' || type === 'Construction' || type === 'ตรวจก่อสร้าง';
 }
 
 function toLocalDateStr(date: Date): string {

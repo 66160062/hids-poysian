@@ -370,7 +370,7 @@ onMounted(async () => {
     if (!existing) return;
 
     form.projectName = existing.projectName || '';
-    form.inspectionType = existing.inspectionType || 'ตรวจ Defect';
+    form.inspectionType = (existing.inspectionType === 'CONSTRUCTION_INSPECTION' || existing.inspectionType === 'Construction' || existing.inspectionType === 'ตรวจก่อสร้าง') ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
     form.houseType = existing.houseType?.house_type_id || 1;
     form.usableArea = existing.usableArea?.toString() || '';
     form.houseNumber = existing.address?.houseNumber || '';
@@ -510,7 +510,9 @@ const onSubmit = async () => {
         }
 
         const jobFormData = new FormData();
-        jobFormData.append('inspectionType', form.inspectionType);        jobFormData.append('houseTypeId', String(form.houseType));
+        const inspectionTypeStr = form.inspectionType === 'ตรวจก่อสร้าง' ? 'CONSTRUCTION_INSPECTION' : 'DEFECT_INSPECTION';
+        jobFormData.append('inspectionType', inspectionTypeStr);
+        jobFormData.append('houseTypeId', String(form.houseType));
         jobFormData.append('projectName', form.projectName);
         jobFormData.append('locationCoordinate', '');
         jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
@@ -531,7 +533,10 @@ const onSubmit = async () => {
         position: 'top',
         icon: 'check_circle',
       });
-      await router.push(`/admin/work/${editId.value}`);
+      const redirectPath = form.inspectionType === 'ตรวจก่อสร้าง' 
+        ? `/admin/work/cons/${editId.value}`
+        : `/admin/work/ins/${editId.value}`;
+      await router.push(redirectPath);
     } else {
       // 1. Create or Get Customer
       let customerId: number;
@@ -573,7 +578,8 @@ const onSubmit = async () => {
       jobFormData.append('customerId', String(customerId));
       jobFormData.append('addressId', String(addressId));
       if (finalContractorId) jobFormData.append('contractorId', String(finalContractorId));
-      jobFormData.append('inspectionType', form.inspectionType);
+      const inspectionTypeStr = form.inspectionType === 'ตรวจก่อสร้าง' ? 'CONSTRUCTION_INSPECTION' : 'DEFECT_INSPECTION';
+      jobFormData.append('inspectionType', inspectionTypeStr);
       jobFormData.append('houseTypeId', String(form.houseType));
       jobFormData.append('projectName', form.projectName);
       jobFormData.append('locationCoordinate', '');

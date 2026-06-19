@@ -32,8 +32,7 @@ import { DefectSubCategory } from './defect-sub-categories/entities/defect-sub-c
 import { RepairRecord } from './repair-records/entities/repair-record.entity';
 import { Contractor } from './contractor/entities/contractor.entity';
 import { Defect } from './defects/entities/defect.entity';
-import { RoomTemplatesModule } from './room-templates/room-templates.module';
-import { RoomTemplate } from './room-templates/entities/room-template.entity';
+
 import { SummaryTemplateOptionsModule } from './summary-template-options/summary-template-options.module';
 import { SummaryTemplateOption } from './summary-template-options/entities/summary-template-option.entity';
 import { SummaryTemplatesModule } from './summary-templates/summary-templates.module';
@@ -89,7 +88,6 @@ import { DailyIssue } from './construction-daily-reports/entities/daily-issue.en
         RepairRecord,
         Contractor,
         Defect,
-        RoomTemplate,
         SummaryTemplateOption,
         SummaryTemplate,
         InspectionSummaryItem,
@@ -122,7 +120,6 @@ import { DailyIssue } from './construction-daily-reports/entities/daily-issue.en
     ContractorModule,
     RepairRecordsModule,
     InspectionRoundsModule,
-    RoomTemplatesModule,
     SummaryTemplateOptionsModule,
     SummaryTemplatesModule,
     InspectionSummaryItemsModule,

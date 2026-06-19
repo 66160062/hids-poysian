@@ -55,6 +55,14 @@ export class ConstructionDailyReport {
   @DeleteDateColumn()
   deletedAt!: Date;
 
+  // --- ส่วนที่เพิ่มเข้ามาสำหรับการเก็บ PDF Report ---
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  pdfUrl!: string; // เก็บ URL หรือ Path ของไฟล์ PDF
+
+  @Column({ type: 'timestamp', nullable: true })
+  generatedAt!: Date; // บันทึกเวลาที่ทำการ Generate PDF ล่าสุด
+  // ----------------------------------------------
+
   @ManyToOne(() => InspectionRound)
   @JoinColumn({ name: 'round_id' })
   round!: InspectionRound;

@@ -1,6 +1,8 @@
 import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub-category.entity';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
-import { RoomTemplate } from 'src/room-templates/entities/room-template.entity';
+import { Room } from 'src/rooms/entities/room.entity';
+import { SubRoom } from 'src/sub-rooms/entities/sub-room.entity';
+import { Floor } from 'src/floor/entities/floor.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
 import {
@@ -69,9 +71,17 @@ export class Defect {
   @JoinColumn({ name: 'round_id' })
   round!: InspectionRound;
 
-  @ManyToOne(() => RoomTemplate)
-  @JoinColumn({ name: 'template_id' })
-  template!: RoomTemplate;
+  @ManyToOne(() => Room)
+  @JoinColumn({ name: 'room_id' })
+  room!: Room;
+
+  @ManyToOne(() => SubRoom, { nullable: true })
+  @JoinColumn({ name: 'sub_room_id' })
+  subRoom!: SubRoom | null;
+
+  @ManyToOne(() => Floor)
+  @JoinColumn({ name: 'floor_id' })
+  floor!: Floor;
 
   @ManyToMany(() => DefectSubCategory)
   @JoinTable({ name: 'defect_sub_category_map' })

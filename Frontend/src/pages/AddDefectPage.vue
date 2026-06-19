@@ -297,66 +297,37 @@ const form = ref<DefectForm>({
 const isLoadingRooms = ref(false);
 const isLoadingFloors = ref(false);
 
-const roomOptions = computed(() => {
-  const seen = new Set<number>();
-  return templates.value
-    .filter((t) => {
-      if (seen.has(t.room.roomId)) return false;
-      seen.add(t.room.roomId);
-      return true;
-    })
-    .map((t) => ({ value: t.room.roomId, label: t.room.roomName }));
-});
+const roomOptions = ref<{ value: number; label: string }[]>([]);
+const subRoomOptions = ref<{ value: number; label: string }[]>([]);
+const floorOptions = ref<{ value: number; label: string }[]>([]);
 
-const subRoomOptions = computed(() => {
-  if (!form.value.roomId) return [];
-  const seen = new Set<number>();
-  return templates.value
-    .filter((t) => {
-      if (t.room.roomId !== form.value.roomId) return false;
-      if (t.subRoom === null) return false;
-      // ถ้าเลือก floor แล้ว ให้ filter ตาม floor ด้วย
-      if (form.value.floorId !== null) {
-        return t.floor.floorId === form.value.floorId;
-      }
-      return true;
-    })
-    .filter((t) => {
-      if (seen.has(t.subRoom!.subRoomId)) return false;
-      seen.add(t.subRoom!.subRoomId);
-      return true;
-    })
-    .map((t) => ({ value: t.subRoom!.subRoomId, label: t.subRoom!.roomName }));
-});
-
-const floorOptions = computed(() => {
-  if (!form.value.roomId) return [];
-  const seen = new Set<number>();
-  return templates.value
-    .filter((t) => {
-      if (t.room.roomId !== form.value.roomId) return false;
-      if (form.value.subRoomId !== null) {
-        return t.subRoom?.subRoomId === form.value.subRoomId;
-      }
-      return true;
-    })
-    .filter((t) => {
-      if (seen.has(t.floor.floorId)) return false;
-      seen.add(t.floor.floorId);
-      return true;
-    })
-    .map((t) => ({ value: t.floor.floorId, label: t.floor.label }));
-});
-
-const onSubRoomChange = () => {
-  form.value.floorId = null;
-  form.value.templateId = null;
+const fetchRooms = async () => {
+  const { data } = await api.get<{ roomId: number; roomName: string }[]>('/rooms');
+  roomOptions.value = data.map((r) => ({ value: r.roomId, label: r.roomName }));
 };
 
-// const severityOptions = [
-//   { value: 'Major', label: 'Major' },
-//   { value: 'Minor', label: 'Minor' },
-// ];
+const fetchSubRooms = async () => {
+  const { data } = await api.get<{ subRoomId: number; roomName: string }[]>('/sub-rooms');
+  subRoomOptions.value = data.map((s) => ({ value: s.subRoomId, label: s.roomName }));
+};
+
+const fetchFloors = async () => {
+  const { data } = await api.get<{ floorId: number; label: string }[]>('/floor');
+  floorOptions.value = data.map((f) => ({ value: f.floorId, label: f.label }));
+};
+
+const onRoomChange = async () => {
+  // ไม่ต้อง clear subRoomId แล้ว เพราะมันอิสระ
+  // แต่สามารถ clear floorId ถ้าต้องการ (หรือไม่ clear ก็ได้)
+};
+
+const onSubRoomChange = () => {
+  // ไม่ต้อง clear floorId 
+};
+
+const onFloorChange = () => {
+  // ไม่ต้อง lookup template แล้ว
+};
 
 // ── Category / SubCategory ────────────────────────────────────
 
@@ -376,32 +347,6 @@ const onCategoryChange = (val: number | null) => {
   form.value.jobType = val;
   form.value.defectTypes = [];
 };
-
-// ── Room/Floor change → lookup templateId ────────────────────
-
-const onRoomChange = () => {
-  form.value.subRoomId = null;
-  form.value.templateId = null;
-  void lookupTemplate();
-};
-
-const onFloorChange = () => {
-  form.value.templateId = null;
-  void lookupTemplate();
-};
-
-function lookupTemplate() {
-  const { roomId, subRoomId, floorId } = form.value;
-  if (!roomId || !floorId) return;
-
-  const found = templates.value.find(
-    (t) =>
-      t.room.roomId === roomId &&
-      t.floor.floorId === floorId &&
-      (subRoomId ? t.subRoom?.subRoomId === subRoomId : !t.subRoom),
-  );
-  form.value.templateId = found?.templateId ?? null;
-}
 
 // ── Image ─────────────────────────────────────────────────────
 
@@ -447,14 +392,6 @@ const handleNext = async () => {
       $q.notify({ message: 'กรุณาเลือกชั้น', color: 'negative', icon: 'warning' });
       return;
     }
-    if (!form.value.templateId) {
-      $q.notify({
-        message: 'ไม่พบห้องที่ตรงกับที่เลือก กรุณาเลือกใหม่',
-        color: 'negative',
-        icon: 'warning',
-      });
-      return;
-    }
     step.value = 2;
     return;
   }
@@ -479,7 +416,11 @@ const handleNext = async () => {
   try {
     const formData = new FormData();
     formData.append('roundId', String(roundId));
-    formData.append('templateId', String(form.value.templateId));
+    formData.append('roomId', String(form.value.roomId));
+    if (form.value.subRoomId) {
+      formData.append('subRoomId', String(form.value.subRoomId));
+    }
+    formData.append('floorId', String(form.value.floorId));
     formData.append('inspectorId', '1'); // TODO: ดึงจาก auth store
     formData.append('severity', form.value.severity);
     formData.append('description', form.value.note || '-');
@@ -519,15 +460,6 @@ const handleNext = async () => {
 
 // ── Lifecycle ─────────────────────────────────────────────────
 
-const templates = ref<
-  {
-    templateId: number;
-    room: { roomId: number; roomName: string };
-    subRoom: { subRoomId: number; roomName: string } | null;
-    floor: { floorId: number; label: string };
-  }[]
->([]);
-
 const severityToggle = ref(true); // true = Major, false = Minor
 
 const onSeverityToggle = (val: boolean) => {
@@ -537,15 +469,15 @@ const onSeverityToggle = (val: boolean) => {
 onMounted(async () => {
   void inspectionStore.fetchInspectionMasterData(roundId);
 
-  const { data } = await api.get('/room-templates');
-  templates.value = data;
+  await fetchRooms();
+  await fetchSubRooms();
+  await fetchFloors();
 
   const { roomId, subRoomId, floorId } = route.query;
   if (roomId) {
     form.value.roomId = Number(roomId);
     if (subRoomId) form.value.subRoomId = Number(subRoomId);
     if (floorId) form.value.floorId = Number(floorId);
-    void lookupTemplate();
     step.value = 2;
   }
 });

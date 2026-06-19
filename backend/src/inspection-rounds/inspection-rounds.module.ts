@@ -8,12 +8,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { InspectionRound } from './entities/inspection-round.entity';
 import { InspectionJobsModule } from 'src/inspection-jobs/inspection-jobs.module';
 import { InspectionTeamMembersModule } from 'src/inspection-team-members/inspection-team-members.module';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([InspectionRound]),
     InspectionJobsModule,
     InspectionTeamMembersModule,
+    UsersModule,
   ],
   controllers: [InspectionRoundsController, ProjectApprovalController],
   providers: [InspectionRoundsService],

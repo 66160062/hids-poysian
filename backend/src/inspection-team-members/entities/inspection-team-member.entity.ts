@@ -6,21 +6,26 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
+import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { User } from 'src/users/entities/user.entity';
+import { Team } from 'src/teams/entities/team.entity';
 
 @Entity('inspection_team_member')
 export class InspectionTeamMember {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => InspectionJob)
-  @JoinColumn({ name: 'job_id' })
-  job!: InspectionJob;
+  @ManyToOne(() => InspectionRound)
+  @JoinColumn({ name: 'round_id' })
+  round: InspectionRound;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'inspector_id' })
-  inspector!: User;
+  inspector!: User | null;
+
+  @ManyToOne(() => Team, { nullable: true })
+  @JoinColumn({ name: 'team_id' })
+  team!: Team | null;
 
   @CreateDateColumn({ name: 'assigned_at' })
   assignedAt!: Date;

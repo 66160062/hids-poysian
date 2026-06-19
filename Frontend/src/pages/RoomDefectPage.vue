@@ -284,9 +284,9 @@ function severityColor(s: string): string {
 // ── Map Defect → DefectDetailCard props ──────────────────────
 
 function toCardData(d: Defect) {
-  const room = d.template?.room?.roomName ?? '-';
-  const subRoom = d.template?.subRoom?.roomName ?? '-';
-  const floor = d.template?.floor?.label ?? '-';
+  const room = d.room?.roomName ?? '-';
+  const subRoom = d.subRoom?.roomName ?? '-';
+  const floor = d.floor?.label ?? '-';
 
   return {
     defectId: d.defectId,
@@ -311,9 +311,9 @@ const onAddDefectClick = () => {
     name: 'addDefect',
     params: { roundId },
     query: {
-      roomId: defect?.template?.room?.roomId,
-      subRoomId: defect?.template?.subRoom?.subRoomId ?? '',
-      floorId: defect?.template?.floor?.floorId,
+      roomId: defect?.room?.roomId,
+      subRoomId: defect?.subRoom?.subRoomId ?? '',
+      floorId: defect?.floor?.floorId,
     },
   });
 };

@@ -105,7 +105,7 @@ const selectedDayRounds = computed(() => {
 
 const filteredDayRounds = computed(() => {
   return selectedDayRounds.value.filter(
-    (r) => r.job?.inspectionType === 'Construction' || r.job?.inspectionType === 'ตรวจก่อสร้าง',
+    (r) => r.job?.inspectionType === 'CONSTRUCTION_INSPECTION' || r.job?.inspectionType === 'Construction' || r.job?.inspectionType === 'ตรวจก่อสร้าง',
   );
 });
 

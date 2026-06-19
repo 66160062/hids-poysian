@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { SubRoomsService } from './sub-rooms.service';
 import { CreateSubRoomDto } from './dto/create-sub-room.dto';

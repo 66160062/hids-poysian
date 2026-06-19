@@ -23,7 +23,18 @@ export class CreateDailyReportRoundDto {
   @Type(() => Number)
   @IsNumber()
   @IsOptional()
+  @IsOptional()
   inspectorId?: number;
+
+  @ApiProperty({
+    description: 'Team ID. Used to assign a team to the round.',
+    example: 1,
+    required: false,
+  })
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  teamId?: number;
 
   @ApiProperty({
     description: 'Scheduled date for the new round',

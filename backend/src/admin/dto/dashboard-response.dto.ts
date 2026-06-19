@@ -6,6 +6,8 @@
 /** โครงสร้างของ Task Item ที่ส่งไปให้ Frontend แสดงผล */
 export interface DashboardTaskItem {
   id: number;
+  jobId: number;
+  inspectionType: string;
   title: string;
   meta: string;
   status: string;
@@ -27,5 +29,6 @@ export interface DashboardResponse {
   townhouse: number;
   condo: number;
   construction: number;
+  calendarEvents: number[];
   tasks: DashboardTaskItem[];
 }

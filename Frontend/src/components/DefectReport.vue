@@ -416,9 +416,7 @@ const majorChunks = computed(() => {
 const allDefectGroups = computed(() => {
   const groups: Record<string, Defect[]> = {};
   props.defects.forEach((defect) => {
-    const key = defect.template
-      ? `${defect.template?.room?.roomName ?? '-'}, ${defect.template?.subRoom?.roomName ?? '-'}, ${defect.template?.floor?.label}`
-      : 'ไม่ระบุห้อง';
+    const key = `${defect.room?.roomName ?? '-'}, ${defect.subRoom?.roomName ?? '-'}, ${defect.floor?.label}`;
     if (!groups[key]) groups[key] = [];
     groups[key].push(defect);
   });
@@ -444,8 +442,7 @@ const totalPages = computed(
 );
 
 function getRoomShortName(defect: Defect) {
-  if (!defect.template) return 'ไม่ระบุห้อง';
-  return `${defect.template?.room?.roomName}, ${defect.template?.subRoom?.roomName ?? '-'}, ${defect.template?.floor?.label}`;
+  return `${defect.room?.roomName ?? '-'}, ${defect.subRoom?.roomName ?? '-'}, ${defect.floor?.label ?? '-'}`;
 }
 
 function formatDate(dateStr: string) {

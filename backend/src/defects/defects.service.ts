@@ -6,7 +6,6 @@ import { CreateDefectDto } from './dto/create-defect.dto';
 import { UpdateDefectDto } from './dto/update-defect.dto';
 import { ContractorUpdateDefectDto } from './dto/contractor-update-defect.dto';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
-import { RoomTemplate } from 'src/room-templates/entities/room-template.entity';
 import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub-category.entity';
 import { User } from 'src/users/entities/user.entity';
 import { DefectStatus } from './entities/defect.entity';
@@ -20,9 +19,6 @@ export class DefectsService {
 
     @InjectRepository(InspectionRound)
     private readonly roundsRepo: Repository<InspectionRound>,
-
-    @InjectRepository(RoomTemplate)
-    private readonly templatesRepo: Repository<RoomTemplate>,
 
     @InjectRepository(DefectSubCategory)
     private readonly subCategoriesRepo: Repository<DefectSubCategory>,
@@ -40,9 +36,6 @@ export class DefectsService {
     const round = await this.roundsRepo.findOneByOrFail({
       roundId: createDefectDto.roundId,
     });
-    const template = await this.templatesRepo.findOneByOrFail({
-      templateId: createDefectDto.templateId,
-    });
     const subCategories = await this.subCategoriesRepo.findBy({
       subCategoryId: In(createDefectDto.subCategoryIds),
     });
@@ -53,7 +46,9 @@ export class DefectsService {
     const defect = this.defectsRepo.create({
       ...createDefectDto,
       round,
-      template,
+      room: { roomId: createDefectDto.roomId } as any,
+      floor: { floorId: createDefectDto.floorId } as any,
+      subRoom: createDefectDto.subRoomId ? { subRoomId: createDefectDto.subRoomId } as any : null,
       subCategories,
       inspector,
       imageFileSize: createDefectDto.imageFileSize,
@@ -64,14 +59,14 @@ export class DefectsService {
 
   findAll() {
     return this.defectsRepo.find({
-      relations: ['round', 'template', 'subCategories', 'inspector'],
+      relations: ['round', 'room', 'subRoom', 'floor', 'subCategories', 'inspector'],
     });
   }
 
   findOne(id: number) {
     return this.defectsRepo.findOneOrFail({
       where: { defectId: id },
-      relations: ['round', 'template', 'subCategories', 'inspector'],
+      relations: ['round', 'room', 'subRoom', 'floor', 'subCategories', 'inspector'],
     });
   }
 
@@ -132,10 +127,9 @@ export class DefectsService {
         'subCategories',
         'subCategories.category',
         'inspector',
-        'template',
-        'template.floor',
-        'template.subRoom',
-        'template.room',
+        'room',
+        'subRoom',
+        'floor',
       ],
     });
   }

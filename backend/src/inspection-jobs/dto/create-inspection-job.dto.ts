@@ -29,11 +29,11 @@ export class CreateInspectionJobDto {
 
   @ApiProperty({
     description: 'ประเภทการตรวจ',
-    example: 'ตรวจ Defect',
-    maxLength: 50,
+    example: 'DEFECT_INSPECTION',
+    enum: ['DEFECT_INSPECTION', 'CONSTRUCTION_INSPECTION'],
   })
   @IsString()
-  @MaxLength(50)
+  @IsEnum(['DEFECT_INSPECTION', 'CONSTRUCTION_INSPECTION'])
   inspectionType!: string;
 
   @ApiProperty({ description: 'รหัสที่อยู่โครงการ (Address ID)', example: 1 })

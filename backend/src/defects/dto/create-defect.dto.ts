@@ -14,10 +14,21 @@ export class CreateDefectDto {
   @IsNumber()
   roundId!: number;
 
-  @ApiProperty({ description: 'รหัส template ห้อง', example: 1 })
+  @ApiProperty({ description: 'รหัสห้องใหญ่', example: 1 })
   @Type(() => Number)
   @IsNumber()
-  templateId!: number;
+  roomId!: number;
+
+  @ApiProperty({ description: 'รหัสห้องย่อย', example: 1, required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  subRoomId?: number;
+
+  @ApiProperty({ description: 'รหัสชั้น', example: 1 })
+  @Type(() => Number)
+  @IsNumber()
+  floorId!: number;
 
   @Transform(({ value }: { value: string | string[] }) => {
     if (Array.isArray(value)) return value.map((v) => Number(v));

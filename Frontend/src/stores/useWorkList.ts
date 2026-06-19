@@ -40,6 +40,11 @@ export interface Work {
     email?: string;
     companyName?: string;
   };
+  rounds?: {
+    roundId: number;
+    status: string;
+    scheduledDate: string;
+  }[];
 }
 
 export interface StatusMeta {
@@ -81,11 +86,11 @@ export const useWorkListStore = defineStore('workList', () => {
         works.value = response.data.data;
         meta.value = response.data.meta;
       } else {
-        works.value = Array.isArray(response.data) 
-          ? response.data 
+        works.value = Array.isArray(response.data)
+          ? response.data
           : (response.data.data || []);
       }
-      
+
       await fetchStatusMeta();
     } catch (error) {
       console.error('Failed to fetch jobs', error);
