@@ -164,7 +164,7 @@
 
             <div class="col min-w-0">
               <div class="text-weight-bold text-dark ellipsis" style="font-size: 14px;">{{ task.title }}</div>
-              <div class="text-grey-6 ellipsis" style="font-size: 12px; margin-top: 2px;">{{ task.meta }}</div>
+              <div class="text-grey-6 ellipsis" style="font-size: 12px; margin-top: 2px;">{{ task.inspectionType === 'CONSTRUCTION_INSPECTION' || task.inspectionType === 'ตรวจก่อสร้าง' ? 'งานก่อสร้าง' : 'ตรวจบ้าน' }}</div>
             </div>
 
             <div class="q-pl-sm">

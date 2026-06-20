@@ -67,9 +67,9 @@ export const useWorkListStore = defineStore('workList', () => {
     totalPages: 1
   });
 
-  const fetchStatusMeta = async () => {
+  const fetchStatusMeta = async (params: { search?: string, type?: string, inspectionType?: string } = {}) => {
     try {
-      const response = await api.get('/inspection-jobs/statuses/meta');
+      const response = await api.get('/inspection-jobs/statuses/meta', { params });
       statusMeta.value = response.data;
     } catch (error) {
       console.error('Failed to fetch status meta', error);
@@ -77,7 +77,7 @@ export const useWorkListStore = defineStore('workList', () => {
     }
   };
 
-  const fetchJobs = async (params: { page?: number, limit?: number, status?: string, search?: string, type?: string, sort?: string } = {}) => {
+  const fetchJobs = async (params: { page?: number, limit?: number, status?: string, search?: string, type?: string, sort?: string, inspectionType?: string } = {}) => {
     isLoading.value = true;
     try {
       const response = await api.get('/inspection-jobs', { params });
@@ -91,7 +91,12 @@ export const useWorkListStore = defineStore('workList', () => {
           : (response.data.data || []);
       }
 
-      await fetchStatusMeta();
+      const metaParams: { search?: string, type?: string, inspectionType?: string } = {};
+      if (params.search) metaParams.search = params.search;
+      if (params.type) metaParams.type = params.type;
+      if (params.inspectionType) metaParams.inspectionType = params.inspectionType;
+
+      await fetchStatusMeta(metaParams);
     } catch (error) {
       console.error('Failed to fetch jobs', error);
       throw error;
