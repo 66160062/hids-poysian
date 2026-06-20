@@ -109,14 +109,14 @@
 
         <q-card flat bordered class="q-pa-md bg-white card-rounded" :class="{'bg-grey-1': selectedCustomer && !isEditMode}">
           <div class="column input-group">
-            <q-input v-model="form.customerName" dense filled placeholder="ชื่อ-นามสกุล" class="custom-input"
+            <q-input v-model="form.customerName" dense filled clearable placeholder="ชื่อ-นามสกุล" class="custom-input"
               :rules="[(val) => !!val || 'กรุณากรอกชื่อลูกค้า']" :readonly="!!selectedCustomer && !isEditMode" />
-            <q-input v-model="form.customerPhone" dense filled placeholder="เบอร์โทรศัพท์" class="custom-input"
+            <q-input v-model="form.customerPhone" dense filled clearable placeholder="เบอร์โทรศัพท์" class="custom-input"
               mask="###-###-####" :rules="[
                 (val) => !!val || 'กรุณากรอกเบอร์โทรศัพท์',
                 (val) => val.length === 12 || 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก',
               ]" :readonly="!!selectedCustomer && !isEditMode" />
-            <q-input v-model="form.customerEmail" dense filled placeholder="อีเมล (ไม่บังคับ)" class="custom-input" :readonly="!!selectedCustomer && !isEditMode" />
+            <q-input v-model="form.customerEmail" dense filled clearable placeholder="อีเมล (ไม่บังคับ)" class="custom-input" :readonly="!!selectedCustomer && !isEditMode" />
           </div>
         </q-card>
       </div>
@@ -129,31 +129,78 @@
         </div>
         <q-card flat bordered class="q-pa-md bg-white card-rounded">
           <div class="column input-group">
-            <q-input v-model="form.contractorFullName" dense filled placeholder="ชื่อ-นามสกุล" class="custom-input" />
-            <q-input v-model="form.contractorPhoneNumber" dense filled placeholder="เบอร์โทรศัพท์" class="custom-input"
+            <q-input v-model="form.contractorFullName" dense filled clearable placeholder="ชื่อ-นามสกุล" class="custom-input" />
+            <q-input v-model="form.contractorPhoneNumber" dense filled clearable placeholder="เบอร์โทรศัพท์" class="custom-input"
               mask="###-###-####" :rules="[
                 (val) => !val || val.length === 12 || 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก',
               ]" />
-            <q-input v-model="form.contractorEmail" dense filled placeholder="อีเมล" class="custom-input" />
-            <q-input v-model="form.contractorCompanyName" dense filled placeholder="ไอดีไลน์ หรือ ชื่อบริษัท" class="custom-input" />
+            <q-input v-model="form.contractorEmail" dense filled clearable placeholder="อีเมล" class="custom-input" />
+            <q-input v-model="form.contractorCompanyName" dense filled clearable placeholder="ไอดีไลน์ หรือ ชื่อบริษัท" class="custom-input" />
           </div>
         </q-card>
       </div>
 
       <!-- ข้อมูลที่อยู่โครงการ -->
       <div class="section">
-        <div class="row items-center q-mb-sm text-primary">
-          <q-icon name="location_on" size="20px" class="q-mr-sm" />
-          <div class="text-subtitle2 text-weight-bold">ข้อมูลที่อยู่โครงการ</div>
+        <div class="row items-center justify-between q-mb-sm text-primary">
+          <div class="row items-center">
+            <q-icon name="location_on" size="20px" class="q-mr-sm" />
+            <div class="text-subtitle2 text-weight-bold">ข้อมูลที่อยู่โครงการ</div>
+          </div>
+          <q-btn outline color="primary" size="sm" icon="map" label="ค้นหาด้วย Google Maps" @click="openGoogleMaps" class="bg-white" />
         </div>
         <q-card flat bordered class="q-pa-md bg-white card-rounded">
           <div class="column input-group">
-            <q-input v-model="form.houseNumber" dense filled placeholder="เลขที่ห้อง/บ้านเลขที่" class="custom-input" />
-            <q-input v-model="form.floor" dense filled placeholder="ชั้น/ซอย" class="custom-input" />
-            <q-input v-model="form.province" dense filled placeholder="จังหวัด" class="custom-input" />
-            <q-input v-model="form.district" dense filled placeholder="เขต/อำเภอ" class="custom-input" />
-            <q-input v-model="form.subDistrict" dense filled placeholder="ตำบล/แขวง" class="custom-input" />
-            <q-input v-model="form.postalCode" dense filled placeholder="รหัสไปรษณีย์" class="custom-input" />
+            <q-input v-model="form.houseNumber" dense filled clearable placeholder="เลขที่ห้อง/บ้านเลขที่" class="custom-input" />
+            <q-input v-model="form.floor" dense filled clearable placeholder="ชั้น/ซอย" class="custom-input" />
+            <q-input v-model="form.subDistrict" dense filled clearable placeholder="ตำบล/แขวง" class="custom-input" @update:model-value="(val) => handleAddressInput(val, 'subDistrict')">
+              <q-menu fit no-focus no-refocus v-model="showMenu.subDistrict" no-parent-event>
+                <q-list style="max-height: 250px" v-if="addressOptions.length > 0">
+                  <q-item v-for="(opt, index) in addressOptions" :key="index" clickable v-close-popup @click="onAddressSelected(opt)">
+                    <q-item-section>
+                      <q-item-label>{{ opt.district }}</q-item-label>
+                      <q-item-label caption>{{ opt.amphoe }} » {{ opt.province }} » {{ opt.zipcode }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-input>
+            <q-input v-model="form.district" dense filled clearable placeholder="เขต/อำเภอ" class="custom-input" @update:model-value="(val) => handleAddressInput(val, 'district')">
+              <q-menu fit no-focus no-refocus v-model="showMenu.district" no-parent-event>
+                <q-list style="max-height: 250px" v-if="addressOptions.length > 0">
+                  <q-item v-for="(opt, index) in addressOptions" :key="index" clickable v-close-popup @click="onAddressSelected(opt)">
+                    <q-item-section>
+                      <q-item-label>{{ opt.amphoe }}</q-item-label>
+                      <q-item-label caption>{{ opt.district }} » {{ opt.province }} » {{ opt.zipcode }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-input>
+            <q-input v-model="form.province" dense filled clearable placeholder="จังหวัด" class="custom-input" @update:model-value="(val) => handleAddressInput(val, 'province')">
+              <q-menu fit no-focus no-refocus v-model="showMenu.province" no-parent-event>
+                <q-list style="max-height: 250px" v-if="addressOptions.length > 0">
+                  <q-item v-for="(opt, index) in addressOptions" :key="index" clickable v-close-popup @click="onAddressSelected(opt)">
+                    <q-item-section>
+                      <q-item-label>{{ opt.province }}</q-item-label>
+                      <q-item-label caption>{{ opt.district }} » {{ opt.amphoe }} » {{ opt.zipcode }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-input>
+            <q-input v-model="form.postalCode" dense filled clearable placeholder="รหัสไปรษณีย์" class="custom-input" @update:model-value="(val) => handleAddressInput(val, 'postalCode')">
+              <q-menu fit no-focus no-refocus v-model="showMenu.postalCode" no-parent-event>
+                <q-list style="max-height: 250px" v-if="addressOptions.length > 0">
+                  <q-item v-for="(opt, index) in addressOptions" :key="index" clickable v-close-popup @click="onAddressSelected(opt)">
+                    <q-item-section>
+                      <q-item-label>{{ opt.zipcode }}</q-item-label>
+                      <q-item-label caption>{{ opt.district }} » {{ opt.amphoe }} » {{ opt.province }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-input>
           </div>
         </q-card>
       </div>
@@ -166,11 +213,11 @@
         </div>
         <q-card flat bordered class="q-pa-md bg-white card-rounded">
           <div class="column input-group">
-            <q-input v-model="form.projectName" dense filled placeholder="ชื่อโครงการ" class="custom-input"
+            <q-input v-model="form.projectName" dense filled clearable placeholder="ชื่อโครงการ" class="custom-input"
               :rules="[(val) => !!val || 'กรุณากรอกชื่อโครงการ']" />
             <div class="row q-col-gutter-sm">
               <div class="col-6">
-                <q-input v-model="form.usableArea" dense filled placeholder="ขนาดพื้นที่(ตารางเมตร)"
+                <q-input v-model="form.usableArea" dense filled clearable placeholder="ขนาดพื้นที่(ตารางเมตร)"
                   class="custom-input" type="number" />
               </div>
               <div class="col-6">
@@ -189,7 +236,7 @@
           <div class="text-subtitle2 text-weight-bold">รูปภาพแปลนบ้าน (House Plan Photo)</div>
         </div>
         <div class="row q-col-gutter-md">
-          <div class="col-6">
+          <div class="col-12">
             <q-card flat bordered class="upload-box flex flex-center cursor-pointer relative-position"
               @click="triggerUpload('housePlan')">
               <div v-if="!form.housePlanImage" class="column items-center">
@@ -203,11 +250,6 @@
               </template>
             </q-card>
           </div>
-          <div class="col-6">
-            <q-card flat bordered class="upload-box flex flex-center bg-grey-2">
-              <q-icon name="image" size="32px" color="grey-4" />
-            </q-card>
-          </div>
         </div>
       </div>
 
@@ -218,7 +260,7 @@
           <div class="text-subtitle2 text-weight-bold">รูปภาพโครงการ (Project Photo)</div>
         </div>
         <div class="row q-col-gutter-md">
-          <div class="col-6">
+          <div class="col-12">
             <q-card flat bordered class="upload-box flex flex-center cursor-pointer relative-position"
               @click="triggerUpload('projectPhoto')">
               <div v-if="!form.projectImage" class="column items-center">
@@ -230,11 +272,6 @@
                 <q-btn round dense color="negative" icon="close" class="absolute-top-right q-ma-xs shadow-2" size="sm"
                   @click.stop="() => { form.projectImage = null; form.projectImageFile = null; }" />
               </template>
-            </q-card>
-          </div>
-          <div class="col-6">
-            <q-card flat bordered class="upload-box flex flex-center bg-grey-2">
-              <q-icon name="image" size="32px" color="grey-4" />
             </q-card>
           </div>
         </div>
@@ -263,6 +300,7 @@ import { useCustomerStore, type Customer } from '../stores/useCustomer';
 import { useAddressStore } from '../stores/useAddress';
 import { useContractorStore } from '../stores/useContractor';
 import { useHouseTypeStore } from '../stores/useHouseType';
+import { useThaiAddress, type ThaiAddress } from '../composables/useThaiAddress';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 const getImageUrl = (path: string | null | undefined): string | null => {
@@ -279,6 +317,7 @@ const customerStore = useCustomerStore();
 const addressStore = useAddressStore();
 const contractorStore = useContractorStore();
 const houseTypeStore = useHouseTypeStore();
+const thaiAddress = useThaiAddress();
 
 // ─── Edit mode ────────────────────────────────────────────────────────────
 const editId = computed(() => {
@@ -345,6 +384,64 @@ const form = reactive({
   housePlanImageFile: null as File | null,
   projectImageFile: null as File | null,
 });
+
+// ─── Thai Address Auto-fill ────────────────────────────────────────────────
+const addressOptions = ref<ThaiAddress[]>([]);
+const showMenu = reactive({
+  province: false,
+  district: false,
+  subDistrict: false,
+  postalCode: false
+});
+
+const handleAddressInput = (val: string | number | null, field: 'province' | 'district' | 'subDistrict' | 'postalCode') => {
+  // Close all menus first
+  Object.keys(showMenu).forEach(k => showMenu[k as keyof typeof showMenu] = false);
+
+  if (val) {
+    addressOptions.value = thaiAddress.filterAddresses(String(val));
+    showMenu[field] = addressOptions.value.length > 0;
+  } else {
+    addressOptions.value = [];
+  }
+};
+
+const onAddressSelected = (address: ThaiAddress) => {
+  form.province = address.province;
+  form.district = address.amphoe;
+  form.subDistrict = address.district;
+  form.postalCode = address.zipcode.toString();
+  addressOptions.value = []; 
+  Object.keys(showMenu).forEach(k => showMenu[k as keyof typeof showMenu] = false);
+};
+
+// ─── Google Maps ──────────────────────────────────────────────────────────
+const openGoogleMaps = () => {
+  const addressParts = [
+    form.projectName,
+    form.houseNumber ? `เลขที่ ${form.houseNumber}` : '',
+    form.floor && form.floor !== '-' ? `ชั้น/ซอย ${form.floor}` : '',
+    form.subDistrict ? `ต.${form.subDistrict}` : '',
+    form.district ? `อ.${form.district}` : '',
+    form.province ? `จ.${form.province}` : '',
+    form.postalCode || ''
+  ];
+  
+  const searchQuery = addressParts.filter((part) => part).join(' ');
+  
+  if (searchQuery.trim() && (form.projectName || form.province)) {
+    const encodedQuery = encodeURIComponent(searchQuery);
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
+    window.open(mapsUrl, '_blank');
+  } else {
+    $q.notify({
+      message: 'กรุณากรอกชื่อโครงการหรือข้อมูลที่อยู่ก่อนค้นหาในแผนที่',
+      color: 'warning',
+      position: 'top',
+      icon: 'warning'
+    });
+  }
+};
 
 const houseTypeOptions = computed(() => houseTypeStore.houseTypes.map(ht => ({
   label: ht.name,
@@ -735,7 +832,9 @@ const onSubmit = async () => {
   background-color: #fcfdfe;
   border: 2px dashed #e2e8f0;
   border-radius: 16px;
-  height: 120px;
+  aspect-ratio: 16/9;
+  min-height: 160px;
+  max-height: 250px;
   transition: all 0.2s ease;
 }
 
