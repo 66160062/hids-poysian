@@ -67,6 +67,27 @@ export const useWorkListStore = defineStore('workList', () => {
     totalPages: 1
   });
 
+  const absoluteJobCounts = ref({
+    all: 0,
+    defect: 0,
+    construction: 0
+  });
+
+  const fetchAbsoluteJobCounts = async () => {
+    try {
+      const [resAll, resDef, resCon] = await Promise.all([
+        api.get('/inspection-jobs', { params: { limit: 1 } }),
+        api.get('/inspection-jobs', { params: { limit: 1, inspectionType: 'ตรวจบ้าน' } }),
+        api.get('/inspection-jobs', { params: { limit: 1, inspectionType: 'งานก่อสร้าง' } })
+      ]);
+      absoluteJobCounts.value.all = resAll.data?.meta?.total || 0;
+      absoluteJobCounts.value.defect = resDef.data?.meta?.total || 0;
+      absoluteJobCounts.value.construction = resCon.data?.meta?.total || 0;
+    } catch (error) {
+      console.error('Failed to fetch absolute counts', error);
+    }
+  };
+
   const fetchStatusMeta = async (params: { search?: string, type?: string, inspectionType?: string } = {}) => {
     try {
       const response = await api.get('/inspection-jobs/statuses/meta', { params });
@@ -144,5 +165,5 @@ export const useWorkListStore = defineStore('workList', () => {
     }
   };
 
-  return { works, statusMeta, meta, isLoading, fetchJobs, fetchStatusMeta, createJob, removeJob, updateJob };
+  return { works, statusMeta, meta, absoluteJobCounts, isLoading, fetchJobs, fetchStatusMeta, fetchAbsoluteJobCounts, createJob, removeJob, updateJob };
 });

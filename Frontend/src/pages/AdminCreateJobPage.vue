@@ -19,56 +19,8 @@
     <!-- ================================ -->
     <!-- FORM -->
     <!-- ================================ -->
-    <!-- ประเภทงาน -->
+
     <div v-else-if="!isLoading" class="form-container q-pa-md q-gutter-y-lg pb-100">
-  <div class="section q-mb-lg">
-    <div class="row items-center q-mb-sm text-primary">
-      <q-icon name="category" size="20px" class="q-mr-sm" />
-      <div class="text-subtitle2 text-weight-bold">ประเภทงาน</div>
-    </div>
-
-    <div class="row q-col-gutter-md">
-      <div class="col-6">
-        <q-card
-          flat
-          bordered
-          class="cursor-pointer transition-all h-100"
-          :class="form.inspectionType === 'ตรวจ Defect' ? 'bg-teal-1 border-teal' : 'bg-white'"
-          @click="form.inspectionType = 'ตรวจ Defect'"
-        >
-          <q-card-section class="column items-center text-center q-pa-md">
-            <q-avatar
-              :color="form.inspectionType === 'ตรวจ Defect' ? 'teal' : 'grey-3'"
-              :text-color="form.inspectionType === 'ตรวจ Defect' ? 'white' : 'grey-6'"
-              icon="home_work"
-              class="q-mb-sm"
-            />
-            <div class="text-weight-bold" :class="form.inspectionType === 'ตรวจ Defect' ? 'text-teal-9' : 'text-grey-8'">งานตรวจบ้าน</div>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-6">
-        <q-card
-          flat
-          bordered
-          class="cursor-pointer transition-all h-100"
-          :class="form.inspectionType === 'ตรวจก่อสร้าง' ? 'bg-orange-1 border-orange' : 'bg-white'"
-          @click="form.inspectionType = 'ตรวจก่อสร้าง'"
-        >
-          <q-card-section class="column items-center text-center q-pa-md">
-            <q-avatar
-              :color="form.inspectionType === 'ตรวจก่อสร้าง' ? 'orange' : 'grey-3'"
-              :text-color="form.inspectionType === 'ตรวจก่อสร้าง' ? 'white' : 'grey-6'"
-              icon="construction"
-              class="q-mb-sm"
-            />
-            <div class="text-weight-bold" :class="form.inspectionType === 'ตรวจก่อสร้าง' ? 'text-orange-9' : 'text-grey-8'">งานตรวจก่อสร้าง</div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-  </div>
       <!-- ข้อมูลลูกค้า -->
       <div class="section">
         <div class="row items-center q-mb-sm text-primary justify-between">

@@ -46,28 +46,14 @@
 
       <div class="hide-scrollbar q-mb-md" style="overflow-x: auto; padding-bottom: 4px;">
         <div class="row no-wrap q-gutter-x-sm">
-          <q-card flat bordered class="mini-card">
+          <q-card flat bordered class="mini-card" style="flex: 1;">
             <div class="row items-center q-mb-xs">
               <div class="dot-indicator bg-blue q-mr-sm"></div>
-              <div class="text-grey-7" style="font-size: 13px;">บ้านเดี่ยว</div>
+              <div class="text-grey-7" style="font-size: 13px;">งานตรวจบ้าน</div>
             </div>
-            <div class="text-h5 text-weight-bold text-dark">{{ dashboard.singleHouse }}</div>
+            <div class="text-h5 text-weight-bold text-dark">{{ dashboard.totalProjects - dashboard.construction }}</div>
           </q-card>
-          <q-card flat bordered class="mini-card">
-            <div class="row items-center q-mb-xs">
-              <div class="dot-indicator bg-teal q-mr-sm"></div>
-              <div class="text-grey-7" style="font-size: 13px;">ทาวน์เฮาส์</div>
-            </div>
-            <div class="text-h5 text-weight-bold text-dark">{{ dashboard.townhouse }}</div>
-          </q-card>
-          <q-card flat bordered class="mini-card">
-            <div class="row items-center q-mb-xs">
-              <div class="dot-indicator bg-purple q-mr-sm"></div>
-              <div class="text-grey-7" style="font-size: 13px;">คอนโด</div>
-            </div>
-            <div class="text-h5 text-weight-bold text-dark">{{ dashboard.condo }}</div>
-          </q-card>
-          <q-card flat bordered class="mini-card">
+          <q-card flat bordered class="mini-card" style="flex: 1;">
             <div class="row items-center q-mb-xs">
               <div class="dot-indicator bg-orange q-mr-sm"></div>
               <div class="text-grey-7" style="font-size: 13px;">งานก่อสร้าง</div>

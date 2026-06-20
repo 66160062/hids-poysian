@@ -32,6 +32,39 @@
         </q-btn>
       </div>
 
+      <!-- Tabs for Job Type -->
+      <q-tabs
+        v-model="selectedJobType"
+        dense
+        class="bg-white text-grey-7 shadow-1 q-mb-lg"
+        active-color="primary"
+        indicator-color="primary"
+        align="justify"
+        style="border-radius: 12px;"
+      >
+        <q-tab name="ทั้งหมด">
+          <div class="row items-center q-gutter-x-sm no-wrap">
+            <q-icon name="format_list_bulleted" size="18px" />
+            <span>ทั้งหมด</span>
+            <q-badge color="grey-3" text-color="grey-8" rounded>{{ allJobCount }}</q-badge>
+          </div>
+        </q-tab>
+        <q-tab name="ตรวจบ้าน">
+          <div class="row items-center q-gutter-x-sm no-wrap">
+            <q-icon name="home" size="18px" />
+            <span>ตรวจบ้าน</span>
+            <q-badge color="blue-1" text-color="blue-8" rounded>{{ defectJobCount }}</q-badge>
+          </div>
+        </q-tab>
+        <q-tab name="งานก่อสร้าง">
+          <div class="row items-center q-gutter-x-sm no-wrap">
+            <q-icon name="construction" size="18px" />
+            <span>ก่อสร้าง</span>
+            <q-badge color="orange-1" text-color="orange-8" rounded>{{ constructJobCount }}</q-badge>
+          </div>
+        </q-tab>
+      </q-tabs>
+
       <!-- Filter Bottom Sheet Dialog -->
       <q-dialog v-model="showFilterDialog" position="bottom">
         <q-card style="width: 100%; max-width: 600px; border-radius: 24px 24px 0 0;" class="q-pa-lg shadow-up-4">
@@ -43,8 +76,18 @@
             </div>
           </div>
           
-          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px;">ประเภทงาน</div>
-          <q-select v-model="selectedJobType" :options="['ทั้งหมด', 'ตรวจบ้าน', 'งานก่อสร้าง']" dense outlined rounded class="q-mb-md filter-select" behavior="dialog" />
+
+
+          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px;">สถานะงาน</div>
+          <q-select v-model="activeFilter" :options="filters" option-value="value" option-label="label" emit-value map-options dense outlined rounded class="q-mb-md filter-select" behavior="dialog">
+            <template v-slot:option="scope">
+              <q-item v-bind="scope.itemProps">
+                <q-item-section>
+                  <q-item-label>{{ scope.opt.label }} <span v-if="scope.opt.count" class="text-grey-6">({{ scope.opt.count }})</span></q-item-label>
+                </q-item-section>
+              </q-item>
+            </template>
+          </q-select>
 
           <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px;">ประเภทบ้าน</div>
           <q-select v-model="selectedType" :options="typeOptions" dense outlined rounded class="q-mb-md filter-select" behavior="dialog" />
@@ -59,39 +102,12 @@
       <!-- Active Filters Chips -->
       <div v-if="activeFilterCount > 0" class="row items-center q-gutter-x-sm q-mb-sm">
         <span class="text-caption text-grey-7 q-mr-xs q-pl-xs">กำลังกรอง:</span>
-        <q-chip v-if="selectedJobType !== 'ทั้งหมด'" removable @remove="selectedJobType = 'ทั้งหมด'" color="blue-1" text-color="primary" dense class="text-weight-medium">
-          {{ selectedJobType }}
+        <q-chip v-if="activeFilter !== 'all'" removable @remove="activeFilter = 'all'" color="blue-1" text-color="primary" dense class="text-weight-medium">
+          {{ filters.find(f => f.value === activeFilter)?.label || activeFilter }}
         </q-chip>
         <q-chip v-if="selectedType !== 'ทั้งหมด'" removable @remove="selectedType = 'ทั้งหมด'" color="blue-1" text-color="primary" dense class="text-weight-medium">
           {{ selectedType }}
         </q-chip>
-      </div>
-
-      <div class="filter-container q-mb-lg">
-        <div class="filter-scroll-wrapper no-wrap scroll-x hide-scrollbar row q-gutter-x-sm q-px-none">
-          <q-btn
-            v-for="filter in filters"
-            :key="filter.label"
-            unelevated
-            rounded
-            :class="activeFilter === filter.value ? 'bg-primary text-white' : 'bg-white text-grey-8'"
-            class="filter-chip"
-            style="border: 1px solid #f0f0f0;"
-            no-caps
-            @click="activeFilter = filter.value"
-          >
-            <div class="row no-wrap items-center">
-              <span :class="activeFilter === filter.value ? 'text-weight-medium' : ''">{{ filter.label }}</span>
-              <q-badge
-                v-if="filter.count !== undefined"
-                :class="activeFilter === filter.value ? 'bg-white text-primary' : 'bg-grey-2 text-grey-8'"
-                class="q-ml-sm count-badge"
-              >
-                {{ filter.count }}
-              </q-badge>
-            </div>
-          </q-btn>
-        </div>
       </div>
 
       <div class="work-list-wrapper">
@@ -100,48 +116,68 @@
         </div>
 
         <div v-else class="work-list q-gutter-y-md">
-          <q-card
-            v-for="task in tasks"
-            :key="task.id"
-            flat
-            bordered
-            class="work-card cursor-pointer"
-            v-ripple
-            @click="viewDetail(task)"
-          >
+
+            <q-card
+              v-for="task in tasks"
+              :key="task.id"
+              flat
+              bordered
+              class="work-card cursor-pointer"
+              style="border-radius: 12px;"
+              v-ripple
+              @click="viewDetail(task)"
+            >
             <q-card-section class="q-pa-md">
-              <div class="row justify-between items-start q-mb-sm">
-                <div class="text-weight-bold text-dark ellipsis" style="font-size: 16px; max-width: 65%;">
+              <div class="row justify-between items-center q-mb-sm">
+                <div class="text-weight-bold text-dark ellipsis" style="font-size: 17px; max-width: 65%;">
                   {{ task.title }}
                 </div>
-                <q-badge
-                  class="status-badge"
-                  :class="[task.statusBgClass, `text-${task.statusTextColor}`]"
-                >
-                  {{ task.status }}
-                </q-badge>
+                <div class="row items-center q-gutter-x-sm">
+                  <q-badge
+                    class="status-badge"
+                    :class="[task.statusBgClass, `text-${task.statusTextColor}`]"
+                  >
+                    {{ task.status }}
+                  </q-badge>
+                  <q-btn flat round dense icon="more_vert" color="grey-8" style="margin-right: -8px;" @click.stop>
+                    <q-menu auto-close anchor="bottom right" self="top right">
+                      <q-list style="min-width: 150px">
+                        <q-item clickable @click="editWork(task)">
+                          <q-item-section avatar style="min-width: 0; padding-right: 8px;">
+                            <q-icon name="edit" color="primary" size="20px" />
+                          </q-item-section>
+                          <q-item-section class="text-weight-medium">แก้ไขงาน</q-item-section>
+                        </q-item>
+                        <q-separator />
+                        <q-item clickable @click="onDeleteClick(task)">
+                          <q-item-section avatar style="min-width: 0; padding-right: 8px;">
+                            <q-icon name="delete" color="negative" size="20px" />
+                          </q-item-section>
+                          <q-item-section class="text-weight-medium text-negative">ลบงาน</q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-menu>
+                  </q-btn>
+                </div>
               </div>
 
-              <div class="row q-gutter-x-sm q-mb-md">
-                <q-badge color="indigo-1" text-color="grey-8" class="tag-badge">
-                  {{ task.type || 'คอนโด' }}
-                </q-badge>
-                <q-badge color="indigo-1" text-color="grey-8" class="tag-badge">
-                  {{ task.area || '0' }} ตร.ม.
-                </q-badge>
+              <div class="row items-center text-grey-7" style="font-size: 13px;">
+                <q-icon name="person" size="16px" class="q-mr-sm" />
+                <span class="ellipsis" style="max-width: 80%;">{{ task.customer }}</span>
               </div>
 
             </q-card-section>
 
             <q-separator color="grey-2" inset />
 
-            <q-card-actions class="row justify-between items-center q-px-md q-py-sm">
-              <div class="row items-center text-grey-6" style="font-size: 13px;">
-                <q-icon name="assignment" size="16px" class="q-mr-sm" />
-                {{ task.inspectionType === 'CONSTRUCTION_INSPECTION' || task.inspectionType === 'ตรวจก่อสร้าง' ? 'งานก่อสร้าง' : 'ตรวจบ้าน' }}
-              </div>
+            <q-card-actions class="row items-center q-px-md q-py-sm">
               <div class="row q-gutter-x-sm">
-                <q-btn flat round dense icon="edit" color="grey-8" class="bg-grey-2 action-btn" @click.stop="editWork(task)" />
+                <q-badge color="grey-2" text-color="grey-8" class="tag-badge">
+                  <q-icon name="apartment" size="14px" class="q-mr-xs" /> {{ task.type || 'คอนโด' }}
+                </q-badge>
+                <q-badge color="grey-2" text-color="grey-8" class="tag-badge">
+                  <q-icon name="square_foot" size="14px" class="q-mr-xs" /> {{ task.area || '0' }} ตร.ม.
+                </q-badge>
               </div>
             </q-card-actions>
           </q-card>
@@ -170,6 +206,8 @@
         direction="up"
         color="primary"
         class="shadow-4 custom-fab"
+        transition-show="jump-up"
+        transition-hide="jump-down"
       >
         <q-fab-action color="orange-8" text-color="white" icon="construction" label="งานก่อสร้าง" class="text-weight-bold custom-fab-action" @click="addNewWork('construction')" />
         <q-fab-action color="blue-8" text-color="white" icon="home" label="ตรวจบ้าน" class="text-weight-bold custom-fab-action" @click="addNewWork('defect')" />
@@ -182,10 +220,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useQuasar } from 'quasar';
 import { useWorkListStore } from '../stores/useWorkList';
 import { useHouseTypeStore } from '../stores/useHouseType';
 
 const router = useRouter();
+const $q = useQuasar();
 const workStore = useWorkListStore();
 const houseTypeStore = useHouseTypeStore();
 
@@ -212,16 +252,20 @@ const showFilterDialog = ref(false);
 
 const activeFilterCount = computed(() => {
   let count = 0;
-  if (selectedJobType.value !== 'ทั้งหมด') count++;
   if (selectedType.value !== 'ทั้งหมด') count++;
+  if (activeFilter.value !== 'all') count++;
   return count;
 });
 
 function clearFilters() {
-  selectedJobType.value = 'ทั้งหมด';
   selectedType.value = 'ทั้งหมด';
+  activeFilter.value = 'all';
   sortOrder.value = 'desc';
 }
+
+const allJobCount = computed(() => workStore.absoluteJobCounts.all);
+const defectJobCount = computed(() => workStore.absoluteJobCounts.defect);
+const constructJobCount = computed(() => workStore.absoluteJobCounts.construction);
 
 const currentPage = ref(1);
 
@@ -340,15 +384,48 @@ async function viewDetail(task: TaskItem): Promise<void> {
   }
 }
 
-async function editWork(task: TaskItem): Promise<void> {
-  await router.push(`/admin/work/create?editId=${task.id}`);
-}
 
 const isFabClicked = ref(false);
 
-function addNewWork(type: 'defect' | 'construction'): void {
-  void router.push(`/admin/work/create?type=${type}`);
+function addNewWork(type: 'defect' | 'construction') {
   isFabClicked.value = false;
+  void router.push({
+    path: '/admin/work/create',
+    query: { type }
+  });
+}
+
+function editWork(task: TaskItem) {
+  void router.push(`/admin/work/create?editId=${task.id}`);
+}
+
+function onDeleteClick(task: TaskItem) {
+  $q.dialog({
+    title: 'ยืนยันการลบข้อมูล',
+    message: 'คุณแน่ใจหรือไม่ที่จะลบงานนี้? การกระทำนี้ไม่สามารถกู้คืนได้',
+    persistent: true,
+    ok: { label: 'ลบข้อมูล', color: 'negative', flat: true },
+    cancel: { label: 'ยกเลิก', color: 'grey-8', flat: true }
+  }).onOk(() => {
+    void (async () => {
+      try {
+        await workStore.removeJob(task.id);
+        $q.notify({ type: 'positive', message: 'ลบงานเรียบร้อยแล้ว' });
+        // Trigger refetch
+        await workStore.fetchJobs({
+          page: currentPage.value,
+          limit: 10,
+          status: activeFilter.value,
+          search: searchTerm.value,
+          type: selectedType.value,
+          sort: sortOrder.value,
+          ...(selectedJobType.value !== 'ทั้งหมด' && { inspectionType: selectedJobType.value }),
+        });
+      } catch {
+        $q.notify({ type: 'negative', message: 'เกิดข้อผิดพลาดในการลบงาน' });
+      }
+    })();
+  });
 }
 
 // ==========================================
@@ -380,6 +457,7 @@ async function fetchWorkList(): Promise<void> {
 }
 
 onMounted((): void => {
+  void workStore.fetchAbsoluteJobCounts();
   void fetchWorkList();
 });
 </script>
@@ -394,6 +472,7 @@ onMounted((): void => {
 .search-input {
   background-color: #ffffff;
   border: 1px solid #e0e0e0;
+  border-radius: 24px;
   padding: 2px 16px;
   height: 48px;
 }
@@ -445,10 +524,12 @@ onMounted((): void => {
 }
 
 .status-badge {
-  font-weight: 600;
-  font-size: 11px;
-  padding: 6px 12px;
-  border-radius: 20px;
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 6px 14px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.2px;
 }
 
 .tag-badge {
@@ -516,6 +597,14 @@ onMounted((): void => {
   right: 0 !important;
   transform: none !important;
   align-items: flex-end !important;
+}
+
+/* Speed up the FAB jump animation */
+.q-transition--jump-up-enter-active,
+.q-transition--jump-up-leave-active,
+.q-transition--jump-down-enter-active,
+.q-transition--jump-down-leave-active {
+  transition-duration: 0.15s !important;
 }
 
 /* Ensure FAB actions are exactly the same size with larger icons */

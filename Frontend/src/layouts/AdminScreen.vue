@@ -156,10 +156,10 @@ async function handleTabClick(link: string) {
 
 /* Page Transition Animations */
 .jump-enter-active {
-  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .jump-leave-active {
-  transition: all 0.2s ease-in;
+  transition: all 0.15s ease-in;
 }
 .jump-enter-from {
   transform: translateY(20px);
