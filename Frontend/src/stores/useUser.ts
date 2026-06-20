@@ -27,13 +27,13 @@ export const useUserStore = defineStore('user', () => {
       const requestData = new FormData();
 
       // Append form fields
-      if (payload.form.fullName) requestData.append('fullName', payload.form.fullName);
-      if (payload.form.phoneNumber) requestData.append('phoneNumber', payload.form.phoneNumber);
-      if (payload.form.email) requestData.append('email', payload.form.email);
-      if (payload.form.lineId) requestData.append('lineId', payload.form.lineId);
-      if (payload.form.role) requestData.append('role', payload.form.role);
-      if (payload.form.password) requestData.append('password', payload.form.password);
-      if (payload.form.teamId) requestData.append('teamId', payload.form.teamId.toString());
+      if (payload.form.fullName !== undefined) requestData.append('fullName', payload.form.fullName);
+      if (payload.form.phoneNumber !== undefined) requestData.append('phoneNumber', payload.form.phoneNumber);
+      if (payload.form.email !== undefined) requestData.append('email', payload.form.email);
+      if (payload.form.lineId !== undefined) requestData.append('lineId', payload.form.lineId);
+      if (payload.form.role !== undefined) requestData.append('role', payload.form.role);
+      if (payload.form.password !== undefined) requestData.append('password', payload.form.password);
+      if (payload.form.teamId !== undefined) requestData.append('teamId', payload.form.teamId.toString());
 
       // Append file
       if (payload.file) {
@@ -61,13 +61,13 @@ export const useUserStore = defineStore('user', () => {
       const requestData = new FormData();
 
       // Append form fields
-      if (payload.form.fullName) requestData.append('fullName', payload.form.fullName);
-      if (payload.form.phoneNumber) requestData.append('phoneNumber', payload.form.phoneNumber);
-      if (payload.form.email) requestData.append('email', payload.form.email);
-      if (payload.form.lineId) requestData.append('lineId', payload.form.lineId);
-      if (payload.form.role) requestData.append('role', payload.form.role);
-      if (payload.form.password) requestData.append('password', payload.form.password);
-      if (payload.form.teamId) requestData.append('teamId', payload.form.teamId.toString());
+      if (payload.form.fullName !== undefined) requestData.append('fullName', payload.form.fullName);
+      if (payload.form.phoneNumber !== undefined) requestData.append('phoneNumber', payload.form.phoneNumber);
+      if (payload.form.email !== undefined) requestData.append('email', payload.form.email);
+      if (payload.form.lineId !== undefined) requestData.append('lineId', payload.form.lineId);
+      if (payload.form.role !== undefined) requestData.append('role', payload.form.role);
+      if (payload.form.password !== undefined) requestData.append('password', payload.form.password);
+      if (payload.form.teamId !== undefined) requestData.append('teamId', payload.form.teamId.toString());
 
       // Append file
       if (payload.file) {

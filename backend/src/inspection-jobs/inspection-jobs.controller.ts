@@ -76,6 +76,7 @@ export class InspectionJobsController {
     @Query('search') search?: string,
     @Query('type') type?: string,
     @Query('sort') sort?: 'asc' | 'desc',
+    @Query('inspectionType') inspectionType?: string,
   ) {
     // Treat 'all' as undefined
     const parsedStatus =
@@ -88,13 +89,18 @@ export class InspectionJobsController {
       search,
       type,
       sort,
+      inspectionType,
     );
   }
 
   @Get('statuses/meta')
   @ApiOperation({ summary: 'ข้อมูลสถานะงานและจำนวน' })
-  getStatusMetadata() {
-    return this.inspectionJobsService.getStatusMetadata();
+  getStatusMetadata(
+    @Query('search') search?: string,
+    @Query('type') type?: string,
+    @Query('inspectionType') inspectionType?: string,
+  ) {
+    return this.inspectionJobsService.getStatusMetadata(search, type, inspectionType);
   }
 
   @Get(':id')

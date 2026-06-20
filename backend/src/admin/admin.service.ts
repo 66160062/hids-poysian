@@ -51,6 +51,17 @@ export class AdminService {
         inProgress++;
       }
 
+      // จำแนกประเภทงาน (ตรวจบ้าน / ก่อสร้าง)
+      const inspectionType = job.inspectionType || '';
+      if (
+        inspectionType === 'CONSTRUCTION_INSPECTION' ||
+        inspectionType === 'ตรวจก่อสร้าง' ||
+        inspectionType === 'Construction' ||
+        inspectionType === 'งานก่อสร้าง'
+      ) {
+        construction++;
+      }
+
       // จำแนกประเภทบ้านจากชื่อ HouseType
       const houseTypeName: string = job.houseType?.name ?? '';
 
@@ -63,8 +74,6 @@ export class AdminService {
         townhouse++;
       } else if (houseTypeName.includes('คอนโด')) {
         condo++;
-      } else if (houseTypeName.includes('ก่อสร้าง')) {
-        construction++;
       }
     }
 

@@ -78,6 +78,7 @@ export class InspectionJobsService {
     search?: string,
     type?: string,
     sort?: 'asc' | 'desc',
+    inspectionType?: string,
   ) {
     limit = Math.min(limit, 100);
     const query = this.inspectionsRepo
@@ -94,6 +95,16 @@ export class InspectionJobsService {
 
     if (type && type !== 'ทั้งหมด') {
       query.andWhere('houseType.name = :type', { type });
+    }
+
+    if (inspectionType && inspectionType !== 'ทั้งหมด') {
+      const dbType = inspectionType === 'งานก่อสร้าง' ? 'CONSTRUCTION_INSPECTION' : 'DEFECT_INSPECTION';
+      const thaiType = inspectionType === 'งานก่อสร้าง' ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
+      const engType = inspectionType === 'งานก่อสร้าง' ? 'Construction' : 'Defect';
+      query.andWhere(
+        '(job.inspectionType = :dbType OR job.inspectionType = :thaiType OR job.inspectionType = :engType)',
+        { dbType, thaiType, engType }
+      );
     }
 
     if (search) {
@@ -203,52 +214,76 @@ export class InspectionJobsService {
     return this.inspectionsRepo.save(inspectionJob);
   }
 
-  async getStatusMetadata() {
+  async getStatusMetadata(search?: string, type?: string, inspectionType?: string) {
     const statuses = [
       {
         key: InspectionJobStatus.Draft,
         label: 'แบบร่าง',
-        bgClass: 'bg-grey-2',
-        textColor: 'grey-8',
+        bgClass: 'bg-grey-7',
+        textColor: 'white',
       },
       {
         key: InspectionJobStatus.Active,
         label: 'กำลังดำเนินการ',
-        bgClass: 'bg-blue-1',
-        textColor: 'primary',
+        bgClass: 'bg-blue-8',
+        textColor: 'white',
       },
       {
         key: InspectionJobStatus.Pending,
         label: 'รออนุมัติ',
-        bgClass: 'bg-orange-1',
-        textColor: 'orange-8',
+        bgClass: 'bg-orange-8',
+        textColor: 'white',
       },
       {
         key: InspectionJobStatus.Completed,
         label: 'เสร็จสิ้น',
-        bgClass: 'bg-green-1',
-        textColor: 'positive',
+        bgClass: 'bg-green-7',
+        textColor: 'white',
       },
       {
         key: InspectionJobStatus.Locked,
         label: 'ล็อค',
-        bgClass: 'bg-red-1',
-        textColor: 'negative',
+        bgClass: 'bg-red-7',
+        textColor: 'white',
       },
       {
         key: InspectionJobStatus.Cancelled,
         label: 'ยกเลิก',
-        bgClass: 'bg-red-1',
-        textColor: 'negative',
+        bgClass: 'bg-red-9',
+        textColor: 'white',
       },
     ];
 
-    const countsQuery = await this.inspectionsRepo
+    const query = this.inspectionsRepo
       .createQueryBuilder('job')
+      .leftJoin('job.customer', 'customer')
+      .leftJoin('job.houseType', 'houseType')
       .select('job.status', 'status')
       .addSelect('COUNT(job.jobId)', 'count')
-      .groupBy('job.status')
-      .getRawMany();
+      .groupBy('job.status');
+
+    if (type && type !== 'ทั้งหมด') {
+      query.andWhere('houseType.name = :type', { type });
+    }
+
+    if (inspectionType && inspectionType !== 'ทั้งหมด') {
+      const dbType = inspectionType === 'งานก่อสร้าง' ? 'CONSTRUCTION_INSPECTION' : 'DEFECT_INSPECTION';
+      const thaiType = inspectionType === 'งานก่อสร้าง' ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
+      const engType = inspectionType === 'งานก่อสร้าง' ? 'Construction' : 'Defect';
+      query.andWhere(
+        '(job.inspectionType = :dbType OR job.inspectionType = :thaiType OR job.inspectionType = :engType)',
+        { dbType, thaiType, engType }
+      );
+    }
+
+    if (search) {
+      query.andWhere(
+        '(LOWER(job.projectName) LIKE LOWER(:search) OR LOWER(customer.fullName) LIKE LOWER(:search))',
+        { search: `%${search}%` },
+      );
+    }
+
+    const countsQuery = await query.getRawMany();
 
     const countMap: Record<string, number> = {};
     for (const row of countsQuery) {

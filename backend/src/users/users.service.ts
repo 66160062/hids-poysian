@@ -57,9 +57,16 @@ export class UsersService {
         updateUserDto.password,
         saltOrRounds,
       );
+    } else {
+      delete updateUserDto.password;
     }
 
     Object.assign(user, updateUserDto);
+
+    // If role is admin, they shouldn't belong to a team
+    if (user.role === 'admin') {
+      user.teamId = null as any;
+    }
 
     return this.usersRepository.save(user);
   }
