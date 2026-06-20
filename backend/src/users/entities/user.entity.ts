@@ -22,7 +22,7 @@ export class User {
   @Column()
   email!: string;
 
-  @Column()
+  @Column({ nullable: true, default: '' })
   lineId!: string;
 
   @Column()
@@ -43,6 +43,9 @@ export class User {
 
   @DeleteDateColumn()
   deletedAt!: Date;
+
+  @Column({ name: 'team_id', nullable: true })
+  teamId!: number;
 
   @ManyToOne(() => Team)
   @JoinColumn({ name: 'team_id' })

@@ -15,9 +15,9 @@ export class CreateUserDto {
     example: '101',
   })
   @Type(() => Number)
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
-  teamId!: number;
+  teamId?: number;
 
   @ApiProperty({
     description: 'เบอร์โทร',
@@ -35,7 +35,9 @@ export class CreateUserDto {
     description: 'ไลน์ไอดี',
     example: 'Triphop007X',
   })
-  lineId!: string;
+  @IsString()
+  @IsOptional()
+  lineId?: string;
 
   @ApiProperty({
     description: 'รหัสผ่าน',
