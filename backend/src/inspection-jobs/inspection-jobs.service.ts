@@ -78,6 +78,7 @@ export class InspectionJobsService {
     search?: string,
     type?: string,
     sort?: 'asc' | 'desc',
+    inspectionType?: string,
   ) {
     limit = Math.min(limit, 100);
     const query = this.inspectionsRepo
@@ -94,6 +95,16 @@ export class InspectionJobsService {
 
     if (type && type !== 'ทั้งหมด') {
       query.andWhere('houseType.name = :type', { type });
+    }
+
+    if (inspectionType && inspectionType !== 'ทั้งหมด') {
+      const dbType = inspectionType === 'งานก่อสร้าง' ? 'CONSTRUCTION_INSPECTION' : 'DEFECT_INSPECTION';
+      const thaiType = inspectionType === 'งานก่อสร้าง' ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
+      const engType = inspectionType === 'งานก่อสร้าง' ? 'Construction' : 'Defect';
+      query.andWhere(
+        '(job.inspectionType = :dbType OR job.inspectionType = :thaiType OR job.inspectionType = :engType)',
+        { dbType, thaiType, engType }
+      );
     }
 
     if (search) {
@@ -203,7 +214,7 @@ export class InspectionJobsService {
     return this.inspectionsRepo.save(inspectionJob);
   }
 
-  async getStatusMetadata() {
+  async getStatusMetadata(search?: string, type?: string, inspectionType?: string) {
     const statuses = [
       {
         key: InspectionJobStatus.Draft,
@@ -243,12 +254,36 @@ export class InspectionJobsService {
       },
     ];
 
-    const countsQuery = await this.inspectionsRepo
+    const query = this.inspectionsRepo
       .createQueryBuilder('job')
+      .leftJoin('job.customer', 'customer')
+      .leftJoin('job.houseType', 'houseType')
       .select('job.status', 'status')
       .addSelect('COUNT(job.jobId)', 'count')
-      .groupBy('job.status')
-      .getRawMany();
+      .groupBy('job.status');
+
+    if (type && type !== 'ทั้งหมด') {
+      query.andWhere('houseType.name = :type', { type });
+    }
+
+    if (inspectionType && inspectionType !== 'ทั้งหมด') {
+      const dbType = inspectionType === 'งานก่อสร้าง' ? 'CONSTRUCTION_INSPECTION' : 'DEFECT_INSPECTION';
+      const thaiType = inspectionType === 'งานก่อสร้าง' ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
+      const engType = inspectionType === 'งานก่อสร้าง' ? 'Construction' : 'Defect';
+      query.andWhere(
+        '(job.inspectionType = :dbType OR job.inspectionType = :thaiType OR job.inspectionType = :engType)',
+        { dbType, thaiType, engType }
+      );
+    }
+
+    if (search) {
+      query.andWhere(
+        '(LOWER(job.projectName) LIKE LOWER(:search) OR LOWER(customer.fullName) LIKE LOWER(:search))',
+        { search: `%${search}%` },
+      );
+    }
+
+    const countsQuery = await query.getRawMany();
 
     const countMap: Record<string, number> = {};
     for (const row of countsQuery) {

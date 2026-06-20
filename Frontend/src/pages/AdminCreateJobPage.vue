@@ -457,6 +457,11 @@ onMounted(async () => {
   await customerStore.fetchCustomers();
   await houseTypeStore.fetchHouseTypes();
 
+  // Pre-select job type from route query if available
+  if (route.query.type) {
+    form.inspectionType = route.query.type === 'construction' ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
+  }
+
   if (!editId.value) return;
 
   isLoading.value = true;

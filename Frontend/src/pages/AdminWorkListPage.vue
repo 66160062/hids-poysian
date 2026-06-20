@@ -15,12 +15,10 @@
         </template>
       </q-banner>
 
-      <div class="row q-mb-sm">
+      <div class="row q-mb-sm q-gutter-x-sm no-wrap">
         <q-input
           v-model="searchTerm"
-          dense
-          borderless
-          rounded
+          dense borderless rounded
           placeholder="ค้นหาโครงการ, ผู้ตรวจสอบ..."
           class="col search-input"
         >
@@ -28,47 +26,48 @@
             <q-icon name="search" color="grey-6" />
           </template>
         </q-input>
+
+        <q-btn round unelevated :color="activeFilterCount > 0 ? 'primary' : 'white'" :text-color="activeFilterCount > 0 ? 'white' : 'primary'" icon="tune" class="shadow-1" style="height: 48px; width: 48px; min-height: 48px;" @click="showFilterDialog = true">
+          <q-badge v-if="activeFilterCount > 0" color="red" floating rounded style="top: 2px; right: 2px">{{ activeFilterCount }}</q-badge>
+        </q-btn>
       </div>
 
-      <div class="row q-col-gutter-sm q-mb-md">
-        <div class="col-6">
-          <q-select
-            v-model="selectedType"
-            :options="typeOptions"
-            dense
-            outlined
-            rounded
-            bg-color="white"
-            class="filter-select"
-            behavior="menu"
-          >
-            <template v-slot:prepend>
-              <q-icon name="home_work" size="18px" color="grey-6" />
-            </template>
-          </q-select>
-        </div>
+      <!-- Filter Bottom Sheet Dialog -->
+      <q-dialog v-model="showFilterDialog" position="bottom">
+        <q-card style="width: 100%; max-width: 600px; border-radius: 24px 24px 0 0;" class="q-pa-lg shadow-up-4">
+          <div class="row items-center justify-between q-mb-lg">
+            <div class="text-h6 text-weight-bold text-dark">ตัวกรอง</div>
+            <div class="row items-center">
+              <q-btn v-if="activeFilterCount > 0" flat dense color="negative" label="ล้าง" class="q-mr-sm" @click="clearFilters" />
+              <q-btn flat round dense icon="close" color="grey-6" v-close-popup />
+            </div>
+          </div>
+          
+          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px;">ประเภทงาน</div>
+          <q-select v-model="selectedJobType" :options="['ทั้งหมด', 'ตรวจบ้าน', 'งานก่อสร้าง']" dense outlined rounded class="q-mb-md filter-select" behavior="dialog" />
 
-        <div class="col-6">
-          <q-select
-            v-model="sortOrder"
-            :options="sortOptions"
-            emit-value
-            map-options
-            dense
-            outlined
-            rounded
-            bg-color="white"
-            class="filter-select"
-            behavior="menu"
-          >
-            <template v-slot:prepend>
-              <q-icon name="sort" size="18px" color="grey-6" />
-            </template>
-          </q-select>
-        </div>
+          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px;">ประเภทบ้าน</div>
+          <q-select v-model="selectedType" :options="typeOptions" dense outlined rounded class="q-mb-md filter-select" behavior="dialog" />
+
+          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px;">เรียงลำดับ</div>
+          <q-select v-model="sortOrder" :options="sortOptions" emit-value map-options dense outlined rounded class="q-mb-xl filter-select" behavior="dialog" />
+
+          <q-btn unelevated rounded color="primary" label="เสร็จสิ้น" class="full-width text-weight-bold" style="height: 48px; font-size: 16px;" v-close-popup />
+        </q-card>
+      </q-dialog>
+
+      <!-- Active Filters Chips -->
+      <div v-if="activeFilterCount > 0" class="row items-center q-gutter-x-sm q-mb-sm">
+        <span class="text-caption text-grey-7 q-mr-xs q-pl-xs">กำลังกรอง:</span>
+        <q-chip v-if="selectedJobType !== 'ทั้งหมด'" removable @remove="selectedJobType = 'ทั้งหมด'" color="blue-1" text-color="primary" dense class="text-weight-medium">
+          {{ selectedJobType }}
+        </q-chip>
+        <q-chip v-if="selectedType !== 'ทั้งหมด'" removable @remove="selectedType = 'ทั้งหมด'" color="blue-1" text-color="primary" dense class="text-weight-medium">
+          {{ selectedType }}
+        </q-chip>
       </div>
 
-      <div class="filter-container q-mb-md">
+      <div class="filter-container q-mb-lg">
         <div class="filter-scroll-wrapper no-wrap scroll-x hide-scrollbar row q-gutter-x-sm q-px-none">
           <q-btn
             v-for="filter in filters"
@@ -138,8 +137,8 @@
 
             <q-card-actions class="row justify-between items-center q-px-md q-py-sm">
               <div class="row items-center text-grey-6" style="font-size: 13px;">
-                <q-icon name="calendar_today" size="16px" class="q-mr-sm" />
-                {{ formatDate(task.date) }}
+                <q-icon name="assignment" size="16px" class="q-mr-sm" />
+                {{ task.inspectionType === 'CONSTRUCTION_INSPECTION' || task.inspectionType === 'ตรวจก่อสร้าง' ? 'งานก่อสร้าง' : 'ตรวจบ้าน' }}
               </div>
               <div class="row q-gutter-x-sm">
                 <q-btn flat round dense icon="edit" color="grey-8" class="bg-grey-2 action-btn" @click.stop="editWork(task)" />
@@ -163,8 +162,18 @@
       </div>
     </div>
 
-    <q-page-sticky position="bottom-right" :offset="[18, 18]" style="z-index: 9999">
-      <q-btn fab icon="add" color="primary" @click="addNewWork" :class="{'fab-clicked': isFabClicked, 'fab-animate': !isFabClicked}" />
+    <q-page-sticky position="bottom-right" :offset="[18, 18]">
+      <q-fab
+        v-model="isFabClicked"
+        icon="add"
+        active-icon="close"
+        direction="up"
+        color="primary"
+        class="shadow-4 custom-fab"
+      >
+        <q-fab-action color="orange-8" text-color="white" icon="construction" label="งานก่อสร้าง" class="text-weight-bold custom-fab-action" @click="addNewWork('construction')" />
+        <q-fab-action color="blue-8" text-color="white" icon="home" label="ตรวจบ้าน" class="text-weight-bold custom-fab-action" @click="addNewWork('defect')" />
+      </q-fab>
     </q-page-sticky>
 
   </q-page>
@@ -186,7 +195,8 @@ const error = ref<string>('');
 // ตัวแปรสำหรับค้นหาและกรอง
 const searchTerm = ref('');
 const activeFilter = ref('all');
-const selectedType = ref('ทั้งหมด'); // ตัวเลือกประเภทงาน
+const selectedType = ref('ทั้งหมด'); // ตัวเลือกประเภทบ้าน
+const selectedJobType = ref('ทั้งหมด'); // ตัวเลือกประเภทงาน
 const sortOrder = ref('desc');       // desc = ล่าสุด -> เก่า, asc = เก่า -> ล่าสุด
 
 // ตัวเลือกใน Dropdown
@@ -197,6 +207,21 @@ const sortOptions = [
   { label: 'ล่าสุด - เก่า', value: 'desc' },
   { label: 'เก่า - ล่าสุด', value: 'asc' }
 ];
+
+const showFilterDialog = ref(false);
+
+const activeFilterCount = computed(() => {
+  let count = 0;
+  if (selectedJobType.value !== 'ทั้งหมด') count++;
+  if (selectedType.value !== 'ทั้งหมด') count++;
+  return count;
+});
+
+function clearFilters() {
+  selectedJobType.value = 'ทั้งหมด';
+  selectedType.value = 'ทั้งหมด';
+  sortOrder.value = 'desc';
+}
 
 const currentPage = ref(1);
 
@@ -222,7 +247,21 @@ interface TaskItem {
 // 🎯 Mock Data (ปรับวันที่ให้เป็นรูปแบบสากลเพื่อการเรียงลำดับที่แม่นยำ)
 // ==========================================
 const tasks = computed<TaskItem[]>(() => {
-  return workStore.works.map(work => {
+  let works = workStore.works;
+  
+  // Local fallback filter in case backend doesn't support inspectionType param yet
+  if (selectedJobType.value !== 'ทั้งหมด') {
+    works = works.filter(w => {
+      const type = w.inspectionType || '';
+      if (selectedJobType.value === 'งานก่อสร้าง') {
+        return type === 'CONSTRUCTION_INSPECTION' || type === 'ตรวจก่อสร้าง' || type === 'Construction';
+      } else {
+        return type === 'DEFECT_INSPECTION' || type === 'ตรวจ Defect' || type === 'Defect';
+      }
+    });
+  }
+
+  return works.map(work => {
     // Find matching status config from backend meta
     const meta = workStore.statusMeta.find(m => m.key === work.status) || {
       label: work.status || 'รออนุมัติ',
@@ -259,21 +298,7 @@ const tasks = computed<TaskItem[]>(() => {
   });
 });
 
-// ==========================================
-// ฟังก์ชันจัดการวันที่ให้แสดงผลสวยงาม (DD/MM/YYYY)
-// ==========================================
-function formatDate(dateStr?: string) {
-  if (!dateStr) return 'ไม่ระบุวันที่';
-  try {
-    const date = new Date(dateStr);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  } catch {
-    return dateStr;
-  }
-}
+
 
 // ==========================================
 // ลอจิก Filter & Search & Sort
@@ -302,7 +327,7 @@ watch(searchTerm, () => {
   }, 500);
 });
 
-watch([activeFilter, selectedType, sortOrder], () => {
+watch([activeFilter, selectedType, selectedJobType, sortOrder], () => {
   currentPage.value = 1;
   void fetchWorkList();
 });
@@ -321,13 +346,9 @@ async function editWork(task: TaskItem): Promise<void> {
 
 const isFabClicked = ref(false);
 
-function addNewWork(): void {
-  isFabClicked.value = true;
-  setTimeout(() => {
-    void router.push('/admin/work/create');
-    // Reset state slightly after routing so it's clean when user comes back
-    setTimeout(() => { isFabClicked.value = false; }, 300);
-  }, 300);
+function addNewWork(type: 'defect' | 'construction'): void {
+  void router.push(`/admin/work/create?type=${type}`);
+  isFabClicked.value = false;
 }
 
 // ==========================================
@@ -345,7 +366,8 @@ async function fetchWorkList(): Promise<void> {
         status: activeFilter.value,
         search: searchTerm.value,
         type: selectedType.value,
-        sort: sortOrder.value
+        sort: sortOrder.value,
+        ...(selectedJobType.value !== 'ทั้งหมด' && { inspectionType: selectedJobType.value }),
       }),
       houseTypeStore.houseTypes.length === 0 ? houseTypeStore.fetchHouseTypes() : Promise.resolve()
     ]);
@@ -479,4 +501,36 @@ onMounted((): void => {
 }
 </style>
 
-```
+<style>
+/* Make jump animations snappier globally for this page's components */
+.q-transition--jump-down-enter-active,
+.q-transition--jump-down-leave-active,
+.q-transition--jump-up-enter-active,
+.q-transition--jump-up-leave-active {
+  transition-duration: 0.15s !important;
+}
+
+/* Fix q-fab pill buttons overflowing the right edge of screen */
+.custom-fab .q-fab__actions--up {
+  left: auto !important;
+  right: 0 !important;
+  transform: none !important;
+  align-items: flex-end !important;
+}
+
+/* Ensure FAB actions are exactly the same size with larger icons */
+.custom-fab-action {
+  width: 150px !important;
+  justify-content: flex-start !important;
+  padding-left: 16px !important;
+}
+.custom-fab-action :deep(.q-icon) {
+  font-size: 26px !important;
+  margin-right: 8px !important;
+}
+.custom-fab-action :deep(.q-btn__content) {
+  width: 100%;
+  justify-content: flex-start;
+}
+</style>
+
