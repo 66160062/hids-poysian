@@ -35,7 +35,7 @@
               <div class="text-h6 text-primary text-weight-bold">{{ job.projectName }}</div>
               <div class="text-caption text-grey-7 q-mt-xs">{{ job.address }}</div>
             </div>
-            <q-btn round flat icon="map" color="primary" class="map-btn" />
+            <q-btn round flat icon="map" color="primary" class="map-btn" @click="openGoogleMaps" />
           </div>
 
           <!-- Type & Area -->
@@ -906,6 +906,38 @@ const goBack = async () => {
 
 const onEdit = async () => {
   await router.push(`/admin/work/create?editId=${jobId.value}`);
+};
+
+const openGoogleMaps = () => {
+  if (!jobData.value) return;
+  const projectName = jobData.value.projectName || '';
+  const addr = jobData.value.address;
+  
+  const addressParts = [
+    projectName,
+    addr?.houseNumber ? `เลขที่ ${addr.houseNumber}` : '',
+    addr?.floor && addr.floor !== '-' ? `ชั้น ${addr.floor}` : '',
+    addr?.soi && addr.soi !== '-' ? `ซอย ${addr.soi}` : '',
+    addr?.subDistrict ? `ต.${addr.subDistrict}` : '',
+    addr?.district ? `อ.${addr.district}` : '',
+    addr?.province ? `จ.${addr.province}` : '',
+    addr?.postalCode || ''
+  ];
+  
+  const searchQuery = addressParts.filter(Boolean).join(' ');
+  
+  if (searchQuery.trim() && (projectName || addr?.province)) {
+    const encodedQuery = encodeURIComponent(searchQuery);
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
+    window.open(mapsUrl, '_blank');
+  } else {
+    $q.notify({
+      message: 'ไม่พบข้อมูลที่อยู่สำหรับค้นหาในแผนที่',
+      color: 'warning',
+      position: 'top',
+      icon: 'warning'
+    });
+  }
 };
 
 const showImageDialog = ref(false);
