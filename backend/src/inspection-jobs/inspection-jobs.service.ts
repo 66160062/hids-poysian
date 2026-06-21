@@ -63,6 +63,7 @@ export class InspectionJobsService {
 
     const inspectionJob = this.inspectionsRepo.create({
       ...createInspectionJobDto,
+      status: createInspectionJobDto.status ?? 'Draft',
       customer,
       address,
       houseType,

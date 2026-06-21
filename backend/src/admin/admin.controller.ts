@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Post } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { DashboardResponse } from './dto/dashboard-response.dto';
@@ -24,6 +24,12 @@ export class AdminController {
   })
   getDashboard(@Query('date') dateString?: string): Promise<DashboardResponse> {
     return this.adminService.getDashboardData(dateString);
+  }
+
+  @Post('sync-jobs')
+  @ApiOperation({ summary: 'Sync สถานะงานจากระบบภายนอก' })
+  syncJobs() {
+    return this.adminService.syncJobStatuses();
   }
 
   @Get('jobs')

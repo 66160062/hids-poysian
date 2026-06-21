@@ -175,17 +175,26 @@ function toLocalDateStr(date: Date): string {
 
 function toScheduledDateStr(dateStr: string): string {
   if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+  try {
+    return new Date(dateStr).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+  } catch {
+    const tPart = dateStr.split('T')[0];
+    return tPart ? (tPart.split(' ')[0] || '') : '';
+  }
 }
 
 function getBangkokHour(dateStr: string): number {
-  return Number(
-    new Date(dateStr).toLocaleString('en-US', {
-      timeZone: 'Asia/Bangkok',
-      hour: 'numeric',
-      hour12: false,
-    }),
-  );
+  if (!dateStr) return 0;
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 0;
+    const timeStr = d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Bangkok' });
+    const hourPart = timeStr.split(':')[0];
+    const hour = parseInt(hourPart || '', 10);
+    return isNaN(hour) ? d.getHours() : hour;
+  } catch {
+    return new Date(dateStr).getHours();
+  }
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────

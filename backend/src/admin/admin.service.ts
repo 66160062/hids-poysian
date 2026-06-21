@@ -148,7 +148,7 @@ export class AdminService {
       }
 
       // กำหนดสถานะแสดงผลและสี (ใช้สถานะรอบตรวจ ถ้าไม่มีใช้สถานะงาน)
-      const statusMapping = latestRound ? this.mapRoundStatus(latestRound.status) : this.mapJobStatus(job.status);
+      const statusMapping = latestRound ? this.mapRoundStatus(latestRound.status, latestRound.roundNumber) : this.mapJobStatus(job.status);
 
         const iconMapping = this.mapHouseTypeIcon(job.houseType?.name ?? '');
 
@@ -282,8 +282,8 @@ export class AdminService {
         let statusKey = 'waiting';
 
         if (latestRound) {
-          if (latestRound.status === 'COMPLETED') {
-            displayStatus = 'เสร็จสิ้น';
+          if (latestRound.status === 'COMPLETED' || latestRound.status === 'APPROVED') {
+            displayStatus = `เสร็จสิ้น ${latestRound.roundNumber}`;
             statusBgClass = 'bg-green-1';
             statusTextColor = 'positive';
             statusKey = 'others';
@@ -351,14 +351,14 @@ export class AdminService {
   /**
    * Map สถานะของ InspectionRound → สีและข้อความที่ Frontend ต้องใช้
    */
-  private mapRoundStatus(status: string): {
+  private mapRoundStatus(status: string, roundNumber?: number): {
     displayStatus: string;
     statusBgClass: string;
     statusTextColor: string;
   } {
-    if (status === 'COMPLETED') {
+    if (status === 'COMPLETED' || status === 'APPROVED') {
       return {
-        displayStatus: 'เสร็จสิ้น',
+        displayStatus: roundNumber ? `เสร็จสิ้น ${roundNumber}` : 'เสร็จสิ้น',
         statusBgClass: 'bg-green-1',
         statusTextColor: 'positive',
       };
@@ -438,5 +438,37 @@ export class AdminService {
       avatarBgClass: 'bg-green-1',
       avatarTextColor: 'positive',
     };
+  }
+
+  /**
+   * Sync existing jobs with their latest rounds to fix DB inconsistencies
+   */
+  async syncJobStatuses(): Promise<{ synced: number }> {
+    const jobs = await this.jobsRepo.find({ relations: ['rounds'] });
+    let count = 0;
+
+    for (const job of jobs) {
+      if (!job.rounds || job.rounds.length === 0) continue;
+
+      const sortedRounds = [...job.rounds].sort((a, b) => b.roundId - a.roundId);
+      const latestRound = sortedRounds[0];
+
+      let newStatus = job.status;
+      if (latestRound.status === 'APPROVED' || latestRound.status === 'COMPLETED') {
+        newStatus = 'Completed';
+      } else if (latestRound.status === 'SUBMITTED') {
+        newStatus = 'Pending';
+      } else if (latestRound.status === 'Active' || latestRound.status === 'SCHEDULED' || latestRound.status === 'DRAFT') {
+        newStatus = 'Active';
+      }
+
+      if (job.status !== newStatus) {
+        job.status = newStatus;
+        await this.jobsRepo.save(job);
+        count++;
+      }
+    }
+
+    return { synced: count };
   }
 }

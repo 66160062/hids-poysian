@@ -42,6 +42,7 @@ export interface Work {
   };
   rounds?: {
     roundId: number;
+    roundNumber?: number;
     status: string;
     scheduledDate: string;
   }[];
