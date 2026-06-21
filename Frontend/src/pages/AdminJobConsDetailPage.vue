@@ -420,40 +420,69 @@
                   </div>
                 </q-card-section>
 
-                <q-list v-else separator>
-                  <q-item
-                    v-for="defect in roundDefects"
-                    :key="defect.defectId"
-                    clickable
-                    v-ripple
-                    :active="selectedDefect?.defectId === defect.defectId"
-                    active-class="bg-blue-1 text-primary"
-                    @click="selectDefect(defect)"
-                  >
-                    <q-item-section avatar>
-                      <q-avatar rounded size="52px" color="grey-2">
-                        <q-img loading="eager" v-if="defect.imageUrl" :src="getImageUrl(defect.imageUrl) ?? ''" fit="cover" />
-                        <q-icon v-else name="image_not_supported" color="grey-5" />
-                      </q-avatar>
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label class="text-weight-medium ellipsis">
-                        #{{ defect.defectId }} {{ getDefectRoomLabel(defect) }}
-                      </q-item-label>
-                      <q-item-label caption lines="2">
-                        {{ defect.description || '-' }}
-                      </q-item-label>
-                      <div class="row q-gutter-xs q-mt-xs">
-                        <q-chip dense size="sm" :color="defect.severity === 'Major' ? 'red-1' : 'orange-1'" text-color="dark">
-                          {{ defect.severity }}
-                        </q-chip>
-                        <q-chip dense size="sm" color="grey-2" text-color="dark">
-                          {{ defect.status }}
-                        </q-chip>
-                      </div>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
+                <div v-else-if="!selectedGroupKey" class="column q-gutter-y-sm q-pa-sm">
+                  <InspectionItemCard
+                    v-for="item in groupedDefects"
+                    :key="item.groupKey"
+                    :groupedData="item"
+                    @clickCard="selectedGroupKey = item.groupKey"
+                  />
+                </div>
+
+                <div v-else class="column">
+                  <div class="row items-center q-pa-sm bg-grey-2" style="position: sticky; top: 0; z-index: 10;">
+                    <q-btn flat round dense icon="arrow_back" color="primary" @click="selectedGroupKey = null" />
+                    <div class="text-subtitle2 q-ml-sm text-weight-bold">{{ groupedDefects.find(g => g.groupKey === selectedGroupKey)?.roomName }}</div>
+                  </div>
+                  <q-list separator>
+                    <q-item
+                      v-for="defect in paginatedDefects"
+                      :key="defect.defectId"
+                      clickable
+                      v-ripple
+                      :active="selectedDefect?.defectId === defect.defectId"
+                      active-class="bg-blue-1 text-primary"
+                      @click="selectDefect(defect)"
+                    >
+                      <q-item-section avatar>
+                        <q-avatar rounded size="52px" color="grey-2">
+                          <q-img loading="eager" v-if="defect.imageUrl" :src="getImageUrl(defect.imageUrl) ?? ''" fit="cover" />
+                          <q-icon v-else name="image_not_supported" color="grey-5" />
+                        </q-avatar>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label class="text-weight-medium ellipsis">
+                          #{{ defect.defectId }} {{ getDefectRoomLabel(defect) }}
+                        </q-item-label>
+                        <q-item-label caption lines="2">
+                          {{ defect.description || '-' }}
+                        </q-item-label>
+                        <div class="row q-gutter-xs q-mt-xs">
+                          <q-chip dense size="sm" :color="defect.severity === 'Major' ? 'red-1' : 'orange-1'" text-color="dark">
+                            {{ defect.severity }}
+                          </q-chip>
+                          <q-chip dense size="sm" color="grey-2" text-color="dark">
+                            {{ defect.status }}
+                          </q-chip>
+                        </div>
+                      </q-item-section>
+                    </q-item>
+                  </q-list>
+                  
+                  <!-- Pagination -->
+                  <div class="row justify-center q-mt-md q-mb-md" v-if="totalPages > 1">
+                    <q-pagination
+                      v-model="currentPage"
+                      :max="totalPages"
+                      color="grey-8"
+                      active-color="primary"
+                      active-text-color="white"
+                      boundary-links
+                      direction-links
+                      gutter="sm"
+                    />
+                  </div>
+                </div>
               </q-card>
             </div>
 
@@ -568,13 +597,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { api } from 'src/boot/axios';
 import { useUserStore } from '../stores/useUser';
 import { useTeamStore } from '../stores/useTeam';
 import type { Defect } from 'src/models';
+import InspectionItemCard from '../components/InspectionItemCard.vue';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 
@@ -667,6 +697,89 @@ const selectedRound = ref<RoundView | null>(null);
 const selectedDefect = ref<AdminDefect | null>(null);
 const defectSubCategoryOptions = ref<DefectCategoryOption[]>([]);
 const showRoundReviewDialog = ref(false);
+
+// Grouping and Pagination State
+interface GroupedDefectItem {
+  groupKey: string;
+  roomName: string;
+  roomId: number;
+  floorLabel: string;
+  roomType: string;
+  severity: string;
+  totalItems: number;
+  passCount: number;
+  failCount: number;
+  passPercentage: number;
+  failPercentage: number;
+  defects: AdminDefect[];
+}
+
+const getFloorLabel = (d: AdminDefect) => d.floor?.label ?? 'ไม่ระบุชั้น';
+const getRoomName = (d: AdminDefect) => d.subRoom?.roomName ?? d.room?.roomName ?? 'ไม่ระบุห้อง';
+const getRoomType = (d: AdminDefect) => d.room?.roomName ?? 'ไม่ระบุประเภท';
+
+const groupedDefects = computed<GroupedDefectItem[]>(() => {
+  const map = new Map<string, GroupedDefectItem>();
+
+  for (const defect of roundDefects.value) {
+    const key = `room__${getRoomName(defect)}__${getFloorLabel(defect)}`;
+
+    if (!map.has(key)) {
+      map.set(key, {
+        groupKey: key,
+        roomName: getRoomName(defect),
+        roomId: defect.room?.roomId ?? defect.defectId,
+        floorLabel: getFloorLabel(defect),
+        roomType: getRoomType(defect),
+        severity: defect.severity,
+        totalItems: 0,
+        passCount: 0,
+        failCount: 0,
+        passPercentage: 0,
+        failPercentage: 0,
+        defects: [],
+      });
+    }
+
+    const group = map.get(key)!;
+    group.totalItems++;
+    group.defects.push(defect);
+    if (defect.status === 'PASS') group.passCount++;
+    else group.failCount++;
+  }
+
+  for (const g of map.values()) {
+    g.passPercentage = g.totalItems > 0 ? Math.round((g.passCount / g.totalItems) * 100) : 0;
+    g.failPercentage = 100 - g.passPercentage;
+  }
+
+  return [...map.values()];
+});
+
+const selectedGroupKey = ref<string | null>(null);
+
+const currentRoomDefects = computed(() => {
+  if (!selectedGroupKey.value) return [];
+  const group = groupedDefects.value.find(g => g.groupKey === selectedGroupKey.value);
+  return group?.defects ?? [];
+});
+
+const currentPage = ref(1);
+const itemsPerPage = 10;
+const totalPages = computed(() => Math.ceil(currentRoomDefects.value.length / itemsPerPage));
+
+const paginatedDefects = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return currentRoomDefects.value.slice(start, start + itemsPerPage);
+});
+
+watch(selectedGroupKey, () => {
+  currentPage.value = 1;
+});
+
+watch(selectedRound, () => {
+  selectedGroupKey.value = null;
+});
 
 const defectEditForm = ref<{
   description: string;
