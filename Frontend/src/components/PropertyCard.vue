@@ -85,7 +85,7 @@ const isConstruction = (type?: string) => type === 'CONSTRUCTION_INSPECTION' || 
   <q-card v-if="item && item.job" flat bordered class="q-mb-md property-card q-mx-auto cursor-pointer" @click="goToInspectionInfo(item.roundId)" v-ripple>
     <q-card-section class="row no-wrap items-stretch" style="padding: 16px">
       <div class="col-auto column" style="padding-right: 16px">
-        <q-img
+        <q-img loading="eager"
           :src="
             item.job.projectImageUrl
               ? `${apiUrl}${item.job.projectImageUrl}`

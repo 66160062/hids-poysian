@@ -22,7 +22,7 @@
           :class="job.projectImage ? 'cursor-pointer' : ''"
           @click="viewProjectImage"
         >
-          <q-img v-if="job.projectImage" :src="job.projectImage" class="house-img" fit="cover" />
+          <q-img loading="eager" v-if="job.projectImage" :src="job.projectImage" class="house-img" fit="cover" />
           <div v-else class="house-img-placeholder row items-center justify-center bg-grey-2">
             <q-icon name="home" size="64px" color="grey-4" />
           </div>
@@ -99,7 +99,7 @@
               class="plan-thumb relative-position cursor-pointer"
               @click="viewPlan"
             >
-              <q-img :src="job.housePlanImage" class="plan-img" fit="cover" />
+              <q-img loading="eager" :src="job.housePlanImage" class="plan-img" fit="cover" />
             </div>
             <div
               v-else
@@ -206,7 +206,7 @@
           <q-btn dense flat round icon="close" v-close-popup size="lg" color="white" />
         </q-toolbar>
         <q-card-section class="col flex flex-center q-pa-none">
-          <q-img :src="currentImageUrl" fit="contain" class="full-height full-width" />
+          <q-img loading="eager" :src="currentImageUrl" fit="contain" class="full-height full-width" />
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -432,7 +432,7 @@
                   >
                     <q-item-section avatar>
                       <q-avatar rounded size="52px" color="grey-2">
-                        <q-img v-if="defect.imageUrl" :src="getImageUrl(defect.imageUrl) ?? ''" fit="cover" />
+                        <q-img loading="eager" v-if="defect.imageUrl" :src="getImageUrl(defect.imageUrl) ?? ''" fit="cover" />
                         <q-icon v-else name="image_not_supported" color="grey-5" />
                       </q-avatar>
                     </q-item-section>
@@ -1050,9 +1050,7 @@ async function saveDefectChanges() {
       formData.append('file', defectEditForm.value.file);
     }
 
-    await api.patch(`/defects/${selectedDefect.value.defectId}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    await api.patch(`/defects/${selectedDefect.value.defectId}`, formData);
 
     if (selectedRound.value) {
       await fetchRoundDefects(selectedRound.value.id);

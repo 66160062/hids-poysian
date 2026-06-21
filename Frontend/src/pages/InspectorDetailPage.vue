@@ -15,7 +15,7 @@
       </div>
 
       <div v-else-if="jobData" class="q-px-lg q-pb-md col column">
-        <q-img
+        <q-img loading="eager"
           :src="
             jobData.job.projectImageUrl
               ? `${apiUrl}${jobData.job.projectImageUrl}`

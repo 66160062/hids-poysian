@@ -128,11 +128,7 @@ export const useWorkListStore = defineStore('workList', () => {
 
   const createJob = async (formData: FormData) => {
     try {
-      const response = await api.post('/inspection-jobs', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await api.post('/inspection-jobs', formData);
       // Optionally fetch again to update the list, or we just rely on page reload.
       return response.data;
     } catch (error) {
@@ -153,11 +149,7 @@ export const useWorkListStore = defineStore('workList', () => {
 
   const updateJob = async (id: number, formData: FormData) => {
     try {
-      const response = await api.patch(`/inspection-jobs/${id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await api.patch(`/inspection-jobs/${id}`, formData);
       return response.data;
     } catch (error) {
       console.error('Failed to update job', error);

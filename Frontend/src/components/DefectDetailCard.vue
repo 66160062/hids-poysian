@@ -2,7 +2,10 @@
   <q-card flat bordered class="rounded-borders bg-white q-pa-sm">
     <div class="row no-wrap q-gutter-x-md">
       <div class="image-wrapper">
-        <q-img :src="`${apiUrl}${defect.imageUrl}`" class="defect-img rounded-borders" />
+        <q-img v-if="defect.imageUrl" loading="eager" :src="getImageUrl(defect.imageUrl) ?? undefined" class="defect-img rounded-borders" />
+        <div v-else class="defect-img-placeholder row items-center justify-center bg-grey-2 rounded-borders defect-img">
+          <q-icon name="image_not_supported" size="48px" color="grey-5" />
+        </div>
         <div class="location-badge">{{ defect.locationLabel }}</div>
       </div>
 
@@ -59,7 +62,11 @@
 </template>
 
 <script setup lang="ts">
-const apiUrl = import.meta.env.VITE_API_URL;
+const getImageUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  return path.startsWith('http') ? path : `${baseUrl}${path}`;
+};
 // เพิ่มฟังก์ชันสำหรับจัดการข้อมูลสถานะ
 function statusInfo(status: string) {
   if (status === 'PASS') {
