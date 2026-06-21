@@ -314,6 +314,8 @@ const tasks = computed<TaskItem[]>(() => {
       key: 'others'
     };
 
+    let finalStatusLabel = meta.label;
+
     // ค้นหารอบตรวจที่มีสถานะกำลังดำเนินการ (SCHEDULED หรือ Active)
     let latestActiveRoundDate = work.createdAt;
     if (work.rounds && work.rounds.length > 0) {
@@ -323,12 +325,21 @@ const tasks = computed<TaskItem[]>(() => {
       if (activeRound && activeRound.scheduledDate) {
         latestActiveRoundDate = activeRound.scheduledDate;
       }
+
+      if (work.status === 'Completed') {
+        const completedRound = sortedRounds.find(r => r.status === 'APPROVED' || r.status === 'COMPLETED');
+        if (completedRound) {
+          finalStatusLabel = `เสร็จสิ้น ${completedRound.roundNumber ?? ''}`.trim();
+        } else {
+          finalStatusLabel = `เสร็จสิ้น ${sortedRounds[0]?.roundNumber ?? ''}`.trim();
+        }
+      }
     }
 
     return {
       id: work.jobId,
       title: work.projectName || 'ไม่ระบุชื่อโครงการ',
-      status: meta.label,
+      status: finalStatusLabel,
       statusBgClass: meta.bgClass,
       statusTextColor: meta.textColor,
       statusKey: meta.key,

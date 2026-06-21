@@ -87,11 +87,12 @@ export class CreateInspectionJobDto {
 
   @ApiProperty({
     description: 'สถานะของงาน',
-    enum: ['Draft', 'Active', 'Completed', 'Cancelled'],
+    enum: ['Draft', 'Active', 'Pending', 'Completed', 'Cancelled'],
     default: 'Draft',
   })
   @IsString()
   @MaxLength(50)
-  @IsEnum(['Draft', 'Active', 'Completed', 'Cancelled'])
-  status!: string;
+  @IsEnum(['Draft', 'Active', 'Pending', 'Completed', 'Cancelled'])
+  @IsOptional()
+  status?: string;
 }
