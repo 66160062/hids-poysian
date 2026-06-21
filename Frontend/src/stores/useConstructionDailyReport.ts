@@ -75,14 +75,19 @@ export const useConstructionDailyReportStore = defineStore(
     const submitError = ref<string | null>(null);
 
     async function submitReport(
-      payload: ConstructionDailyReportPayload,
+      formData: FormData,
     ): Promise<ConstructionDailyReportResponse> {
       isSubmitting.value = true;
       submitError.value = null;
       try {
         const { data } = await api.post<ConstructionDailyReportResponse>(
           '/construction-daily-reports',
-          payload,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          }
         );
         return data;
       } catch (err) {
