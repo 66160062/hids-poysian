@@ -150,14 +150,24 @@ export class DailyReportsService {
     return this.dataSource.transaction(async (manager) => {
       const latestRound = await manager
         .getRepository(InspectionRound)
-        .createQueryBuilder('round')
-        .select('MAX(round.roundNumber)', 'maxRoundNumber')
-        .where('round.job_id = :jobId', { jobId })
-        .getRawOne<{ maxRoundNumber: string | null }>();
+        .findOne({
+          where: { job: { jobId } },
+          order: { roundNumber: 'DESC' },
+        });
+
+      if (
+        latestRound &&
+        latestRound.status !== 'APPROVED' &&
+        latestRound.status !== 'CANCELLED'
+      ) {
+        throw new BadRequestException(
+          'ไม่สามารถสร้างรอบใหม่ได้ เนื่องจากรอบก่อนหน้ายังไม่เสร็จสิ้น',
+        );
+      }
 
       const round = manager.getRepository(InspectionRound).create({
         job,
-        roundNumber: Number(latestRound?.maxRoundNumber ?? 0) + 1,
+        roundNumber: (latestRound?.roundNumber ?? 0) + 1,
         scheduledDate: createRoundDto.scheduledDate,
         status: createRoundDto.status ?? 'SCHEDULED',
       });

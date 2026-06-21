@@ -38,12 +38,30 @@ export class InspectionRoundsService {
       jobId: createInspectionRoundDto.jobId,
     });
 
+    const latestRound = await this.inspectionRoundsRepo.findOne({
+      where: { job: { jobId: job.jobId } },
+      order: { roundNumber: 'DESC' },
+    });
+
+    if (
+      latestRound &&
+      latestRound.status !== 'APPROVED' &&
+      latestRound.status !== 'CANCELLED'
+    ) {
+      throw new BadRequestException(
+        'ไม่สามารถสร้างรอบใหม่ได้ เนื่องจากรอบก่อนหน้ายังไม่เสร็จสิ้น',
+      );
+    }
+
     const round = this.inspectionRoundsRepo.create({
       ...createInspectionRoundDto,
       job,
     });
 
     const savedRound = await this.inspectionRoundsRepo.save(round);
+
+    job.status = 'Active';
+    await this.inspectionJobsRepo.save(job);
 
     if (createInspectionRoundDto.teamMemberId) {
       const teamMember = await this.teamMembersRepo.findOneByOrFail({
@@ -186,8 +204,9 @@ export class InspectionRoundsService {
   }
 
   async submit(id: number) {
-    const round = await this.inspectionRoundsRepo.findOneByOrFail({
-      roundId: id,
+    const round = await this.inspectionRoundsRepo.findOneOrFail({
+      where: { roundId: id },
+      relations: ['job'],
     });
 
     if (!round.inspectedAt) {
@@ -204,6 +223,12 @@ export class InspectionRoundsService {
 
     round.status = 'SUBMITTED';
     round.submittedAt = new Date();
+
+    if (round.job) {
+      round.job.status = 'Pending';
+      await this.inspectionJobsRepo.save(round.job);
+    }
+
     return this.inspectionRoundsRepo.save(round);
   }
 
@@ -219,6 +244,11 @@ export class InspectionRoundsService {
 
     round.status = 'APPROVED';
     round.approvedAt = new Date();
+
+    if (round.job) {
+      round.job.status = 'Completed';
+      await this.inspectionJobsRepo.save(round.job);
+    }
 
     const approvedRound = await this.inspectionRoundsRepo.save(round);
     const notification = this.buildApprovalNotification(approvedRound);

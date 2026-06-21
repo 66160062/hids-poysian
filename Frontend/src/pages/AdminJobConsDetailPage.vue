@@ -181,15 +181,22 @@
             </q-item>
           </q-list>
           <div class="q-pa-md">
-            <q-btn
-              unelevated
-              color="primary"
-              icon="add_circle"
-              label="สร้างรอบการตรวจใหม่"
-              class="full-width create-round-btn"
-              no-caps
-              @click="onCreateRound"
-            />
+            <div :class="{ 'cursor-not-allowed': isLatestRoundNotCompleted }">
+              <q-btn
+                unelevated
+                color="primary"
+                icon="add_circle"
+                label="สร้างรอบการตรวจใหม่"
+                class="full-width create-round-btn"
+                no-caps
+                :disable="isLatestRoundNotCompleted"
+                :style="isLatestRoundNotCompleted ? 'pointer-events: none;' : ''"
+                @click="onCreateRound"
+              />
+              <q-tooltip v-if="isLatestRoundNotCompleted" class="bg-red text-white" anchor="top middle" self="bottom middle">
+                กรุณาปิดรอบก่อนหน้าให้เสร็จสิ้นก่อน
+              </q-tooltip>
+            </div>
           </div>
         </template>
       </q-card>
@@ -683,6 +690,13 @@ const userStore = useUserStore();
 
 
 const jobId = computed(() => Number(route.params.id));
+
+const isLatestRoundNotCompleted = computed(() => {
+  if (!inspectionRounds.value.length) return false;
+  const latestRound = inspectionRounds.value[inspectionRounds.value.length - 1];
+  if (!latestRound) return false;
+  return latestRound?.statusKey !== 'APPROVED' && latestRound?.statusKey !== 'CANCELLED';
+});
 const isLoading = ref(true);
 const isSubmittingRound = ref(false);
 const isLoadingRoundDefects = ref(false);
@@ -1222,6 +1236,7 @@ async function approveSelectedRound() {
     await api.patch(`/inspection-rounds/${selectedRound.value.id}/approve`);
     const rounds = await fetchRounds();
     applyRounds(rounds);
+    await fetchJobDetails(); // Fetch job details to update job status
     const updatedRound = inspectionRounds.value.find((round) => round.id === selectedRound.value?.id);
     selectedRound.value = updatedRound ?? null;
 
