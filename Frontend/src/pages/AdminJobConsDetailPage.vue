@@ -71,7 +71,7 @@
                 <q-icon name="phone" size="13px" class="q-mr-xs" />
                 {{ job.customerPhone }}
               </div>
-              <div class="text-caption text-grey-7 q-mt-xs">{{ job.customerEmail }}</div>
+              <div class="text-caption text-grey-7 q-mt-xs">Email : {{ job.customerEmail }}</div>
             </div>
 
             <!-- ผู้ประสานงาน -->
@@ -85,7 +85,7 @@
                 <q-icon name="phone" size="13px" class="q-mr-xs" />
                 {{ job.coordPhone }}
               </div>
-              <div class="text-caption text-grey-7 q-mt-xs">{{ job.coordEmail }}</div>
+              <div class="text-caption text-grey-7 q-mt-xs">Email : {{ job.coordEmail }}</div>
               <div class="text-caption text-grey-7 q-mt-xs">Line ID: {{ job.coordLine }}</div>
             </div>
           </div>
@@ -216,51 +216,51 @@
       <q-card class="create-round-card q-pa-lg">
         <!-- Dialog Header -->
         <div class="row items-center justify-between q-mb-md">
-          <div class="text-h6 text-weight-bold text-dark-blue">Create New Round</div>
+          <div class="text-h6 text-weight-bold text-dark-blue">สร้างรอบการตรวจใหม่</div>
           <q-btn icon="close" flat round dense v-close-popup class="text-grey-6 close-dialog-btn" />
         </div>
 
-        <div class="q-mb-md">
-          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">ประเภทการตรวจ (Round Type)</div>
-          <q-btn-toggle
-            v-model="roundType"
-            spread
-            no-caps
-            unelevated
-            toggle-color="primary"
-            color="grey-1"
-            text-color="grey-8"
-            class="custom-toggle"
-            :options="[
-              { label: 'รายวัน', value: 'daily', icon: 'today' },
-              { label: 'รายสัปดาห์', value: 'weekly', icon: 'date_range' }
-            ]"
-          />
-        </div>
-        <!-- Inspection Date Field -->
-        <div class="q-mb-md">
-          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">Inspection Date</div>
-          <q-input
-            borderless
-            dense
-            readonly
-            :model-value="scheduledDate ? formatDateDisplay(scheduledDate) : ''"
-            placeholder="mm/dd/yyyy"
-            class="custom-input cursor-pointer"
-            @click="showDatePicker = true"
-          >
-            <template v-slot:prepend>
-              <q-icon name="calendar_month" color="primary" size="20px" class="q-ml-sm" />
-            </template>
+        <div class="row q-col-gutter-md q-mb-md">
+          <!-- Inspection Date Field -->
+          <div class="col-12 col-sm-6">
+            <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">วันที่นัดตรวจ</div>
+            <q-input
+              borderless
+              dense
+              readonly
+              :model-value="scheduledDate ? formatDateDisplay(scheduledDate) : ''"
+              placeholder="mm/dd/yyyy"
+              class="custom-input cursor-pointer"
+              @click="showDatePicker = true"
+            >
+              <template v-slot:prepend>
+                <q-icon name="calendar_month" color="primary" size="20px" class="q-ml-sm" />
+              </template>
+              <q-popup-proxy v-model="showDatePicker" transition-show="scale" transition-hide="scale">
+                <q-date v-model="scheduledDate" mask="YYYY-MM-DD" :options="dateOptions" @update:model-value="showDatePicker = false" />
+              </q-popup-proxy>
+            </q-input>
+          </div>
 
-            <q-popup-proxy v-model="showDatePicker" transition-show="scale" transition-hide="scale">
-              <q-date v-model="scheduledDate" mask="YYYY-MM-DD" @update:model-value="showDatePicker = false">
-                <div class="row items-center justify-end">
-                  <q-btn v-close-popup label="ปิด" color="primary" flat />
-                </div>
-              </q-date>
-            </q-popup-proxy>
-          </q-input>
+          <!-- Time Field -->
+          <div class="col-12 col-sm-6">
+            <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">รอบการเข้าตรวจ</div>
+            <q-btn-toggle
+              v-model="timeInput"
+              spread
+              no-caps
+              rounded
+              unelevated
+              toggle-color="primary"
+              color="white"
+              text-color="grey-8"
+              style="border: 1px solid #e0e0e0"
+              :options="[
+                {label: 'เช้า (9:00-12:00)', value: '09:00:00'},
+                {label: 'บ่าย (13:00-16:00)', value: '13:00:00'}
+              ]"
+            />
+          </div>
         </div>
 
         <!-- Select Team vs Individuals Toggle -->
@@ -276,7 +276,7 @@
             color="white"
             text-color="grey-8"
             :options="[
-              {label: 'มอบหมายให้ทีม (Team)', value: 'team'},
+              {label: 'มอบหมายให้ทีม', value: 'team'},
               {label: 'มอบหมายรายบุคคล', value: 'individual'}
             ]"
             class="q-mb-md border-grey"
@@ -336,7 +336,7 @@
           <div class="col-6">
             <q-btn
               outline
-              label="Cancel"
+              label="ยกเลิก"
               class="full-width cancel-btn"
               no-caps
               v-close-popup
@@ -345,7 +345,7 @@
           <div class="col-6">
             <q-btn
               unelevated
-              label="Create Round"
+              label="สร้างรอบการตรวจ"
               class="full-width submit-btn"
               no-caps
               :loading="isSubmittingRound"
@@ -812,12 +812,22 @@ const formatRoundDate = (dateStr: string) => {
   if (!dateStr) return '-';
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString('th-TH', {
+  
+  const formattedDate = date.toLocaleDateString('th-TH', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     timeZone: 'Asia/Bangkok',
   });
+
+  const hour = date.getHours();
+  if (hour === 9) {
+    return `${formattedDate} (รอบเช้า)`;
+  } else if (hour === 13) {
+    return `${formattedDate} (รอบบ่าย)`;
+  }
+  
+  return formattedDate;
 };
 
 const mapRoundStatus = (status: string) => {
@@ -1238,11 +1248,19 @@ async function approveSelectedRound() {
 const showCreateRoundDialog = ref(false);
 const scheduledDate = ref('');
 const showDatePicker = ref(false);
+const timeInput = ref('09:00:00');
+
+const dateOptions = (dateStr: string) => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const todayStr = `${year}/${month}/${day}`;
+  return dateStr >= todayStr;
+};
 const assignmentMode = ref<'team' | 'individual'>('team');
 const selectedTeam = ref<number | null>(null);
 const selectedInspectors = ref<{ label: string; value: number }[]>([]);
-const roundType = ref('daily');
-
 const teamStore = useTeamStore();
 
 // Predefined inspector options list
@@ -1283,14 +1301,17 @@ const filterInspectors = (val: string, update: (callback: () => void) => void) =
 
 const formatDateDisplay = (dateStr: string) => {
   if (!dateStr) return '';
-  const parts = dateStr.replace(/\//g, '-').split('-');
+  const [datePart = '', timePart = ''] = dateStr.split(' ');
+  if (!datePart) return dateStr;
+  const parts = datePart.replace(/\//g, '-').split('-');
   if (parts.length !== 3) return dateStr;
   const [year, month, day] = parts;
-  return `${month}/${day}/${year}`;
+  return `${month}/${day}/${year}` + (timePart ? ` ${timePart}` : '');
 };
 
 const onCreateRound = () => {
   scheduledDate.value = '';
+  timeInput.value = '09:00:00';
   selectedInspectors.value = [];
   selectedTeam.value = null;
   assignmentMode.value = 'team';
@@ -1339,7 +1360,7 @@ const submitCreateRound = async () => {
     }
 
     const roundPayload: RoundPayload = {
-      scheduledDate: scheduledDate.value,
+      scheduledDate: timeInput.value ? `${scheduledDate.value} ${timeInput.value}` : scheduledDate.value,
       status: 'SCHEDULED',
     };
 
@@ -1366,8 +1387,7 @@ const submitCreateRound = async () => {
     for (const inspector of extraInspectors) {
       await api.post('/assignments', {
         jobId: jobId.value,
-        inspectorId: inspector.value,
-        roundType: roundType.value
+        inspectorId: inspector.value
       });
     }
 

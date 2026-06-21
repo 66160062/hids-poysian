@@ -22,6 +22,18 @@ export class InspectionRoundsService {
   ) {}
 
   async create(createInspectionRoundDto: CreateInspectionRoundDto) {
+    if (createInspectionRoundDto.scheduledDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const scheduledDate = new Date(createInspectionRoundDto.scheduledDate);
+      scheduledDate.setHours(0, 0, 0, 0);
+
+      if (scheduledDate < today) {
+        throw new BadRequestException('ไม่สามารถเลือกวันนัดหมายย้อนหลังได้');
+      }
+    }
+
     const job = await this.inspectionJobsRepo.findOneByOrFail({
       jobId: createInspectionRoundDto.jobId,
     });
@@ -131,6 +143,18 @@ export class InspectionRoundsService {
   }
 
   async update(id: number, updateInspectionRoundDto: UpdateInspectionRoundDto) {
+    if (updateInspectionRoundDto.scheduledDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const scheduledDate = new Date(updateInspectionRoundDto.scheduledDate);
+      scheduledDate.setHours(0, 0, 0, 0);
+
+      if (scheduledDate < today) {
+        throw new BadRequestException('ไม่สามารถเลือกวันนัดหมายย้อนหลังได้');
+      }
+    }
+
     const round = await this.inspectionRoundsRepo.findOneByOrFail({
       roundId: id,
     });
