@@ -16,12 +16,17 @@
         </div>
 
         <div class="row justify-center q-py-sm">
-          <img :src="PoysianLogo" style="height: 100px; object-fit: contain" />
+          <img loading="eager" :src="PoysianLogo" style="height: 100px; object-fit: contain" />
         </div>
 
         <div class="row justify-center q-mb-md">
           <img
-            :src="`${apiUrl}${round.job.projectImageUrl}`"
+            loading="eager"
+            :src="
+              round.job.projectImageUrl
+                ? `${apiUrl}${round.job.projectImageUrl}`
+                : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600'
+            "
             style="
               width: 95%;
               max-height: 200px;
@@ -120,13 +125,13 @@
         <div class="pdf-footer">
           <span>© 2026, POYSIAN</span>
           <div class="footer-contacts">
-            <img :src="LineLogo" style="height: 16px" />
+            <img loading="eager" :src="LineLogo" style="height: 16px" />
             <span>@poysian,</span>
-            <img :src="FacebookLogo" style="height: 16px" />
+            <img loading="eager" :src="FacebookLogo" style="height: 16px" />
             <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
-            <img :src="CallLogo" style="height: 16px" />
+            <img loading="eager" :src="CallLogo" style="height: 16px" />
             <span>098-765-4321,</span>
-            <img :src="GmailLogo" style="height: 12px" />
+            <img loading="eager" :src="GmailLogo" style="height: 12px" />
             <span>poysian@gmail.com</span>
           </div>
         </div>
@@ -150,7 +155,7 @@
           <div v-for="defect in chunk" :key="defect.defectId" class="defect-card">
             <div class="badge-id">#{{ defect.defectId }}</div>
             <div class="badge-main" style="background: #ef4444">{{ defect.severity }}</div>
-            <img :src="`${apiUrl}${defect.imageUrl}`" class="defect-img" />
+            <img loading="eager" :src="defect.imageUrl ? `${apiUrl}${defect.imageUrl}` : 'https://via.placeholder.com/400x300?text=No+Image'" class="defect-img" />
             <div class="card-body">
               <div class="room-title">{{ getRoomShortName(defect) }}</div>
               <div class="info-row">
@@ -176,20 +181,20 @@
                         : defect.status
                 }}
               </div>
-              <img :src="PoysianLogo" class="card-logo-watermark-img" />
+              <img loading="eager" :src="PoysianLogo" class="card-logo-watermark-img" />
             </div>
           </div>
         </div>
         <div class="pdf-footer">
           <span>© 2026, POYSIAN</span>
           <div class="footer-contacts">
-            <img :src="LineLogo" style="height: 16px" />
+            <img loading="eager" :src="LineLogo" style="height: 16px" />
             <span>@poysian,</span>
-            <img :src="FacebookLogo" style="height: 16px" />
+            <img loading="eager" :src="FacebookLogo" style="height: 16px" />
             <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
-            <img :src="CallLogo" style="height: 16px" />
+            <img loading="eager" :src="CallLogo" style="height: 16px" />
             <span>098-765-4321,</span>
-            <img :src="GmailLogo" style="height: 12px" />
+            <img loading="eager" :src="GmailLogo" style="height: 12px" />
             <span>poysian@gmail.com</span>
           </div>
         </div>
@@ -227,7 +232,7 @@
               >
                 {{ defect.severity }}
               </div>
-              <img :src="`${apiUrl}${defect.imageUrl}`" class="defect-img" />
+              <img loading="eager" :src="defect.imageUrl ? `${apiUrl}${defect.imageUrl}` : 'https://via.placeholder.com/400x300?text=No+Image'" class="defect-img" />
               <div class="card-body">
                 <div class="info-row">
                   <span class="label">ประเภทงาน:</span>
@@ -244,7 +249,7 @@
                   <span class="label">สถานะ:</span>
                   {{ defect.status === 'PENDING_REPAIR' ? 'กำลังรอซ่อม' : defect.status }}
                 </div>
-                <img :src="PoysianLogo" class="card-logo-watermark-img" />
+                <img loading="eager" :src="PoysianLogo" class="card-logo-watermark-img" />
               </div>
             </div>
           </div>
@@ -270,13 +275,13 @@
         <div class="pdf-footer">
           <span>© 2026, POYSIAN</span>
           <div class="footer-contacts">
-            <img :src="LineLogo" style="height: 16px" />
+            <img loading="eager" :src="LineLogo" style="height: 16px" />
             <span>@poysian,</span>
-            <img :src="FacebookLogo" style="height: 16px" />
+            <img loading="eager" :src="FacebookLogo" style="height: 16px" />
             <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
-            <img :src="CallLogo" style="height: 16px" />
+            <img loading="eager" :src="CallLogo" style="height: 16px" />
             <span>098-765-4321,</span>
-            <img :src="GmailLogo" style="height: 12px" />
+            <img loading="eager" :src="GmailLogo" style="height: 12px" />
             <span>poysian@gmail.com</span>
           </div>
         </div>
@@ -334,13 +339,13 @@
         <div class="pdf-footer">
           <span>© 2026, POYSIAN</span>
           <div class="footer-contacts">
-            <img :src="LineLogo" style="height: 16px" />
+            <img loading="eager" :src="LineLogo" style="height: 16px" />
             <span>@poysian,</span>
-            <img :src="FacebookLogo" style="height: 16px" />
+            <img loading="eager" :src="FacebookLogo" style="height: 16px" />
             <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
-            <img :src="CallLogo" style="height: 16px" />
+            <img loading="eager" :src="CallLogo" style="height: 16px" />
             <span>098-765-4321,</span>
-            <img :src="GmailLogo" style="height: 12px" />
+            <img loading="eager" :src="GmailLogo" style="height: 12px" />
             <span>poysian@gmail.com</span>
           </div>
         </div>

@@ -1,7 +1,7 @@
 <template>
   <q-layout view="lHh Lpr lFf">
     <q-page-container>
-      <q-page class="q-pa-md bg-white">
+      <q-page class="q-pa-md bg-white" style="padding-bottom: 160px;">
         <!-- Filter button -->
         <div class="row justify-end q-mb-md">
           <q-btn
@@ -27,12 +27,27 @@
         </div>
 
         <!-- List -->
-        <div v-else class="column q-gutter-y-md">
-          <DefectDetailCard
-            v-for="defect in filteredDefects"
-            :key="defect.defectId"
-            :defect="toCardData(defect)"
-          />
+        <div v-else class="column">
+          <div class="column q-gutter-y-md">
+            <DefectDetailCard
+              v-for="defect in paginatedDefects"
+              :key="defect.defectId"
+              :defect="toCardData(defect)"
+            />
+          </div>
+          
+          <div class="row justify-center q-mt-lg q-mb-md" v-if="totalPages > 1">
+            <q-pagination
+              v-model="currentPage"
+              :max="totalPages"
+              color="grey-8"
+              active-color="primary"
+              active-text-color="white"
+              boundary-links
+              direction-links
+              gutter="sm"
+            />
+          </div>
         </div>
         <ActionFab @add="onAddDefectClick" />
       </q-page>
@@ -166,7 +181,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import DefectDetailCard from '../components/DefectDetailCard.vue';
@@ -255,6 +270,19 @@ const filteredDefects = computed(() => {
   }
 
   return list;
+});
+
+const currentPage = ref(1);
+const itemsPerPage = 20; // Or whatever is appropriate for inspector, maybe 20
+const totalPages = computed(() => Math.ceil(filteredDefects.value.length / itemsPerPage));
+
+const paginatedDefects = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return filteredDefects.value.slice(start, start + itemsPerPage);
+});
+
+watch(filteredDefects, () => {
+  currentPage.value = 1;
 });
 
 // ── Helpers ───────────────────────────────────────────────────

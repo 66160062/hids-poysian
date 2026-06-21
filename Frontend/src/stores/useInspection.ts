@@ -240,9 +240,7 @@ export const useInspectionStore = defineStore('inspection', () => {
 
   async function saveDefect(payload: FormData) {
     try {
-      const res = await api.post('/defects', payload, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const res = await api.post('/defects', payload);
       return res.data;
     } catch (err) {
       const error = err as { response?: { data: unknown } };
