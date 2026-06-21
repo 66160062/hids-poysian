@@ -201,7 +201,7 @@
             :disable="isSubmitted"
             :outline="!isSummaryDone"
             :color="isSummaryDone ? 'green' : 'blue'"
-            class="full-width action-btn"
+            class="full-width q-mb-sm action-btn"
             no-caps
             align="between"
             @click="router.push(`/inspector/job/${roundId}/report`)"
@@ -212,6 +212,25 @@
             <q-icon
               :name="isSummaryDone ? 'check_circle' : 'chevron_right'"
               :class="isSummaryDone ? 'text-white' : 'bg-blue text-white rounded-borders'"
+              size="24px"
+              style="padding: 2px;"
+            />
+          </q-btn>
+
+          <q-btn
+            v-if="!isConstruction(jobData.job?.inspectionType)"
+            :disable="!isSummaryDone || isGeneratingPdf"
+            :outline="!isSummaryDone"
+            :color="isSummaryDone ? 'primary' : 'grey-5'"
+            class="full-width action-btn"
+            no-caps
+            align="between"
+            @click="handleViewReport"
+          >
+            <span class="text-weight-bold q-ml-sm">ดูรายงาน</span>
+            <q-icon
+              :name="isSummaryDone ? 'visibility' : 'lock'"
+              :class="isSummaryDone ? 'text-white' : 'text-grey-5'"
               size="24px"
               style="padding: 2px;"
             />
@@ -238,6 +257,30 @@
         ไม่พบข้อมูลงานตรวจนี้
       </div>
     </div>
+
+    <!-- PDF Report View Dialog -->
+    <q-dialog v-model="showReportDialog" maximized transition-show="slide-up" transition-hide="slide-down">
+      <q-card class="bg-grey-3 column">
+        <!-- Dialog Header -->
+        <q-toolbar class="bg-white text-dark shadow-2 z-top">
+          <q-btn flat round dense icon="close" v-close-popup />
+          <q-toolbar-title class="text-weight-bold" style="font-size: 16px;">
+            ตัวอย่างรายงาน
+          </q-toolbar-title>
+        </q-toolbar>
+
+        <!-- Dialog Content (PDF View) -->
+        <q-card-section class="col q-pa-none" style="overflow-y: auto; overflow-x: hidden;">
+          <DefectReport
+            v-if="pdfDataLoaded && jobData"
+            ref="pdfReportRef"
+            :round="jobData"
+            :defects="pdfDefects"
+            :summaryItems="pdfSummaryItems"
+          />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -246,7 +289,8 @@ import { ref, computed, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
-import type { InspectionRound } from 'src/models';
+import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
+import DefectReport from 'src/components/DefectReport.vue';
 
 const apiUrl = import.meta.env.VITE_API_URL;
 const $q = useQuasar();
@@ -272,6 +316,13 @@ const jobData = ref<
 
 const roundId = route.params.roundId as string;
 const isSubmitting = ref(false);
+
+// PDF Export State
+const pdfReportRef = ref<InstanceType<typeof DefectReport> | null>(null);
+const isGeneratingPdf = ref(false);
+const pdfDataLoaded = ref(false);
+const pdfDefects = ref<Defect[]>([]);
+const pdfSummaryItems = ref<InspectionSummaryItem[]>([]);
 
 // === Computed Properties สถานะต่างๆ ===
 const isInspected = computed(() => !!jobData.value?.inspectedAt);
@@ -344,6 +395,35 @@ async function fetchJobDetails() {
     console.error('Error fetching job details:', error);
   } finally {
     loading.value = false;
+  }
+}
+
+const showReportDialog = ref(false);
+
+async function handleViewReport() {
+  if (!isSummaryDone.value) {
+    $q.notify({ type: 'warning', message: 'กรุณาสรุปรายงานก่อนดูรายงาน' });
+    return;
+  }
+
+  isGeneratingPdf.value = true;
+  $q.loading.show({ message: 'กำลังเตรียมข้อมูลรายงาน...' });
+  try {
+    const [defectsRes, summaryRes] = await Promise.all([
+      api.get(`/defects/round/${roundId}`),
+      api.get(`/inspection-summary-items/round/${roundId}`)
+    ]);
+    pdfDefects.value = defectsRes.data;
+    pdfSummaryItems.value = summaryRes.data;
+    pdfDataLoaded.value = true;
+    showReportDialog.value = true; // เปิด Dialog แสงดรายงาน
+    
+  } catch (error) {
+    console.error('Error generating report:', error);
+    $q.notify({ color: 'negative', message: 'เกิดข้อผิดพลาดในการดึงข้อมูลรายงาน' });
+  } finally {
+    $q.loading.hide();
+    isGeneratingPdf.value = false;
   }
 }
 
