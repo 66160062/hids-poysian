@@ -98,6 +98,50 @@ export class IssueDto {
   note?: string;
 }
 
+export class AccidentReportDto {
+  @ApiProperty({ description: 'จำนวนครั้งของอุบัติเหตุ', example: 1 })
+  @IsNumber()
+  @IsOptional()
+  accidentCount?: number;
+
+  @ApiProperty({
+    description: 'รายละเอียดอุบัติเหตุ',
+    example: 'คนงานตกจากนั่งร้าน',
+  })
+  @IsString()
+  description!: string;
+}
+
+export class DailyMachineDto {
+  @ApiProperty({
+    description: 'ชื่อหรือประเภทเครื่องจักร',
+    example: 'รถแบ็คโฮ',
+  })
+  @IsString()
+  @MaxLength(100)
+  machineName!: string;
+
+  @ApiProperty({
+    description: 'ขนาดเครื่องจักร',
+    example: 'PC200',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(50)
+  machineSize?: string;
+
+  @ApiProperty({ description: 'จำนวนเครื่อง', example: 2 })
+  @IsNumber()
+  @IsOptional()
+  quantity?: number;
+
+  @ApiProperty({ description: 'ชั่วโมงทำงาน', example: 8, required: false })
+  @IsNumber()
+  @IsOptional()
+  workingHours?: number;
+}
+
 export class CreateConstructionDailyReportDto {
   @ApiProperty({ description: 'Round ID (รอบการตรวจ)', example: 1 })
   @Type(() => Number)
@@ -175,4 +219,27 @@ export class CreateConstructionDailyReportDto {
   @Type(() => IssueDto)
   @IsOptional()
   issues?: IssueDto[];
+
+  @ApiProperty({
+    description: 'รายงานอุบัติเหตุ',
+    type: [AccidentReportDto],
+    required: false,
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AccidentReportDto)
+  @IsOptional()
+  accidents?: AccidentReportDto[];
+
+  @ApiProperty({
+    description: 'เครื่องจักร/อุปกรณ์',
+    type: [DailyMachineDto],
+    required: false,
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => DailyMachineDto)
+  @IsOptional()
+  machines?: DailyMachineDto[];
 }
+

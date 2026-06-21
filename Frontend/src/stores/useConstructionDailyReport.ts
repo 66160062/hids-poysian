@@ -27,6 +27,18 @@ export interface IssuePayload {
   note?: string;
 }
 
+export interface AccidentPayload {
+  accidentCount?: number;
+  description: string;
+}
+
+export interface MachinePayload {
+  machineName: string;
+  machineSize?: string;
+  quantity?: number;
+  workingHours?: number;
+}
+
 export interface ConstructionDailyReportPayload {
   roundId: number;
   reportDate: string;
@@ -38,6 +50,8 @@ export interface ConstructionDailyReportPayload {
   workItems?: WorkItemPayload[];
   personnels?: PersonnelPayload[];
   issues?: IssuePayload[];
+  accidents?: AccidentPayload[];
+  machines?: MachinePayload[];
 }
 
 export interface ConstructionDailyReportResponse {
@@ -48,6 +62,8 @@ export interface ConstructionDailyReportResponse {
   workItems: WorkItemPayload[];
   personnels: PersonnelPayload[];
   issues: IssuePayload[];
+  accidents: AccidentPayload[];
+  machines: MachinePayload[];
 }
 
 // ── Store ─────────────────────────────────────────────────────

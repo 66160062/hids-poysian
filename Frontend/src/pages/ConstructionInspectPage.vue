@@ -132,7 +132,59 @@
           </div>
         </q-card>
 
-        <!-- 4. รายงานเพิ่มเติมหรือปัญหาในการทำงาน -->
+        <!-- 4. เครื่องจักร/อุปกรณ์ -->
+        <q-card flat bordered class="q-mb-md ui-card">
+          <q-card-section class="q-pa-sm bg-grey-2 text-dark text-weight-bold row items-center">
+            <q-icon name="construction" size="18px" class="q-mr-xs text-teal-8" />
+            เครื่องจักร/อุปกรณ์
+          </q-card-section>
+          <q-list separator>
+            <q-item v-for="m in machineList" :key="m.id" class="bg-white">
+              <q-item-section>
+                <q-item-label class="text-weight-bold text-teal-8">{{ m.name }}</q-item-label>
+                <q-item-label caption>ขนาด: {{ m.size || '-' }} | จำนวน: {{ m.quantity }} | ชม.: {{ m.hours ?? '-' }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn flat round dense icon="delete" color="negative" size="sm" @click="removeMachine(m.id)" />
+              </q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple @click="addMachine" class="bg-white">
+              <q-item-section class="text-teal-8 text-weight-medium">เพิ่มเครื่องจักร/อุปกรณ์</q-item-section>
+              <q-item-section side>
+                <q-icon name="add_circle_outline" color="teal-8" size="24px" />
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card>
+
+        <!-- 5. รายงานอุบัติเหตุ -->
+        <q-card flat bordered class="q-mb-md ui-card">
+          <q-card-section class="q-pa-sm bg-grey-2 text-dark text-weight-bold row items-center">
+            <q-icon name="health_and_safety" size="18px" class="q-mr-xs text-red-8" />
+            รายงานอุบัติเหตุ
+          </q-card-section>
+          <q-list separator>
+            <q-item v-for="a in accidentList" :key="a.id" class="bg-white">
+              <q-item-section>
+                <q-item-label class="text-weight-bold text-red-8">{{ a.description }}</q-item-label>
+                <q-item-label caption>จำนวนครั้ง: {{ a.count }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn flat round dense icon="delete" color="negative" size="sm" @click="removeAccident(a.id)" />
+              </q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple @click="addAccident" class="bg-white">
+              <q-item-section class="text-red-8 text-weight-medium">เพิ่มรายงานอุบัติเหตุ</q-item-section>
+              <q-item-section side>
+                <q-icon name="add_circle_outline" color="red-8" size="24px" />
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card>
+
+        <!-- 6. รายงานเพิ่มเติมหรือปัญหาในการทำงาน -->
         <q-card flat bordered class="q-mb-md ui-card">
           <q-card-section class="q-pa-sm bg-grey-2 text-dark text-weight-bold row items-center">
             <q-icon name="report_problem" size="18px" class="q-mr-xs text-primary" />
@@ -158,7 +210,7 @@
           </q-list>
         </q-card>
 
-        <!-- 5. PROJECT PHOTOS -->
+        <!-- 7. PROJECT PHOTOS -->
         <div class="text-subtitle2 text-weight-bold row items-center q-mb-sm text-uppercase text-dark">
           <q-icon name="photo_camera" size="20px" class="q-mr-xs text-primary" />
           PROJECT PHOTOS
@@ -173,9 +225,15 @@
 
         <!-- Additional Photos Grid (max 6) -->
         <div class="row q-col-gutter-sm">
-          <div class="col-6" v-for="i in 6" :key="i">
-            <q-card flat bordered class="upload-box flex flex-center" style="min-height: 100px;" clickable v-ripple>
-              <q-icon name="add" size="24px" color="grey-5" />
+          <div class="col-6" v-for="(slot, i) in photoSlots" :key="i">
+            <q-card flat bordered class="upload-box flex flex-center column q-pa-sm text-center" style="min-height: 100px;" clickable v-ripple>
+              <q-icon name="add_a_photo" size="24px" :color="slot.name ? 'primary' : 'grey-5'" />
+              <div v-if="slot.name" class="text-caption text-weight-medium text-primary q-mt-xs" style="font-size: 11px; line-height: 1.2;">
+                {{ slot.name }}
+              </div>
+              <div v-else class="text-caption text-weight-medium text-grey-5 q-mt-xs" style="font-size: 11px;">
+                รูปภาพเพิ่มเติม
+              </div>
             </q-card>
           </div>
         </div>
@@ -309,15 +367,64 @@
       </q-card>
     </q-dialog>
 
+    <!-- Dialog: เพิ่มเครื่องจักร -->
+    <q-dialog v-model="machineDialog" persistent>
+      <q-card style="min-width: 340px; border-radius: 12px;">
+        <q-card-section class="bg-teal-8 text-white">
+          <div class="text-h6">เพิ่มเครื่องจักร/อุปกรณ์</div>
+        </q-card-section>
+        <q-card-section class="q-pt-md column q-gutter-y-md">
+          <q-input outlined dense v-model="newMachine.name" label="ชื่อ/ประเภทเครื่องจักร" placeholder="เช่น รถแบ็คโฮ, รถเครน" autofocus />
+          <q-input outlined dense v-model="newMachine.size" label="ขนาดเครื่องจักร" placeholder="เช่น PC200, 50T" />
+          <div class="row q-col-gutter-sm">
+            <div class="col-6">
+              <q-input outlined dense type="number" v-model.number="newMachine.quantity" label="จำนวน (คัน)" />
+            </div>
+            <div class="col-6">
+              <q-input outlined dense type="number" v-model.number="newMachine.hours" label="ชั่วโมงทำงาน" />
+            </div>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right" class="text-teal-8">
+          <q-btn flat label="ยกเลิก" v-close-popup />
+          <q-btn flat label="บันทึกข้อมูล" @click="saveMachine" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Dialog: เพิ่มรายงานอุบัติเหตุ -->
+    <q-dialog v-model="accidentDialog" persistent>
+      <q-card style="min-width: 340px; border-radius: 12px;">
+        <q-card-section class="bg-red-8 text-white">
+          <div class="text-h6">รายงานอุบัติเหตุ</div>
+        </q-card-section>
+        <q-card-section class="q-pt-md column q-gutter-y-md">
+          <q-input outlined dense v-model="newAccident.description" type="textarea" rows="3" label="รายละเอียดอุบัติเหตุ" autofocus />
+          <div class="row items-center justify-between">
+            <span class="text-subtitle2 text-grey-8">จำนวนครั้ง</span>
+            <div class="row items-center q-gutter-x-sm">
+              <q-btn round dense flat color="negative" icon="remove_circle" size="md" @click="newAccident.count > 1 ? newAccident.count-- : 1" />
+              <q-input outlined dense type="number" v-model.number="newAccident.count" input-class="text-center text-weight-bold" style="width: 80px;" />
+              <q-btn round dense flat color="red-8" icon="add_circle" size="md" @click="newAccident.count++" />
+            </div>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right" class="text-red-8">
+          <q-btn flat label="ยกเลิก" v-close-popup />
+          <q-btn flat label="บันทึกข้อมูล" @click="saveAccident" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useConstructionDailyReportStore } from 'src/stores/useConstructionDailyReport';
-import type { ConstructionDailyReportPayload } from 'src/stores/useConstructionDailyReport';
+import type { ConstructionDailyReportPayload, MachinePayload } from 'src/stores/useConstructionDailyReport';
 
 const $q = useQuasar();
 const router = useRouter();
@@ -340,6 +447,21 @@ const unitOptions = ['ตร.ม.', 'เมตร', 'ชิ้น', 'จุด',
 const workDetails = ref<{id: number, name: string, location: string, unit: string, actual: number}[]>([]);
 const workDialog = ref(false);
 const newWork = ref({ name: '', location: '', unit: '', actual: 0 });
+
+// คำนวณช่องใส่รูปภาพให้เชื่อมกับรายละเอียดงาน และแสดงให้ครบ 6 ช่อง
+const photoSlots = computed(() => {
+  const slots = [];
+  const MAX_SLOTS = 6;
+  for (let i = 0; i < MAX_SLOTS; i++) {
+    const detail = workDetails.value[i];
+    if (detail) {
+      slots.push({ name: detail.name });
+    } else {
+      slots.push({ name: '' });
+    }
+  }
+  return slots;
+});
 
 const addWorkDetail = () => {
   newWork.value = { name: '', location: '', unit: '', actual: 0 };
@@ -406,7 +528,45 @@ const removeWorker = (id: number) => {
   workerList.value = workerList.value.filter(w => w.id !== id);
 };
 
-// 4. Additional Notes
+// 4. เครื่องจักร/อุปกรณ์
+const machineList = ref<{id: number, name: string, size: string, quantity: number, hours: number | null}[]>([]);
+const machineDialog = ref(false);
+const newMachine = ref({ name: '', size: '', quantity: 1, hours: null as number | null });
+
+const addMachine = () => {
+  newMachine.value = { name: '', size: '', quantity: 1, hours: null };
+  machineDialog.value = true;
+};
+const saveMachine = () => {
+  if (!newMachine.value.name) return $q.notify({ message: 'กรุณากรอกชื่อ/ประเภทเครื่องจักร', color: 'warning' });
+  if (newMachine.value.quantity < 1) newMachine.value.quantity = 1;
+  machineList.value.push({ id: Date.now(), ...newMachine.value });
+  machineDialog.value = false;
+};
+const removeMachine = (id: number) => {
+  machineList.value = machineList.value.filter(m => m.id !== id);
+};
+
+// 5. รายงานอุบัติเหตุ
+const accidentList = ref<{id: number, description: string, count: number}[]>([]);
+const accidentDialog = ref(false);
+const newAccident = ref({ description: '', count: 1 });
+
+const addAccident = () => {
+  newAccident.value = { description: '', count: 1 };
+  accidentDialog.value = true;
+};
+const saveAccident = () => {
+  if (!newAccident.value.description) return $q.notify({ message: 'กรุณากรอกรายละเอียดอุบัติเหตุ', color: 'warning' });
+  if (newAccident.value.count < 1) newAccident.value.count = 1;
+  accidentList.value.push({ id: Date.now(), ...newAccident.value });
+  accidentDialog.value = false;
+};
+const removeAccident = (id: number) => {
+  accidentList.value = accidentList.value.filter(a => a.id !== id);
+};
+
+// 6. Additional Notes
 const notesList = ref<{id: number, text: string, status: string}[]>([]);
 const noteDialog = ref(false);
 const newNote = ref({ text: '', status: 'ต้องติดตามผล' });
@@ -424,7 +584,7 @@ const removeNote = (id: number) => {
   notesList.value = notesList.value.filter(n => n.id !== id);
 };
 
-// 5. Submit — แปลง form data เป็น API payload แล้วส่ง POST
+// 7. Submit — แปลง form data เป็น API payload แล้วส่ง POST
 const submitReport = async () => {
   const payload: ConstructionDailyReportPayload = {
     roundId,
@@ -457,6 +617,23 @@ const submitReport = async () => {
     issues: notesList.value.map((n) => ({
       description: n.text,
       note: n.status,
+    })),
+
+    // แปลง machineList → machines
+    machines: machineList.value.map((m) => {
+      const payload: MachinePayload = {
+        machineName: m.name,
+        quantity: m.quantity,
+      };
+      if (m.size) payload.machineSize = m.size;
+      if (m.hours != null) payload.workingHours = m.hours;
+      return payload;
+    }),
+
+    // แปลง accidentList → accidents
+    accidents: accidentList.value.map((a) => ({
+      description: a.description,
+      accidentCount: a.count,
     })),
   };
 
