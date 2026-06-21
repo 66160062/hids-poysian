@@ -5,6 +5,8 @@ import { ConstructionDailyReport } from './entities/construction-daily-report.en
 import { DailyWorkItem } from './entities/daily-work-item.entity';
 import { DailyPersonnel } from './entities/daily-personnel.entity';
 import { DailyIssue } from './entities/daily-issue.entity';
+import { AccidentReport } from './entities/accident-report.entity';
+import { DailyMachine } from './entities/daily-machine.entity';
 import { CreateConstructionDailyReportDto } from './dto/create-construction-daily-report.dto';
 
 @Injectable()
@@ -82,10 +84,42 @@ export class ConstructionDailyReportsService {
         await manager.getRepository(DailyIssue).save(issues);
       }
 
-      // 6. โหลดข้อมูลกลับมาพร้อม relations ทั้งหมด
+      // 6. สร้าง accident_report[] (ตารางย่อย)
+      if (dto.accidents && dto.accidents.length > 0) {
+        const accidents = dto.accidents.map((a) =>
+          manager.getRepository(AccidentReport).create({
+            dailyReport: savedReport,
+            accidentCount: a.accidentCount,
+            description: a.description,
+          }),
+        );
+        await manager.getRepository(AccidentReport).save(accidents);
+      }
+
+      // 7. สร้าง daily_machine[] (ตารางย่อย)
+      if (dto.machines && dto.machines.length > 0) {
+        const machines = dto.machines.map((m) =>
+          manager.getRepository(DailyMachine).create({
+            dailyReport: savedReport,
+            machineSize: m.machineSize,
+            quantity: m.quantity ?? 1,
+            workingHours: m.workingHours,
+          }),
+        );
+        await manager.getRepository(DailyMachine).save(machines);
+      }
+
+      // 8. โหลดข้อมูลกลับมาพร้อม relations ทั้งหมด
       return manager.getRepository(ConstructionDailyReport).findOneOrFail({
         where: { dailyReportId: savedReport.dailyReportId },
-        relations: ['round', 'workItems', 'personnels', 'issues'],
+        relations: [
+          'round',
+          'workItems',
+          'personnels',
+          'issues',
+          'accidents',
+          'machines',
+        ],
       });
     });
   }
@@ -95,7 +129,14 @@ export class ConstructionDailyReportsService {
       .getRepository(ConstructionDailyReport)
       .findOne({
         where: { round: { roundId } },
-        relations: ['round', 'workItems', 'personnels', 'issues'],
+        relations: [
+          'round',
+          'workItems',
+          'personnels',
+          'issues',
+          'accidents',
+          'machines',
+        ],
         order: { createdAt: 'DESC' },
       });
 
@@ -108,3 +149,4 @@ export class ConstructionDailyReportsService {
     return report;
   }
 }
+

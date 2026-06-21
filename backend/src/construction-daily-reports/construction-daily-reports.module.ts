@@ -5,6 +5,9 @@ import { ConstructionDailyReport } from './entities/construction-daily-report.en
 import { DailyWorkItem } from './entities/daily-work-item.entity';
 import { DailyPersonnel } from './entities/daily-personnel.entity';
 import { DailyIssue } from './entities/daily-issue.entity';
+import { AccidentReport } from './entities/accident-report.entity';
+import { DailyMachine } from './entities/daily-machine.entity';
+import { MachineType } from './entities/machine-type.entity';
 import { ConstructionDailyReportsController } from './construction-daily-reports.controller';
 import { ConstructionDailyReportsService } from './construction-daily-reports.service';
 
@@ -15,6 +18,9 @@ import { ConstructionDailyReportsService } from './construction-daily-reports.se
       DailyWorkItem,
       DailyPersonnel,
       DailyIssue,
+      AccidentReport,
+      DailyMachine,
+      MachineType,
       InspectionRound,
     ]),
   ],
@@ -22,3 +28,4 @@ import { ConstructionDailyReportsService } from './construction-daily-reports.se
   providers: [ConstructionDailyReportsService],
 })
 export class ConstructionDailyReportsModule {}
+

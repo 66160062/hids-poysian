@@ -35,6 +35,21 @@ describe('ConstructionDailyReportsService', () => {
         },
       ],
       issues: [{ issueId: 1, description: 'ปูนขาด', note: 'รอดำเนินการ' }],
+      accidents: [
+        {
+          accidentReportId: 1,
+          accidentCount: 1,
+          description: 'คนงานตกจากนั่งร้าน',
+        },
+      ],
+      machines: [
+        {
+          dailyMachineId: 1,
+          machineSize: 'PC200',
+          quantity: 2,
+          workingHours: 8,
+        },
+      ],
     };
 
     const repoMocks: Record<string, Record<string, jest.Mock>> = {};
@@ -119,9 +134,20 @@ describe('ConstructionDailyReportsService', () => {
         { name: 'วิศวกรสนาม', type: PersonnelType.PERSONNEL, count: 1 },
       ],
       issues: [{ description: 'ปูนขาด', note: 'รอดำเนินการ' }],
+      accidents: [
+        { accidentCount: 1, description: 'คนงานตกจากนั่งร้าน' },
+      ],
+      machines: [
+        {
+          machineName: 'รถแบ็คโฮ',
+          machineSize: 'PC200',
+          quantity: 2,
+          workingHours: 8,
+        },
+      ],
     };
 
-    it('should create daily report with all child entities in a transaction', async () => {
+    it('should create daily report with all child entities including accidents and machines in a transaction', async () => {
       const manager = createMockManager();
 
       mockDataSource.transaction.mockImplementation(
@@ -137,10 +163,12 @@ describe('ConstructionDailyReportsService', () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(manager.getRepository).toHaveBeenCalled();
 
-      // ตรวจว่า result มี relations กลับมา
+      // ตรวจว่า result มี relations กลับมาครบทุกตาราง
       expect(result).toHaveProperty('workItems');
       expect(result).toHaveProperty('personnels');
       expect(result).toHaveProperty('issues');
+      expect(result).toHaveProperty('accidents');
+      expect(result).toHaveProperty('machines');
     });
 
     it('should throw NotFoundException when round does not exist', async () => {
@@ -185,6 +213,48 @@ describe('ConstructionDailyReportsService', () => {
         'Database connection lost',
       );
     });
+
+    it('should create report with only accidents (no machines)', async () => {
+      const dtoWithAccidentsOnly: CreateConstructionDailyReportDto = {
+        roundId: 1,
+        reportDate: '2026-06-19',
+        accidents: [
+          { accidentCount: 2, description: 'อุปกรณ์ชำรุด' },
+        ],
+      };
+
+      const manager = createMockManager();
+
+      mockDataSource.transaction.mockImplementation(
+        async (cb: (manager: EntityManager) => Promise<unknown>) => cb(manager),
+      );
+
+      const result = await service.create(dtoWithAccidentsOnly);
+
+      expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
+      expect(result).toHaveProperty('accidents');
+    });
+
+    it('should create report with only machines (no accidents)', async () => {
+      const dtoWithMachinesOnly: CreateConstructionDailyReportDto = {
+        roundId: 1,
+        reportDate: '2026-06-19',
+        machines: [
+          { machineName: 'รถเครน', machineSize: '50T', quantity: 1, workingHours: 4 },
+        ],
+      };
+
+      const manager = createMockManager();
+
+      mockDataSource.transaction.mockImplementation(
+        async (cb: (manager: EntityManager) => Promise<unknown>) => cb(manager),
+      );
+
+      const result = await service.create(dtoWithMachinesOnly);
+
+      expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
+      expect(result).toHaveProperty('machines');
+    });
   });
 
   describe('findByRound', () => {
@@ -199,13 +269,15 @@ describe('ConstructionDailyReportsService', () => {
       );
     });
 
-    it('should return report with all relations when found', async () => {
+    it('should return report with all relations including accidents and machines when found', async () => {
       const expectedReport = {
         dailyReportId: 1,
         reportDate: '2026-06-19',
         workItems: [{ workItemId: 1 }],
         personnels: [{ personnelId: 1 }],
         issues: [{ issueId: 1 }],
+        accidents: [{ accidentReportId: 1 }],
+        machines: [{ dailyMachineId: 1 }],
       };
 
       const repoMock = {
@@ -219,7 +291,14 @@ describe('ConstructionDailyReportsService', () => {
       expect(repoMock.findOne).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { round: { roundId: 1 } },
-          relations: ['round', 'workItems', 'personnels', 'issues'],
+          relations: [
+            'round',
+            'workItems',
+            'personnels',
+            'issues',
+            'accidents',
+            'machines',
+          ],
         }),
       );
     });

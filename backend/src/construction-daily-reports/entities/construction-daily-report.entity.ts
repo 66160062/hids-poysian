@@ -13,6 +13,8 @@ import { User } from 'src/users/entities/user.entity';
 import { DailyWorkItem } from './daily-work-item.entity';
 import { DailyPersonnel } from './daily-personnel.entity';
 import { DailyIssue } from './daily-issue.entity';
+import { AccidentReport } from './accident-report.entity';
+import { DailyMachine } from './daily-machine.entity';
 
 @Entity('daily_report')
 export class ConstructionDailyReport {
@@ -79,4 +81,10 @@ export class ConstructionDailyReport {
 
   @OneToMany(() => DailyIssue, (i) => i.dailyReport, { cascade: true })
   issues!: DailyIssue[];
+
+  @OneToMany(() => AccidentReport, (a) => a.dailyReport, { cascade: true })
+  accidents!: AccidentReport[];
+
+  @OneToMany(() => DailyMachine, (m) => m.dailyReport, { cascade: true })
+  machines!: DailyMachine[];
 }
