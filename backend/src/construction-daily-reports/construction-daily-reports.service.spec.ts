@@ -134,9 +134,7 @@ describe('ConstructionDailyReportsService', () => {
         { name: 'วิศวกรสนาม', type: PersonnelType.PERSONNEL, count: 1 },
       ],
       issues: [{ description: 'ปูนขาด', note: 'รอดำเนินการ' }],
-      accidents: [
-        { accidentCount: 1, description: 'คนงานตกจากนั่งร้าน' },
-      ],
+      accidents: [{ accidentCount: 1, description: 'คนงานตกจากนั่งร้าน' }],
       machines: [
         {
           machineName: 'รถแบ็คโฮ',
@@ -154,7 +152,7 @@ describe('ConstructionDailyReportsService', () => {
         async (cb: (manager: EntityManager) => Promise<unknown>) => cb(manager),
       );
 
-      const result = await service.create(validDto);
+      const result = await service.create(JSON.stringify(validDto), [], {}, 1);
 
       // ตรวจว่า transaction ถูกเรียก
       expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
@@ -180,9 +178,9 @@ describe('ConstructionDailyReportsService', () => {
         async (cb: (manager: EntityManager) => Promise<unknown>) => cb(manager),
       );
 
-      await expect(service.create(validDto)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.create(JSON.stringify(validDto), [], {}, 1),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('should create report without optional child entities', async () => {
@@ -198,7 +196,12 @@ describe('ConstructionDailyReportsService', () => {
         async (cb: (manager: EntityManager) => Promise<unknown>) => cb(manager),
       );
 
-      const result = await service.create(dtoWithoutChildren);
+      const result = await service.create(
+        JSON.stringify(dtoWithoutChildren),
+        [],
+        {},
+        1,
+      );
 
       expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
       expect(result).toBeDefined();
@@ -209,18 +212,16 @@ describe('ConstructionDailyReportsService', () => {
         new Error('Database connection lost'),
       );
 
-      await expect(service.create(validDto)).rejects.toThrow(
-        'Database connection lost',
-      );
+      await expect(
+        service.create(JSON.stringify(validDto), [], {}, 1),
+      ).rejects.toThrow('Database connection lost');
     });
 
     it('should create report with only accidents (no machines)', async () => {
       const dtoWithAccidentsOnly: CreateConstructionDailyReportDto = {
         roundId: 1,
         reportDate: '2026-06-19',
-        accidents: [
-          { accidentCount: 2, description: 'อุปกรณ์ชำรุด' },
-        ],
+        accidents: [{ accidentCount: 2, description: 'อุปกรณ์ชำรุด' }],
       };
 
       const manager = createMockManager();
@@ -229,7 +230,12 @@ describe('ConstructionDailyReportsService', () => {
         async (cb: (manager: EntityManager) => Promise<unknown>) => cb(manager),
       );
 
-      const result = await service.create(dtoWithAccidentsOnly);
+      const result = await service.create(
+        JSON.stringify(dtoWithAccidentsOnly),
+        [],
+        {},
+        1,
+      );
 
       expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
       expect(result).toHaveProperty('accidents');
@@ -240,7 +246,12 @@ describe('ConstructionDailyReportsService', () => {
         roundId: 1,
         reportDate: '2026-06-19',
         machines: [
-          { machineName: 'รถเครน', machineSize: '50T', quantity: 1, workingHours: 4 },
+          {
+            machineName: 'รถเครน',
+            machineSize: '50T',
+            quantity: 1,
+            workingHours: 4,
+          },
         ],
       };
 
@@ -250,7 +261,12 @@ describe('ConstructionDailyReportsService', () => {
         async (cb: (manager: EntityManager) => Promise<unknown>) => cb(manager),
       );
 
-      const result = await service.create(dtoWithMachinesOnly);
+      const result = await service.create(
+        JSON.stringify(dtoWithMachinesOnly),
+        [],
+        {},
+        1,
+      );
 
       expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
       expect(result).toHaveProperty('machines');

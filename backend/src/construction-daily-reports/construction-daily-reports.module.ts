@@ -10,9 +10,11 @@ import { DailyMachine } from './entities/daily-machine.entity';
 import { MachineType } from './entities/machine-type.entity';
 import { ConstructionDailyReportsController } from './construction-daily-reports.controller';
 import { ConstructionDailyReportsService } from './construction-daily-reports.service';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
+    AuthModule,
     TypeOrmModule.forFeature([
       ConstructionDailyReport,
       DailyWorkItem,
@@ -28,4 +30,3 @@ import { ConstructionDailyReportsService } from './construction-daily-reports.se
   providers: [ConstructionDailyReportsService],
 })
 export class ConstructionDailyReportsModule {}
-

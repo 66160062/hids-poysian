@@ -4,7 +4,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { DefectsService } from './defects.service';
 import { Defect, DefectStatus } from './entities/defect.entity';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
-import { RoomTemplate } from 'src/room-templates/entities/room-template.entity';
+
 import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub-category.entity';
 import { User } from 'src/users/entities/user.entity';
 
@@ -35,7 +35,7 @@ describe('DefectsService', () => {
         DefectsService,
         { provide: getRepositoryToken(Defect), useValue: defectsRepo },
         { provide: getRepositoryToken(InspectionRound), useValue: repoMock },
-        { provide: getRepositoryToken(RoomTemplate), useValue: repoMock },
+
         { provide: getRepositoryToken(DefectSubCategory), useValue: repoMock },
         { provide: getRepositoryToken(User), useValue: repoMock },
       ],
