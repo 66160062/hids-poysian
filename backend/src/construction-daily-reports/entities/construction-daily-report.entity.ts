@@ -15,6 +15,7 @@ import { DailyPersonnel } from './daily-personnel.entity';
 import { DailyIssue } from './daily-issue.entity';
 import { AccidentReport } from './accident-report.entity';
 import { DailyMachine } from './daily-machine.entity';
+import { DailyReportImage } from './daily-report-image.entity';
 
 @Entity('daily_report')
 export class ConstructionDailyReport {
@@ -87,4 +88,7 @@ export class ConstructionDailyReport {
 
   @OneToMany(() => DailyMachine, (m) => m.dailyReport, { cascade: true })
   machines!: DailyMachine[];
+
+  @OneToMany(() => DailyReportImage, (img) => img.dailyReport, { cascade: true })
+  images!: DailyReportImage[];
 }
