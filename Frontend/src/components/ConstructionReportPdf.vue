@@ -477,3 +477,27 @@ td, th {
   }
 }
 </style>
+
+<style>
+/* Global print styles to hide everything except the PDF content */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .pdf-page, .pdf-page * {
+    visibility: visible;
+  }
+  .pdf-page {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  .q-dialog__backdrop,
+  .q-dialog__inner {
+    background: transparent !important;
+  }
+}
+</style>

@@ -142,44 +142,161 @@
         </q-card-section>
 
         <template v-else>
-          <q-list separator>
-            <q-item
-              v-for="round in inspectionRounds"
-              :key="round.id"
-              clickable
-              v-ripple
-              class="q-py-md"
-              @click="openRoundReview(round)"
-            >
-              <q-item-section avatar>
-                <q-avatar color="primary" text-color="white" size="36px">
-                  {{ round.roundNumber }}
-                </q-avatar>
-              </q-item-section>
-              <q-item-section>
-                <q-item-label class="text-weight-medium"
-                  >รอบที่ {{ round.roundNumber }}</q-item-label
-                >
-                <q-item-label caption class="column q-gutter-y-xs">
-                  <span>วันที่: {{ round.date }}</span>
-                  <span v-if="round.inspectors && round.inspectors.length" class="text-primary text-caption text-weight-medium">
-                    ผู้ตรวจ: {{ round.inspectors.join(', ') }}
-                  </span>
-                </q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-chip
-                  dense
-                  :color="getRoundStatusColor(round.status)"
-                  text-color="dark"
-                  class="text-caption"
-                >
-                  {{ round.status }}
-                </q-chip>
-                <q-icon name="chevron_right" color="grey-5" class="q-mt-xs" />
-              </q-item-section>
-            </q-item>
-          </q-list>
+          <div class="q-pa-md column q-gutter-y-lg">
+            <div v-for="round in inspectionRounds" :key="round.id">
+              <!-- Info Card -->
+              <q-card
+                flat
+                bordered
+                class="card-round relative-position overflow-hidden cursor-pointer q-mb-md"
+                @click="openRoundReview(round)"
+              >
+                <!-- Left border strip -->
+                <div 
+                  class="absolute-left" 
+                  :class="round.statusKey === 'APPROVED' ? 'bg-positive' : 'bg-primary'" 
+                  style="width: 6px;">
+                </div>
+                
+                <q-card-section class="q-pl-lg">
+                  <div class="row items-center justify-between q-mb-sm">
+                    <q-chip
+                      dense
+                      :color="getRoundStatusColor(round.status)"
+                      text-color="white"
+                      class="text-caption text-weight-bold"
+                    >
+                      <q-icon v-if="round.statusKey === 'APPROVED'" name="check_circle" size="14px" class="q-mr-xs" />
+                      {{ round.status }}
+                    </q-chip>
+                    <div class="text-caption text-grey-6">#RND-{{ String(round.roundNumber).padStart(3, '0') }}</div>
+                  </div>
+
+                  <div class="text-h6 text-weight-bold q-mb-md">ตรวจรอบที่ {{ round.roundNumber }}</div>
+
+                  <div class="row q-col-gutter-md q-mb-md">
+                    <div class="col-6">
+                      <div class="text-caption text-grey-6 text-weight-bold">DATE</div>
+                      <div class="row items-center q-mt-xs text-body2">
+                        <q-icon name="calendar_today" color="primary" class="q-mr-xs" />
+                        {{ round.date }}
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="text-caption text-grey-6 text-weight-bold">INSPECTORS</div>
+                      <div class="row items-center q-mt-xs">
+                        <q-avatar size="24px" class="q-mr-xs" color="grey-3" text-color="grey-8">
+                          <q-icon name="person" size="16px" />
+                        </q-avatar>
+                        <span class="text-body2 text-grey-8 ellipsis" style="max-width: 120px;">
+                          {{ round.inspectors?.join(', ') || '-' }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <q-btn
+                    v-if="round.statusKey === 'APPROVED'"
+                    unelevated
+                    rounded
+                    color="primary"
+                    icon="download"
+                    label="ดาวน์โหลดรายงาน (PDF)"
+                    class="full-width q-mt-sm"
+                    no-caps
+                    @click.stop="downloadReport(round)"
+                  />
+                </q-card-section>
+              </q-card>
+
+              <!-- Share Links & Progress (Only for APPROVED) -->
+              <template v-if="round.statusKey === 'APPROVED'">
+                <q-card flat bordered class="card-round q-mb-md">
+                  <q-card-section>
+                    <div class="row items-center q-mb-sm">
+                      <q-icon name="share" size="20px" color="primary" class="q-mr-sm" />
+                      <div class="text-subtitle1 text-weight-bold">แชร์ลิงก์ (Share Links)</div>
+                    </div>
+
+                    <!-- Customer Link -->
+                    <div class="q-mb-sm">
+                      <div class="text-caption text-weight-medium text-grey-8 q-mb-xs">สำหรับลูกค้า (ดูและดาวน์โหลด)</div>
+                      <q-input
+                        outlined
+                        rounded
+                        dense
+                        readonly
+                        v-model="round.customerShareLink"
+                        class="bg-white"
+                      >
+                        <template v-slot:append>
+                          <q-btn
+                            unelevated
+                            rounded
+                            color="primary"
+                            icon="content_copy"
+                            label="คัดลอก"
+                            no-caps
+                            size="sm"
+                            @click.stop="copyLink(round.customerShareLink)"
+                          />
+                        </template>
+                      </q-input>
+                      <div class="text-caption text-positive q-mt-xs">สร้างรหัสผ่านชั่วคราวแล้ว</div>
+                    </div>
+
+                    <!-- Contractor Link -->
+                    <div>
+                      <div class="text-caption text-weight-medium text-grey-8 q-mb-xs">สำหรับผู้รับเหมา (อัปเดตงานซ่อม)</div>
+                      <q-input
+                        outlined
+                        rounded
+                        dense
+                        readonly
+                        v-model="round.contractorShareLink"
+                        class="bg-white"
+                      >
+                        <template v-slot:append>
+                          <q-btn
+                            unelevated
+                            rounded
+                            color="primary"
+                            icon="content_copy"
+                            label="คัดลอก"
+                            no-caps
+                            size="sm"
+                            @click.stop="copyLink(round.contractorShareLink)"
+                          />
+                        </template>
+                      </q-input>
+                      <div class="text-caption text-positive q-mt-xs">สร้างรหัสผ่านชั่วคราวแล้ว</div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+
+                <!-- Repair Progress -->
+                <div class="q-mt-sm">
+                  <div class="row items-center justify-between q-mb-xs">
+                    <div class="text-caption text-weight-bold">ความคืบหน้าการซ่อมแซม</div>
+                    <div class="text-caption text-weight-bold text-primary">{{ round.repairProgress }}%</div>
+                  </div>
+                  <q-linear-progress
+                    rounded
+                    size="12px"
+                    :value="(round.repairProgress || 0) / 100"
+                    color="primary"
+                    track-color="grey-3"
+                    class="q-mb-xs"
+                  />
+                  <div class="row items-center text-grey-7 text-caption" style="font-size: 11px;">
+                    <q-icon name="info" color="warning" class="q-mr-xs" size="14px" />
+                    ต้องมีความคืบหน้า 80% ขึ้นไปเพื่อเปิดรอบตรวจถัดไป
+                  </div>
+                </div>
+              </template>
+              <q-separator v-if="round.id !== inspectionRounds[inspectionRounds.length - 1]?.id" class="q-my-lg" />
+            </div>
+          </div>
           <div class="q-pa-md">
             <div :class="{ 'cursor-not-allowed': isLatestRoundNotCompleted }">
               <q-btn
@@ -606,7 +723,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
+import { useQuasar, copyToClipboard } from 'quasar';
 import { api } from 'src/boot/axios';
 import { useUserStore } from '../stores/useUser';
 import { useTeamStore } from '../stores/useTeam';
@@ -666,6 +783,10 @@ interface RoundView {
   status: string;
   statusKey: string;
   inspectors?: string[];
+  reportPdfUrl?: string;
+  customerShareLink?: string;
+  contractorShareLink?: string;
+  repairProgress?: number;
 }
 
 interface DefectCategoryOption {
@@ -885,6 +1006,12 @@ const mapRoundToView = (round: RoundApiResponse) => {
     status: mapRoundStatus(round.status),
     statusKey: round.status,
     inspectors,
+    ...(round.status === 'APPROVED' ? {
+      reportPdfUrl: '#',
+      customerShareLink: 'กำลังสร้างลิงก์...',
+      contractorShareLink: 'กำลังสร้างลิงก์...',
+      repairProgress: 40,
+    } : {})
   };
 };
 
@@ -904,7 +1031,28 @@ async function fetchRounds() {
 }
 
 function applyRounds(rounds: RoundApiResponse[]) {
-  inspectionRounds.value = rounds.map(mapRoundToView);
+  const mappedRounds = rounds.map(mapRoundToView);
+  inspectionRounds.value = mappedRounds;
+  void populateShareLinks(mappedRounds);
+}
+
+async function populateShareLinks(rounds: RoundView[]) {
+  for (const round of rounds) {
+    if (round.statusKey === 'APPROVED') {
+      try {
+        const [customerRes, contractorRes] = await Promise.all([
+          api.get(`/auth/generate-link?project_id=${jobId.value}&role=customer`),
+          api.get(`/auth/generate-link?project_id=${jobId.value}&role=contractor`)
+        ]);
+        round.customerShareLink = customerRes.data.url;
+        round.contractorShareLink = contractorRes.data.url;
+      } catch (e) {
+        console.error('Failed to generate tokens', e);
+        round.customerShareLink = 'ไม่สามารถสร้างลิงก์ได้';
+        round.contractorShareLink = 'ไม่สามารถสร้างลิงก์ได้';
+      }
+    }
+  }
 }
 
 async function fetchDefectMasterData() {
@@ -1030,6 +1178,10 @@ const inspectionRounds = ref<{
   status: string;
   statusKey: string;
   inspectors?: string[];
+  reportPdfUrl?: string;
+  customerShareLink?: string;
+  contractorShareLink?: string;
+  repairProgress?: number;
 }[]>([]);
 
 const canApproveSelectedRound = computed(() => selectedRound.value?.statusKey === 'SUBMITTED');
@@ -1039,6 +1191,40 @@ const approvalButtonLabel = computed(() =>
 
 const goBack = async () => {
   await router.push('/admin/work');
+};
+
+const copyLink = async (link: string | undefined): Promise<void> => {
+  if (!link) return;
+  try {
+    await copyToClipboard(link);
+    $q.notify({
+      type: 'positive',
+      message: 'คัดลอกลิงก์สำเร็จ',
+      position: 'top',
+      icon: 'check_circle'
+    });
+  } catch {
+    $q.notify({
+      type: 'negative',
+      message: 'คัดลอกลิงก์ไม่สำเร็จ',
+      position: 'top',
+      icon: 'error'
+    });
+  }
+};
+
+const downloadReport = async (_round: RoundView) => {
+  $q.notify({
+    type: 'info',
+    message: 'กำลังเตรียมรายงานสำหรับดาวน์โหลด...',
+    position: 'top',
+  });
+  
+  await openRoundReview(_round);
+  
+  setTimeout(() => {
+    window.print();
+  }, 800);
 };
 
 const onEdit = async () => {
@@ -1626,5 +1812,30 @@ function getRoundStatusColor(status: string) {
   border-radius: 12px !important;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
   border: 1px solid #E2E8F0;
+}
+</style>
+
+<style>
+/* Global print styles to hide everything except the PDF content */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .review-dialog-content, .review-dialog-content * {
+    visibility: visible;
+  }
+  .review-dialog-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  .q-dialog__backdrop,
+  .q-toolbar,
+  .no-print {
+    display: none !important;
+  }
 }
 </style>
