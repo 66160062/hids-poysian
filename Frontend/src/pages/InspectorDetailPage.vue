@@ -175,7 +175,7 @@
           </div>
 
           <q-btn
-            :disable="isSubmitted"
+            :disable="isSubmitted || (isInspected && isConstruction(jobData.job?.inspectionType))"
             :outline="!isInspected"
             :color="isInspected ? 'green' : 'blue'"
             class="full-width q-mb-sm action-btn"
@@ -185,7 +185,7 @@
           >
             <span class="text-weight-bold q-ml-sm">{{
               isInspected
-                ? (isConstruction(jobData.job?.inspectionType) ? 'ดูข้อมูลการตรวจก่อสร้าง' : 'ดูข้อมูลการตรวจ Defect')
+                ? (isConstruction(jobData.job?.inspectionType) ? 'ตรวจเสร็จสิ้น' : 'ดูข้อมูลการตรวจ Defect')
                 : (isConstruction(jobData.job?.inspectionType) ? 'เริ่มตรวจก่อสร้าง' : 'เริ่มตรวจบ้าน')
             }}</span>
             <q-icon

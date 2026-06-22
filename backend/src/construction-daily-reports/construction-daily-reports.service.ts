@@ -36,6 +36,11 @@ export class ConstructionDailyReportsService {
         throw new NotFoundException(`ไม่พบรอบการตรวจ ID ${dto.roundId}`);
       }
 
+      if (!round.inspectedAt) {
+        round.inspectedAt = new Date();
+        await manager.getRepository(InspectionRound).save(round);
+      }
+
       // 2. สร้าง daily_report (ตารางหลัก)
       const report: ConstructionDailyReport = manager
         .getRepository(ConstructionDailyReport)
@@ -164,12 +169,14 @@ export class ConstructionDailyReportsService {
         where: { dailyReportId: savedReport.dailyReportId },
         relations: [
           'round',
+          'round.job',
           'workItems',
           'personnels',
           'issues',
           'accidents',
           'machines',
           'images',
+          'createdBy',
         ],
       });
     });
@@ -182,12 +189,14 @@ export class ConstructionDailyReportsService {
         where: { round: { roundId } },
         relations: [
           'round',
+          'round.job',
           'workItems',
           'personnels',
           'issues',
           'accidents',
           'machines',
           'images',
+          'createdBy',
         ],
         order: { createdAt: 'DESC' },
       });
