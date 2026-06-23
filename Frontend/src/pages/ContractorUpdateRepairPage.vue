@@ -140,8 +140,10 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRepairDetail } from 'src/stores/useContractorRepairDetail'
+import { useLinkAccess } from 'src/stores/useLinkAccess'
 
 const route     = useRoute()
+const { isCustomerViewOnly } = useLinkAccess()
 const defectId  = Number(route.params.id)
 const fileInput = ref<HTMLInputElement>()
 
@@ -158,7 +160,7 @@ const {
 } = useRepairDetail(defectId)
 
 //  computed หลัง destructure
-const isReadOnly = computed(() => defect.value.status === 'รอดำเนินการ')
+const isReadOnly = computed(() => isCustomerViewOnly.value || defect.value.status === 'รอดำเนินการ')
 const isPassed   = computed(() => defect.value.status === 'ผ่าน')
 
 const onFileChange = (e: Event) => {

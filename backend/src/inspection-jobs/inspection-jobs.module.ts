@@ -7,6 +7,7 @@ import { CustomersModule } from 'src/customers/customers.module';
 import { AddressesModule } from 'src/addresses/addresses.module';
 import { HouseTypesModule } from 'src/house-types/house-types.module';
 import { ContractorModule } from 'src/contractor/contractor.module';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ContractorModule } from 'src/contractor/contractor.module';
     AddressesModule,
     HouseTypesModule,
     ContractorModule,
+    AuthModule,
   ],
   controllers: [InspectionJobsController],
   providers: [InspectionJobsService],

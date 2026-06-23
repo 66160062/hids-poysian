@@ -121,6 +121,95 @@
         </q-card-section>
       </q-card>
 
+      <!-- Share Links Card -->
+      <q-card flat bordered class="q-mb-md card-round">
+        <q-card-section>
+          <div class="row items-center q-mb-md">
+            <q-icon name="share" color="primary" size="22px" class="q-mr-sm" />
+            <div class="text-subtitle2 text-weight-bold">แชร์ลิงก์ (Share Links)</div>
+          </div>
+
+          <div class="q-mb-md">
+            <div class="text-caption text-grey-7 q-mb-xs">สำหรับลูกค้า (ดูและดาวน์โหลด)</div>
+            <div class="row q-col-gutter-sm items-center no-wrap">
+              <q-input
+                :model-value="customerShareUrl"
+                readonly
+                dense
+                outlined
+                class="col share-link-input"
+                bg-color="white"
+              />
+              <q-btn
+                unelevated
+                color="primary"
+                icon="content_copy"
+                label="คัดลอกลิงก์"
+                no-caps
+                class="share-copy-btn"
+                :loading="isCopyingCustomer"
+                @click="copyShareLink('customer')"
+              />
+            </div>
+            <div v-if="customerLinkExpiresAt" class="text-caption text-grey-5 q-mt-xs">
+              ลิงก์หมดอายุใน 15 นาที · ไม่ต้อง login
+            </div>
+          </div>
+
+          <div>
+            <div class="row items-center justify-between q-mb-xs">
+              <div class="text-caption text-grey-7">สำหรับผู้รับเหมา (อัปเดตงานซ่อม)</div>
+              <q-chip
+                dense
+                size="sm"
+                :color="contractorShareEnabled ? 'green-2' : 'grey-3'"
+                text-color="dark"
+              >
+                {{ contractorShareEnabled ? 'เปิดใช้งาน' : 'ปิดอยู่' }}
+              </q-chip>
+            </div>
+            <div class="row q-col-gutter-sm items-center no-wrap">
+              <q-input
+                :model-value="contractorShareUrl"
+                readonly
+                dense
+                outlined
+                class="col share-link-input"
+                bg-color="white"
+                :placeholder="contractorShareEnabled ? '' : 'กดคัดลอกลิงก์เพื่อเปิดใช้งาน'"
+              />
+              <q-btn
+                unelevated
+                color="primary"
+                icon="content_copy"
+                label="คัดลอกลิงก์"
+                no-caps
+                class="share-copy-btn"
+                :loading="isCopyingContractor"
+                @click="copyShareLink('contractor')"
+              />
+            </div>
+            <div class="row items-center justify-between q-mt-xs">
+              <div class="text-caption text-grey-5">
+                ไม่หมดอายุอัตโนมัติ · Admin ปิดได้เมื่อไม่ต้องการให้เข้าถึง
+              </div>
+              <q-btn
+                v-if="contractorShareEnabled"
+                flat
+                dense
+                color="negative"
+                icon="link_off"
+                label="ปิดลิงก์"
+                no-caps
+                class="revoke-link-btn"
+                :loading="isRevokingContractor"
+                @click="confirmRevokeContractorLink"
+              />
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+
       <!-- รอบการตรวจ Section -->
       <div class="text-subtitle2 text-weight-bold q-mb-sm">รอบการตรวจ</div>
       <q-card flat bordered class="card-round">
@@ -668,6 +757,22 @@ interface RoundView {
   inspectors?: string[];
 }
 
+interface ShareLinkResponse {
+  token: string;
+  url: string;
+  role: string;
+  expires_at: number | null;
+  admin_controlled?: boolean;
+  contractor_share_enabled?: boolean;
+}
+
+interface ContractorShareStatusResponse {
+  contractor_share_enabled: boolean;
+  token: string | null;
+}
+
+type ShareLinkRole = 'customer' | 'contractor';
+
 interface DefectCategoryOption {
   label: string;
   value: number;
@@ -711,6 +816,130 @@ const selectedRound = ref<RoundView | null>(null);
 const selectedDefect = ref<AdminDefect | null>(null);
 const defectSubCategoryOptions = ref<DefectCategoryOption[]>([]);
 const showRoundReviewDialog = ref(false);
+
+const customerShareUrl = ref('');
+const contractorShareUrl = ref('');
+const customerLinkExpiresAt = ref<number | null>(null);
+const contractorShareEnabled = ref(false);
+const isCopyingCustomer = ref(false);
+const isCopyingContractor = ref(false);
+const isRevokingContractor = ref(false);
+
+function buildShareUrl(role: ShareLinkRole, token: string) {
+  const base = window.location.origin.replace(/\/$/, '');
+  const path =
+    role === 'customer'
+      ? `/view/prj-${jobId.value}`
+      : `/fix/prj-${jobId.value}-con`;
+  return `${base}/#${path}?token=${encodeURIComponent(token)}`;
+}
+
+async function fetchShareLink(role: ShareLinkRole): Promise<ShareLinkResponse> {
+  const { data } = await api.get<ShareLinkResponse>('/auth/generate-link', {
+    params: { project_id: jobId.value, role },
+  });
+  return data;
+}
+
+async function fetchContractorShareStatus() {
+  const { data } = await api.get<ContractorShareStatusResponse>(
+    `/inspection-jobs/${jobId.value}/contractor-share`,
+  );
+  contractorShareEnabled.value = data.contractor_share_enabled;
+  contractorShareUrl.value =
+    data.contractor_share_enabled && data.token
+      ? buildShareUrl('contractor', data.token)
+      : '';
+}
+
+async function loadShareLinks() {
+  try {
+    const customerLink = await fetchShareLink('customer');
+    customerShareUrl.value = buildShareUrl('customer', customerLink.token);
+    customerLinkExpiresAt.value = customerLink.expires_at;
+    await fetchContractorShareStatus();
+  } catch (error) {
+    console.error('Failed to load share links:', error);
+  }
+}
+
+async function copyShareLink(role: ShareLinkRole) {
+  const loadingRef = role === 'customer' ? isCopyingCustomer : isCopyingContractor;
+  loadingRef.value = true;
+
+  try {
+    const link = await fetchShareLink(role);
+    const url = buildShareUrl(role, link.token);
+
+    if (role === 'customer') {
+      customerShareUrl.value = url;
+      customerLinkExpiresAt.value = link.expires_at;
+    } else {
+      contractorShareUrl.value = url;
+      contractorShareEnabled.value = link.contractor_share_enabled ?? true;
+    }
+
+    await navigator.clipboard.writeText(url);
+
+    $q.notify({
+      message:
+        role === 'customer'
+          ? 'คัดลอกลิงก์สำหรับลูกค้าแล้ว'
+          : 'คัดลอกลิงก์สำหรับผู้รับเหมาแล้ว',
+      color: 'positive',
+      icon: 'content_copy',
+      position: 'top',
+    });
+  } catch (error) {
+    console.error('Failed to copy share link:', error);
+    $q.notify({
+      message: 'ไม่สามารถคัดลอกลิงก์ได้',
+      color: 'negative',
+      icon: 'error',
+      position: 'top',
+    });
+  } finally {
+    loadingRef.value = false;
+  }
+}
+
+function confirmRevokeContractorLink() {
+  $q.dialog({
+    title: 'ปิดลิงก์ผู้รับเหมา',
+    message: 'ผู้รับเหมาที่มีลิงก์เดิมจะเข้าใช้งานไม่ได้ทันที ต้องการปิดลิงก์ใช่ไหม?',
+    ok: { label: 'ปิดลิงก์', color: 'negative' },
+    cancel: { label: 'ยกเลิก', flat: true, color: 'grey-7' },
+    persistent: true,
+  }).onOk(() => {
+    void revokeContractorLink();
+  });
+}
+
+async function revokeContractorLink() {
+  isRevokingContractor.value = true;
+  try {
+    await api.patch(`/inspection-jobs/${jobId.value}/contractor-share/revoke`);
+    contractorShareEnabled.value = false;
+    contractorShareUrl.value = '';
+
+    $q.notify({
+      message: 'ปิดลิงก์ผู้รับเหมาแล้ว',
+      color: 'positive',
+      icon: 'link_off',
+      position: 'top',
+    });
+  } catch (error) {
+    console.error('Failed to revoke contractor link:', error);
+    $q.notify({
+      message: 'ไม่สามารถปิดลิงก์ได้',
+      color: 'negative',
+      icon: 'error',
+      position: 'top',
+    });
+  } finally {
+    isRevokingContractor.value = false;
+  }
+}
 
 // Grouping and Pagination State
 interface GroupedDefectItem {
@@ -945,6 +1174,7 @@ async function loadPageData() {
     await userStore.fetchUsers().catch((err) => {
       console.warn('Failed to fetch users for inspector picker:', err);
     });
+    await loadShareLinks();
   } catch (error) {
     console.error('Failed to load job detail:', error);
     $q.notify({
@@ -1531,6 +1761,29 @@ function getRoundStatusColor(status: string) {
   border-radius: 50px;
   height: 48px;
   font-size: 15px;
+}
+
+.revoke-link-btn {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.share-copy-btn {
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 0 14px;
+  height: 40px;
+}
+
+.share-link-input :deep(.q-field__control) {
+  border-radius: 10px;
+}
+
+.share-link-input :deep(input) {
+  font-size: 12px;
+  color: #475569;
 }
 
 /* Create Round Dialog styling matching the mockup precisely */

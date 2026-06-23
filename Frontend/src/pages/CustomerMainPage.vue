@@ -6,6 +6,13 @@
 
     <div class="q-px-md q-pb-xl">
 
+      <q-banner v-if="hasLinkAccess && isCustomerViewOnly" dense rounded class="bg-blue-1 text-primary q-mb-md">
+        <template #avatar>
+          <q-icon name="visibility" color="primary" />
+        </template>
+        โหมดดูอย่างเดียว · ลิงก์มีเวลาจำกัด ไม่ต้อง login
+      </q-banner>
+
       <!-- div class="text-h5 text-weight-bold text-center q-py-md">ภาพรวม</div> -->
 
       <!-- Download Btn -->
@@ -186,17 +193,17 @@
       </q-card>
 
     </div>
-<q-btn
-        color="primary"
-        icon="star"
-        label="รีวิวและให้คะแนน"
-        class="full-width q-mb-md download-btn"
-        unelevated
-        size="md"
-        @click="review"
-      />
-      <ReviewDialog v-model="dialog" />
-    <!--Tab Bar -->
+    <q-btn
+      v-if="!(hasLinkAccess && isCustomerViewOnly)"
+      color="primary"
+      icon="star"
+      label="รีวิวและให้คะแนน"
+      class="full-width q-mb-md download-btn"
+      unelevated
+      size="md"
+      @click="review"
+    />
+    <ReviewDialog v-model="dialog" />
     <q-footer class="bg-white bottom-bar">
       <q-tabs :model-value="activeTab"
       @update:model-value="(tab) => router.push(`/app/${tab}`)">
@@ -215,6 +222,9 @@ import { useDefectSummary } from 'src/stores/useDefectSummary'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ReviewDialog from 'src/components/ReviewDialog.vue'
+import { useLinkAccess } from 'src/stores/useLinkAccess'
+
+const { isCustomerViewOnly, hasLinkAccess } = useLinkAccess()
 
 // ── Defect summary จาก stores ──────────────────────────────────────────
 const {

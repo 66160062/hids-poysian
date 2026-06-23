@@ -55,6 +55,15 @@ export class InspectionJob {
   @Column({ type: 'varchar', length: 50, default: 'Active' })
   status!: string;
 
+  @Column({ type: 'boolean', default: false })
+  contractorShareEnabled!: boolean;
+
+  @Column({ type: 'int', default: 0 })
+  contractorShareGeneration!: number;
+
+  @Column({ type: 'text', nullable: true })
+  contractorShareToken!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 
