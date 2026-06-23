@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@quasar/extras": "^1.16.4",
-    "@rolldown/binding-win32-x64-msvc": "^1.0.0-rc.10",
     "axios": "^1.2.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
