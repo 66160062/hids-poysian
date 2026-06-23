@@ -330,7 +330,7 @@ const form = reactive({
   subDistrict: '',
   postalCode: '',
   usableArea: '',
-  houseType: 1 as number | string,
+  houseType: 1,
   housePlanImage: null as string | null,
   projectImage: null as string | null,
   housePlanImageFile: null as File | null,
