@@ -19,9 +19,10 @@ async function bootstrap() {
     origin: [
       'http://localhost:9000',
       'https://hids-poysian-project.vercel.app',
+      'https://hids-poysian-project-kittisak293s-projects.vercel.app',
     ],
     credentials: true,
   });
-  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+  await app.listen(process.env.PORT || 3000);
 }
 void bootstrap();
