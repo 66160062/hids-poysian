@@ -98,7 +98,7 @@ export class DefectsService {
       throw new ForbiddenException('Contractor cannot update this defect');
     }
 
-    defect.status = DefectStatus.FIXED;
+    defect.status = DefectStatus.REPAIRED;
     defect.contractorNote = contractorUpdateDto.note ?? defect.contractorNote;
     defect.updatedBy = {
       contractorId: contractorUpdateDto.contractorId,

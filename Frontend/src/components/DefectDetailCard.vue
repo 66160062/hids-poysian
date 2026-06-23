@@ -69,7 +69,7 @@ const getImageUrl = (path: string | null | undefined): string | null => {
 };
 // เพิ่มฟังก์ชันสำหรับจัดการข้อมูลสถานะ
 function statusInfo(status: string) {
-  if (status === 'PASS') {
+  if (status === 'verified') {
     return { label: 'ผ่าน', color: 'green-1', textColor: 'green-9' };
   }
   return { label: 'ไม่ผ่าน', color: 'red-1', textColor: 'red-9' };

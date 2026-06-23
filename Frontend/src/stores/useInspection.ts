@@ -157,7 +157,7 @@ export const useInspectionStore = defineStore('inspection', () => {
       const group = map.get(key)!;
       group.totalItems++;
       group.defects.push(defect);
-      if (defect.status === 'PASS') group.passCount++;
+      if (defect.status === 'verified') group.passCount++;
       else group.failCount++;
     }
 
@@ -173,7 +173,7 @@ export const useInspectionStore = defineStore('inspection', () => {
 
   const summaryData = computed(() => {
     const list = filteredDefects.value;
-    const pass = list.filter((d) => d.status === 'PASS').length;
+    const pass = list.filter((d) => d.status === 'verified').length;
     return {
       totalRooms: new Set(list.map((d) => d.room?.roomId)).size, // ✅ เปลี่ยนจาก templateId เป็น roomId
       totalJobs: new Set(

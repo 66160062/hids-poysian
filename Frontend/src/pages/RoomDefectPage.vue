@@ -217,7 +217,7 @@ const filter = ref({
 
 const statusOptions = [
   { value: 'all', label: 'ทั้งหมด' },
-  { value: 'PASS', label: 'ผ่าน' },
+  { value: 'verified', label: 'ผ่าน' },
   { value: 'not_pass', label: 'ไม่ผ่าน' },
 ];
 
@@ -251,8 +251,8 @@ const filteredDefects = computed(() => {
   // filter status
   if (filter.value.statuses.length > 0) {
     list = list.filter((d) => {
-      if (filter.value.statuses.includes('PASS')) return d.status === 'PASS';
-      if (filter.value.statuses.includes('not_pass')) return d.status !== 'PASS';
+      if (filter.value.statuses.includes('verified')) return d.status === 'verified';
+      if (filter.value.statuses.includes('not_pass')) return d.status !== 'verified';
       return true;
     });
   }

@@ -42,7 +42,7 @@ export function useDefectSummary() {
       const defects = defectLists.flat()
 
       totalDefects.value = defects.length
-      passed.value = defects.filter((d) => d.status === 'PASS').length
+      passed.value = defects.filter((d) => d.status === 'verified').length
       inProgress.value = totalDefects.value - passed.value
 
       const categoryCounts = new Map<string, number>()

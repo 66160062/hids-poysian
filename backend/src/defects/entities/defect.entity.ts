@@ -17,10 +17,10 @@ import {
   JoinTable,
 } from 'typeorm';
 export enum DefectStatus {
-  PENDING_REPAIR = 'PENDING_REPAIR',
-  FIXED = 'Fixed',
-  REJECTED = 'REJECTED',
-  PASS = 'PASS',
+  PENDING_REPAIR = 'pending_repair',
+  REPAIRED = 'repaired',
+  REJECTED = 'rejected',
+  VERIFIED = 'verified',
 }
 
 @Entity()
