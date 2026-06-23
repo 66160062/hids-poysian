@@ -61,11 +61,32 @@ interface RoundResponse {
   roundId: number;
 }
 
+interface JobResponse {
+  contractor?: { contractorId: number };
+}
+
+// สถานะดิบจาก backend (DefectStatus): pending_repair, repaired, rejected, verified
+export function defectStatusLabel(status: string): string {
+  switch (status) {
+    case 'verified':
+      return 'ผ่าน';
+    case 'repaired':
+      return 'ซ่อมแล้ว';
+    case 'rejected':
+      return 'ไม่ผ่าน';
+    case 'pending_repair':
+    default:
+      return 'รอดำเนินการ';
+  }
+}
+
 export const useContractorRepair = defineStore('contractorRepair', () => {
   const router = useRouter();
   const search = ref('');
   const loading = ref(false);
   const error = ref<string | null>(null);
+  const contractorId = ref<number | null>(null);
+  const currentJobId = ref<number | null>(null);
 
   const stats = ref<RepairStats>({
     totalRoomTypes: 0,
@@ -82,8 +103,13 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
   const fetchRepairData = async (jobId: number) => {
     loading.value = true;
     error.value = null;
+    currentJobId.value = jobId;
     try {
-      const { data: roundsData } = await api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`);
+      const [{ data: job }, { data: roundsData }] = await Promise.all([
+        api.get<JobResponse>(`/inspection-jobs/${jobId}`),
+        api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`),
+      ]);
+      contractorId.value = job.contractor?.contractorId ?? null;
       const defectLists = await Promise.all(
         roundsData.map((round) =>
           api.get<DefectResponse[]>(`/defects/round/${round.roundId}`).then((res) => res.data),
@@ -117,7 +143,7 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
           roomMap.set(key, room);
         }
 
-        const isPassed = defect.status === 'PASS';
+        const isPassed = defect.status === 'verified';
         room.count++;
         if (isPassed) room.passed++;
         else room.failed++;
@@ -143,7 +169,7 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
             : '',
           location: room.name,
           jobType: categoryNames.join(', ') || '-',
-          status: isPassed ? 'ผ่าน' : 'ไม่ผ่าน',
+          status: defect.status,
           tags: (defect.subCategories ?? []).map((sub) => sub.name),
         });
       }
@@ -151,7 +177,7 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
       rooms.value = Array.from(roomMap.values());
       allDefectItems.value = items;
 
-      const passed = items.filter((item) => item.status === 'ผ่าน').length;
+      const passed = items.filter((item) => item.status === 'verified').length;
       stats.value = {
         totalRoomTypes: roomTypeNames.size,
         totalJobTypes: jobTypeNames.size,
@@ -199,17 +225,25 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
   };
 
   const goToDefectList = (room: RepairRoom) => {
-    void router.push(`/contractor/defect-list/${room.id}`);
+    void router.push({
+      path: `/contractor/defect-list/${room.id}`,
+      query: currentJobId.value ? { jobId: String(currentJobId.value) } : {},
+    });
   };
 
   const goToAllDefects = () => {
-    void router.push('/contractor/defect-list');
+    void router.push({
+      path: '/contractor/defect-list',
+      query: currentJobId.value ? { jobId: String(currentJobId.value) } : {},
+    });
   };
 
   return {
     search,
     loading,
     error,
+    contractorId,
+    currentJobId,
     stats,
     rooms,
     filteredRooms,

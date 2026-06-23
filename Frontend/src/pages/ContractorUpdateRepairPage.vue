@@ -112,10 +112,11 @@
 
     <!-- Submit Button (แสดงเฉพาะโหมด edit) -->
     <div v-if="!isReadOnly" class="fixed-bottom q-pa-md">
+      <div v-if="submitError" class="text-negative text-caption q-mb-xs text-center">{{ submitError }}</div>
       <q-btn
         unelevated color="primary" icon="assignment_turned_in"
         label="ส่งให้วิศวกรตรวจสอบ" class="full-width submit-btn"
-        size="md" :disable="!afterImageUrl" @click="submitRepair"
+        size="md" :loading="isSubmitting" :disable="!afterImageUrl || isSubmitting" @click="submitRepair"
       />
     </div>
 
@@ -151,8 +152,11 @@ const fileInput = ref<HTMLInputElement>()
 const {
   defect,
   afterImageUrl,
+  afterImageFile,
   note,
   submitRepair,
+  isSubmitting,
+  submitError,
   showSuccess,
   confirmSuccess,
   savedAfterImage,
@@ -160,19 +164,23 @@ const {
 } = useRepairDetail(defectId)
 
 //  computed หลัง destructure
-const isReadOnly = computed(() => isCustomerViewOnly.value || defect.value.status === 'รอดำเนินการ')
-const isPassed   = computed(() => defect.value.status === 'ผ่าน')
+// FIXED = ซ่อมแล้ว (รอวิศวกรตรวจ), PASS = ผ่านการตรวจซ้ำแล้ว — ทั้งสองกรณีแก้ไขซ้ำไม่ได้แล้ว
+const isReadOnly = computed(
+  () => isCustomerViewOnly.value || defect.value.status === 'repaired' || defect.value.status === 'verified',
+)
+const isPassed   = computed(() => defect.value.status === 'verified')
 
 const onFileChange = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
+  afterImageFile.value = file
   const reader = new FileReader()
   reader.onload = () => { afterImageUrl.value = reader.result as string }
   reader.readAsDataURL(file)
 }
 
 const triggerCamera   = () => fileInput.value?.click()
-const clearAfterImage = () => { afterImageUrl.value = '' }
+const clearAfterImage = () => { afterImageUrl.value = ''; afterImageFile.value = null }
 </script>
 
 <style scoped>

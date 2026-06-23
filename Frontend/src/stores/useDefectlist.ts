@@ -84,7 +84,7 @@ export function useDefectList() {
             : '',
           location: `${roomName}, ${subRoomName}, ${floorLabel}`,
           jobType: categoryNames.join(', ') || '-',
-          status: defect.status === 'PASS' ? 'ผ่าน' : 'ไม่ผ่าน',
+          status: defect.status === 'verified' ? 'ผ่าน' : 'ไม่ผ่าน',
           tags: (defect.subCategories ?? []).map((sub) => sub.name),
           roomName,
           categoryNames,

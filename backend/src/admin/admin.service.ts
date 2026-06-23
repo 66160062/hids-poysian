@@ -485,7 +485,7 @@ export class AdminService {
         const remainingDefects = await this.defectsRepo.count({
           where: {
             round: { roundId: In(sortedRounds.map((r) => r.roundId)) },
-            status: Not(DefectStatus.PASS),
+            status: Not(DefectStatus.VERIFIED),
           },
         });
         newStatus = remainingDefects === 0 ? 'Completed' : 'Active';

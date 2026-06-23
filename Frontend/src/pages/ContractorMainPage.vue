@@ -3,6 +3,14 @@
 
     <div class="q-px-md q-pt-md q-pb-xl">
 
+      <!-- Error Banner -->
+      <q-banner v-if="error" class="text-white bg-negative q-mb-md" rounded dense>
+        {{ error }}
+        <template #action>
+          <q-btn flat label="ลองใหม่" @click="loadData" />
+        </template>
+      </q-banner>
+
       <!-- Search Bar -->
       <q-input
         v-model="search"
@@ -140,7 +148,7 @@ import { useLinkAccess } from 'src/stores/useLinkAccess'
 
 const route = useRoute()
 const { projectId } = useLinkAccess()
-const { search, stats, filteredRooms, tagColor, fetchRepairData, goToDefectList, goToAllDefects } = useContractorRepair()
+const { search, stats, error, filteredRooms, tagColor, fetchRepairData, goToDefectList, goToAllDefects } = useContractorRepair()
 
 function getJobId(): number | null {
   const queryJobId = route.query.jobId
@@ -148,11 +156,13 @@ function getJobId(): number | null {
   return projectId.value
 }
 
-onMounted(async () => {
+async function loadData() {
   const jobId = getJobId()
   if (!jobId) return
   await fetchRepairData(jobId)
-})
+}
+
+onMounted(loadData)
 
 </script>
 

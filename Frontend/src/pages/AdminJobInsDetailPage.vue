@@ -22,7 +22,13 @@
           :class="job.projectImage ? 'cursor-pointer' : ''"
           @click="viewProjectImage"
         >
-          <q-img loading="eager" v-if="job.projectImage" :src="job.projectImage" class="house-img" fit="cover" />
+          <q-img
+            loading="eager"
+            v-if="job.projectImage"
+            :src="job.projectImage"
+            class="house-img"
+            fit="cover"
+          />
           <div v-else class="house-img-placeholder row items-center justify-center bg-grey-2">
             <q-icon name="home" size="64px" color="grey-4" />
           </div>
@@ -251,7 +257,10 @@
                 >
                 <q-item-label caption class="column q-gutter-y-xs">
                   <span>วันที่: {{ round.date }}</span>
-                  <span v-if="round.inspectors && round.inspectors.length" class="text-primary text-caption text-weight-medium">
+                  <span
+                    v-if="round.inspectors && round.inspectors.length"
+                    class="text-primary text-caption text-weight-medium"
+                  >
                     ผู้ตรวจ: {{ round.inspectors.join(', ') }}
                   </span>
                 </q-item-label>
@@ -282,7 +291,12 @@
                 :style="isLatestRoundNotCompleted ? 'pointer-events: none;' : ''"
                 @click="onCreateRound"
               />
-              <q-tooltip v-if="isLatestRoundNotCompleted" class="bg-red text-white" anchor="top middle" self="bottom middle">
+              <q-tooltip
+                v-if="isLatestRoundNotCompleted"
+                class="bg-red text-white"
+                anchor="top middle"
+                self="bottom middle"
+              >
                 กรุณาปิดรอบก่อนหน้าให้เสร็จสิ้นก่อน
               </q-tooltip>
             </div>
@@ -302,7 +316,12 @@
           <q-btn dense flat round icon="close" v-close-popup size="lg" color="white" />
         </q-toolbar>
         <q-card-section class="col flex flex-center q-pa-none">
-          <q-img loading="eager" :src="currentImageUrl" fit="contain" class="full-height full-width" />
+          <q-img
+            loading="eager"
+            :src="currentImageUrl"
+            fit="contain"
+            class="full-height full-width"
+          />
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -319,7 +338,9 @@
         <div class="row q-col-gutter-md q-mb-md">
           <!-- Inspection Date Field -->
           <div class="col-12 col-sm-6">
-            <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">วันที่นัดตรวจ</div>
+            <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">
+              วันที่นัดตรวจ
+            </div>
             <q-input
               borderless
               dense
@@ -332,15 +353,26 @@
               <template v-slot:prepend>
                 <q-icon name="calendar_month" color="primary" size="20px" class="q-ml-sm" />
               </template>
-              <q-popup-proxy v-model="showDatePicker" transition-show="scale" transition-hide="scale">
-                <q-date v-model="scheduledDate" mask="YYYY-MM-DD" :options="dateOptions" @update:model-value="showDatePicker = false" />
+              <q-popup-proxy
+                v-model="showDatePicker"
+                transition-show="scale"
+                transition-hide="scale"
+              >
+                <q-date
+                  v-model="scheduledDate"
+                  mask="YYYY-MM-DD"
+                  :options="dateOptions"
+                  @update:model-value="showDatePicker = false"
+                />
               </q-popup-proxy>
             </q-input>
           </div>
 
           <!-- Time Field -->
           <div class="col-12 col-sm-6">
-            <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">รอบการเข้าตรวจ</div>
+            <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">
+              รอบการเข้าตรวจ
+            </div>
             <q-btn-toggle
               v-model="timeInput"
               spread
@@ -352,8 +384,8 @@
               text-color="grey-8"
               style="border: 1px solid #e0e0e0"
               :options="[
-                {label: 'เช้า (9:00-12:00)', value: '09:00:00'},
-                {label: 'บ่าย (13:00-16:00)', value: '13:00:00'}
+                { label: 'เช้า (9:00-12:00)', value: '09:00:00' },
+                { label: 'บ่าย (13:00-16:00)', value: '13:00:00' },
               ]"
             />
           </div>
@@ -361,7 +393,9 @@
 
         <!-- Select Team vs Individuals Toggle -->
         <div class="q-mb-md">
-          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">รูปแบบการมอบหมายงาน</div>
+          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">
+            รูปแบบการมอบหมายงาน
+          </div>
           <q-btn-toggle
             v-model="assignmentMode"
             spread
@@ -372,8 +406,8 @@
             color="white"
             text-color="grey-8"
             :options="[
-              {label: 'มอบหมายให้ทีม', value: 'team'},
-              {label: 'มอบหมายรายบุคคล', value: 'individual'}
+              { label: 'มอบหมายให้ทีม', value: 'team' },
+              { label: 'มอบหมายรายบุคคล', value: 'individual' },
             ]"
             class="q-mb-md border-grey"
             style="border: 1px solid #e0e0e0"
@@ -382,7 +416,9 @@
 
         <!-- Select Team -->
         <div v-if="assignmentMode === 'team'" class="q-mb-lg">
-          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">เลือกทีม (Team)</div>
+          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">
+            เลือกทีม (Team)
+          </div>
           <q-select
             borderless
             dense
@@ -430,13 +466,7 @@
         <!-- Dialog Actions -->
         <q-card-actions class="row q-col-gutter-x-md q-px-none q-pb-none q-mt-lg">
           <div class="col-6">
-            <q-btn
-              outline
-              label="ยกเลิก"
-              class="full-width cancel-btn"
-              no-caps
-              v-close-popup
-            />
+            <q-btn outline label="ยกเลิก" class="full-width cancel-btn" no-caps v-close-popup />
           </div>
           <div class="col-6">
             <q-btn
@@ -453,7 +483,12 @@
     </q-dialog>
 
     <!-- Review Round / Defect Dialog -->
-    <q-dialog v-model="showRoundReviewDialog" maximized transition-show="slide-up" transition-hide="slide-down">
+    <q-dialog
+      v-model="showRoundReviewDialog"
+      maximized
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
       <q-card class="bg-grey-1 column no-wrap full-height">
         <q-toolbar class="bg-white shadow-1">
           <q-btn flat round dense icon="close" v-close-popup />
@@ -479,11 +514,14 @@
                 <q-card-section class="row items-center justify-between">
                   <div>
                     <div class="text-subtitle2 text-weight-bold">รายการ Defect</div>
-                    <div class="text-caption text-grey-6">
-                      {{ roundDefects.length }} รายการ
-                    </div>
+                    <div class="text-caption text-grey-6">{{ roundDefects.length }} รายการ</div>
                   </div>
-                  <q-chip v-if="selectedRound" dense :color="getRoundStatusColor(selectedRound.status)" text-color="dark">
+                  <q-chip
+                    v-if="selectedRound"
+                    dense
+                    :color="getRoundStatusColor(selectedRound.status)"
+                    text-color="dark"
+                  >
                     {{ selectedRound.status }}
                   </q-chip>
                 </q-card-section>
@@ -496,7 +534,9 @@
 
                 <q-card-section v-else-if="roundDefectsError" class="column items-center q-py-xl">
                   <q-icon name="error_outline" size="48px" color="negative" />
-                  <div class="text-body2 text-negative q-mt-sm text-center">{{ roundDefectsError }}</div>
+                  <div class="text-body2 text-negative q-mt-sm text-center">
+                    {{ roundDefectsError }}
+                  </div>
                   <q-btn
                     flat
                     color="primary"
@@ -508,9 +548,14 @@
                   />
                 </q-card-section>
 
-                <q-card-section v-else-if="roundDefects.length === 0" class="column items-center q-py-xl">
+                <q-card-section
+                  v-else-if="roundDefects.length === 0"
+                  class="column items-center q-py-xl"
+                >
                   <q-icon name="fact_check" size="48px" color="grey-4" />
-                  <div class="text-body2 text-grey-6 q-mt-sm text-center">ไม่พบรายการ defect ในรอบนี้</div>
+                  <div class="text-body2 text-grey-6 q-mt-sm text-center">
+                    ไม่พบรายการ defect ในรอบนี้
+                  </div>
                   <div class="text-caption text-grey-5 q-mt-xs text-center">
                     หากเป็นรอบที่รออนุมัติ ให้ตรวจสอบว่า inspector ได้บันทึก defect แล้วหรือไม่
                   </div>
@@ -526,9 +571,21 @@
                 </div>
 
                 <div v-else class="column">
-                  <div class="row items-center q-pa-sm bg-grey-2" style="position: sticky; top: 0; z-index: 10;">
-                    <q-btn flat round dense icon="arrow_back" color="primary" @click="selectedGroupKey = null" />
-                    <div class="text-subtitle2 q-ml-sm text-weight-bold">{{ groupedDefects.find(g => g.groupKey === selectedGroupKey)?.roomName }}</div>
+                  <div
+                    class="row items-center q-pa-sm bg-grey-2"
+                    style="position: sticky; top: 0; z-index: 10"
+                  >
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      icon="arrow_back"
+                      color="primary"
+                      @click="selectedGroupKey = null"
+                    />
+                    <div class="text-subtitle2 q-ml-sm text-weight-bold">
+                      {{ groupedDefects.find((g) => g.groupKey === selectedGroupKey)?.roomName }}
+                    </div>
                   </div>
                   <q-list separator>
                     <q-item
@@ -542,7 +599,12 @@
                     >
                       <q-item-section avatar>
                         <q-avatar rounded size="52px" color="grey-2">
-                          <q-img loading="eager" v-if="defect.imageUrl" :src="getImageUrl(defect.imageUrl) ?? ''" fit="cover" />
+                          <q-img
+                            loading="eager"
+                            v-if="defect.imageUrl"
+                            :src="getImageUrl(defect.imageUrl) ?? ''"
+                            fit="cover"
+                          />
                           <q-icon v-else name="image_not_supported" color="grey-5" />
                         </q-avatar>
                       </q-item-section>
@@ -554,7 +616,12 @@
                           {{ defect.description || '-' }}
                         </q-item-label>
                         <div class="row q-gutter-xs q-mt-xs">
-                          <q-chip dense size="sm" :color="defect.severity === 'Major' ? 'red-1' : 'orange-1'" text-color="dark">
+                          <q-chip
+                            dense
+                            size="sm"
+                            :color="defect.severity === 'Major' ? 'red-1' : 'orange-1'"
+                            text-color="dark"
+                          >
                             {{ defect.severity }}
                           </q-chip>
                           <q-chip dense size="sm" color="grey-2" text-color="dark">
@@ -564,7 +631,7 @@
                       </q-item-section>
                     </q-item>
                   </q-list>
-                  
+
                   <!-- Pagination -->
                   <div class="row justify-center q-mt-md q-mb-md" v-if="totalPages > 1">
                     <q-pagination
@@ -587,7 +654,11 @@
                 <q-card-section v-if="!selectedDefect" class="column items-center q-py-xl">
                   <q-icon name="edit_note" size="56px" color="grey-4" />
                   <div class="text-body2 text-grey-6 q-mt-sm text-center">
-                    {{ roundDefectsError ? 'ยังแก้ไขไม่ได้เพราะโหลด defect ไม่สำเร็จ' : 'เลือกรายการ defect เพื่อแก้ไข' }}
+                    {{
+                      roundDefectsError
+                        ? 'ยังแก้ไขไม่ได้เพราะโหลด defect ไม่สำเร็จ'
+                        : 'เลือกรายการ defect เพื่อแก้ไข'
+                    }}
                   </div>
                 </q-card-section>
 
@@ -598,7 +669,9 @@
                         <div class="text-subtitle2 text-weight-bold">
                           แก้ไข Defect #{{ selectedDefect.defectId }}
                         </div>
-                        <div class="text-caption text-grey-6">{{ getDefectRoomLabel(selectedDefect) }}</div>
+                        <div class="text-caption text-grey-6">
+                          {{ getDefectRoomLabel(selectedDefect) }}
+                        </div>
                       </div>
                       <q-btn
                         flat
@@ -671,7 +744,13 @@
                   <q-separator />
 
                   <q-card-actions align="right" class="q-pa-md">
-                    <q-btn flat color="grey-7" label="ยกเลิก" no-caps @click="resetSelectedDefectForm" />
+                    <q-btn
+                      flat
+                      color="grey-7"
+                      label="ยกเลิก"
+                      no-caps
+                      @click="resetSelectedDefectForm"
+                    />
                     <q-btn
                       unelevated
                       color="primary"
@@ -793,7 +872,6 @@ const router = useRouter();
 const $q = useQuasar();
 const userStore = useUserStore();
 
-
 const jobId = computed(() => Number(route.params.id));
 
 const isLatestRoundNotCompleted = computed(() => {
@@ -827,10 +905,7 @@ const isRevokingContractor = ref(false);
 
 function buildShareUrl(role: ShareLinkRole, token: string) {
   const base = window.location.origin.replace(/\/$/, '');
-  const path =
-    role === 'customer'
-      ? `/view/prj-${jobId.value}`
-      : `/fix/prj-${jobId.value}-con`;
+  const path = role === 'customer' ? `/view/prj-${jobId.value}` : `/fix/prj-${jobId.value}-con`;
   return `${base}/#${path}?token=${encodeURIComponent(token)}`;
 }
 
@@ -847,9 +922,7 @@ async function fetchContractorShareStatus() {
   );
   contractorShareEnabled.value = data.contractor_share_enabled;
   contractorShareUrl.value =
-    data.contractor_share_enabled && data.token
-      ? buildShareUrl('contractor', data.token)
-      : '';
+    data.contractor_share_enabled && data.token ? buildShareUrl('contractor', data.token) : '';
 }
 
 async function loadShareLinks() {
@@ -883,9 +956,7 @@ async function copyShareLink(role: ShareLinkRole) {
 
     $q.notify({
       message:
-        role === 'customer'
-          ? 'คัดลอกลิงก์สำหรับลูกค้าแล้ว'
-          : 'คัดลอกลิงก์สำหรับผู้รับเหมาแล้ว',
+        role === 'customer' ? 'คัดลอกลิงก์สำหรับลูกค้าแล้ว' : 'คัดลอกลิงก์สำหรับผู้รับเหมาแล้ว',
       color: 'positive',
       icon: 'content_copy',
       position: 'top',
@@ -987,7 +1058,7 @@ const groupedDefects = computed<GroupedDefectItem[]>(() => {
     const group = map.get(key)!;
     group.totalItems++;
     group.defects.push(defect);
-    if (defect.status === 'PASS') group.passCount++;
+    if (defect.status === 'verified') group.passCount++;
     else group.failCount++;
   }
 
@@ -1003,7 +1074,7 @@ const selectedGroupKey = ref<string | null>(null);
 
 const currentRoomDefects = computed(() => {
   if (!selectedGroupKey.value) return [];
-  const group = groupedDefects.value.find(g => g.groupKey === selectedGroupKey.value);
+  const group = groupedDefects.value.find((g) => g.groupKey === selectedGroupKey.value);
   return group?.defects ?? [];
 });
 
@@ -1033,7 +1104,7 @@ const defectEditForm = ref<{
 }>({
   description: '',
   severity: 'Minor',
-  status: 'PENDING_REPAIR',
+  status: 'pending_repair',
   subCategoryIds: [],
   file: null,
 });
@@ -1044,18 +1115,16 @@ const severityOptions = [
 ];
 
 const defectStatusOptions = [
-  { label: 'รอซ่อม', value: 'PENDING_REPAIR' },
-  { label: 'ผ่าน', value: 'PASS' },
-  { label: 'ปฏิเสธ', value: 'REJECTED' },
+  { label: 'รอซ่อม', value: 'pending_repair' },
+  { label: 'ผ่าน', value: 'verified' },
+  { label: 'ปฏิเสธ', value: 'rejected' },
 ];
-
-
 
 const formatRoundDate = (dateStr: string) => {
   if (!dateStr) return '-';
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return dateStr;
-  
+
   const formattedDate = date.toLocaleDateString('th-TH', {
     day: '2-digit',
     month: '2-digit',
@@ -1069,7 +1138,7 @@ const formatRoundDate = (dateStr: string) => {
   } else if (hour === 13) {
     return `${formattedDate} (รอบบ่าย)`;
   }
-  
+
   return formattedDate;
 };
 
@@ -1088,9 +1157,9 @@ const mapRoundStatus = (status: string) => {
 
 const mapRoundToView = (round: RoundApiResponse) => {
   let inspectors: string[] = [];
-  
+
   if (round.teamMembers && round.teamMembers.length > 0) {
-    inspectors = round.teamMembers.map(member => {
+    inspectors = round.teamMembers.map((member) => {
       if (member.team?.team_name) {
         return `[ทีม] ${member.team.team_name}`;
       } else if (member.inspector?.fullName) {
@@ -1141,9 +1210,10 @@ async function fetchDefectMasterData() {
 
   isLoadingDefectMaster.value = true;
   try {
-    const { data } = await api.get<
-      { subCategoryId: number; name: string; category?: { name?: string } }[]
-    >('/defect-sub-categories');
+    const { data } =
+      await api.get<{ subCategoryId: number; name: string; category?: { name?: string } }[]>(
+        '/defect-sub-categories',
+      );
     defectSubCategoryOptions.value = data.map((item) => ({
       value: item.subCategoryId,
       label: item.category?.name ? `${item.category.name} - ${item.name}` : item.name,
@@ -1165,9 +1235,9 @@ async function loadPageData() {
   isLoading.value = true;
   try {
     await Promise.all([
-      fetchJobDetails(), 
+      fetchJobDetails(),
       fetchTeamMembers(),
-      teamStore.fetchTeams() // ดึงข้อมูลทีม
+      teamStore.fetchTeams(), // ดึงข้อมูลทีม
     ]);
     const rounds = await fetchRounds();
     applyRounds(rounds);
@@ -1217,7 +1287,7 @@ const job = computed(() => {
 
   const formatAddressStr = (addr?: AddressEntity) => {
     if (!addr) return '-';
-    
+
     const parts = [];
     if (addr.houseNumber) parts.push(`เลขที่ ${addr.houseNumber}`);
     if (addr.floor && addr.floor !== '-' && addr.floor !== '') parts.push(`ชั้น ${addr.floor}`);
@@ -1226,7 +1296,7 @@ const job = computed(() => {
     if (addr.district) parts.push(`อ.${addr.district}`);
     if (addr.province) parts.push(`จ.${addr.province}`);
     if (addr.postalCode) parts.push(`${addr.postalCode}`);
-    
+
     return parts.length > 0 ? parts.join(' ') : '-';
   };
 
@@ -1236,7 +1306,9 @@ const job = computed(() => {
     projectName: data.projectName || '-',
     houseType: data.houseType?.name || '-',
     area: data.usableArea?.toString() || '-',
-    appointmentDate: latestRound?.date || (data.createdAt ? new Date(data.createdAt).toLocaleDateString('th-TH') : '-'),
+    appointmentDate:
+      latestRound?.date ||
+      (data.createdAt ? new Date(data.createdAt).toLocaleDateString('th-TH') : '-'),
     address: formatAddressStr(data.address),
     customerName: data.customer?.fullName || '-',
     customerPhone: data.customer?.phoneNumber || '-',
@@ -1244,7 +1316,7 @@ const job = computed(() => {
     coordName: data.contractor?.fullName || '-',
     coordPhone: data.contractor?.phoneNumber || '-',
     coordEmail: data.contractor?.email || '-',
-    coordLine: data.contractor?.companyName || '-', 
+    coordLine: data.contractor?.companyName || '-',
     housePlanImage: getImageUrl(data.housePlanUrl),
     projectImage: getImageUrl(data.projectImageUrl),
     status: latestRound?.status || data.status || '-',
@@ -1253,14 +1325,16 @@ const job = computed(() => {
 });
 
 // Reactive inspection rounds
-const inspectionRounds = ref<{
-  id: number;
-  roundNumber: number;
-  date: string;
-  status: string;
-  statusKey: string;
-  inspectors?: string[];
-}[]>([]);
+const inspectionRounds = ref<
+  {
+    id: number;
+    roundNumber: number;
+    date: string;
+    status: string;
+    statusKey: string;
+    inspectors?: string[];
+  }[]
+>([]);
 
 const canApproveSelectedRound = computed(() => selectedRound.value?.statusKey === 'SUBMITTED');
 const approvalButtonLabel = computed(() =>
@@ -1279,7 +1353,7 @@ const openGoogleMaps = () => {
   if (!jobData.value) return;
   const projectName = jobData.value.projectName || '';
   const addr = jobData.value.address;
-  
+
   const addressParts = [
     projectName,
     addr?.houseNumber ? `เลขที่ ${addr.houseNumber}` : '',
@@ -1288,11 +1362,11 @@ const openGoogleMaps = () => {
     addr?.subDistrict ? `ต.${addr.subDistrict}` : '',
     addr?.district ? `อ.${addr.district}` : '',
     addr?.province ? `จ.${addr.province}` : '',
-    addr?.postalCode || ''
+    addr?.postalCode || '',
   ];
-  
+
   const searchQuery = addressParts.filter(Boolean).join(' ');
-  
+
   if (searchQuery.trim() && (projectName || addr?.province)) {
     const encodedQuery = encodeURIComponent(searchQuery);
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
@@ -1302,7 +1376,7 @@ const openGoogleMaps = () => {
       message: 'ไม่พบข้อมูลที่อยู่สำหรับค้นหาในแผนที่',
       color: 'warning',
       position: 'top',
-      icon: 'warning'
+      icon: 'warning',
     });
   }
 };
@@ -1333,7 +1407,8 @@ const viewPlan = () => {
 
 const viewDefectImage = () => {
   if (!selectedDefect.value?.imageUrl) return;
-  currentImageUrl.value = getImageUrl(selectedDefect.value.imageUrl) ?? selectedDefect.value.imageUrl;
+  currentImageUrl.value =
+    getImageUrl(selectedDefect.value.imageUrl) ?? selectedDefect.value.imageUrl;
   showImageDialog.value = true;
 };
 
@@ -1389,7 +1464,7 @@ function selectDefect(defect: AdminDefect) {
   defectEditForm.value = {
     description: defect.description || '',
     severity: defect.severity || 'Minor',
-    status: defect.status || 'PENDING_REPAIR',
+    status: defect.status || 'pending_repair',
     subCategoryIds: defect.subCategories?.map((item) => item.subCategoryId) ?? [],
     file: null,
   };
@@ -1467,7 +1542,9 @@ async function approveSelectedRound() {
     const rounds = await fetchRounds();
     applyRounds(rounds);
     await fetchJobDetails(); // Fetch job details to update job status
-    const updatedRound = inspectionRounds.value.find((round) => round.id === selectedRound.value?.id);
+    const updatedRound = inspectionRounds.value.find(
+      (round) => round.id === selectedRound.value?.id,
+    );
     selectedRound.value = updatedRound ?? null;
 
     $q.notify({
@@ -1539,7 +1616,7 @@ const filterInspectors = (val: string, update: (callback: () => void) => void) =
       filteredInspectorOptions.value = inspectorOptions.value;
     } else {
       filteredInspectorOptions.value = inspectorOptions.value.filter(
-        (v) => v.label.toLowerCase().indexOf(needle) > -1
+        (v) => v.label.toLowerCase().indexOf(needle) > -1,
       );
     }
   });
@@ -1575,7 +1652,11 @@ const submitCreateRound = async () => {
     return;
   }
 
-  if (assignmentMode.value === 'team' && !selectedTeam.value && selectedInspectors.value.length === 0) {
+  if (
+    assignmentMode.value === 'team' &&
+    !selectedTeam.value &&
+    selectedInspectors.value.length === 0
+  ) {
     $q.notify({
       message: 'กรุณาเลือกทีม หรือ ผู้ตรวจอย่างน้อย 1 คน',
       color: 'warning',
@@ -1606,7 +1687,9 @@ const submitCreateRound = async () => {
     }
 
     const roundPayload: RoundPayload = {
-      scheduledDate: timeInput.value ? `${scheduledDate.value} ${timeInput.value}` : scheduledDate.value,
+      scheduledDate: timeInput.value
+        ? `${scheduledDate.value} ${timeInput.value}`
+        : scheduledDate.value,
       status: 'SCHEDULED',
     };
 
@@ -1625,7 +1708,10 @@ const submitCreateRound = async () => {
     // 2. ดึงรอบที่เพิ่งถูกสร้างขึ้นมา (backend สร้างไปที่ล่าสุดแล้ว)
     // สำหรับคนที่เหลือ ให้ยิงเข้า /assignments เพื่อผูกกับรอบนั้น (ซึ่ง Backend ผูกกับรอบล่าสุดให้)
     let extraInspectors = selectedInspectors.value;
-    if (assignmentMode.value === 'individual' || (!selectedTeam.value && assignmentMode.value === 'team')) {
+    if (
+      assignmentMode.value === 'individual' ||
+      (!selectedTeam.value && assignmentMode.value === 'team')
+    ) {
       // ตัดคนแรกออก เพราะถูกส่งไปสร้างรอบแล้ว
       extraInspectors = selectedInspectors.value.slice(1);
     }
@@ -1791,11 +1877,13 @@ function getRoundStatusColor(status: string) {
   border-radius: 24px !important;
   max-width: 420px;
   width: 100%;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .text-dark-blue {
-  color: #1E293B;
+  color: #1e293b;
   font-family: 'Outfit', 'Inter', sans-serif;
   font-size: 20px;
   font-weight: 700;
@@ -1814,39 +1902,42 @@ function getRoundStatusColor(status: string) {
 
 .font-sub {
   font-size: 11px;
-  color: #64748B;
+  color: #64748b;
 }
 
 /* Custom Outlined Inputs with rounded edges and grey background */
-.custom-input, .custom-select {
-  border: 1px solid #E2E8F0;
+.custom-input,
+.custom-select {
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
-  background-color: #F8FAFC;
+  background-color: #f8fafc;
   padding: 2px 8px;
   transition: all 0.2s ease-in-out;
 }
 
-.custom-input:hover, .custom-select:hover {
-  border-color: #CBD5E1;
+.custom-input:hover,
+.custom-select:hover {
+  border-color: #cbd5e1;
 }
 
-.custom-input.q-field--focused, .custom-select.q-field--focused {
-  border-color: #3B82F6;
-  background-color: #FFFFFF;
+.custom-input.q-field--focused,
+.custom-select.q-field--focused {
+  border-color: #3b82f6;
+  background-color: #ffffff;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
 /* Customize Chips */
 .custom-select :deep(.q-chip) {
-  background: #E2E8F0;
-  color: #1E293B;
+  background: #e2e8f0;
+  color: #1e293b;
   font-weight: 500;
   border-radius: 6px;
 }
 
 /* Custom Buttons matching screenshot */
 .cancel-btn {
-  border: 1px solid #E2E8F0 !important;
+  border: 1px solid #e2e8f0 !important;
   color: #475569 !important;
   border-radius: 50px !important;
   font-weight: 600;
@@ -1855,12 +1946,12 @@ function getRoundStatusColor(status: string) {
 }
 
 .cancel-btn:hover {
-  background-color: #F8FAFC !important;
-  border-color: #CBD5E1 !important;
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
 }
 
 .submit-btn {
-  background: #2563EB !important; /* Vibrant primary blue from the mockup */
+  background: #2563eb !important; /* Vibrant primary blue from the mockup */
   color: white !important;
   border-radius: 50px !important;
   font-weight: 600;
@@ -1870,7 +1961,7 @@ function getRoundStatusColor(status: string) {
 }
 
 .submit-btn:hover {
-  background: #1D4ED8 !important;
+  background: #1d4ed8 !important;
   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
 }
 
@@ -1878,6 +1969,6 @@ function getRoundStatusColor(status: string) {
 .custom-dropdown-popup {
   border-radius: 12px !important;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #e2e8f0;
 }
 </style>
