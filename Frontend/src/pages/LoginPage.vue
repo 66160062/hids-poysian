@@ -10,5 +10,5 @@
 
 <script setup lang="ts">
 import LoginForm from 'src/components/LoginForm.vue';
-import Logos from 'src/assets/Logos/Poysianlogo.png';
+import Logos from 'src/assets/Logos/PoysianLogo.png';
 </script>
