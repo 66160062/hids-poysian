@@ -78,6 +78,10 @@ import { DailyReportImage } from './construction-daily-reports/entities/daily-re
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
+      ssl:
+        process.env.NODE_ENV === 'production'
+          ? { rejectUnauthorized: false }
+          : false,
       entities: [
         User,
         InspectionJob,
