@@ -240,8 +240,8 @@
         <q-btn
           :disable="!canSubmitApproval"
           :class="['full-width', !canSubmitApproval ? 'disabled-btn' : 'shadow-2']"
-          :color="isSubmitted ? 'grey-5' : canSubmitApproval ? 'primary' : 'grey-4'"
-          :label="isSubmitted ? 'ส่งอนุมัติการตรวจเรียบร้อยแล้ว' : 'ส่งอนุมัติการตรวจ'"
+          :color="isApproved ? 'grey-4' : isSubmitted ? 'grey-5' : canSubmitApproval ? 'primary' : 'grey-4'"
+          :label="isApproved ? 'อนุมัติการตรวจแล้ว' : isSubmitted ? 'ส่งอนุมัติการตรวจเรียบร้อยแล้ว' : 'ส่งอนุมัติการตรวจ'"
           no-caps
           @click="onSubmit()"
           style="
@@ -328,14 +328,15 @@ const pdfSummaryItems = ref<InspectionSummaryItem[]>([]);
 const isInspected = computed(() => !!jobData.value?.inspectedAt);
 const isSummaryDone = computed(() => !!jobData.value?.summaryCompletedAt);
 const isSubmitted = computed(() => jobData.value?.status === 'SUBMITTED');
+const isApproved = computed(() => jobData.value?.status === 'APPROVED');
 const canSubmitApproval = computed(() => {
-  if (isSubmitted.value) return false;
+  if (isSubmitted.value || isApproved.value) return false;
   if (!isInspected.value) return false;
-  
+
   if (isConstruction(jobData.value?.job?.inspectionType)) {
     return true; // Construction only requires inspection to be done
   }
-  
+
   return isSummaryDone.value; // Defect requires summary to be done
 });
 
@@ -417,7 +418,7 @@ async function handleViewReport() {
     pdfSummaryItems.value = summaryRes.data;
     pdfDataLoaded.value = true;
     showReportDialog.value = true; // เปิด Dialog แสงดรายงาน
-    
+
   } catch (error) {
     console.error('Error generating report:', error);
     $q.notify({ color: 'negative', message: 'เกิดข้อผิดพลาดในการดึงข้อมูลรายงาน' });
