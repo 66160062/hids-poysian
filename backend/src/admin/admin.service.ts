@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, In, Not } from 'typeorm';
 import { InspectionJob } from '../inspection-jobs/entities/inspection-job.entity';
 import { InspectionRound } from '../inspection-rounds/entities/inspection-round.entity';
+import { Defect, DefectStatus } from '../defects/entities/defect.entity';
 import {
   DashboardResponse,
   DashboardTaskItem,
@@ -24,6 +25,8 @@ export class AdminService {
     private readonly jobsRepo: Repository<InspectionJob>,
     @InjectRepository(InspectionRound)
     private readonly roundsRepo: Repository<InspectionRound>,
+    @InjectRepository(Defect)
+    private readonly defectsRepo: Repository<Defect>,
   ) {}
 
   /**
@@ -111,10 +114,16 @@ export class AdminService {
       .map((round: InspectionRound): number => {
         const d = new Date(round.scheduledDate);
         return !isNaN(d.getTime())
-          ? parseInt(d.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'Asia/Bangkok' }), 10)
+          ? parseInt(
+              d.toLocaleDateString('en-US', {
+                day: 'numeric',
+                timeZone: 'Asia/Bangkok',
+              }),
+              10,
+            )
           : 0;
       })
-      .filter(day => day > 0);
+      .filter((day) => day > 0);
 
     // ========================================
     // 3. ดึง 15 งานที่ถูกสร้างล่าสุด
@@ -139,16 +148,21 @@ export class AdminService {
     // 4. แปลง InspectionJob → DashboardTaskItem
     //    พร้อม Map สีและไอคอนตาม Design ของ Frontend
     // ========================================
-    const tasks: DashboardTaskItem[] = recentJobs.map((job: InspectionJob): DashboardTaskItem => {
-      // ค้นหารอบตรวจล่าสุดเพื่อดึงข้อมูล (เรียงจาก id มากไปน้อย)
-      let latestRound: InspectionRound | null = null;
-      if (job.rounds && job.rounds.length > 0) {
-        const sortedRounds = [...job.rounds].sort((a, b) => b.roundId - a.roundId);
-        latestRound = sortedRounds[0];
-      }
+    const tasks: DashboardTaskItem[] = recentJobs.map(
+      (job: InspectionJob): DashboardTaskItem => {
+        // ค้นหารอบตรวจล่าสุดเพื่อดึงข้อมูล (เรียงจาก id มากไปน้อย)
+        let latestRound: InspectionRound | null = null;
+        if (job.rounds && job.rounds.length > 0) {
+          const sortedRounds = [...job.rounds].sort(
+            (a, b) => b.roundId - a.roundId,
+          );
+          latestRound = sortedRounds[0];
+        }
 
-      // กำหนดสถานะแสดงผลและสี (ใช้สถานะรอบตรวจ ถ้าไม่มีใช้สถานะงาน)
-      const statusMapping = latestRound ? this.mapRoundStatus(latestRound.status, latestRound.roundNumber) : this.mapJobStatus(job.status);
+        // กำหนดสถานะแสดงผลและสี (ใช้สถานะรอบตรวจ ถ้าไม่มีใช้สถานะงาน)
+        const statusMapping = latestRound
+          ? this.mapRoundStatus(latestRound.status, latestRound.roundNumber)
+          : this.mapJobStatus(job.status);
 
         const iconMapping = this.mapHouseTypeIcon(job.houseType?.name ?? '');
 
@@ -156,11 +170,12 @@ export class AdminService {
         const firstTeamMember = latestRound?.teamMembers?.[0];
         const teamName: string =
           firstTeamMember?.team?.team_name ??
-          firstTeamMember?.inspector?.team?.team_name ?? 
+          firstTeamMember?.inspector?.team?.team_name ??
           'ยังไม่ระบุทีม';
 
         // ดึงชื่อลูกค้า
-        const customerName: string = job.customer?.fullName ?? 'ยังไม่ระบุลูกค้า';
+        const customerName: string =
+          job.customer?.fullName ?? 'ยังไม่ระบุลูกค้า';
 
         // แปลง scheduledDate เป็น Date object อย่างปลอดภัย
         // แปลงวันที่อ้างอิง: ถ้ามีรอบตรวจใช้วันที่นัดหมาย, ถ้าไม่มีใช้วันที่สร้างงาน
@@ -169,12 +184,12 @@ export class AdminService {
           : new Date(job.createdAt);
 
         // วันที่จัดรูปแบบให้ Frontend ใช้งานง่าย
-        const dateStr = !isNaN(referenceDate.getTime()) 
+        const dateStr = !isNaN(referenceDate.getTime())
           ? referenceDate.toLocaleDateString('th-TH', {
               day: '2-digit',
               month: 'short',
               year: 'numeric',
-              timeZone: 'Asia/Bangkok'
+              timeZone: 'Asia/Bangkok',
             })
           : 'ยังไม่ระบุวันที่';
 
@@ -215,7 +230,8 @@ export class AdminService {
           team: teamName,
           customer: customerName,
         };
-      });
+      },
+    );
 
     return {
       totalProjects,
@@ -282,7 +298,10 @@ export class AdminService {
         let statusKey = 'waiting';
 
         if (latestRound) {
-          if (latestRound.status === 'COMPLETED' || latestRound.status === 'APPROVED') {
+          if (
+            latestRound.status === 'COMPLETED' ||
+            latestRound.status === 'APPROVED'
+          ) {
             displayStatus = `เสร็จสิ้น ${latestRound.roundNumber}`;
             statusBgClass = 'bg-green-1';
             statusTextColor = 'positive';
@@ -321,7 +340,7 @@ export class AdminService {
         const firstTeamMember = latestRound?.teamMembers?.[0];
         const teamName: string =
           firstTeamMember?.team?.team_name ??
-          firstTeamMember?.inspector?.team?.team_name ?? 
+          firstTeamMember?.inspector?.team?.team_name ??
           'ไม่ระบุทีม';
 
         // วันที่จัดรูปแบบให้ Frontend ใช้งานง่าย (ISO String)
@@ -351,7 +370,10 @@ export class AdminService {
   /**
    * Map สถานะของ InspectionRound → สีและข้อความที่ Frontend ต้องใช้
    */
-  private mapRoundStatus(status: string, roundNumber?: number): {
+  private mapRoundStatus(
+    status: string,
+    roundNumber?: number,
+  ): {
     displayStatus: string;
     statusBgClass: string;
     statusTextColor: string;
@@ -450,15 +472,30 @@ export class AdminService {
     for (const job of jobs) {
       if (!job.rounds || job.rounds.length === 0) continue;
 
-      const sortedRounds = [...job.rounds].sort((a, b) => b.roundId - a.roundId);
+      const sortedRounds = [...job.rounds].sort(
+        (a, b) => b.roundId - a.roundId,
+      );
       const latestRound = sortedRounds[0];
 
       let newStatus = job.status;
-      if (latestRound.status === 'APPROVED' || latestRound.status === 'COMPLETED') {
-        newStatus = 'Completed';
+      if (
+        latestRound.status === 'APPROVED' ||
+        latestRound.status === 'COMPLETED'
+      ) {
+        const remainingDefects = await this.defectsRepo.count({
+          where: {
+            round: { roundId: In(sortedRounds.map((r) => r.roundId)) },
+            status: Not(DefectStatus.PASS),
+          },
+        });
+        newStatus = remainingDefects === 0 ? 'Completed' : 'Active';
       } else if (latestRound.status === 'SUBMITTED') {
         newStatus = 'Pending';
-      } else if (latestRound.status === 'Active' || latestRound.status === 'SCHEDULED' || latestRound.status === 'DRAFT') {
+      } else if (
+        latestRound.status === 'Active' ||
+        latestRound.status === 'SCHEDULED' ||
+        latestRound.status === 'DRAFT'
+      ) {
         newStatus = 'Active';
       }
 

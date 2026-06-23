@@ -18,7 +18,7 @@ import {
 } from 'typeorm';
 export enum DefectStatus {
   PENDING_REPAIR = 'PENDING_REPAIR',
-  FIXED = 'Fixed',
+  FIXED = 'FIXED',
   REJECTED = 'REJECTED',
   PASS = 'PASS',
 }

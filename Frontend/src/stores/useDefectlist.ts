@@ -1,12 +1,18 @@
 import { ref, computed } from 'vue'
+import { api } from 'src/boot/axios'
+
+const API_BASE_URL = import.meta.env.VITE_API_URL as string
 
 // ── Types ────────────────────────────────────────────────────────────────────
 export interface DefectItem {
-  image:    string
-  location: string
-  jobType:  string
-  status:   string
-  tags:     string[]
+  image:         string
+  location:      string
+  jobType:       string
+  status:        string
+  tags:          string[]
+  roomName:      string
+  categoryNames: string[]
+  severity:      string
 }
 
 export interface DefectSummary {
@@ -17,33 +23,97 @@ export interface DefectSummary {
   failed:   number
 }
 
-export interface DefectFilter {
-  rooms:      string[]
-  jobTypes:   string[]
-  severities: string[]
-  statuses:   string[]
+interface DefectSubCategoryResponse {
+  subCategoryId: number
+  name: string
+  category?: { categoryId: number; name: string }
+}
+
+interface DefectResponse {
+  defectId: number
+  severity: string
+  imageUrl?: string
+  status: string
+  room?: { roomId: number; roomName: string }
+  subRoom?: { subRoomId: number; roomName: string } | null
+  floor?: { floorId: number; label: string }
+  subCategories?: DefectSubCategoryResponse[]
+}
+
+interface RoundResponse {
+  roundId: number
 }
 
 // ── Composable ───────────────────────────────────────────────────────────────
 export function useDefectList() {
 
-  // ── Summary (จะมาจาก API) ─────────────────────────────────────────────────
-  const summary = ref<DefectSummary>({
-    rooms:    9,
-    jobTypes: 6,
-    total:    132,
-    passed:   84,
-    failed:   48,
-  })
+  const allDefectItems = ref<DefectItem[]>([])
+  const isLoading = ref(false)
 
-  // ── Defect items source (จะมาจาก API) ────────────────────────────────────
-  const allDefectItems = ref<DefectItem[]>([
-    { image: 'https://placehold.co/160x120/e0e0e0/999?text=Wall',  location: 'ห้องนั่งเล่น, -, ชั้น1', jobType: 'ผนัง',      status: 'ไม่ผ่าน', tags: ['ผิวไม่เสมอ', 'สีต่าง'] },
-    { image: 'https://placehold.co/160x120/e0e0e0/999?text=Wall',  location: 'ห้องนอน, -, ชั้น1',     jobType: 'ผนัง',      status: 'ไม่ผ่าน', tags: ['สีต่าง'] },
-    { image: 'https://placehold.co/160x120/e0e0e0/999?text=Floor', location: 'ห้องน้ำ, -, ชั้น2',     jobType: 'กระเบื้อง', status: 'ไม่ผ่าน', tags: ['ร้าว', 'ยาแนวไม่เต็มร่อง'] },
-    { image: 'https://placehold.co/160x120/e0e0e0/999?text=Door',  location: 'ห้องนอนใหญ่, -, ชั้น2', jobType: 'ประตู',     status: 'ผ่าน',    tags: ['บานพับหลวม'] },
-    { image: 'https://placehold.co/160x120/e0e0e0/999?text=Elec',  location: 'ห้องครัว, -, ชั้น1',    jobType: 'ไฟฟ้า',     status: 'ผ่าน',    tags: ['สายไม่เป็นระเบียบ'] },
-  ])
+  async function fetchDefects(jobId: number) {
+    isLoading.value = true
+    try {
+      const { data: rounds } = await api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`)
+
+      const defectLists = await Promise.all(
+        rounds.map((round) =>
+          api
+            .get<DefectResponse[]>(`/defects/round/${round.roundId}`)
+            .then((res) => res.data),
+        ),
+      )
+      const defects = defectLists.flat()
+
+      allDefectItems.value = defects.map((defect) => {
+        const categoryNames = Array.from(
+          new Set(
+            (defect.subCategories ?? [])
+              .map((sub) => sub.category?.name)
+              .filter((name): name is string => !!name),
+          ),
+        )
+        const roomName = defect.room?.roomName || '-'
+        const subRoomName = defect.subRoom?.roomName || '-'
+        const floorLabel = defect.floor?.label ? `ชั้น${defect.floor.label}` : '-'
+
+        return {
+          image: defect.imageUrl
+            ? defect.imageUrl.startsWith('http')
+              ? defect.imageUrl
+              : `${API_BASE_URL}${defect.imageUrl}`
+            : '',
+          location: `${roomName}, ${subRoomName}, ${floorLabel}`,
+          jobType: categoryNames.join(', ') || '-',
+          status: defect.status === 'PASS' ? 'ผ่าน' : 'ไม่ผ่าน',
+          tags: (defect.subCategories ?? []).map((sub) => sub.name),
+          roomName,
+          categoryNames,
+          severity: defect.severity,
+        }
+      })
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // ── Selected filters ──────────────────────────────────────────────────────
+  const selectedRooms      = ref<string[]>([])
+  const selectedJobTypes   = ref<string[]>([])
+  const selectedSeverities = ref<string[]>([])
+  const selectedStatuses   = ref<string[]>([])
+
+  // ── Summary ───────────────────────────────────────────────────────────────
+  const summary = computed<DefectSummary>(() => {
+    const items = allDefectItems.value
+    const passed = items.filter((item) => item.status === 'ผ่าน').length
+    return {
+      rooms:    new Set(items.map((item) => item.roomName)).size,
+      jobTypes: new Set(items.flatMap((item) => item.categoryNames)).size,
+      total:    items.length,
+      passed,
+      failed:   items.length - passed,
+    }
+  })
 
   // ── Filtered items (reactive ตาม selectedXxx) ─────────────────────────────
   const defectItems = computed(() => {
@@ -51,14 +121,15 @@ export function useDefectList() {
 
       const matchRoom = selectedRooms.value.length === 0
         || selectedRooms.value.includes('ทั้งหมด')
-        || selectedRooms.value.some(r => item.location.startsWith(r.split(',')[0] ?? ''))
+        || selectedRooms.value.includes(item.roomName)
 
       const matchJobType = selectedJobTypes.value.length === 0
         || selectedJobTypes.value.includes('ทั้งหมด')
-        || selectedJobTypes.value.includes(item.jobType)
+        || item.categoryNames.some((name) => selectedJobTypes.value.includes(name))
 
       const matchSeverity = selectedSeverities.value.length === 0
         || selectedSeverities.value.includes('ทั้งหมด')
+        || selectedSeverities.value.includes(item.severity)
 
       const matchStatus = selectedStatuses.value.length === 0
         || selectedStatuses.value.includes(item.status)
@@ -67,32 +138,20 @@ export function useDefectList() {
     })
   })
 
-  // ── ตอนเชื่อม backend uncomment ส่วนนี้ แล้วลบ mock ด้านบนออก ─────────────
-  // const fetchDefects = async (filter?: DefectFilter) => {
-  //   const params = new URLSearchParams()
-  //   if (filter?.rooms.length)      params.append('rooms',      filter.rooms.join(','))
-  //   if (filter?.jobTypes.length)   params.append('jobTypes',   filter.jobTypes.join(','))
-  //   if (filter?.severities.length) params.append('severities', filter.severities.join(','))
-  //   if (filter?.statuses.length)   params.append('statuses',   filter.statuses.join(','))
-  //
-  //   const res  = await fetch(`/api/defects?${params}`)
-  //   const data = await res.json()
-  //   summary.value     = data.summary
-  //   defectItems.value = data.items
-  // }
-  // onMounted(() => fetchDefects())
-
-  // ── Filter options ────────────────────────────────────────────────────────
-  const filterRooms      = ['ทั้งหมด', 'ห้องนอนใหญ่', 'ห้องน้ำ', 'ห้องนั่งเล่น', 'ห้องครัว', 'ห้องนอน', 'ห้องเก็บของ', 'ห้องพระ']
-  const filterJobTypes   = ['ทั้งหมด', 'ไฟฟ้า', 'ฝาเพดาน', 'ประตู', 'หน้าต่าง', 'กระเบื้อง', 'ผนัง']
-  const filterSeverities = ['ทั้งหมด', 'Major', 'Minor']
-  const filterStatuses   = ['ผ่าน', 'ไม่ผ่าน']
-
-  // ── Selected filters ──────────────────────────────────────────────────────
-  const selectedRooms      = ref<string[]>([])
-  const selectedJobTypes   = ref<string[]>([])
-  const selectedSeverities = ref<string[]>([])
-  const selectedStatuses   = ref<string[]>([])
+  // ── Filter options (มาจากข้อมูลจริงที่ดึงมา) ───────────────────────────────
+  const filterRooms = computed(() => [
+    'ทั้งหมด',
+    ...Array.from(new Set(allDefectItems.value.map((item) => item.roomName))),
+  ])
+  const filterJobTypes = computed(() => [
+    'ทั้งหมด',
+    ...Array.from(new Set(allDefectItems.value.flatMap((item) => item.categoryNames))),
+  ])
+  const filterSeverities = computed(() => [
+    'ทั้งหมด',
+    ...Array.from(new Set(allDefectItems.value.map((item) => item.severity))),
+  ])
+  const filterStatuses = ['ผ่าน', 'ไม่ผ่าน']
 
   // ── Filter actions ────────────────────────────────────────────────────────
   const resetFilter = () => {
@@ -104,13 +163,13 @@ export function useDefectList() {
 
   const applyFilter = () => {
     // defectItems เป็น computed — อัปเดตอัตโนมัติเมื่อ selected เปลี่ยน
-    // ตอนเชื่อม backend: เรียก fetchDefects() แทนครับ
   }
 
   return {
     // data
     summary,
     defectItems,
+    isLoading,
     // filter options
     filterRooms,
     filterJobTypes,
@@ -124,5 +183,6 @@ export function useDefectList() {
     // actions
     resetFilter,
     applyFilter,
+    fetchDefects,
   }
 }

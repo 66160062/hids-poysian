@@ -151,20 +151,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia' // ✅ เพิ่ม
 import { useContractorRepair, type DefectItem } from 'src/stores/useContractormain'
+import { useLinkAccess } from 'src/stores/useLinkAccess'
 import FilterChipGroup from 'src/components/FilterChipGroup.vue'
 
 const route  = useRoute()
 const router = useRouter()
+const { projectId } = useLinkAccess()
 
 const store = useContractorRepair()
 const { rooms, allDefectItems } = storeToRefs(store)      // ✅ storeToRefs สำหรับ state
-const { getDefectsByRoom }      = store                    // ✅ function ใช้ตรงๆ
+const { getDefectsByRoom, fetchRepairData } = store        // ✅ function ใช้ตรงๆ
 
-const filterRooms      = ['ทั้งหมด', ...rooms.value.map(r => r.name)]
+function getJobId(): number | null {
+  const queryJobId = route.query.jobId
+  if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId)
+  return projectId.value
+}
+
+// โหลดข้อมูลเองถ้ายังไม่มีใน store (เช่น เปิดลิงก์ตรงมาที่หน้านี้ ไม่ได้ผ่านหน้า repair-overview มาก่อน)
+onMounted(async () => {
+  if (allDefectItems.value.length > 0) return
+  const jobId = getJobId()
+  if (!jobId) return
+  await fetchRepairData(jobId)
+})
+
+const filterRooms      = computed(() => ['ทั้งหมด', ...rooms.value.map(r => r.name)])
 const filterJobTypes   = ['ทั้งหมด', 'ผนัง', 'กระเบื้อง', 'ประตู', 'ไฟฟ้า', 'ประปา', 'ฝ้าเพดาน']
 const filterSeverities = ['ทั้งหมด', 'Major', 'Minor']
 const filterStatuses   = ['ผ่าน', 'ไม่ผ่าน', 'รอดำเนินการ'] // ✅ เพิ่ม status ใหม่
