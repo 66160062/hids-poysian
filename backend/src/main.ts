@@ -15,14 +15,7 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, documentFactory);
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.enableCors({
-    origin: [
-      'http://localhost:9000',
-      'https://hids-poysian-project.vercel.app',
-      'https://hids-poysian-project-kittisak293s-projects.vercel.app',
-    ],
-    credentials: true,
-  });
+  app.enableCors();
   await app.listen(process.env.PORT || 3000);
 }
 void bootstrap();
