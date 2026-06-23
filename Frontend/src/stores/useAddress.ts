@@ -4,7 +4,7 @@ import { api } from 'src/boot/axios';
 export const useAddressStore = defineStore('address', () => {
   const createAddress = async (payload: {
     houseNumber: string;
-    floor: string;
+    soi: string;
     province: string;
     district: string;
     subDistrict: string;
@@ -13,8 +13,7 @@ export const useAddressStore = defineStore('address', () => {
     try {
       const response = await api.post('/addresses', {
         houseNumber: payload.houseNumber || '',
-        floor: payload.floor || '',
-        soi: '',
+        soi: payload.soi || '',
         subDistrict: payload.subDistrict || '',
         district: payload.district || '',
         province: payload.province || '',
@@ -27,19 +26,21 @@ export const useAddressStore = defineStore('address', () => {
     }
   };
 
-  const updateAddress = async (id: number, payload: {
-    houseNumber: string;
-    floor: string;
-    province: string;
-    district: string;
-    subDistrict: string;
-    postalCode: string;
-  }) => {
+  const updateAddress = async (
+    id: number,
+    payload: {
+      houseNumber: string;
+      soi: string;
+      province: string;
+      district: string;
+      subDistrict: string;
+      postalCode: string;
+    },
+  ) => {
     try {
       const response = await api.patch(`/addresses/${id}`, {
         houseNumber: payload.houseNumber || '',
-        floor: payload.floor || '',
-        soi: '',
+        soi: payload.soi || '',
         subDistrict: payload.subDistrict || '',
         district: payload.district || '',
         province: payload.province || '',

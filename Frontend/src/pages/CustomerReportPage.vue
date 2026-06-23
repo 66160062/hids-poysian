@@ -52,45 +52,45 @@
                 {{ field.label }}
               </div>
 
-              <!-- Radio -->
+              <!-- Radio (แสดงเฉพาะตัวเลือกที่ถูกเลือก) -->
               <div
-                v-if="field.type === 'radio'"
+                v-if="field.type === 'radio' && field.selected"
                 class="option-group"
               >
                 <q-radio
-                  v-for="opt in field.options"
-                  :key="opt"
-                  v-model="field.selected"
-                  :val="opt"
-                  :label="opt"
+                  :model-value="field.selected"
+                  :val="field.selected"
+                  :label="String(field.selected)"
                   color="primary"
                   dense
+                  disable
                 />
               </div>
 
-              <!-- Checkbox -->
+              <!-- Checkbox (แสดงเฉพาะตัวเลือกที่ถูกเลือก) -->
               <div
-                v-if="field.type === 'checkbox'"
+                v-if="field.type === 'checkbox' && Array.isArray(field.selected) && field.selected.length > 0"
                 class="option-group"
               >
                 <q-checkbox
-                  v-for="opt in field.options"
+                  v-for="opt in field.selected"
                   :key="opt"
-                  v-model="field.selected"
-                  :val="opt"
+                  :model-value="true"
                   :label="opt"
                   color="primary"
                   dense
+                  disable
                 />
               </div>
 
               <!-- Textarea -->
               <q-input
                 v-if="field.type === 'textarea'"
-                v-model="field.value"
+                :model-value="field.value"
                 type="textarea"
                 outlined
                 dense
+                readonly
                 rows="3"
                 bg-color="grey-1"
                 placeholder="หมายเหตุ..."
@@ -111,9 +111,26 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useReport } from 'src/stores/useCustomerReport'
+import { useLinkAccess } from 'src/stores/useLinkAccess'
 
-const { reportSections } = useReport()
+const route = useRoute()
+const { projectId } = useLinkAccess()
+const { reportSections, fetchReport } = useReport()
+
+function getJobId(): number | null {
+  const queryJobId = route.query.jobId
+  if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId)
+  return projectId.value
+}
+
+onMounted(async () => {
+  const jobId = getJobId()
+  if (!jobId) return
+  await fetchReport(jobId)
+})
 </script>
 
 <style scoped>

@@ -475,7 +475,7 @@
                       </q-item-section>
                     </q-item>
                   </q-list>
-                  
+
                   <!-- Pagination -->
                   <div class="row justify-center q-mt-md q-mb-md" v-if="totalPages > 1">
                     <q-pagination
@@ -791,7 +791,7 @@ const groupedDefects = computed<GroupedDefectItem[]>(() => {
     const group = map.get(key)!;
     group.totalItems++;
     group.defects.push(defect);
-    if (defect.status === 'PASS') group.passCount++;
+    if (defect.status === 'verified') group.passCount++;
     else group.failCount++;
   }
 
@@ -837,7 +837,7 @@ const defectEditForm = ref<{
 }>({
   description: '',
   severity: 'Minor',
-  status: 'PENDING_REPAIR',
+  status: 'pending_repair',
   subCategoryIds: [],
   file: null,
 });
@@ -848,9 +848,9 @@ const severityOptions = [
 ];
 
 const defectStatusOptions = [
-  { label: 'รอซ่อม', value: 'PENDING_REPAIR' },
-  { label: 'ผ่าน', value: 'PASS' },
-  { label: 'ปฏิเสธ', value: 'REJECTED' },
+  { label: 'รอซ่อม', value: 'pending_repair' },
+  { label: 'ผ่าน', value: 'verified' },
+  { label: 'ปฏิเสธ', value: 'rejected' },
 ];
 
 
@@ -859,7 +859,7 @@ const formatRoundDate = (dateStr: string) => {
   if (!dateStr) return '-';
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return dateStr;
-  
+
   const formattedDate = date.toLocaleDateString('th-TH', {
     day: '2-digit',
     month: '2-digit',
@@ -873,7 +873,7 @@ const formatRoundDate = (dateStr: string) => {
   } else if (hour === 13) {
     return `${formattedDate} (รอบบ่าย)`;
   }
-  
+
   return formattedDate;
 };
 
@@ -892,7 +892,7 @@ const mapRoundStatus = (status: string) => {
 
 const mapRoundToView = (round: RoundApiResponse) => {
   let inspectors: string[] = [];
-  
+
   if (round.teamMembers && round.teamMembers.length > 0) {
     inspectors = round.teamMembers.map(member => {
       if (member.team?.team_name) {
@@ -971,7 +971,7 @@ async function loadPageData() {
   isLoading.value = true;
   try {
     await Promise.all([
-      fetchJobDetails(), 
+      fetchJobDetails(),
       fetchTeamMembers(),
       teamStore.fetchTeams() // ดึงข้อมูลทีม
     ]);
@@ -1084,7 +1084,7 @@ const openGoogleMaps = () => {
   if (!jobData.value) return;
   const projectName = jobData.value.projectName || '';
   const addr = jobData.value.address;
-  
+
   const addressParts = [
     projectName,
     addr?.houseNumber ? `เลขที่ ${addr.houseNumber}` : '',
@@ -1095,9 +1095,9 @@ const openGoogleMaps = () => {
     addr?.province ? `จ.${addr.province}` : '',
     addr?.postalCode || ''
   ];
-  
+
   const searchQuery = addressParts.filter(Boolean).join(' ');
-  
+
   if (searchQuery.trim() && (projectName || addr?.province)) {
     const encodedQuery = encodeURIComponent(searchQuery);
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
@@ -1221,7 +1221,7 @@ function selectDefect(defect: AdminDefect) {
   defectEditForm.value = {
     description: defect.description || '',
     severity: defect.severity || 'Minor',
-    status: defect.status || 'PENDING_REPAIR',
+    status: defect.status || 'pending_repair',
     subCategoryIds: defect.subCategories?.map((item) => item.subCategoryId) ?? [],
     file: null,
   };

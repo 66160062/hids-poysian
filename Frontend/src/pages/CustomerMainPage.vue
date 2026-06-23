@@ -353,7 +353,6 @@ const projectFields = computed<FieldRow[]>(() => {
     { label: 'ชื่อโครงการ TH', value: job?.projectName || '-' },
     { label: 'ชื่อโครงการ EN', value: '–', empty: true },
     { label: 'สถานที่ตั้ง', value: location || '-', full: true },
-    { label: 'รายละเอียดเพิ่มเติม', value: '–', empty: true, full: true },
     {
       label: 'ประเภท/ชั้น',
       value:
