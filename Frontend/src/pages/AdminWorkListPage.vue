@@ -388,10 +388,16 @@ watch([activeFilter, selectedType, selectedJobType, sortOrder], () => {
 });
 
 async function viewDetail(task: TaskItem): Promise<void> {
-  if (task.inspectionType === 'ตรวจ Defect') {
-    await router.push(`/admin/work/ins/${task.id}`);
-  } else {
+  const isConstruction =
+    task.inspectionType === 'CONSTRUCTION_INSPECTION' ||
+    task.inspectionType === 'ตรวจก่อสร้าง' ||
+    task.inspectionType === 'Construction' ||
+    task.inspectionType === 'งานก่อสร้าง';
+
+  if (isConstruction) {
     await router.push(`/admin/work/cons/${task.id}`);
+  } else {
+    await router.push(`/admin/work/ins/${task.id}`);
   }
 }
 

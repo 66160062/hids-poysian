@@ -1,12 +1,14 @@
 <template>
   <q-page class="overview-page bg-white">
-
     <!-- Header label -->
 
-
     <div class="q-px-md q-pb-xl">
-
-      <q-banner v-if="hasLinkAccess && isCustomerViewOnly" dense rounded class="bg-blue-1 text-primary q-mb-md">
+      <q-banner
+        v-if="hasLinkAccess && isCustomerViewOnly"
+        dense
+        rounded
+        class="bg-blue-1 text-primary q-mb-md"
+      >
         <template #avatar>
           <q-icon name="visibility" color="primary" />
         </template>
@@ -30,7 +32,11 @@
         <q-card-section>
           <div class="section-title q-mb-md">ข้อมูลโครงการ</div>
           <div class="row q-col-gutter-md">
-            <div class="col-6" v-for="field in projectFields" :key="field.label">
+            <div
+              :class="field.full ? 'col-12' : 'col-6'"
+              v-for="field in projectFields"
+              :key="field.label"
+            >
               <div class="field-label">{{ field.label }}</div>
               <div class="field-value">{{ field.value }}</div>
             </div>
@@ -43,15 +49,20 @@
         <q-card-section>
           <div class="section-title q-mb-md">ข้อมูลลูกค้า</div>
           <div class="row q-col-gutter-md">
-            <div class="col-6" v-for="field in customerFields" :key="field.label">
+            <div
+              :class="field.full ? 'col-12' : 'col-6'"
+              v-for="field in customerFields"
+              :key="field.label"
+            >
               <div class="field-label">{{ field.label }}</div>
-              <div class="field-value" :class="field.empty ? 'text-grey-4' : ''">{{ field.value }}</div>
+              <div class="field-value" :class="field.empty ? 'text-grey-4' : ''">
+                {{ field.value }}
+              </div>
             </div>
           </div>
         </q-card-section>
       </q-card>
 
-      
       <div class="row q-col-gutter-sm q-mb-md">
         <div class="col-4">
           <q-card flat bordered class="stat-card text-center">
@@ -109,7 +120,11 @@
                 </div>
                 <div class="wf-label">{{ step.label }}</div>
               </div>
-              <div v-if="i < workflowSteps.length - 1" class="wf-line" :class="step.status === 'done' ? 'done' : 'grey'" />
+              <div
+                v-if="i < workflowSteps.length - 1"
+                class="wf-line"
+                :class="step.status === 'done' ? 'done' : 'grey'"
+              />
             </template>
           </div>
         </q-card-section>
@@ -124,15 +139,38 @@
             <div class="col-auto">
               <svg viewBox="0 0 100 100" width="95" height="95">
                 <circle cx="50" cy="50" r="36" fill="none" stroke="#f0f0f0" stroke-width="14" />
-                <circle cx="50" cy="50" r="36" fill="none" stroke="#4CAF50" stroke-width="14"
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="36"
+                  fill="none"
+                  stroke="#4CAF50"
+                  stroke-width="14"
                   :stroke-dasharray="`${passedDash} ${circumference}`"
                   stroke-dashoffset="0"
-                  transform="rotate(-90 50 50)" />
-                <circle cx="50" cy="50" r="36" fill="none" stroke="#FF9800" stroke-width="14"
+                  transform="rotate(-90 50 50)"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="36"
+                  fill="none"
+                  stroke="#FF9800"
+                  stroke-width="14"
                   :stroke-dasharray="`${inProgressDash} ${circumference}`"
                   :stroke-dashoffset="`-${passedDash}`"
-                  transform="rotate(-90 50 50)" />
-                <text x="50" y="55" text-anchor="middle" font-size="20" font-weight="bold" fill="#333">{{ totalDefects }}</text>
+                  transform="rotate(-90 50 50)"
+                />
+                <text
+                  x="50"
+                  y="55"
+                  text-anchor="middle"
+                  font-size="20"
+                  font-weight="bold"
+                  fill="#333"
+                >
+                  {{ totalDefects }}
+                </text>
               </svg>
             </div>
             <!-- Legend -->
@@ -161,8 +199,12 @@
           <!-- Job Type Chips -->
           <div class="row q-gutter-xs q-mt-md">
             <q-chip
-              v-for="tag in jobTypes" :key="tag.label"
-              dense outline color="grey-7" text-color="grey-8"
+              v-for="tag in jobTypes"
+              :key="tag.label"
+              dense
+              outline
+              color="grey-7"
+              text-color="grey-8"
               class="text-caption"
             >
               {{ tag.label }} {{ tag.count }}
@@ -177,7 +219,7 @@
           <div class="section-title q-mb-md">อัพเดตล่าสุด</div>
           <q-list dense>
             <q-item v-for="(item, i) in updates" :key="i" class="q-px-none q-py-sm">
-              <q-item-section avatar style="min-width:20px">
+              <q-item-section avatar style="min-width: 20px">
                 <q-icon name="circle" :color="item.color" size="10px" />
               </q-item-section>
               <q-item-section>
@@ -191,7 +233,6 @@
           </q-list>
         </q-card-section>
       </q-card>
-
     </div>
     <q-btn
       v-if="!(hasLinkAccess && isCustomerViewOnly)"
@@ -205,91 +246,203 @@
     />
     <ReviewDialog v-model="dialog" />
     <q-footer class="bg-white bottom-bar">
-      <q-tabs :model-value="activeTab"
-      @update:model-value="(tab) => router.push(`/app/${tab}`)">
-        <q-tab name="overview"  icon="home"        label="ภาพรวม" />
-        <q-tab name="defect"    icon="list_alt"    label="รายการ Defect" />
-        <q-tab name="report"    icon="description" label="สรุปรายงาน" />
+      <q-tabs :model-value="activeTab" @update:model-value="(tab) => router.push(`/app/${tab}`)">
+        <q-tab name="overview" icon="home" label="ภาพรวม" />
+        <q-tab name="defect" icon="list_alt" label="รายการ Defect" />
+        <q-tab name="report" icon="description" label="สรุปรายงาน" />
       </q-tabs>
     </q-footer>
-
   </q-page>
 </template>
 
 <script setup lang="ts">
+import { useDefectSummary } from 'src/stores/useDefectSummary';
+import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import ReviewDialog from 'src/components/ReviewDialog.vue';
+import { useLinkAccess } from 'src/stores/useLinkAccess';
+import { api } from 'src/boot/axios';
 
-import { useDefectSummary } from 'src/stores/useDefectSummary'
-import { computed, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import ReviewDialog from 'src/components/ReviewDialog.vue'
-import { useLinkAccess } from 'src/stores/useLinkAccess'
-
-const { isCustomerViewOnly, hasLinkAccess } = useLinkAccess()
+const { isCustomerViewOnly, hasLinkAccess, projectId } = useLinkAccess();
 
 // ── Defect summary จาก stores ──────────────────────────────────────────
 const {
   totalDefects,
   inProgress,
   passed,
+  jobTypes,
   progressValue,
   progressPercent,
   passedDash,
   inProgressDash,
   circumference,
-} = useDefectSummary()
+  fetchSummary,
+} = useDefectSummary();
 
-const router    = useRouter()
-const route     = useRoute()
-const activeTab = computed(() => route.path.split('/').pop())
-const dialog = ref(false)
-  function review(){
-    dialog.value = true
-  }
+const router = useRouter();
+const route = useRoute();
+const activeTab = computed(() => route.path.split('/').pop());
+const dialog = ref(false);
+function review() {
+  dialog.value = true;
+}
 
-// Mock Data
-const projectFields = [
-  { label: 'ชื่อโครงการ TH', value: 'บ้านแสนสุข' },
-  { label: 'ชื่อโครงการ EN', value: 'Happy House' },
-  { label: 'จังหวัด',         value: 'ชลบุรี' },
-  { label: 'เขต/อำเภอ',       value: 'เมือง' },
-  { label: 'แขวง/ตำบล',       value: 'แสนสุข' },
-  { label: 'รหัสไปรษณีย์',   value: '20130' },
-  { label: 'ประเภท',           value: 'บ้านเดี่ยว 2 ชั้น' },
-  { label: 'พื้นที่',          value: '250 ตร.ม.' },
-]
+interface AddressResponse {
+  houseNumber?: string;
+  floor?: string;
+  soi?: string;
+  subDistrict?: string;
+  district?: string;
+  province?: string;
+  postalCode?: string;
+}
 
-const customerFields = [
-  { label: 'ชื่อลูกค้า',                    value: 'คุณสมชาย รักดี' },
-  { label: 'ประเภทที่อยู่',                  value: 'บ้านเดี่ยว' },
-  { label: 'เบอร์โทรศัพท์',                 value: '081-234-5678' },
-  { label: 'อีเมล',                          value: 'somchai@email.com' },
-  { label: 'เลขที่ห้อง/บ้านเลขที่',         value: '88/12' },
-  { label: 'ชั้น/ซอย',                       value: 'ซ.นวลจันทร์ 15' },
-  { label: 'ผู้ประสานงาน',                   value: '–', empty: true },
-  { label: 'เบอร์โทรศัพท์ผู้ประสานงาน',     value: '–', empty: true },
-]
+interface CustomerResponse {
+  fullName?: string;
+  phoneNumber?: string;
+  email?: string;
+}
 
-const workflowSteps = [
-  { icon: 'search',        label: 'ตรวจรอบที่ 1', status: 'done'    },
-  { icon: 'description',  label: 'ส่งรายงาน',    status: 'done'    },
-  { icon: 'build',        label: 'ซ่อมเสร็จสิ้น', status: 'active'  },
-  { icon: 'search',       label: 'ตรวจรอบที่ 2',  status: 'active'  },
-  { icon: 'check_circle', label: 'เสร็จสิ้น',     status: 'pending' },
-]
+interface JobResponse {
+  jobId: number;
+  projectName: string;
+  usableArea: number;
+  status: string;
+  customer?: CustomerResponse;
+  address?: AddressResponse;
+  houseType?: { name?: string };
+}
 
-const jobTypes = [
-  { label: 'งานสี',      count: 38 },
-  { label: 'งานไฟฟ้า',   count: 24 },
-  { label: 'งานประปา',   count: 19 },
-  { label: 'งานประตู',   count: 31 },
-  { label: 'โครงสร้าง', count: 20 },
-]
+interface RoundResponse {
+  roundId: number;
+  roundNumber: number;
+  status: string;
+  inspectedAt?: string | null;
+  submittedAt?: string | null;
+}
 
+const jobData = ref<JobResponse | null>(null);
+const rounds = ref<RoundResponse[]>([]);
+
+interface FieldRow {
+  label: string;
+  value: string;
+  empty?: boolean;
+  full?: boolean;
+}
+
+function getJobId(): number | null {
+  const queryJobId = route.query.jobId;
+  if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId);
+  return projectId.value;
+}
+
+const projectFields = computed<FieldRow[]>(() => {
+  const job = jobData.value;
+  const address = job?.address;
+  const location = [
+    address?.houseNumber,
+    address?.subDistrict ? `ต.${address.subDistrict}` : '',
+    address?.district ? `อ.${address.district}` : '',
+    address?.province ? `จ.${address.province}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return [
+    { label: 'ชื่อโครงการ TH', value: job?.projectName || '-' },
+    { label: 'ชื่อโครงการ EN', value: '–', empty: true },
+    { label: 'สถานที่ตั้ง', value: location || '-', full: true },
+    { label: 'รายละเอียดเพิ่มเติม', value: '–', empty: true, full: true },
+    {
+      label: 'ประเภท/ชั้น',
+      value:
+        [job?.houseType?.name, address?.floor ? `${address.floor} ชั้น` : '']
+          .filter(Boolean)
+          .join(' ') || '-',
+    },
+    { label: 'พื้นที่', value: job ? `${job.usableArea} ตร.ม.` : '-' },
+  ];
+});
+
+const customerFields = computed<FieldRow[]>(() => {
+  const customer = jobData.value?.customer;
+  return [
+    { label: 'ชื่อลูกค้า', value: customer?.fullName || '-' },
+    { label: 'ชื่อผู้ประสานงาน', value: '–', empty: true },
+    { label: 'เบอร์โทรศัพท์ลูกค้า', value: customer?.phoneNumber || '-' },
+    { label: 'เบอร์โทรศัพท์ผู้ประสานงาน', value: '–', empty: true },
+    { label: 'อีเมลลูกค้า', value: customer?.email || '-' },
+  ];
+});
+
+const workflowSteps = computed(() => {
+  const latestRound = rounds.value[rounds.value.length - 1];
+  const nextRound = rounds.value.find((r) => r.roundNumber === (latestRound?.roundNumber ?? 0) + 1);
+  const isInspected = !!latestRound?.inspectedAt;
+  const isSubmitted = !!latestRound?.submittedAt;
+  const isRepairDone = totalDefects.value > 0 && passed.value === totalDefects.value;
+  const isCompleted = jobData.value?.status === 'Completed';
+
+  return [
+    {
+      icon: 'search',
+      label: `ตรวจรอบที่ ${latestRound?.roundNumber ?? 1}`,
+      status: isInspected ? 'done' : 'active',
+    },
+    {
+      icon: 'description',
+      label: 'ส่งรายงาน',
+      status: isSubmitted ? 'done' : isInspected ? 'active' : 'pending',
+    },
+    {
+      icon: 'build',
+      label: 'ซ่อมเสร็จสิ้น',
+      status: isRepairDone ? 'done' : totalDefects.value > 0 ? 'active' : 'pending',
+    },
+    {
+      icon: 'search',
+      label: `ตรวจรอบที่ ${(latestRound?.roundNumber ?? 1) + 1}`,
+      status: nextRound?.inspectedAt ? 'done' : nextRound ? 'active' : 'pending',
+    },
+    {
+      icon: 'check_circle',
+      label: 'เสร็จสิ้น',
+      status: isCompleted ? 'done' : 'pending',
+    },
+  ];
+});
+
+// ไม่มี endpoint สำหรับ activity log ในระบบปัจจุบัน จึงยังเป็น mock
 const updates = [
-  { color: 'green',  title: 'ผู้รับเหมาแก้ไขเพิ่ม 6 รายการแล้ว',  sub: 'งานสี: ห้องนั่งเล่น • ห้องนอนชั้น2',  date: 'วันนี้'   },
-  { color: 'orange', title: 'ส่งรายงาน PDF ให้คุณสมชายแล้ว',       sub: 'ครั้งที่ 1 · 132 รายการ',             date: 'เมื่อวาน' },
-  { color: 'blue',   title: 'รอวิศวกรเข้าตรวจ',                     sub: 'วันที่ตรวจ : 21 ก.พ. 2569',          date: '15 ก.พ.'  },
-]
+  {
+    color: 'green',
+    title: 'ผู้รับเหมาแก้ไขเพิ่ม 6 รายการแล้ว',
+    sub: 'งานสี: ห้องนั่งเล่น • ห้องนอนชั้น2',
+    date: 'วันนี้',
+  },
+  {
+    color: 'orange',
+    title: 'ส่งรายงาน PDF ให้คุณสมชายแล้ว',
+    sub: 'ครั้งที่ 1 · 132 รายการ',
+    date: 'เมื่อวาน',
+  },
+  { color: 'blue', title: 'รอวิศวกรเข้าตรวจ', sub: 'วันที่ตรวจ : 21 ก.พ. 2569', date: '15 ก.พ.' },
+];
+
+onMounted(async () => {
+  const jobId = getJobId();
+  if (!jobId) return;
+
+  const [jobRes, roundsRes] = await Promise.all([
+    api.get<JobResponse>(`/inspection-jobs/${jobId}`),
+    api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`),
+  ]);
+  jobData.value = jobRes.data;
+  rounds.value = roundsRes.data;
+
+  await fetchSummary(jobId);
+});
 </script>
 
 <style scoped>
@@ -372,9 +525,19 @@ const updates = [
   margin-bottom: 4px;
 }
 
-.wf-circle.done    { background: #1976D2; color: #fff; }
-.wf-circle.active  { background: #1976D2; color: #fff; opacity: 0.75; }
-.wf-circle.pending { background: #e0e0e0; color: #bdbdbd; }
+.wf-circle.done {
+  background: #1976d2;
+  color: #fff;
+}
+.wf-circle.active {
+  background: #1976d2;
+  color: #fff;
+  opacity: 0.75;
+}
+.wf-circle.pending {
+  background: #e0e0e0;
+  color: #bdbdbd;
+}
 
 .wf-label {
   font-size: 9.5px;
@@ -390,8 +553,12 @@ const updates = [
   min-width: 6px;
 }
 
-.wf-line.done { background: #1976D2; }
-.wf-line.grey { background: #e0e0e0; }
+.wf-line.done {
+  background: #1976d2;
+}
+.wf-line.grey {
+  background: #e0e0e0;
+}
 
 .bottom-bar {
   border-top: 1px solid #ebebeb;
