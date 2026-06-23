@@ -18,7 +18,7 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:9000',
-      'hids-poysian-project-kittisak293s-projects.vercel.app',
+      'http://hids-poysian-project-kittisak293s-projects.vercel.app',
     ],
     credentials: true,
   });
