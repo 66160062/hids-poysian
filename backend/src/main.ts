@@ -18,10 +18,11 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:9000',
-      'http://hids-poysian-project-kittisak293s-projects.vercel.app',
+      'https://hids-poysian-project.vercel.app',
+      'https://hids-poysian-project-kittisak293s-projects.vercel.app',
     ],
     credentials: true,
   });
-  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+  await app.listen(process.env.PORT || 3000);
 }
 void bootstrap();
