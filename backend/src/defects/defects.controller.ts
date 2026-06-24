@@ -23,7 +23,7 @@ import { extname } from 'path';
 
 @Controller('defects')
 export class DefectsController {
-  constructor(private readonly defectsService: DefectsService) {}
+  constructor(private readonly defectsService: DefectsService) { }
 
   @Post()
   @ApiConsumes('multipart/form-data')
@@ -32,7 +32,11 @@ export class DefectsController {
       storage: diskStorage({
         destination: './uploads/defects',
         filename: (req, file, cb) => {
-          const uniqueFileName = uuidv4() + extname(file.originalname);
+          let ext = extname(file.originalname);
+          if (!ext && file.mimetype) {
+            ext = `.${file.mimetype.split('/')[1]}`;
+          }
+          const uniqueFileName = uuidv4() + ext;
           cb(null, uniqueFileName);
         },
       }),
@@ -71,7 +75,11 @@ export class DefectsController {
       storage: diskStorage({
         destination: './uploads/defects',
         filename: (req, file, cb) => {
-          const uniqueFileName = uuidv4() + extname(file.originalname);
+          let ext = extname(file.originalname);
+          if (!ext && file.mimetype) {
+            ext = `.${file.mimetype.split('/')[1]}`;
+          }
+          const uniqueFileName = uuidv4() + ext;
           cb(null, uniqueFileName);
         },
       }),
@@ -97,7 +105,11 @@ export class DefectsController {
       storage: diskStorage({
         destination: './uploads/defects',
         filename: (req, file, cb) => {
-          const uniqueFileName = uuidv4() + extname(file.originalname);
+          let ext = extname(file.originalname);
+          if (!ext && file.mimetype) {
+            ext = `.${file.mimetype.split('/')[1]}`;
+          }
+          const uniqueFileName = uuidv4() + ext;
           cb(null, uniqueFileName);
         },
       }),
