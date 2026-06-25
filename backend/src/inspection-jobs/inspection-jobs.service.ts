@@ -90,7 +90,7 @@ export class InspectionJobsService {
       .leftJoinAndSelect('job.contractor', 'contractor')
       .leftJoinAndSelect('job.rounds', 'rounds');
 
-    if (status && status !== ('all' as unknown)) {
+    if (status && (status as string) !== 'all') {
       query.andWhere('job.status = :status', { status });
     }
 
@@ -99,12 +99,17 @@ export class InspectionJobsService {
     }
 
     if (inspectionType && inspectionType !== 'ทั้งหมด') {
-      const dbType = inspectionType === 'งานก่อสร้าง' ? 'CONSTRUCTION_INSPECTION' : 'DEFECT_INSPECTION';
-      const thaiType = inspectionType === 'งานก่อสร้าง' ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
-      const engType = inspectionType === 'งานก่อสร้าง' ? 'Construction' : 'Defect';
+      const dbType =
+        inspectionType === 'งานก่อสร้าง'
+          ? 'CONSTRUCTION_INSPECTION'
+          : 'DEFECT_INSPECTION';
+      const thaiType =
+        inspectionType === 'งานก่อสร้าง' ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
+      const engType =
+        inspectionType === 'งานก่อสร้าง' ? 'Construction' : 'Defect';
       query.andWhere(
         '(job.inspectionType = :dbType OR job.inspectionType = :thaiType OR job.inspectionType = :engType)',
-        { dbType, thaiType, engType }
+        { dbType, thaiType, engType },
       );
     }
 
@@ -215,7 +220,11 @@ export class InspectionJobsService {
     return this.inspectionsRepo.save(inspectionJob);
   }
 
-  async getStatusMetadata(search?: string, type?: string, inspectionType?: string) {
+  async getStatusMetadata(
+    search?: string,
+    type?: string,
+    inspectionType?: string,
+  ) {
     const statuses = [
       {
         key: InspectionJobStatus.Draft,
@@ -268,12 +277,17 @@ export class InspectionJobsService {
     }
 
     if (inspectionType && inspectionType !== 'ทั้งหมด') {
-      const dbType = inspectionType === 'งานก่อสร้าง' ? 'CONSTRUCTION_INSPECTION' : 'DEFECT_INSPECTION';
-      const thaiType = inspectionType === 'งานก่อสร้าง' ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
-      const engType = inspectionType === 'งานก่อสร้าง' ? 'Construction' : 'Defect';
+      const dbType =
+        inspectionType === 'งานก่อสร้าง'
+          ? 'CONSTRUCTION_INSPECTION'
+          : 'DEFECT_INSPECTION';
+      const thaiType =
+        inspectionType === 'งานก่อสร้าง' ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
+      const engType =
+        inspectionType === 'งานก่อสร้าง' ? 'Construction' : 'Defect';
       query.andWhere(
         '(job.inspectionType = :dbType OR job.inspectionType = :thaiType OR job.inspectionType = :engType)',
-        { dbType, thaiType, engType }
+        { dbType, thaiType, engType },
       );
     }
 

@@ -9,7 +9,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   Query,
-  ParseEnumPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { InspectionJobsService } from './inspection-jobs.service';
 import { CreateInspectionJobDto } from './dto/create-inspection-job.dto';
@@ -21,8 +21,10 @@ import { extname } from 'path';
 import { ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
 import { InspectionJobStatus } from './enums/inspection-job-status.enum';
 import { AuthService } from 'src/auth/auth.service';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('inspection-jobs')
+@UseGuards(AuthGuard)
 export class InspectionJobsController {
   constructor(
     private readonly inspectionJobsService: InspectionJobsService,
@@ -104,7 +106,11 @@ export class InspectionJobsController {
     @Query('type') type?: string,
     @Query('inspectionType') inspectionType?: string,
   ) {
-    return this.inspectionJobsService.getStatusMetadata(search, type, inspectionType);
+    return this.inspectionJobsService.getStatusMetadata(
+      search,
+      type,
+      inspectionType,
+    );
   }
 
   @Get(':id/contractor-share')
