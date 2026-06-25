@@ -74,6 +74,8 @@ export interface Defect {
   severity: string;
   status: string;
   imageUrl?: string;
+  contractorImageUrl?: string;
+  contractorNote?: string;
   subCategories: {
     subCategoryId: number;
     name: string;

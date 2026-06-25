@@ -7,6 +7,7 @@ import { Repository } from 'typeorm';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { User } from 'src/users/entities/user.entity';
+import { Defect, DefectStatus } from 'src/defects/entities/defect.entity';
 
 @Injectable()
 export class InspectionRoundsService {
@@ -19,6 +20,8 @@ export class InspectionRoundsService {
     private readonly teamMembersRepo: Repository<InspectionTeamMember>,
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
+    @InjectRepository(Defect)
+    private readonly defectsRepo: Repository<Defect>,
   ) {}
 
   async create(createInspectionRoundDto: CreateInspectionRoundDto) {

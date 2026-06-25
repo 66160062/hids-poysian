@@ -16,6 +16,9 @@ async function bootstrap() {
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, documentFactory);
+
+  app.enableCors();
+
   const staticPath = join(process.cwd(), 'uploads');
   app.useStaticAssets(staticPath, { prefix: '/uploads' });
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
@@ -23,8 +26,9 @@ async function bootstrap() {
     index: false,
     redirect: false,
   });
+
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.enableCors();
+
   await app.listen(process.env.PORT || 3000);
 }
 void bootstrap();

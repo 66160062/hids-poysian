@@ -75,7 +75,9 @@ describe('AuthService', () => {
     });
     jobsRepo.save.mockResolvedValue({});
 
-    await expect(service.generateLinkToken(12, 'contractor')).resolves.toMatchObject({
+    await expect(
+      service.generateLinkToken(12, 'contractor'),
+    ).resolves.toMatchObject({
       token: 'signed-link-token',
       role: 'contractor',
       admin_controlled: true,
@@ -100,7 +102,9 @@ describe('AuthService', () => {
       contractorShareToken: 'existing-token',
     });
 
-    await expect(service.generateLinkToken(12, 'contractor')).resolves.toMatchObject({
+    await expect(
+      service.generateLinkToken(12, 'contractor'),
+    ).resolves.toMatchObject({
       token: 'existing-token',
       contractor_share_enabled: true,
     });
@@ -121,11 +125,7 @@ describe('AuthService', () => {
     jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
 
     const { token } = await realService.generateLinkToken(12, 'customer');
-    const decoded = realJwtService.decode(token) as {
-      project_id: number;
-      role: string;
-      exp: number;
-    };
+    const decoded = realJwtService.decode(token);
 
     expect(decoded.project_id).toBe(12);
     expect(decoded.role).toBe('customer');
@@ -145,9 +145,9 @@ describe('AuthService', () => {
       contractorShareGeneration: 2,
     });
 
-    await expect(service.verifyLinkToken('signed-link-token')).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      service.verifyLinkToken('signed-link-token'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
     await expect(service.verifyLinkToken('')).rejects.toBeInstanceOf(
       UnauthorizedException,
     );

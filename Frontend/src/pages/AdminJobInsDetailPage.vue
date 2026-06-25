@@ -216,6 +216,26 @@
         </q-card-section>
       </q-card>
 
+      <!-- Contractor Progress Section -->
+      <div v-if="inspectionRounds.length > 0 && job.status === 'เสร็จสิ้น'" class="q-mb-lg">
+        <div class="row items-center justify-between q-mb-sm">
+          <div class="text-subtitle2 text-weight-bold">ความคืบหน้างานซ่อมของผู้รับเหมา</div>
+          <div class="text-caption text-weight-bold" :class="job.contractorProgress >= 80 ? 'text-positive' : 'text-orange'">
+            {{ Math.round(job.contractorProgress) }}%
+          </div>
+        </div>
+        <q-linear-progress
+          rounded
+          size="10px"
+          :value="job.contractorProgress / 100"
+          :color="job.contractorProgress >= 80 ? 'positive' : 'orange'"
+          class="q-mb-xs"
+        />
+        <div class="text-caption text-grey-6 text-right">
+          {{ job.contractorProgress >= 80 ? 'พร้อมสร้างรอบตรวจที่ 2 แล้ว' : 'ควรรอให้ถึง 80% ก่อนสร้างรอบถัดไป' }}
+        </div>
+      </div>
+
       <!-- รอบการตรวจ Section -->
       <div class="text-subtitle2 text-weight-bold q-mb-sm">รอบการตรวจ</div>
       <q-card flat bordered class="card-round">
@@ -495,6 +515,7 @@
           <q-toolbar-title class="text-subtitle1 text-weight-bold">
             ตรวจรอบที่ {{ selectedRound?.roundNumber ?? '-' }}
           </q-toolbar-title>
+
           <q-btn
             unelevated
             color="positive"
@@ -524,6 +545,19 @@
                   >
                     {{ selectedRound.status }}
                   </q-chip>
+                </q-card-section>
+                
+                <q-card-section class="q-pt-none">
+                  <q-btn
+                    outline
+                    color="primary"
+                    icon="summarize"
+                    label="จัดการสรุปรายงานการตรวจ"
+                    class="full-width text-weight-bold bg-blue-1"
+                    style="border-radius: 8px"
+                    no-caps
+                    @click="goToSummaryReport(selectedRound)"
+                  />
                 </q-card-section>
                 <q-separator />
 
@@ -811,6 +845,14 @@ interface JobApiResponse {
   address?: AddressEntity;
   createdAt?: string;
   status?: string;
+  contractorProgress?: number;
+  isReadyForRound2?: boolean;
+  rounds?: {
+    roundId: number;
+    teamMembers?: {
+      team?: { team_Id?: number };
+    }[];
+  }[];
 }
 
 interface RoundApiResponse {
@@ -1282,6 +1324,8 @@ const job = computed(() => {
       projectImage: null as string | null,
       status: '-',
       statusKey: '',
+      contractorProgress: 0,
+      isReadyForRound2: false,
     };
   }
 
@@ -1321,6 +1365,8 @@ const job = computed(() => {
     projectImage: getImageUrl(data.projectImageUrl),
     status: latestRound?.status || data.status || '-',
     statusKey: (latestRound?.status || data.status) === 'Active' ? 'in_progress' : 'waiting',
+    contractorProgress: data.contractorProgress || 0,
+    isReadyForRound2: data.isReadyForRound2 || false,
   };
 });
 
@@ -1343,6 +1389,11 @@ const approvalButtonLabel = computed(() =>
 
 const goBack = async () => {
   await router.push('/admin/work');
+};
+
+const goToSummaryReport = (round: { id: number } | null | undefined) => {
+  if (!round?.id) return;
+  void router.push(`/admin/report/${round.id}`);
 };
 
 const onEdit = async () => {
@@ -1633,11 +1684,42 @@ const formatDateDisplay = (dateStr: string) => {
 };
 
 const onCreateRound = () => {
+  if (job.value.status === 'เสร็จสิ้น' && job.value.contractorProgress < 80) {
+    $q.dialog({
+      title: 'แจ้งเตือนความคืบหน้างานซ่อม',
+      message: `ผู้รับเหมาซ่อมแซมไปได้เพียง ${Math.round(job.value.contractorProgress)}% ซึ่งยังไม่ถึงเกณฑ์ 80% คุณยืนยันที่จะสร้างรอบตรวจที่ 2 หรือไม่?`,
+      cancel: { label: 'ยกเลิก', flat: true, color: 'grey-7' },
+      ok: { label: 'ยืนยันสร้าง', color: 'primary' },
+      persistent: true,
+    }).onOk(() => {
+      openCreateRoundDialog();
+    });
+  } else {
+    openCreateRoundDialog();
+  }
+};
+
+const openCreateRoundDialog = () => {
   scheduledDate.value = '';
   timeInput.value = '09:00:00';
   selectedInspectors.value = [];
-  selectedTeam.value = null;
-  assignmentMode.value = 'team';
+  
+  // Try to pre-fill from latest round if it exists
+  const latestRoundRaw = jobData.value?.rounds?.sort((a: { roundId: number }, b: { roundId: number }) => b.roundId - a.roundId)[0];
+  if (latestRoundRaw && latestRoundRaw.teamMembers && latestRoundRaw.teamMembers.length > 0) {
+    const teamMember = latestRoundRaw.teamMembers[0];
+    if (teamMember && teamMember.team && teamMember.team.team_Id) {
+      assignmentMode.value = 'team';
+      selectedTeam.value = teamMember.team.team_Id;
+    } else {
+      assignmentMode.value = 'individual';
+      selectedTeam.value = null;
+    }
+  } else {
+    assignmentMode.value = 'team';
+    selectedTeam.value = null;
+  }
+
   showCreateRoundDialog.value = true;
 };
 

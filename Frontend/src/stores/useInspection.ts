@@ -249,6 +249,28 @@ export const useInspectionStore = defineStore('inspection', () => {
     }
   }
 
+  async function updateDefect(id: number, payload: FormData) {
+    try {
+      const res = await api.patch(`/defects/${id}`, payload);
+      return res.data;
+    } catch (err) {
+      const error = err as { response?: { data: unknown } };
+      console.error('Update Defect Error:', error.response?.data);
+      throw err;
+    }
+  }
+
+  async function deleteDefect(id: number) {
+    try {
+      const res = await api.delete(`/defects/${id}`);
+      return res.data;
+    } catch (err) {
+      const error = err as { response?: { data: unknown } };
+      console.error('Delete Defect Error:', error.response?.data);
+      throw err;
+    }
+  }
+
   function clearData() {
     rooms.value = [];
     categories.value = [];
@@ -292,6 +314,8 @@ export const useInspectionStore = defineStore('inspection', () => {
     getSubByCategoryId,
     fetchInspectionMasterData,
     saveDefect,
+    updateDefect,
+    deleteDefect,
     clearData,
     // ใหม่
     defects,

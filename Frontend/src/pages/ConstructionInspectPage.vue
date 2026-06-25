@@ -1,5 +1,12 @@
 <template>
   <q-layout view="lHh Lpr lFf">
+    <q-header v-if="route.path.includes('/admin')" class="bg-white" flat bordered>
+      <div class="row items-center q-pt-md q-pb-sm q-px-md relative-position">
+        <q-btn flat round dense icon="arrow_back_ios_new" color="primary" @click="router.back()" />
+        <div class="text-h6 text-weight-bold q-ml-sm text-primary">แก้ไขการตรวจก่อสร้าง</div>
+      </div>
+    </q-header>
+
     <q-page-container>
       <q-page class="q-pa-md bg-grey-1 modern-font" style="padding-bottom: 80px">
         
@@ -319,7 +326,7 @@
     <q-footer class="bg-transparent q-px-md q-pb-lg">
       <q-btn
         color="primary"
-        label="ส่งรายงานประจำวัน"
+        :label="route.path.includes('/admin') ? 'บันทึกการแก้ไข' : 'ส่งรายงานประจำวัน'"
         class="full-width text-weight-bold shadow-3"
         style="border-radius: 8px; height: 48px; font-size: 16px;"
         :loading="store.isSubmitting"
@@ -524,7 +531,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue';
+import { ref, computed, onUnmounted, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useConstructionDailyReportStore } from 'src/stores/useConstructionDailyReport';
@@ -535,8 +542,113 @@ const router = useRouter();
 const route = useRoute();
 const store = useConstructionDailyReportStore();
 
+const API_BASE_URL = import.meta.env.VITE_API_URL as string;
+
+async function urlToFile(url: string, filename: string): Promise<File | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+  } catch (err) {
+    console.error('Failed to load image as file:', url, err);
+    return null;
+  }
+}
+
 // roundId จาก route params (เช่น /inspector/job/:roundId/construction-inspect)
 const roundId = Number(route.params.roundId);
+
+onMounted(async () => {
+  if (!roundId) return;
+  const existingReport = await store.fetchReportByRound(roundId);
+  if (existingReport) {
+    if (existingReport.workingPeriod) {
+      const [start, end] = existingReport.workingPeriod.split(' - ');
+      if (start) form.value.startTime = start.trim();
+      if (end) form.value.endTime = end.trim();
+    }
+    if (existingReport.weather) {
+      form.value.weather = existingReport.weather;
+    }
+    
+    if (existingReport.workItems && existingReport.workItems.length > 0) {
+      workDetails.value = existingReport.workItems.map(item => ({
+        id: Date.now() + Math.random(),
+        name: item.description,
+        location: item.location || '',
+        unit: item.unit || '',
+        actual: item.actualPercent || 0,
+      }));
+    }
+    
+    if (existingReport.personnels && existingReport.personnels.length > 0) {
+      personnelList.value = existingReport.personnels
+        .filter(p => p.type === 'PERSONNEL')
+        .map(p => ({
+          id: Date.now() + Math.random(),
+          name: p.name,
+          count: p.count,
+          hours: p.hours ?? null,
+        }));
+      workerList.value = existingReport.personnels
+        .filter(p => p.type === 'WORKER')
+        .map(p => ({
+          id: Date.now() + Math.random(),
+          name: p.name,
+          count: p.count,
+          hours: p.hours ?? null,
+        }));
+    }
+    
+    if (existingReport.issues && existingReport.issues.length > 0) {
+      notesList.value = existingReport.issues.map(issue => ({
+        id: Date.now() + Math.random(),
+        text: issue.description,
+        status: issue.note || 'ติดตามผล',
+      }));
+    }
+    
+    if (existingReport.machines && existingReport.machines.length > 0) {
+      machineList.value = existingReport.machines.map(m => ({
+        id: Date.now() + Math.random(),
+        name: m.machineName,
+        size: m.machineSize || '',
+        quantity: m.quantity || 1,
+        hours: m.workingHours ?? null,
+      }));
+    }
+    
+    if (existingReport.accidents && existingReport.accidents.length > 0) {
+      accidentList.value = existingReport.accidents.map(a => ({
+        id: Date.now() + Math.random(),
+        count: a.accidentCount || 1,
+      }));
+    }
+
+    if (existingReport.images && existingReport.images.length > 0) {
+      for (const img of existingReport.images) {
+        const fullUrl = img.imageUrl.startsWith('http') ? img.imageUrl : `${API_BASE_URL}${img.imageUrl}`;
+        const filename = img.imageUrl.split('/').pop() || 'image.jpg';
+        const file = await urlToFile(fullUrl, filename);
+        
+        if (file) {
+          if (img.imageType === 'PANORAMA') {
+            panoramaFile.value = file;
+            panoramaPreview.value = URL.createObjectURL(file);
+          } else if (img.imageType === 'WORK_DETAIL' || img.imageType === 'GENERAL') {
+            photos.value.push({
+              id: Date.now().toString() + Math.random(),
+              file: file,
+              preview: URL.createObjectURL(file),
+              workDetailName: img.caption || null
+            });
+          }
+        }
+      }
+    }
+  }
+});
 
 // สำหรับ Panorama View
 const panoramaInput = ref<HTMLInputElement | null>(null);
@@ -939,7 +1051,7 @@ const submitReport = async () => {
 
     await store.submitReport(formData);
     $q.notify({
-      message: 'ส่งรายงานประจำวันเรียบร้อยแล้ว',
+      message: route.path.includes('/admin') ? 'บันทึกการแก้ไขเรียบร้อยแล้ว' : 'ส่งรายงานประจำวันเรียบร้อยแล้ว',
       color: 'positive',
       icon: 'check_circle',
     });

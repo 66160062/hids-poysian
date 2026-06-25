@@ -33,6 +33,7 @@
               v-for="defect in paginatedDefects"
               :key="defect.defectId"
               :defect="toCardData(defect)"
+              @click="onEditDefectClick(defect)"
             />
           </div>
           
@@ -344,5 +345,25 @@ const onAddDefectClick = () => {
       floorId: defect?.floor?.floorId,
     },
   });
+};
+
+const onEditDefectClick = (defect: Defect) => {
+  if (defect.status === 'repaired') {
+    void router.push({
+      name: 'verifyDefect',
+      params: { roundId },
+      query: {
+        defectId: defect.defectId,
+      },
+    });
+  } else {
+    void router.push({
+      name: 'addDefect',
+      params: { roundId },
+      query: {
+        defectId: defect.defectId,
+      },
+    });
+  }
 };
 </script>

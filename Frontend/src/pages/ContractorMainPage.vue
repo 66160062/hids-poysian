@@ -53,14 +53,14 @@
             <div class="col-6 text-center">
               <div class="row items-center justify-center q-gutter-xs">
                 <q-icon name="check_circle" color="green" size="20px" />
-                <span class="text-caption text-grey-7">ผ่าน</span>
+                <span class="text-caption text-grey-7">ซ่อมแล้ว</span>
               </div>
               <div class="text-h6 text-green text-weight-bold">{{ stats.passed }}</div>
             </div>
             <div class="col-6 text-center">
               <div class="row items-center justify-center q-gutter-xs">
                 <q-icon name="cancel" color="red" size="20px" />
-                <span class="text-caption text-grey-7">ไม่ผ่าน</span>
+                <span class="text-caption text-grey-7">ยังไม่ซ่อม</span>
               </div>
               <div class="text-h6 text-red text-weight-bold">{{ stats.failed }}</div>
             </div>

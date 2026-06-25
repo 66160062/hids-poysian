@@ -55,40 +55,41 @@
         </q-btn>
       </div>
 
-      <!-- Tabs for Job Type -->
-      <q-tabs
-        v-model="selectedJobType"
-        dense
-        class="bg-white text-grey-7 shadow-1 q-mb-lg"
-        active-color="primary"
-        indicator-color="primary"
-        align="justify"
-        style="border-radius: 12px"
-      >
-        <q-tab name="ทั้งหมด">
-          <div class="row items-center q-gutter-x-sm no-wrap">
-            <q-icon name="format_list_bulleted" size="18px" />
-            <span>ทั้งหมด</span>
-            <q-badge color="grey-3" text-color="grey-8" rounded>{{ allJobCount }}</q-badge>
-          </div>
-        </q-tab>
-        <q-tab name="ตรวจบ้าน">
+      <!-- Segmented Control Toggle for Job Type -->
+      <div class="row q-mb-none bg-white shadow-1 q-pa-xs" style="border-radius: 12px;">
+        <q-btn
+          class="col"
+          :unelevated="selectedJobType === 'ตรวจบ้าน'"
+          :flat="selectedJobType !== 'ตรวจบ้าน'"
+          :color="selectedJobType === 'ตรวจบ้าน' ? 'primary' : 'transparent'"
+          :text-color="selectedJobType === 'ตรวจบ้าน' ? 'white' : 'grey-7'"
+          no-caps
+          style="border-radius: 10px; font-weight: 600"
+          @click="selectedJobType = 'ตรวจบ้าน'"
+        >
           <div class="row items-center q-gutter-x-sm no-wrap">
             <q-icon name="home" size="18px" />
             <span>ตรวจบ้าน</span>
-            <q-badge color="blue-1" text-color="blue-8" rounded>{{ defectJobCount }}</q-badge>
+            <q-badge v-if="selectedJobType !== 'ตรวจบ้าน'" color="grey-3" text-color="grey-8" rounded>{{ defectJobCount }}</q-badge>
           </div>
-        </q-tab>
-        <q-tab name="งานก่อสร้าง">
+        </q-btn>
+        <q-btn
+          class="col"
+          :unelevated="selectedJobType === 'งานก่อสร้าง'"
+          :flat="selectedJobType !== 'งานก่อสร้าง'"
+          :color="selectedJobType === 'งานก่อสร้าง' ? 'orange' : 'transparent'"
+          :text-color="selectedJobType === 'งานก่อสร้าง' ? 'white' : 'grey-7'"
+          no-caps
+          style="border-radius: 10px; font-weight: 600"
+          @click="selectedJobType = 'งานก่อสร้าง'"
+        >
           <div class="row items-center q-gutter-x-sm no-wrap">
             <q-icon name="construction" size="18px" />
             <span>ก่อสร้าง</span>
-            <q-badge color="orange-1" text-color="orange-8" rounded>{{
-              constructJobCount
-            }}</q-badge>
+            <q-badge v-if="selectedJobType !== 'งานก่อสร้าง'" color="grey-3" text-color="grey-8" rounded>{{ constructJobCount }}</q-badge>
           </div>
-        </q-tab>
-      </q-tabs>
+        </q-btn>
+      </div>
 
       <!-- Filter Bottom Sheet Dialog -->
       <q-dialog v-model="showFilterDialog" position="bottom">
@@ -181,7 +182,7 @@
       </q-dialog>
 
       <!-- Active Filters Chips -->
-      <div v-if="activeFilterCount > 0" class="row items-center q-gutter-x-sm q-mb-sm">
+      <div v-if="activeFilterCount > 0" class="row items-center q-gutter-x-sm q-mt-sm q-mb-none">
         <span class="text-caption text-grey-7 q-mr-xs q-pl-xs">กำลังกรอง:</span>
         <q-chip
           v-if="activeFilter !== 'all'"
@@ -207,7 +208,7 @@
         </q-chip>
       </div>
 
-      <div class="work-list-wrapper">
+      <div class="work-list-wrapper q-pt-md">
         <div v-if="tasks.length === 0" class="text-center text-grey-6 q-pa-xl">
           ไม่พบข้อมูลที่ค้นหา
         </div>
@@ -313,7 +314,7 @@
         icon="add"
         active-icon="close"
         direction="up"
-        color="primary"
+        :color="selectedJobType === 'ตรวจบ้าน' ? 'primary' : 'orange'"
         class="shadow-4 custom-fab"
         transition-show="jump-up"
         transition-hide="jump-down"
@@ -358,7 +359,7 @@ const error = ref<string>('');
 const searchTerm = ref('');
 const activeFilter = ref('all');
 const selectedType = ref('ทั้งหมด'); // ตัวเลือกประเภทบ้าน
-const selectedJobType = ref('ทั้งหมด'); // ตัวเลือกประเภทงาน
+const selectedJobType = ref('ตรวจบ้าน'); // ตัวเลือกประเภทงาน
 const sortOrder = ref('desc'); // desc = ล่าสุด -> เก่า, asc = เก่า -> ล่าสุด
 
 // ตัวเลือกใน Dropdown
@@ -385,7 +386,6 @@ function clearFilters() {
   sortOrder.value = 'desc';
 }
 
-const allJobCount = computed(() => workStore.absoluteJobCounts.all);
 const defectJobCount = computed(() => workStore.absoluteJobCounts.defect);
 const constructJobCount = computed(() => workStore.absoluteJobCounts.construction);
 
@@ -416,18 +416,16 @@ const tasks = computed<TaskItem[]>(() => {
   let works = workStore.works;
 
   // Local fallback filter in case backend doesn't support inspectionType param yet
-  if (selectedJobType.value !== 'ทั้งหมด') {
-    works = works.filter((w) => {
-      const type = w.inspectionType || '';
-      if (selectedJobType.value === 'งานก่อสร้าง') {
-        return (
-          type === 'CONSTRUCTION_INSPECTION' || type === 'ตรวจก่อสร้าง' || type === 'Construction'
-        );
-      } else {
-        return type === 'DEFECT_INSPECTION' || type === 'ตรวจ Defect' || type === 'Defect';
-      }
-    });
-  }
+  works = works.filter((w) => {
+    const type = w.inspectionType || '';
+    if (selectedJobType.value === 'งานก่อสร้าง') {
+      return (
+        type === 'CONSTRUCTION_INSPECTION' || type === 'ตรวจก่อสร้าง' || type === 'Construction'
+      );
+    } else {
+      return type === 'DEFECT_INSPECTION' || type === 'ตรวจ Defect' || type === 'Defect';
+    }
+  });
 
   return works.map((work) => {
     // Find matching status config from backend meta
@@ -439,6 +437,8 @@ const tasks = computed<TaskItem[]>(() => {
     };
 
     let finalStatusLabel = meta.label;
+    let finalBgClass = meta.bgClass;
+    let finalTextColor = meta.textColor;
 
     // ค้นหารอบตรวจที่มีสถานะกำลังดำเนินการ (SCHEDULED หรือ Active)
     let latestActiveRoundDate = work.createdAt;
@@ -453,13 +453,19 @@ const tasks = computed<TaskItem[]>(() => {
       }
 
       if (work.status === 'Completed') {
-        const completedRound = sortedRounds.find(
-          (r) => r.status === 'APPROVED' || r.status === 'COMPLETED',
-        );
-        if (completedRound) {
-          finalStatusLabel = `เสร็จสิ้น ${completedRound.roundNumber ?? ''}`.trim();
+        if (work.isReadyForRound2) {
+          finalStatusLabel = 'รอตรวจรอบ 2';
+          finalBgClass = 'bg-orange-1';
+          finalTextColor = 'orange-8';
         } else {
-          finalStatusLabel = `เสร็จสิ้น ${sortedRounds[0]?.roundNumber ?? ''}`.trim();
+          const completedRound = sortedRounds.find(
+            (r) => r.status === 'APPROVED' || r.status === 'COMPLETED',
+          );
+          if (completedRound) {
+            finalStatusLabel = `เสร็จสิ้น ${completedRound.roundNumber ?? ''}`.trim();
+          } else {
+            finalStatusLabel = `เสร็จสิ้น ${sortedRounds[0]?.roundNumber ?? ''}`.trim();
+          }
         }
       }
     }
@@ -468,8 +474,8 @@ const tasks = computed<TaskItem[]>(() => {
       id: work.jobId,
       title: work.projectName || 'ไม่ระบุชื่อโครงการ',
       status: finalStatusLabel,
-      statusBgClass: meta.bgClass,
-      statusTextColor: meta.textColor,
+      statusBgClass: finalBgClass,
+      statusTextColor: finalTextColor,
       statusKey: meta.key,
       inspectionType: work.inspectionType || '',
       type: work.houseType?.name || 'ไม่ระบุ',

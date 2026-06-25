@@ -104,7 +104,11 @@ export class InspectionJobsController {
     @Query('type') type?: string,
     @Query('inspectionType') inspectionType?: string,
   ) {
-    return this.inspectionJobsService.getStatusMetadata(search, type, inspectionType);
+    return this.inspectionJobsService.getStatusMetadata(
+      search,
+      type,
+      inspectionType,
+    );
   }
 
   @Get(':id/contractor-share')

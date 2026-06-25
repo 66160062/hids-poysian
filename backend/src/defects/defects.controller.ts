@@ -23,7 +23,7 @@ import { extname } from 'path';
 
 @Controller('defects')
 export class DefectsController {
-  constructor(private readonly defectsService: DefectsService) { }
+  constructor(private readonly defectsService: DefectsService) {}
 
   @Post()
   @ApiConsumes('multipart/form-data')
