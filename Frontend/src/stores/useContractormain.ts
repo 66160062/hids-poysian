@@ -88,16 +88,33 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
   const contractorId = ref<number | null>(null);
   const currentJobId = ref<number | null>(null);
 
-  const stats = ref<RepairStats>({
-    totalRoomTypes: 0,
-    totalJobTypes: 0,
-    totalItems: 0,
-    passed: 0,
-    failed: 0,
+  const baseRooms = ref<RepairRoom[]>([]);
+  const allDefectItems = ref<DefectItem[]>([]);
+
+  const stats = computed<RepairStats>(() => {
+    const passed = allDefectItems.value.filter(d => d.status === 'verified' || d.status === 'repaired').length;
+    const roomTypeNames = new Set(baseRooms.value.flatMap(r => r.tags));
+    const jobTypeNames = new Set(allDefectItems.value.map(d => d.jobType));
+    return {
+      totalRoomTypes: roomTypeNames.size,
+      totalJobTypes: jobTypeNames.size,
+      totalItems: allDefectItems.value.length,
+      passed,
+      failed: allDefectItems.value.length - passed,
+    };
   });
 
-  const rooms = ref<RepairRoom[]>([]);
-  const allDefectItems = ref<DefectItem[]>([]);
+  const rooms = computed<RepairRoom[]>(() => {
+    return baseRooms.value.map(room => {
+      const roomDefects = allDefectItems.value.filter(d => d.roomId === room.id);
+      const passed = roomDefects.filter(d => d.status === 'verified' || d.status === 'repaired').length;
+      return {
+        ...room,
+        passed,
+        failed: room.count - passed,
+      };
+    });
+  });
 
   // ── API INTEGRATION ──────────────────────────────────────────────────────
   const fetchRepairData = async (jobId: number) => {
@@ -143,10 +160,7 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
           roomMap.set(key, room);
         }
 
-        const isPassed = defect.status === 'verified';
         room.count++;
-        if (isPassed) room.passed++;
-        else room.failed++;
 
         roomTypeNames.add(roomName);
 
@@ -174,17 +188,8 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
         });
       }
 
-      rooms.value = Array.from(roomMap.values());
+      baseRooms.value = Array.from(roomMap.values());
       allDefectItems.value = items;
-
-      const passed = items.filter((item) => item.status === 'verified').length;
-      stats.value = {
-        totalRoomTypes: roomTypeNames.size,
-        totalJobTypes: jobTypeNames.size,
-        totalItems: items.length,
-        passed,
-        failed: items.length - passed,
-      };
     } catch (e) {
       error.value = 'โหลดข้อมูลไม่สำเร็จ';
       console.error(e);

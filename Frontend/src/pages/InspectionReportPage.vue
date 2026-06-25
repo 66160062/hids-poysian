@@ -9,7 +9,14 @@
         boxShadow: '0 0 20px rgba(0,0,0,0.1)',
       }"
     >
-      <div class="row items-center justify-between q-pb-md q-px-md relative-position"></div>
+      <div
+        v-if="route.path.includes('/admin')"
+        class="row items-center q-pt-md q-pb-sm q-px-md relative-position"
+      >
+        <q-btn flat round dense icon="arrow_back_ios_new" color="primary" @click="router.back()" />
+        <div class="text-h6 text-weight-bold q-ml-sm text-primary">สรุปรายงานการตรวจ</div>
+      </div>
+      <div v-else class="row items-center justify-between q-pb-md q-px-md relative-position"></div>
 
       <div class="q-px-lg q-pb-xl col column">
         <div class="text-weight-bold q-mb-md" style="font-size: 18px">

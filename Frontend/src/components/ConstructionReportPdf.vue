@@ -6,8 +6,9 @@
       <q-btn color="primary" icon="print" label="พิมพ์เอกสาร (A4)" @click="printPdf" />
     </div>
 
-    <div class="pdf-page">
-      <!-- HEADER 60/40 -->
+    <div class="pdf-wrapper">
+      <div class="pdf-page">
+        <!-- HEADER 60/40 -->
       <table class="report-table no-border-bottom">
         <tbody>
           <tr>
@@ -199,6 +200,7 @@
           <div class="q-mt-xs">วันที่......./......./.......</div>
         </div>
       </div>
+      </div>
     </div>
   </div>
 </template>
@@ -354,14 +356,32 @@ const paddedIssues = computed(() => {
 .pdf-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
   background-color: #525659;
   padding: 20px;
   min-height: 100vh;
 }
 
+.pdf-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  justify-content: center;
+}
+
+@media screen and (max-width: 820px) {
+  .pdf-wrapper {
+    justify-content: flex-start;
+  }
+  .pdf-container {
+    padding: 10px;
+  }
+}
+
 .pdf-page {
-  width: 210mm;
+  width: 210mm !important;
+  min-width: 210mm !important;
+  max-width: 210mm !important;
   min-height: 297mm;
   background-color: white;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);

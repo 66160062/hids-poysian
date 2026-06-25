@@ -6,12 +6,20 @@ export class CreateInspectionTeamMemberDto {
   @IsNumber()
   jobId!: number;
 
-  @ApiProperty({ description: 'รหัสผู้ตรวจ (user)', example: 1, required: false })
+  @ApiProperty({
+    description: 'รหัสผู้ตรวจ (user)',
+    example: 1,
+    required: false,
+  })
   @IsOptional()
   @IsNumber()
   inspectorId?: number;
 
-  @ApiProperty({ description: 'รหัสทีมตรวจ (team)', example: 1, required: false })
+  @ApiProperty({
+    description: 'รหัสทีมตรวจ (team)',
+    example: 1,
+    required: false,
+  })
   @IsOptional()
   @IsNumber()
   teamId?: number;

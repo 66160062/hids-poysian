@@ -11,6 +11,17 @@
         @click="handleBack"
         style="z-index: 10"
       />
+      <q-btn
+        v-if="isEditMode"
+        flat
+        round
+        dense
+        icon="delete"
+        color="negative"
+        class="absolute-top-right q-mt-md q-mr-sm bg-white shadow-1"
+        @click="handleDelete"
+        style="z-index: 10"
+      />
       <q-img v-if="imagePreview" :src="imagePreview" class="fit" fit="cover" />
       <div v-else class="column items-center text-grey-5">
         <q-icon name="image" size="80px" color="grey-4" />
@@ -259,12 +270,17 @@ import { useInspectionStore } from 'src/stores/useInspection';
 import { api } from 'src/boot/axios';
 import { useQuasar } from 'quasar';
 
-const router = useRouter();
 const route = useRoute();
+const router = useRouter();
 const inspectionStore = useInspectionStore();
-const roundId = route.params.roundId as string;
-const step = ref<number>(1);
 const $q = useQuasar();
+
+const roundId = route.params.roundId as string;
+const defectIdFromQuery = route.query.defectId as string | undefined;
+const actionFromQuery = route.query.action as string | undefined;
+const isEditMode = computed(() => !!defectIdFromQuery);
+
+const step = ref(1);
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -424,7 +440,12 @@ const handleNext = async () => {
     formData.append('inspectorId', '1'); // TODO: ดึงจาก auth store
     formData.append('severity', form.value.severity);
     formData.append('description', form.value.note || '-');
-    formData.append('status', 'pending_repair');
+
+    if (!isEditMode.value) {
+      formData.append('status', 'pending_repair');
+    } else if (actionFromQuery === 'fail') {
+      formData.append('status', 'pending_repair');
+    }
 
     // ส่ง subCategoryIds[] ทุกตัวที่เลือก
     form.value.defectTypes.forEach((id) => {
@@ -435,27 +456,67 @@ const handleNext = async () => {
       formData.append('file', selectedFile.value);
     }
 
-    await inspectionStore.saveDefect(formData);
-    await inspectionStore.fetchDefects(roundId);
+    if (isEditMode.value) {
+      await inspectionStore.updateDefect(Number(defectIdFromQuery), formData);
+      await inspectionStore.fetchDefects(roundId);
+      $q.notify({
+        message: 'อัปเดตข้อมูลสำเร็จ!',
+        color: 'positive',
+        icon: 'check_circle',
+        timeout: 1500,
+      });
+      router.back();
+    } else {
+      await inspectionStore.saveDefect(formData);
+      await inspectionStore.fetchDefects(roundId);
 
-    // reset เฉพาะ step 2 คง room info ไว้
-    form.value.severity = '';
-    form.value.jobType = null;
-    form.value.defectTypes = [];
-    form.value.note = '';
-    imagePreview.value = null;
-    selectedFile.value = null;
-    step.value = 1;
+      // reset เฉพาะ step 2 คง room info ไว้
+      form.value.severity = '';
+      form.value.jobType = null;
+      form.value.defectTypes = [];
+      form.value.note = '';
+      imagePreview.value = null;
+      selectedFile.value = null;
+      step.value = 1;
 
-    $q.notify({
-      message: 'บันทึกข้อมูลสำเร็จ!',
-      color: 'positive',
-      icon: 'check_circle',
-      timeout: 1500,
-    });
+      $q.notify({
+        message: 'บันทึกข้อมูลสำเร็จ!',
+        color: 'positive',
+        icon: 'check_circle',
+        timeout: 1500,
+      });
+    }
   } catch {
-    alert('เกิดข้อผิดพลาดในการบันทึก');
+    $q.notify({ message: 'เกิดข้อผิดพลาดในการบันทึก', color: 'negative', icon: 'error' });
   }
+};
+
+const handleDelete = () => {
+  $q.dialog({
+    title: 'ยืนยันการลบ',
+    message: 'คุณต้องการลบรายการ Defect นี้ใช่หรือไม่?',
+    cancel: true,
+    persistent: true,
+  }).onOk(() => {
+    void (async () => {
+      try {
+        await inspectionStore.deleteDefect(Number(defectIdFromQuery));
+        await inspectionStore.fetchDefects(roundId);
+        $q.notify({
+          message: 'ลบข้อมูลสำเร็จ',
+          color: 'positive',
+          icon: 'check_circle',
+        });
+        router.back();
+      } catch {
+        $q.notify({
+          message: 'เกิดข้อผิดพลาดในการลบ',
+          color: 'negative',
+          icon: 'error',
+        });
+      }
+    })();
+  });
 };
 
 // ── Lifecycle ─────────────────────────────────────────────────
@@ -473,12 +534,45 @@ onMounted(async () => {
   await fetchSubRooms();
   await fetchFloors();
 
-  const { roomId, subRoomId, floorId } = route.query;
-  if (roomId) {
-    form.value.roomId = Number(roomId);
-    if (subRoomId) form.value.subRoomId = Number(subRoomId);
-    if (floorId) form.value.floorId = Number(floorId);
-    step.value = 2;
+  if (defectIdFromQuery) {
+    const defectId = Number(defectIdFromQuery);
+    let defect = inspectionStore.defects.find((d) => d.defectId === defectId);
+    if (!defect) {
+      try {
+        const { data } = await api.get(`/defects/${defectId}`);
+        defect = data;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    
+    if (defect) {
+      form.value.roomId = defect.room?.roomId ?? null;
+      form.value.subRoomId = defect.subRoom?.subRoomId ?? null;
+      form.value.floorId = defect.floor?.floorId ?? null;
+      form.value.severity = defect.severity;
+      severityToggle.value = defect.severity === 'Minor';
+      
+      if (defect.subCategories && defect.subCategories.length > 0) {
+        form.value.jobType = defect.subCategories[0]?.category?.categoryId ?? null;
+        form.value.defectTypes = defect.subCategories.map((s: { subCategoryId: number }) => s.subCategoryId);
+      }
+      form.value.note = defect.description !== '--' ? defect.description : '';
+      
+      if (defect.imageUrl) {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        imagePreview.value = defect.imageUrl.startsWith('http') ? defect.imageUrl : `${baseUrl}${defect.imageUrl}`;
+      }
+      step.value = 1; // Stay on step 1 to allow editing room details if needed
+    }
+  } else {
+    const { roomId, subRoomId, floorId } = route.query;
+    if (roomId) {
+      form.value.roomId = Number(roomId);
+      if (subRoomId) form.value.subRoomId = Number(subRoomId);
+      if (floorId) form.value.floorId = Number(floorId);
+      step.value = 2;
+    }
   }
 });
 </script>

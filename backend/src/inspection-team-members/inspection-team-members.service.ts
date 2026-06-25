@@ -53,13 +53,15 @@ export class InspectionTeamMembersService {
       where: { job: { jobId: dto.jobId } },
       order: { roundNumber: 'DESC' },
     });
-    
+
     if (!round) {
       throw new NotFoundException(`ไม่พบรอบการตรวจสำหรับงาน ID ${dto.jobId}`);
     }
 
     if (!dto.inspectorId && !dto.teamId) {
-      throw new BadRequestException('ต้องระบุผู้ตรวจหรือทีมอย่างน้อยหนึ่งอย่าง');
+      throw new BadRequestException(
+        'ต้องระบุผู้ตรวจหรือทีมอย่างน้อยหนึ่งอย่าง',
+      );
     }
 
     let inspector: User | null = null;
@@ -107,7 +109,7 @@ export class InspectionTeamMembersService {
 
   async findByJob(jobId: number): Promise<InspectorChip[]> {
     await this.assertJobExists(jobId);
-    
+
     const latestRound = await this.roundsRepo.findOne({
       where: { job: { jobId } },
       order: { roundNumber: 'DESC' },
@@ -118,7 +120,7 @@ export class InspectionTeamMembersService {
     const rows = await this.teamsRepo.find({
       where: { round: { roundId: latestRound.roundId } },
       relations: ['inspector', 'team'],
-      order: { assignedAt: 'ASC' }, 
+      order: { assignedAt: 'ASC' },
     });
     return rows.map((row) => this.toInspectorChip(row));
   }
@@ -157,7 +159,7 @@ export class InspectionTeamMembersService {
 
   private toInspectorChip(row: InspectionTeamMember): InspectorChip {
     const { inspector, team } = row;
-    
+
     // If it's a team assignment without an inspector
     if (!inspector && team) {
       return {

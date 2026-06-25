@@ -25,7 +25,11 @@ export class CreateDailyReportDto {
   @IsNumber()
   houseTypeId: number;
 
-  @ApiProperty({ description: 'Inspector user ID', example: 1, required: false })
+  @ApiProperty({
+    description: 'Inspector user ID',
+    example: 1,
+    required: false,
+  })
   @Type(() => Number)
   @IsNumber()
   @IsOptional()

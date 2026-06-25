@@ -125,11 +125,7 @@ describe('AuthService', () => {
     jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
 
     const { token } = await realService.generateLinkToken(12, 'customer');
-    const decoded = realJwtService.decode(token) as {
-      project_id: number;
-      role: string;
-      exp: number;
-    };
+    const decoded = realJwtService.decode(token);
 
     expect(decoded.project_id).toBe(12);
     expect(decoded.role).toBe('customer');

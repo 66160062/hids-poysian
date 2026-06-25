@@ -724,6 +724,7 @@ onMounted(async () => {
     form.houseType = existing.houseType?.house_type_id || 1;
     form.usableArea = existing.usableArea?.toString() || '';
     form.houseNumber = existing.address?.houseNumber || '';
+    form.floor = existing.address?.floor || '';
     form.soi = existing.address?.soi || '';
     form.province = existing.address?.province || '';
     form.district = existing.address?.district || '';
@@ -833,6 +834,7 @@ const onSubmit = async () => {
         if (existingJob.address) {
           await addressStore.updateAddress(existingJob.address.addressId, {
             houseNumber: form.houseNumber,
+            floor: form.floor,
             soi: form.soi,
             province: form.province,
             district: form.district,
@@ -909,6 +911,7 @@ const onSubmit = async () => {
       // 2. Create Address
       const addressId = await addressStore.createAddress({
         houseNumber: form.houseNumber,
+        floor: form.floor,
         soi: form.soi,
         province: form.province,
         district: form.district,

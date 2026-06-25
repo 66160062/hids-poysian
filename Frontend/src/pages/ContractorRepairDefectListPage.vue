@@ -36,14 +36,14 @@
             <div class="col-6 text-center">
               <div class="row items-center justify-center q-gutter-xs">
                 <q-icon name="check_circle" color="green" size="20px" />
-                <span class="text-caption text-grey-7">ผ่าน</span>
+                <span class="text-caption text-grey-7">ซ่อมแล้ว</span>
               </div>
               <div class="text-h6 text-green text-weight-bold">{{ stats.passed }}</div>
             </div>
             <div class="col-6 text-center">
               <div class="row items-center justify-center q-gutter-xs">
                 <q-icon name="cancel" color="red" size="20px" />
-                <span class="text-caption text-grey-7">ไม่ผ่าน</span>
+                <span class="text-caption text-grey-7">ยังไม่ซ่อม</span>
               </div>
               <div class="text-h6 text-red text-weight-bold">{{ stats.failed }}</div>
             </div>
@@ -68,7 +68,7 @@
       <div class="text-subtitle2 text-weight-bold q-mb-sm">รายการตรวจ</div>
 
       <q-card
-        v-for="item in defectItems"
+        v-for="item in paginatedDefects"
         :key="item.id"
         flat
         bordered
@@ -129,6 +129,18 @@
           </div>
         </q-card-section>
       </q-card>
+
+      <!-- Pagination -->
+      <div class="row justify-center q-mt-md" v-if="totalPages > 1">
+        <q-pagination
+          v-model="currentPage"
+          :max="totalPages"
+          color="primary"
+          boundary-numbers
+          direction-links
+          :max-pages="5"
+        />
+      </div>
     </div>
 
     <!-- Filter Dialog -->
@@ -180,7 +192,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia'; // ✅ เพิ่ม
 import {
@@ -241,9 +253,14 @@ const stats = computed(() => ({
   rooms: roomId.value ? 1 : rooms.value.length,
   jobTypes: [...new Set(baseItems.value.map((d: DefectItem) => d.jobType))].length,
   total: baseItems.value.length,
-  passed: baseItems.value.filter((d: DefectItem) => d.status === 'verified').length,
-  failed: baseItems.value.filter((d: DefectItem) => d.status === 'rejected').length,
+  passed: baseItems.value.filter((d: DefectItem) => d.status === 'verified' || d.status === 'repaired').length,
+  failed: baseItems.value.filter((d: DefectItem) => d.status === 'rejected' || d.status === 'pending_repair').length,
 }));
+
+const currentPage = ref(1);
+const itemsPerPage = ref(10);
+
+
 
 const defectItems = computed(() =>
   baseItems.value.filter((item: DefectItem) => {
@@ -261,6 +278,18 @@ const defectItems = computed(() =>
     return matchRoom && matchJob && matchStatus;
   }),
 );
+
+const totalPages = computed(() => Math.ceil(defectItems.value.length / itemsPerPage.value));
+
+const paginatedDefects = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  const end = start + itemsPerPage.value;
+  return defectItems.value.slice(start, end);
+});
+
+watch(defectItems, () => {
+  currentPage.value = 1;
+});
 
 const resetFilter = () => {
   selectedRooms.value = [];

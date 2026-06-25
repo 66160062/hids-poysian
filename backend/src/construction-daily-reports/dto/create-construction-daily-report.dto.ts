@@ -242,4 +242,3 @@ export class CreateConstructionDailyReportDto {
   @IsOptional()
   machines?: DailyMachineDto[];
 }
-

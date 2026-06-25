@@ -144,6 +144,26 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/admin/report/:roundId',
+    component: () => import('layouts/FullScreen.vue'),
+    children: [
+      {
+        path: '',
+        component: () => import('pages/InspectionReportPage.vue'),
+      },
+    ],
+  },
+  {
+    path: '/admin/construction-inspect/:roundId',
+    component: () => import('layouts/FullScreen.vue'),
+    children: [
+      {
+        path: '',
+        component: () => import('pages/ConstructionInspectPage.vue'),
+      },
+    ],
+  },
+  {
     path: '/inspector',
     component: () => import('layouts/InspectorScreen.vue'),
     children: [
@@ -182,6 +202,11 @@ const routes: RouteRecordRaw[] = [
         path: 'job/:roundId/inspection/add-defect',
         name: 'addDefect',
         component: () => import('pages/AddDefectPage.vue'),
+      },
+      {
+        path: 'job/:roundId/inspection/verify-defect',
+        name: 'verifyDefect',
+        component: () => import('pages/VerifyDefectPage.vue'),
       },
       {
         path: 'Consdashboard',

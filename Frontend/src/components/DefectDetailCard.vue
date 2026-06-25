@@ -1,5 +1,5 @@
 <template>
-  <q-card flat bordered class="rounded-borders bg-white q-pa-sm">
+  <q-card flat bordered class="rounded-borders bg-white q-pa-sm cursor-pointer" @click="$emit('click')">
     <div class="row no-wrap q-gutter-x-md">
       <div class="image-wrapper">
         <q-img v-if="defect.imageUrl" loading="eager" :src="getImageUrl(defect.imageUrl) ?? undefined" class="defect-img rounded-borders" />
@@ -91,6 +91,8 @@ defineProps({
     required: true,
   },
 });
+
+defineEmits(['click']);
 </script>
 
 <style scoped>

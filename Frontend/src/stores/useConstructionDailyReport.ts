@@ -64,6 +64,7 @@ export interface ConstructionDailyReportResponse {
   issues: IssuePayload[];
   accidents: AccidentPayload[];
   machines: MachinePayload[];
+  images?: { imageUrl: string; caption?: string; imageType?: string }[];
 }
 
 export interface ExtendedConstructionReport extends ConstructionDailyReportResponse {

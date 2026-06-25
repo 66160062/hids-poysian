@@ -48,7 +48,9 @@ export class DefectsService {
       round,
       room: { roomId: createDefectDto.roomId } as any,
       floor: { floorId: createDefectDto.floorId } as any,
-      subRoom: createDefectDto.subRoomId ? { subRoomId: createDefectDto.subRoomId } as any : null,
+      subRoom: createDefectDto.subRoomId
+        ? ({ subRoomId: createDefectDto.subRoomId } as any)
+        : null,
       subCategories,
       inspector,
       imageFileSize: createDefectDto.imageFileSize,
@@ -59,14 +61,28 @@ export class DefectsService {
 
   findAll() {
     return this.defectsRepo.find({
-      relations: ['round', 'room', 'subRoom', 'floor', 'subCategories', 'inspector'],
+      relations: [
+        'round',
+        'room',
+        'subRoom',
+        'floor',
+        'subCategories',
+        'inspector',
+      ],
     });
   }
 
   findOne(id: number) {
     return this.defectsRepo.findOneOrFail({
       where: { defectId: id },
-      relations: ['round', 'room', 'subRoom', 'floor', 'subCategories', 'inspector'],
+      relations: [
+        'round',
+        'room',
+        'subRoom',
+        'floor',
+        'subCategories',
+        'inspector',
+      ],
     });
   }
 
@@ -78,7 +94,35 @@ export class DefectsService {
     },
   ) {
     const defect = await this.defectsRepo.findOneByOrFail({ defectId: id });
-    Object.assign(defect, updateDefectDto);
+
+    // Assign primitive properties
+    defect.description = updateDefectDto.description ?? defect.description;
+    defect.severity = updateDefectDto.severity ?? defect.severity;
+    defect.status = updateDefectDto.status ?? defect.status;
+    if (updateDefectDto.imageUrl) defect.imageUrl = updateDefectDto.imageUrl;
+    if (updateDefectDto.imageFileSize)
+      defect.imageFileSize = updateDefectDto.imageFileSize;
+
+    // Handle relations
+    if (updateDefectDto.roomId) {
+      defect.room = { roomId: updateDefectDto.roomId } as any;
+    }
+    if (updateDefectDto.floorId) {
+      defect.floor = { floorId: updateDefectDto.floorId } as any;
+    }
+    if (updateDefectDto.subRoomId !== undefined) {
+      defect.subRoom = updateDefectDto.subRoomId
+        ? ({ subRoomId: updateDefectDto.subRoomId } as any)
+        : null;
+    }
+
+    if (updateDefectDto.subCategoryIds) {
+      const subCategories = await this.subCategoriesRepo.findBy({
+        subCategoryId: In(updateDefectDto.subCategoryIds),
+      });
+      defect.subCategories = subCategories;
+    }
+
     return this.defectsRepo.save(defect);
   }
 

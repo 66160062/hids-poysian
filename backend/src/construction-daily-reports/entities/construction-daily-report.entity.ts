@@ -89,6 +89,8 @@ export class ConstructionDailyReport {
   @OneToMany(() => DailyMachine, (m) => m.dailyReport, { cascade: true })
   machines!: DailyMachine[];
 
-  @OneToMany(() => DailyReportImage, (img) => img.dailyReport, { cascade: true })
+  @OneToMany(() => DailyReportImage, (img) => img.dailyReport, {
+    cascade: true,
+  })
   images!: DailyReportImage[];
 }

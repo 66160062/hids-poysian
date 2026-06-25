@@ -4,6 +4,7 @@ import { api } from 'src/boot/axios';
 export const useAddressStore = defineStore('address', () => {
   const createAddress = async (payload: {
     houseNumber: string;
+    floor?: string;
     soi: string;
     province: string;
     district: string;
@@ -12,12 +13,13 @@ export const useAddressStore = defineStore('address', () => {
   }) => {
     try {
       const response = await api.post('/addresses', {
-        houseNumber: payload.houseNumber || '',
-        soi: payload.soi || '',
-        subDistrict: payload.subDistrict || '',
-        district: payload.district || '',
-        province: payload.province || '',
-        postalCode: payload.postalCode || '',
+        houseNumber: String(payload.houseNumber || ''),
+        floor: String(payload.floor || ''),
+        soi: String(payload.soi || ''),
+        subDistrict: String(payload.subDistrict || ''),
+        district: String(payload.district || ''),
+        province: String(payload.province || ''),
+        postalCode: String(payload.postalCode || ''),
       });
       return response.data.addressId || response.data.id || 1;
     } catch (error) {
@@ -30,6 +32,7 @@ export const useAddressStore = defineStore('address', () => {
     id: number,
     payload: {
       houseNumber: string;
+      floor?: string;
       soi: string;
       province: string;
       district: string;
@@ -39,12 +42,13 @@ export const useAddressStore = defineStore('address', () => {
   ) => {
     try {
       const response = await api.patch(`/addresses/${id}`, {
-        houseNumber: payload.houseNumber || '',
-        soi: payload.soi || '',
-        subDistrict: payload.subDistrict || '',
-        district: payload.district || '',
-        province: payload.province || '',
-        postalCode: payload.postalCode || '',
+        houseNumber: String(payload.houseNumber || ''),
+        floor: String(payload.floor || ''),
+        soi: String(payload.soi || ''),
+        subDistrict: String(payload.subDistrict || ''),
+        district: String(payload.district || ''),
+        province: String(payload.province || ''),
+        postalCode: String(payload.postalCode || ''),
       });
       return response.data;
     } catch (error) {
