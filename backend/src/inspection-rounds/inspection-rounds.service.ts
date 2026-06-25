@@ -20,8 +20,9 @@ export class InspectionRoundsService {
     private readonly teamMembersRepo: Repository<InspectionTeamMember>,
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
-    private readonly dataSource: DataSource,
-  ) {}
+    @InjectRepository(Defect)
+    private readonly defectsRepo: Repository<Defect>,
+  ) { }
 
   async create(
     createInspectionRoundDto: CreateInspectionRoundDto,
