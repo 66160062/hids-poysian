@@ -9,6 +9,7 @@ import { InspectionRound } from './entities/inspection-round.entity';
 import { InspectionJobsModule } from 'src/inspection-jobs/inspection-jobs.module';
 import { InspectionTeamMembersModule } from 'src/inspection-team-members/inspection-team-members.module';
 import { UsersModule } from 'src/users/users.module';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { UsersModule } from 'src/users/users.module';
     InspectionJobsModule,
     InspectionTeamMembersModule,
     UsersModule,
+    AuthModule,
   ],
   controllers: [InspectionRoundsController, ProjectApprovalController],
   providers: [InspectionRoundsService],

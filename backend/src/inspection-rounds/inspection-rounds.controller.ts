@@ -8,12 +8,15 @@ import {
   Param,
   Delete,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { InspectionRoundsService } from './inspection-rounds.service';
 import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('inspection-rounds')
+@UseGuards(AuthGuard)
 export class InspectionRoundsController {
   constructor(
     private readonly inspectionRoundsService: InspectionRoundsService,
@@ -85,6 +88,7 @@ export class InspectionRoundsController {
 }
 
 @Controller('projects')
+@UseGuards(AuthGuard)
 export class ProjectApprovalController {
   constructor(
     private readonly inspectionRoundsService: InspectionRoundsService,

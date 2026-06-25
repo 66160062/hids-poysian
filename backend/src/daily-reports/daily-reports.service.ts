@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
@@ -29,26 +33,31 @@ export class DailyReportsService {
 
   async create(createDailyReportDto: CreateDailyReportDto) {
     if (!createDailyReportDto.inspectorId && !createDailyReportDto.teamId) {
-      throw new BadRequestException('ต้องระบุผู้ตรวจหรือทีมอย่างน้อยหนึ่งอย่าง');
+      throw new BadRequestException(
+        'ต้องระบุผู้ตรวจหรือทีมอย่างน้อยหนึ่งอย่าง',
+      );
     }
 
-    const [customer, address, houseType, inspector, teamEntity] = await Promise.all([
-      this.customersRepo.findOneBy({
-        customerId: createDailyReportDto.customerId,
-      }),
-      this.addressesRepo.findOneBy({
-        addressId: createDailyReportDto.addressId,
-      }),
-      this.houseTypesRepo.findOneBy({
-        house_type_id: createDailyReportDto.houseTypeId,
-      }),
-      createDailyReportDto.inspectorId 
-        ? this.usersRepo.findOneBy({ id: createDailyReportDto.inspectorId })
-        : Promise.resolve(null),
-      createDailyReportDto.teamId
-        ? this.dataSource.getRepository(Team).findOneBy({ team_Id: createDailyReportDto.teamId })
-        : Promise.resolve(null),
-    ]);
+    const [customer, address, houseType, inspector, teamEntity] =
+      await Promise.all([
+        this.customersRepo.findOneBy({
+          customerId: createDailyReportDto.customerId,
+        }),
+        this.addressesRepo.findOneBy({
+          addressId: createDailyReportDto.addressId,
+        }),
+        this.houseTypesRepo.findOneBy({
+          house_type_id: createDailyReportDto.houseTypeId,
+        }),
+        createDailyReportDto.inspectorId
+          ? this.usersRepo.findOneBy({ id: createDailyReportDto.inspectorId })
+          : Promise.resolve(null),
+        createDailyReportDto.teamId
+          ? this.dataSource
+              .getRepository(Team)
+              .findOneBy({ team_Id: createDailyReportDto.teamId })
+          : Promise.resolve(null),
+      ]);
 
     if (!customer) {
       throw new NotFoundException(
@@ -71,9 +80,7 @@ export class DailyReportsService {
       );
     }
     if (createDailyReportDto.teamId && !teamEntity) {
-      throw new NotFoundException(
-        `ไม่พบทีม ID ${createDailyReportDto.teamId}`,
-      );
+      throw new NotFoundException(`ไม่พบทีม ID ${createDailyReportDto.teamId}`);
     }
 
     return this.dataSource.transaction(async (manager) => {
@@ -130,11 +137,7 @@ export class DailyReportsService {
 
     return this.dataSource.getRepository(InspectionRound).find({
       where: { job: { jobId } },
-      relations: [
-        'teamMembers',
-        'teamMembers.inspector',
-        'teamMembers.team',
-      ],
+      relations: ['teamMembers', 'teamMembers.inspector', 'teamMembers.team'],
       order: { roundNumber: 'ASC' },
     });
   }
@@ -148,12 +151,10 @@ export class DailyReportsService {
     }
 
     return this.dataSource.transaction(async (manager) => {
-      const latestRound = await manager
-        .getRepository(InspectionRound)
-        .findOne({
-          where: { job: { jobId } },
-          order: { roundNumber: 'DESC' },
-        });
+      const latestRound = await manager.getRepository(InspectionRound).findOne({
+        where: { job: { jobId } },
+        order: { roundNumber: 'DESC' },
+      });
 
       if (
         latestRound &&
@@ -171,14 +172,11 @@ export class DailyReportsService {
         scheduledDate: createRoundDto.scheduledDate,
         status: createRoundDto.status ?? 'SCHEDULED',
       });
-      const savedRound = await manager.getRepository(InspectionRound).save(round);
+      const savedRound = await manager
+        .getRepository(InspectionRound)
+        .save(round);
 
-      const teamMember = await this.resolveTeamMember(
-        manager,
-        job,
-        savedRound,
-        createRoundDto,
-      );
+      await this.resolveTeamMember(manager, job, savedRound, createRoundDto);
 
       // Update job status to Active when a round is created
       job.status = 'Active';
@@ -204,9 +202,11 @@ export class DailyReportsService {
           roundNumber: 1,
           status: 'SCHEDULED',
         });
-        const savedFirstRound = await manager.getRepository(InspectionRound).save(firstRound);
+        const savedFirstRound = await manager
+          .getRepository(InspectionRound)
+          .save(firstRound);
 
-        const teamMember = await this.resolveTeamMember(manager, job, savedFirstRound, {});
+        await this.resolveTeamMember(manager, job, savedFirstRound, {});
 
         job.status = 'Active';
         await manager.getRepository(InspectionJob).save(job);
@@ -223,24 +223,28 @@ export class DailyReportsService {
         scheduledDate: latestRound.scheduledDate,
         status: 'SCHEDULED',
       });
-      const savedClonedRound = await manager.getRepository(InspectionRound).save(clonedRound);
+      const savedClonedRound = await manager
+        .getRepository(InspectionRound)
+        .save(clonedRound);
 
       // Clone ALL team members from the previous round
-      const previousTeamMembers = await manager.getRepository(InspectionTeamMember).find({
-        where: { round: { roundId: latestRound.roundId } },
-        relations: ['inspector', 'team'],
-      });
+      const previousTeamMembers = await manager
+        .getRepository(InspectionTeamMember)
+        .find({
+          where: { round: { roundId: latestRound.roundId } },
+          relations: ['inspector', 'team'],
+        });
 
-      const clonedTeamMembers = await Promise.all(
-        previousTeamMembers.map((member) => 
+      await Promise.all(
+        previousTeamMembers.map((member) =>
           manager.getRepository(InspectionTeamMember).save(
             manager.getRepository(InspectionTeamMember).create({
               round: savedClonedRound,
               inspector: member.inspector,
               team: member.team,
-            })
-          )
-        )
+            }),
+          ),
+        ),
       );
 
       const latestItems = await manager
@@ -311,9 +315,7 @@ export class DailyReportsService {
           team_Id: createRoundDto.teamId,
         });
         if (!teamEntity) {
-          throw new NotFoundException(
-            `ไม่พบทีม ID ${createRoundDto.teamId}`,
-          );
+          throw new NotFoundException(`ไม่พบทีม ID ${createRoundDto.teamId}`);
         }
       }
 
@@ -334,7 +336,11 @@ export class DailyReportsService {
         order: { roundNumber: 'DESC' },
       });
 
-    if (!latestRoundWithTeam || !latestRoundWithTeam.teamMembers || latestRoundWithTeam.teamMembers.length === 0) {
+    if (
+      !latestRoundWithTeam ||
+      !latestRoundWithTeam.teamMembers ||
+      latestRoundWithTeam.teamMembers.length === 0
+    ) {
       throw new NotFoundException(
         'ไม่พบข้อมูลผู้ตรวจจากรอบก่อนหน้า กรุณาระบุผู้ตรวจหรือทีมสำหรับรอบนี้',
       );

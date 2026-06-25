@@ -75,7 +75,9 @@ describe('AuthService', () => {
     });
     jobsRepo.save.mockResolvedValue({});
 
-    await expect(service.generateLinkToken(12, 'contractor')).resolves.toMatchObject({
+    await expect(
+      service.generateLinkToken(12, 'contractor'),
+    ).resolves.toMatchObject({
       token: 'signed-link-token',
       role: 'contractor',
       admin_controlled: true,
@@ -100,7 +102,9 @@ describe('AuthService', () => {
       contractorShareToken: 'existing-token',
     });
 
-    await expect(service.generateLinkToken(12, 'contractor')).resolves.toMatchObject({
+    await expect(
+      service.generateLinkToken(12, 'contractor'),
+    ).resolves.toMatchObject({
       token: 'existing-token',
       contractor_share_enabled: true,
     });
@@ -145,9 +149,9 @@ describe('AuthService', () => {
       contractorShareGeneration: 2,
     });
 
-    await expect(service.verifyLinkToken('signed-link-token')).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      service.verifyLinkToken('signed-link-token'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
     await expect(service.verifyLinkToken('')).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
