@@ -424,7 +424,7 @@ const handleNext = async () => {
     formData.append('inspectorId', '1'); // TODO: ดึงจาก auth store
     formData.append('severity', form.value.severity);
     formData.append('description', form.value.note || '-');
-    formData.append('status', 'PENDING_REPAIR');
+    formData.append('status', 'pending_repair');
 
     // ส่ง subCategoryIds[] ทุกตัวที่เลือก
     form.value.defectTypes.forEach((id) => {

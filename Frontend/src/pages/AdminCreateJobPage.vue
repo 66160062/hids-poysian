@@ -1,9 +1,17 @@
 <template>
   <q-page class="bg-grey-1">
     <!-- Header -->
-    <div class="header-container bg-white q-px-md q-py-sm row items-center justify-between shadow-1 sticky-top">
-      <q-btn flat no-caps label="ย้อนกลับ" color="primary"
-        icon="arrow_back_ios_new" @click="handleBack" />
+    <div
+      class="header-container bg-white q-px-md q-py-sm row items-center justify-between shadow-1 sticky-top"
+    >
+      <q-btn
+        flat
+        no-caps
+        label="ย้อนกลับ"
+        color="primary"
+        icon="arrow_back_ios_new"
+        @click="handleBack"
+      />
       <div class="text-subtitle1 text-weight-bold">
         {{ isEditMode ? 'แก้ไขงาน' : 'สร้างงานใหม่' }}
       </div>
@@ -28,22 +36,60 @@
             <q-icon name="person_outline" size="20px" class="q-mr-sm" />
             <div class="text-subtitle2 text-weight-bold">ข้อมูลลูกค้า</div>
           </div>
-          <q-btn v-if="!isEditMode && selectedCustomer" flat dense color="negative" size="sm" icon="close" label="ยกเลิกการเลือก" @click="clearSelectedCustomer" />
+          <q-btn
+            v-if="!isEditMode && selectedCustomer"
+            flat
+            dense
+            color="negative"
+            size="sm"
+            icon="close"
+            label="ยกเลิกการเลือก"
+            @click="clearSelectedCustomer"
+          />
         </div>
 
         <!-- ค้นหาลูกค้า -->
         <div v-if="!isEditMode && !selectedCustomer" class="q-mb-md relative-position">
-          <q-input v-model="customerSearch" dense filled placeholder="ค้นหาชื่อหรือเบอร์โทรลูกค้าที่มีในระบบ..." class="custom-input" clearable @clear="customerSearch = ''">
+          <q-input
+            v-model="customerSearch"
+            dense
+            filled
+            placeholder="ค้นหาชื่อหรือเบอร์โทรลูกค้าที่มีในระบบ..."
+            class="custom-input"
+            clearable
+            @clear="customerSearch = ''"
+          >
             <template #prepend>
               <q-icon name="search" color="grey-5" />
             </template>
           </q-input>
 
           <!-- รายการลูกค้าที่ค้นพบ -->
-          <q-list v-if="customerSearch && filteredCustomers.length > 0" bordered separator class="bg-white q-mt-xs" style="border-radius: 8px; max-height: 200px; overflow-y: auto; position: absolute; z-index: 10; width: 100%;">
-            <q-item v-for="customer in filteredCustomers" :key="customer.id" clickable v-ripple @click="selectCustomer(customer)">
+          <q-list
+            v-if="customerSearch && filteredCustomers.length > 0"
+            bordered
+            separator
+            class="bg-white q-mt-xs"
+            style="
+              border-radius: 8px;
+              max-height: 200px;
+              overflow-y: auto;
+              position: absolute;
+              z-index: 10;
+              width: 100%;
+            "
+          >
+            <q-item
+              v-for="customer in filteredCustomers"
+              :key="customer.id"
+              clickable
+              v-ripple
+              @click="selectCustomer(customer)"
+            >
               <q-item-section avatar>
-                <q-avatar size="32px" :color="getAvatarColor(customer.id)" text-color="white">{{ customer.name.charAt(0) }}</q-avatar>
+                <q-avatar size="32px" :color="getAvatarColor(customer.id)" text-color="white">{{
+                  customer.name.charAt(0)
+                }}</q-avatar>
               </q-item-section>
               <q-item-section>
                 <q-item-label>{{ customer.name }}</q-item-label>
@@ -51,7 +97,17 @@
               </q-item-section>
             </q-item>
           </q-list>
-          <div v-else-if="customerSearch && filteredCustomers.length === 0" class="text-center q-pa-sm text-grey-5 bg-white q-mt-xs" style="border-radius: 8px; border: 1px solid rgba(0, 0, 0, 0.12); position: absolute; z-index: 10; width: 100%;">
+          <div
+            v-else-if="customerSearch && filteredCustomers.length === 0"
+            class="text-center q-pa-sm text-grey-5 bg-white q-mt-xs"
+            style="
+              border-radius: 8px;
+              border: 1px solid rgba(0, 0, 0, 0.12);
+              position: absolute;
+              z-index: 10;
+              width: 100%;
+            "
+          >
             ไม่พบลูกค้าที่ค้นหา
           </div>
           <div class="row items-center justify-center q-my-sm">
@@ -59,16 +115,46 @@
           </div>
         </div>
 
-        <q-card flat bordered class="q-pa-md bg-white card-rounded" :class="{'bg-grey-1': selectedCustomer && !isEditMode}">
+        <q-card
+          flat
+          bordered
+          class="q-pa-md bg-white card-rounded"
+          :class="{ 'bg-grey-1': selectedCustomer && !isEditMode }"
+        >
           <div class="column input-group">
-            <q-input v-model="form.customerName" dense filled clearable placeholder="ชื่อ-นามสกุล" class="custom-input"
-              :rules="[(val) => !!val || 'กรุณากรอกชื่อลูกค้า']" :readonly="!!selectedCustomer && !isEditMode" />
-            <q-input v-model="form.customerPhone" dense filled clearable placeholder="เบอร์โทรศัพท์" class="custom-input"
-              mask="###-###-####" :rules="[
+            <q-input
+              v-model="form.customerName"
+              dense
+              filled
+              clearable
+              placeholder="ชื่อ-นามสกุล"
+              class="custom-input"
+              :rules="[(val) => !!val || 'กรุณากรอกชื่อลูกค้า']"
+              :readonly="!!selectedCustomer && !isEditMode"
+            />
+            <q-input
+              v-model="form.customerPhone"
+              dense
+              filled
+              clearable
+              placeholder="เบอร์โทรศัพท์"
+              class="custom-input"
+              mask="###-###-####"
+              :rules="[
                 (val) => !!val || 'กรุณากรอกเบอร์โทรศัพท์',
                 (val) => val.length === 12 || 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก',
-              ]" :readonly="!!selectedCustomer && !isEditMode" />
-            <q-input v-model="form.customerEmail" dense filled clearable placeholder="อีเมล (ไม่บังคับ)" class="custom-input" :readonly="!!selectedCustomer && !isEditMode" />
+              ]"
+              :readonly="!!selectedCustomer && !isEditMode"
+            />
+            <q-input
+              v-model="form.customerEmail"
+              dense
+              filled
+              clearable
+              placeholder="อีเมล (ไม่บังคับ)"
+              class="custom-input"
+              :readonly="!!selectedCustomer && !isEditMode"
+            />
           </div>
         </q-card>
       </div>
@@ -81,13 +167,42 @@
         </div>
         <q-card flat bordered class="q-pa-md bg-white card-rounded">
           <div class="column input-group">
-            <q-input v-model="form.contractorFullName" dense filled clearable placeholder="ชื่อ-นามสกุล" class="custom-input" />
-            <q-input v-model="form.contractorPhoneNumber" dense filled clearable placeholder="เบอร์โทรศัพท์" class="custom-input"
-              mask="###-###-####" :rules="[
+            <q-input
+              v-model="form.contractorFullName"
+              dense
+              filled
+              clearable
+              placeholder="ชื่อ-นามสกุล"
+              class="custom-input"
+            />
+            <q-input
+              v-model="form.contractorPhoneNumber"
+              dense
+              filled
+              clearable
+              placeholder="เบอร์โทรศัพท์"
+              class="custom-input"
+              mask="###-###-####"
+              :rules="[
                 (val) => !val || val.length === 12 || 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก',
-              ]" />
-            <q-input v-model="form.contractorEmail" dense filled clearable placeholder="อีเมล" class="custom-input" />
-            <q-input v-model="form.contractorCompanyName" dense filled clearable placeholder="ไอดีไลน์ หรือ ชื่อบริษัท" class="custom-input" />
+              ]"
+            />
+            <q-input
+              v-model="form.contractorEmail"
+              dense
+              filled
+              clearable
+              placeholder="อีเมล"
+              class="custom-input"
+            />
+            <q-input
+              v-model="form.contractorCompanyName"
+              dense
+              filled
+              clearable
+              placeholder="ไอดีไลน์ หรือ ชื่อบริษัท"
+              class="custom-input"
+            />
           </div>
         </q-card>
       </div>
@@ -99,55 +214,141 @@
             <q-icon name="location_on" size="20px" class="q-mr-sm" />
             <div class="text-subtitle2 text-weight-bold">ข้อมูลที่อยู่โครงการ</div>
           </div>
-          <q-btn outline color="primary" size="sm" icon="map" label="ค้นหาด้วย Google Maps" @click="openGoogleMaps" class="bg-white" />
+          <q-btn
+            outline
+            color="primary"
+            size="sm"
+            icon="map"
+            label="ค้นหาด้วย Google Maps"
+            @click="openGoogleMaps"
+            class="bg-white"
+          />
         </div>
         <q-card flat bordered class="q-pa-md bg-white card-rounded">
           <div class="column input-group">
-            <q-input v-model="form.houseNumber" dense filled clearable placeholder="เลขที่ห้อง/บ้านเลขที่" class="custom-input" />
-            <q-input v-model="form.floor" dense filled clearable placeholder="ชั้น/ซอย" class="custom-input" />
-            <q-input v-model="form.subDistrict" dense filled clearable placeholder="ตำบล/แขวง" class="custom-input" @update:model-value="(val) => handleAddressInput(val, 'subDistrict')">
+            <q-input
+              v-model="form.houseNumber"
+              dense
+              filled
+              clearable
+              placeholder="เลขที่ห้อง/บ้านเลขที่"
+              class="custom-input"
+            />
+            <q-input
+              v-model="form.soi"
+              dense
+              filled
+              clearable
+              placeholder="ซอย"
+              class="custom-input"
+            />
+            <q-input
+              v-model="form.subDistrict"
+              dense
+              filled
+              clearable
+              placeholder="ตำบล/แขวง"
+              class="custom-input"
+              @update:model-value="(val) => handleAddressInput(val, 'subDistrict')"
+            >
               <q-menu fit no-focus no-refocus v-model="showMenu.subDistrict" no-parent-event>
                 <q-list style="max-height: 250px" v-if="addressOptions.length > 0">
-                  <q-item v-for="(opt, index) in addressOptions" :key="index" clickable v-close-popup @click="onAddressSelected(opt)">
+                  <q-item
+                    v-for="(opt, index) in addressOptions"
+                    :key="index"
+                    clickable
+                    v-close-popup
+                    @click="onAddressSelected(opt)"
+                  >
                     <q-item-section>
                       <q-item-label>{{ opt.district }}</q-item-label>
-                      <q-item-label caption>{{ opt.amphoe }} » {{ opt.province }} » {{ opt.zipcode }}</q-item-label>
+                      <q-item-label caption
+                        >{{ opt.amphoe }} » {{ opt.province }} » {{ opt.zipcode }}</q-item-label
+                      >
                     </q-item-section>
                   </q-item>
                 </q-list>
               </q-menu>
             </q-input>
-            <q-input v-model="form.district" dense filled clearable placeholder="เขต/อำเภอ" class="custom-input" @update:model-value="(val) => handleAddressInput(val, 'district')">
+            <q-input
+              v-model="form.district"
+              dense
+              filled
+              clearable
+              placeholder="เขต/อำเภอ"
+              class="custom-input"
+              @update:model-value="(val) => handleAddressInput(val, 'district')"
+            >
               <q-menu fit no-focus no-refocus v-model="showMenu.district" no-parent-event>
                 <q-list style="max-height: 250px" v-if="addressOptions.length > 0">
-                  <q-item v-for="(opt, index) in addressOptions" :key="index" clickable v-close-popup @click="onAddressSelected(opt)">
+                  <q-item
+                    v-for="(opt, index) in addressOptions"
+                    :key="index"
+                    clickable
+                    v-close-popup
+                    @click="onAddressSelected(opt)"
+                  >
                     <q-item-section>
                       <q-item-label>{{ opt.amphoe }}</q-item-label>
-                      <q-item-label caption>{{ opt.district }} » {{ opt.province }} » {{ opt.zipcode }}</q-item-label>
+                      <q-item-label caption
+                        >{{ opt.district }} » {{ opt.province }} » {{ opt.zipcode }}</q-item-label
+                      >
                     </q-item-section>
                   </q-item>
                 </q-list>
               </q-menu>
             </q-input>
-            <q-input v-model="form.province" dense filled clearable placeholder="จังหวัด" class="custom-input" @update:model-value="(val) => handleAddressInput(val, 'province')">
+            <q-input
+              v-model="form.province"
+              dense
+              filled
+              clearable
+              placeholder="จังหวัด"
+              class="custom-input"
+              @update:model-value="(val) => handleAddressInput(val, 'province')"
+            >
               <q-menu fit no-focus no-refocus v-model="showMenu.province" no-parent-event>
                 <q-list style="max-height: 250px" v-if="addressOptions.length > 0">
-                  <q-item v-for="(opt, index) in addressOptions" :key="index" clickable v-close-popup @click="onAddressSelected(opt)">
+                  <q-item
+                    v-for="(opt, index) in addressOptions"
+                    :key="index"
+                    clickable
+                    v-close-popup
+                    @click="onAddressSelected(opt)"
+                  >
                     <q-item-section>
                       <q-item-label>{{ opt.province }}</q-item-label>
-                      <q-item-label caption>{{ opt.district }} » {{ opt.amphoe }} » {{ opt.zipcode }}</q-item-label>
+                      <q-item-label caption
+                        >{{ opt.district }} » {{ opt.amphoe }} » {{ opt.zipcode }}</q-item-label
+                      >
                     </q-item-section>
                   </q-item>
                 </q-list>
               </q-menu>
             </q-input>
-            <q-input v-model="form.postalCode" dense filled clearable placeholder="รหัสไปรษณีย์" class="custom-input" @update:model-value="(val) => handleAddressInput(val, 'postalCode')">
+            <q-input
+              v-model="form.postalCode"
+              dense
+              filled
+              clearable
+              placeholder="รหัสไปรษณีย์"
+              class="custom-input"
+              @update:model-value="(val) => handleAddressInput(val, 'postalCode')"
+            >
               <q-menu fit no-focus no-refocus v-model="showMenu.postalCode" no-parent-event>
                 <q-list style="max-height: 250px" v-if="addressOptions.length > 0">
-                  <q-item v-for="(opt, index) in addressOptions" :key="index" clickable v-close-popup @click="onAddressSelected(opt)">
+                  <q-item
+                    v-for="(opt, index) in addressOptions"
+                    :key="index"
+                    clickable
+                    v-close-popup
+                    @click="onAddressSelected(opt)"
+                  >
                     <q-item-section>
                       <q-item-label>{{ opt.zipcode }}</q-item-label>
-                      <q-item-label caption>{{ opt.district }} » {{ opt.amphoe }} » {{ opt.province }}</q-item-label>
+                      <q-item-label caption
+                        >{{ opt.district }} » {{ opt.amphoe }} » {{ opt.province }}</q-item-label
+                      >
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -165,16 +366,57 @@
         </div>
         <q-card flat bordered class="q-pa-md bg-white card-rounded">
           <div class="column input-group">
-            <q-input v-model="form.projectName" dense filled clearable placeholder="ชื่อโครงการ" class="custom-input"
-              :rules="[(val) => !!val || 'กรุณากรอกชื่อโครงการ']" />
             <div class="row q-col-gutter-sm">
               <div class="col-6">
-                <q-input v-model="form.usableArea" dense filled clearable placeholder="ขนาดพื้นที่(ตารางเมตร)"
-                  class="custom-input" type="number" />
+                <q-input
+                  v-model="form.projectName"
+                  dense
+                  filled
+                  clearable
+                  placeholder="ชื่อโครงการ"
+                  class="custom-input"
+                  :rules="[(val) => !!val || 'กรุณากรอกชื่อโครงการ']"
+                />
               </div>
               <div class="col-6">
-                <q-select v-model="form.houseType" dense filled :options="houseTypeOptions" label="ประเภทบ้าน"
-                  class="custom-select" emit-value map-options dropdown-icon="expand_more" hide-bottom-space />
+                <q-input
+                  v-model="form.floor"
+                  dense
+                  filled
+                  clearable
+                  placeholder="จำนวนชั้น"
+                  class="custom-input"
+                  type="number"
+                  :rules="[(val) => !!val || 'กรุณากรอกจำนวนชั้น']"
+                />
+              </div>
+            </div>
+            <div class="row q-col-gutter-sm">
+              <div class="col-6">
+                <q-input
+                  v-model="form.usableArea"
+                  dense
+                  filled
+                  clearable
+                  placeholder="ขนาดพื้นที่(ตารางเมตร)"
+                  class="custom-input"
+                  type="number"
+                  :rules="[(val) => !!val || 'กรุณากรอกขนาดพื้นที่']"
+                />
+              </div>
+              <div class="col-6">
+                <q-select
+                  v-model="form.houseType"
+                  dense
+                  filled
+                  :options="houseTypeOptions"
+                  label="ประเภทบ้าน"
+                  class="custom-select"
+                  emit-value
+                  map-options
+                  dropdown-icon="expand_more"
+                  hide-bottom-space
+                />
               </div>
             </div>
           </div>
@@ -189,16 +431,32 @@
         </div>
         <div class="row q-col-gutter-md">
           <div class="col-12">
-            <q-card flat bordered class="upload-box flex flex-center cursor-pointer relative-position"
-              @click="triggerUpload('housePlan')">
+            <q-card
+              flat
+              bordered
+              class="upload-box flex flex-center cursor-pointer relative-position"
+              @click="triggerUpload('housePlan')"
+            >
               <div v-if="!form.housePlanImage" class="column items-center">
                 <q-icon name="add_a_photo" size="32px" color="grey-5" />
                 <div class="text-caption text-grey-6 q-mt-xs">คลิกเพื่ออัปโหลดรูปภาพ</div>
               </div>
               <template v-else>
                 <q-img :src="form.housePlanImage" class="full-height full-width" fit="cover" />
-                <q-btn round dense color="negative" icon="close" class="absolute-top-right q-ma-xs shadow-2" size="sm"
-                  @click.stop="() => { form.housePlanImage = null; form.housePlanImageFile = null; }" />
+                <q-btn
+                  round
+                  dense
+                  color="negative"
+                  icon="close"
+                  class="absolute-top-right q-ma-xs shadow-2"
+                  size="sm"
+                  @click.stop="
+                    () => {
+                      form.housePlanImage = null;
+                      form.housePlanImageFile = null;
+                    }
+                  "
+                />
               </template>
             </q-card>
           </div>
@@ -213,16 +471,32 @@
         </div>
         <div class="row q-col-gutter-md">
           <div class="col-12">
-            <q-card flat bordered class="upload-box flex flex-center cursor-pointer relative-position"
-              @click="triggerUpload('projectPhoto')">
+            <q-card
+              flat
+              bordered
+              class="upload-box flex flex-center cursor-pointer relative-position"
+              @click="triggerUpload('projectPhoto')"
+            >
               <div v-if="!form.projectImage" class="column items-center">
                 <q-icon name="add_a_photo" size="32px" color="grey-5" />
                 <div class="text-caption text-grey-6 q-mt-xs">คลิกเพื่ออัปโหลดรูปภาพ</div>
               </div>
               <template v-else>
                 <q-img :src="form.projectImage" class="full-height full-width" fit="cover" />
-                <q-btn round dense color="negative" icon="close" class="absolute-top-right q-ma-xs shadow-2" size="sm"
-                  @click.stop="() => { form.projectImage = null; form.projectImageFile = null; }" />
+                <q-btn
+                  round
+                  dense
+                  color="negative"
+                  icon="close"
+                  class="absolute-top-right q-ma-xs shadow-2"
+                  size="sm"
+                  @click.stop="
+                    () => {
+                      form.projectImage = null;
+                      form.projectImageFile = null;
+                    }
+                  "
+                />
               </template>
             </q-card>
           </div>
@@ -230,15 +504,27 @@
       </div>
 
       <!-- Hidden File Input -->
-      <input type="file" ref="fileInput" style="display: none" accept="image/*" @change="handleFileChange" />
+      <input
+        type="file"
+        ref="fileInput"
+        style="display: none"
+        accept="image/*"
+        @change="handleFileChange"
+      />
     </div>
 
     <!-- ============================= -->
     <!-- FOOTER BUTTONS               -->
     <!-- ============================= -->
     <div class="submit-footer" v-if="!isLoading">
-      <q-btn unelevated :label="isEditMode ? 'บันทึก' : 'สร้างงานใหม่'" color="primary"
-        class="full-width text-weight-bold submit-btn custom-button" no-caps @click="onSubmit" />
+      <q-btn
+        unelevated
+        :label="isEditMode ? 'บันทึก' : 'สร้างงานใหม่'"
+        color="primary"
+        class="full-width text-weight-bold submit-btn custom-button"
+        no-caps
+        @click="onSubmit"
+      />
     </div>
   </q-page>
 </template>
@@ -282,7 +568,6 @@ const handleBack = () => {
   router.back();
 };
 
-
 const customerSearch = ref('');
 const selectedCustomer = ref<Customer | null>(null);
 
@@ -323,6 +608,7 @@ const form = reactive({
   contractorEmail: '',
   contractorCompanyName: '',
   projectName: '',
+  soi: '',
   houseNumber: '',
   floor: '',
   province: '',
@@ -330,7 +616,7 @@ const form = reactive({
   subDistrict: '',
   postalCode: '',
   usableArea: '',
-  houseType: 1 as number | string,
+  houseType: 1,
   housePlanImage: null as string | null,
   projectImage: null as string | null,
   housePlanImageFile: null as File | null,
@@ -343,12 +629,15 @@ const showMenu = reactive({
   province: false,
   district: false,
   subDistrict: false,
-  postalCode: false
+  postalCode: false,
 });
 
-const handleAddressInput = (val: string | number | null, field: 'province' | 'district' | 'subDistrict' | 'postalCode') => {
+const handleAddressInput = (
+  val: string | number | null,
+  field: 'province' | 'district' | 'subDistrict' | 'postalCode',
+) => {
   // Close all menus first
-  Object.keys(showMenu).forEach(k => showMenu[k as keyof typeof showMenu] = false);
+  Object.keys(showMenu).forEach((k) => (showMenu[k as keyof typeof showMenu] = false));
 
   if (val) {
     addressOptions.value = thaiAddress.filterAddresses(String(val));
@@ -363,8 +652,8 @@ const onAddressSelected = (address: ThaiAddress) => {
   form.district = address.amphoe;
   form.subDistrict = address.district;
   form.postalCode = address.zipcode.toString();
-  addressOptions.value = []; 
-  Object.keys(showMenu).forEach(k => showMenu[k as keyof typeof showMenu] = false);
+  addressOptions.value = [];
+  Object.keys(showMenu).forEach((k) => (showMenu[k as keyof typeof showMenu] = false));
 };
 
 // ─── Google Maps ──────────────────────────────────────────────────────────
@@ -372,15 +661,15 @@ const openGoogleMaps = () => {
   const addressParts = [
     form.projectName,
     form.houseNumber ? `เลขที่ ${form.houseNumber}` : '',
-    form.floor && form.floor !== '-' ? `ชั้น/ซอย ${form.floor}` : '',
+    form.soi && form.soi !== '-' ? `ซอย ${form.soi}` : '',
     form.subDistrict ? `ต.${form.subDistrict}` : '',
     form.district ? `อ.${form.district}` : '',
     form.province ? `จ.${form.province}` : '',
-    form.postalCode || ''
+    form.postalCode || '',
   ];
-  
+
   const searchQuery = addressParts.filter((part) => part).join(' ');
-  
+
   if (searchQuery.trim() && (form.projectName || form.province)) {
     const encodedQuery = encodeURIComponent(searchQuery);
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
@@ -390,15 +679,17 @@ const openGoogleMaps = () => {
       message: 'กรุณากรอกชื่อโครงการหรือข้อมูลที่อยู่ก่อนค้นหาในแผนที่',
       color: 'warning',
       position: 'top',
-      icon: 'warning'
+      icon: 'warning',
     });
   }
 };
 
-const houseTypeOptions = computed(() => houseTypeStore.houseTypes.map(ht => ({
-  label: ht.name,
-  value: ht.house_type_id
-})));
+const houseTypeOptions = computed(() =>
+  houseTypeStore.houseTypes.map((ht) => ({
+    label: ht.name,
+    value: ht.house_type_id,
+  })),
+);
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const currentUploadType = ref<'housePlan' | 'projectPhoto' | null>(null);
@@ -424,11 +715,16 @@ onMounted(async () => {
     if (!existing) return;
 
     form.projectName = existing.projectName || '';
-    form.inspectionType = (existing.inspectionType === 'CONSTRUCTION_INSPECTION' || existing.inspectionType === 'Construction' || existing.inspectionType === 'ตรวจก่อสร้าง') ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
+    form.inspectionType =
+      existing.inspectionType === 'CONSTRUCTION_INSPECTION' ||
+      existing.inspectionType === 'Construction' ||
+      existing.inspectionType === 'ตรวจก่อสร้าง'
+        ? 'ตรวจก่อสร้าง'
+        : 'ตรวจ Defect';
     form.houseType = existing.houseType?.house_type_id || 1;
     form.usableArea = existing.usableArea?.toString() || '';
     form.houseNumber = existing.address?.houseNumber || '';
-    form.floor = existing.address?.floor || '';
+    form.soi = existing.address?.soi || '';
     form.province = existing.address?.province || '';
     form.district = existing.address?.district || '';
     form.subDistrict = existing.address?.subDistrict || '';
@@ -468,8 +764,6 @@ const handleFileChange = (e: Event) => {
   target.value = '';
 };
 
-
-
 // ─── Submit ────────────────────────────────────────────────────────────────
 const isSubmitting = ref(false);
 
@@ -495,7 +789,12 @@ const onSubmit = async () => {
     return;
   }
 
-  if (form.contractorFullName || form.contractorPhoneNumber || form.contractorEmail || form.contractorCompanyName) {
+  if (
+    form.contractorFullName ||
+    form.contractorPhoneNumber ||
+    form.contractorEmail ||
+    form.contractorCompanyName
+  ) {
     if (!form.contractorFullName || !form.contractorPhoneNumber) {
       $q.notify({
         message: 'กรุณากรอกชื่อและเบอร์โทรศัพท์ของผู้รับเหมา',
@@ -511,10 +810,9 @@ const onSubmit = async () => {
   $q.loading.show({ message: 'กำลังบันทึกข้อมูล...' });
 
   try {
-
     const addressParts: string[] = [];
     if (form.houseNumber) addressParts.push(`เลขที่ ${form.houseNumber}`);
-    if (form.floor && form.floor !== '-') addressParts.push(`ชั้น ${form.floor}`);
+    if (form.soi && form.soi !== '-') addressParts.push(`ซอย ${form.soi}`);
     if (form.subDistrict) addressParts.push(`ต.${form.subDistrict}`);
     if (form.district) addressParts.push(`อ.${form.district}`);
     if (form.province) addressParts.push(`จ.${form.province}`);
@@ -535,7 +833,7 @@ const onSubmit = async () => {
         if (existingJob.address) {
           await addressStore.updateAddress(existingJob.address.addressId, {
             houseNumber: form.houseNumber,
-            floor: form.floor,
+            soi: form.soi,
             province: form.province,
             district: form.district,
             subDistrict: form.subDistrict,
@@ -564,7 +862,8 @@ const onSubmit = async () => {
         }
 
         const jobFormData = new FormData();
-        const inspectionTypeStr = form.inspectionType === 'ตรวจก่อสร้าง' ? 'CONSTRUCTION_INSPECTION' : 'DEFECT_INSPECTION';
+        const inspectionTypeStr =
+          form.inspectionType === 'ตรวจก่อสร้าง' ? 'CONSTRUCTION_INSPECTION' : 'DEFECT_INSPECTION';
         jobFormData.append('inspectionType', inspectionTypeStr);
         jobFormData.append('houseTypeId', String(form.houseType));
         jobFormData.append('projectName', form.projectName);
@@ -587,9 +886,10 @@ const onSubmit = async () => {
         position: 'top',
         icon: 'check_circle',
       });
-      const redirectPath = form.inspectionType === 'ตรวจก่อสร้าง' 
-        ? `/admin/work/cons/${editId.value}`
-        : `/admin/work/ins/${editId.value}`;
+      const redirectPath =
+        form.inspectionType === 'ตรวจก่อสร้าง'
+          ? `/admin/work/cons/${editId.value}`
+          : `/admin/work/ins/${editId.value}`;
       await router.push(redirectPath);
     } else {
       // 1. Create or Get Customer
@@ -609,7 +909,7 @@ const onSubmit = async () => {
       // 2. Create Address
       const addressId = await addressStore.createAddress({
         houseNumber: form.houseNumber,
-        floor: form.floor,
+        soi: form.soi,
         province: form.province,
         district: form.district,
         subDistrict: form.subDistrict,
@@ -632,7 +932,8 @@ const onSubmit = async () => {
       jobFormData.append('customerId', String(customerId));
       jobFormData.append('addressId', String(addressId));
       if (finalContractorId) jobFormData.append('contractorId', String(finalContractorId));
-      const inspectionTypeStr = form.inspectionType === 'ตรวจก่อสร้าง' ? 'CONSTRUCTION_INSPECTION' : 'DEFECT_INSPECTION';
+      const inspectionTypeStr =
+        form.inspectionType === 'ตรวจก่อสร้าง' ? 'CONSTRUCTION_INSPECTION' : 'DEFECT_INSPECTION';
       jobFormData.append('inspectionType', inspectionTypeStr);
       jobFormData.append('houseTypeId', String(form.houseType));
       jobFormData.append('projectName', form.projectName);

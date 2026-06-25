@@ -209,13 +209,18 @@ export class InspectionRoundsService {
       relations: ['job'],
     });
 
+    const isConstruction =
+      round.job?.inspectionType === 'CONSTRUCTION_INSPECTION' ||
+      round.job?.inspectionType === 'Construction' ||
+      round.job?.inspectionType === 'ตรวจก่อสร้าง';
+
     if (!round.inspectedAt) {
       throw new BadRequestException(
-        'ไม่สามารถส่งอนุมัติได้ เนื่องจากยังไม่ได้ยืนยันผลการตรวจ Defect',
+        'ไม่สามารถส่งอนุมัติได้ เนื่องจากยังไม่ได้ยืนยันผลการตรวจ',
       );
     }
 
-    if (!round.summaryCompletedAt) {
+    if (!isConstruction && !round.summaryCompletedAt) {
       throw new BadRequestException(
         'ไม่สามารถส่งอนุมัติได้ เนื่องจากยังไม่ได้ยืนยันการสรุปรายงาน',
       );

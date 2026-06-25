@@ -37,6 +37,36 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/view/:slug',
+    component: () => import('layouts/FullScreen.vue'),
+    meta: { publicLink: true },
+    children: [
+      {
+        path: '',
+        component: () => import('pages/PublicLinkEntryPage.vue'),
+        props: {
+          expectedRole: 'customer',
+          redirectPath: '/customer',
+        },
+      },
+    ],
+  },
+  {
+    path: '/fix/:slug',
+    component: () => import('layouts/FullScreen.vue'),
+    meta: { publicLink: true },
+    children: [
+      {
+        path: '',
+        component: () => import('pages/PublicLinkEntryPage.vue'),
+        props: {
+          expectedRole: 'contractor',
+          redirectPath: '/contractor/repair-overview',
+        },
+      },
+    ],
+  },
+  {
     path: '/admin',
     component: () => import('layouts/AdminScreen.vue'),
     children: [

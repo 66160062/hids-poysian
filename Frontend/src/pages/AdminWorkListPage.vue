@@ -2,7 +2,12 @@
   <q-page class="admin-work-page bg-grey-1">
     <div class="q-px-md q-pt-lg relative-position">
       <!-- Loading Indicator -->
-      <q-inner-loading :showing="loading" label="กำลังโหลดข้อมูล..." color="primary" style="z-index: 100" />
+      <q-inner-loading
+        :showing="loading"
+        label="กำลังโหลดข้อมูล..."
+        color="primary"
+        style="z-index: 100"
+      />
 
       <!-- Error Banner -->
       <q-banner v-if="error" class="text-white bg-negative q-mb-md" rounded dense>
@@ -18,7 +23,9 @@
       <div class="row q-mb-sm q-gutter-x-sm no-wrap">
         <q-input
           v-model="searchTerm"
-          dense borderless rounded
+          dense
+          borderless
+          rounded
           placeholder="ค้นหาโครงการ, ผู้ตรวจสอบ..."
           class="col search-input"
         >
@@ -27,8 +34,24 @@
           </template>
         </q-input>
 
-        <q-btn round unelevated :color="activeFilterCount > 0 ? 'primary' : 'white'" :text-color="activeFilterCount > 0 ? 'white' : 'primary'" icon="tune" class="shadow-1" style="height: 48px; width: 48px; min-height: 48px;" @click="showFilterDialog = true">
-          <q-badge v-if="activeFilterCount > 0" color="red" floating rounded style="top: 2px; right: 2px">{{ activeFilterCount }}</q-badge>
+        <q-btn
+          round
+          unelevated
+          :color="activeFilterCount > 0 ? 'primary' : 'white'"
+          :text-color="activeFilterCount > 0 ? 'white' : 'primary'"
+          icon="tune"
+          class="shadow-1"
+          style="height: 48px; width: 48px; min-height: 48px"
+          @click="showFilterDialog = true"
+        >
+          <q-badge
+            v-if="activeFilterCount > 0"
+            color="red"
+            floating
+            rounded
+            style="top: 2px; right: 2px"
+            >{{ activeFilterCount }}</q-badge
+          >
         </q-btn>
       </div>
 
@@ -40,7 +63,7 @@
         active-color="primary"
         indicator-color="primary"
         align="justify"
-        style="border-radius: 12px;"
+        style="border-radius: 12px"
       >
         <q-tab name="ทั้งหมด">
           <div class="row items-center q-gutter-x-sm no-wrap">
@@ -60,52 +83,126 @@
           <div class="row items-center q-gutter-x-sm no-wrap">
             <q-icon name="construction" size="18px" />
             <span>ก่อสร้าง</span>
-            <q-badge color="orange-1" text-color="orange-8" rounded>{{ constructJobCount }}</q-badge>
+            <q-badge color="orange-1" text-color="orange-8" rounded>{{
+              constructJobCount
+            }}</q-badge>
           </div>
         </q-tab>
       </q-tabs>
 
       <!-- Filter Bottom Sheet Dialog -->
       <q-dialog v-model="showFilterDialog" position="bottom">
-        <q-card style="width: 100%; max-width: 600px; border-radius: 24px 24px 0 0;" class="q-pa-lg shadow-up-4">
+        <q-card
+          style="width: 100%; max-width: 600px; border-radius: 24px 24px 0 0"
+          class="q-pa-lg shadow-up-4"
+        >
           <div class="row items-center justify-between q-mb-lg">
             <div class="text-h6 text-weight-bold text-dark">ตัวกรอง</div>
             <div class="row items-center">
-              <q-btn v-if="activeFilterCount > 0" flat dense color="negative" label="ล้าง" class="q-mr-sm" @click="clearFilters" />
+              <q-btn
+                v-if="activeFilterCount > 0"
+                flat
+                dense
+                color="negative"
+                label="ล้าง"
+                class="q-mr-sm"
+                @click="clearFilters"
+              />
               <q-btn flat round dense icon="close" color="grey-6" v-close-popup />
             </div>
           </div>
-          
 
-
-          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px;">สถานะงาน</div>
-          <q-select v-model="activeFilter" :options="filters" option-value="value" option-label="label" emit-value map-options dense outlined rounded class="q-mb-md filter-select" behavior="dialog">
+          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">สถานะงาน</div>
+          <q-select
+            v-model="activeFilter"
+            :options="filters"
+            option-value="value"
+            option-label="label"
+            emit-value
+            map-options
+            dense
+            outlined
+            rounded
+            class="q-mb-md filter-select"
+            behavior="dialog"
+          >
             <template v-slot:option="scope">
               <q-item v-bind="scope.itemProps">
                 <q-item-section>
-                  <q-item-label>{{ scope.opt.label }} <span v-if="scope.opt.count" class="text-grey-6">({{ scope.opt.count }})</span></q-item-label>
+                  <q-item-label
+                    >{{ scope.opt.label }}
+                    <span v-if="scope.opt.count" class="text-grey-6"
+                      >({{ scope.opt.count }})</span
+                    ></q-item-label
+                  >
                 </q-item-section>
               </q-item>
             </template>
           </q-select>
 
-          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px;">ประเภทบ้าน</div>
-          <q-select v-model="selectedType" :options="typeOptions" dense outlined rounded class="q-mb-md filter-select" behavior="dialog" />
+          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">
+            ประเภทบ้าน
+          </div>
+          <q-select
+            v-model="selectedType"
+            :options="typeOptions"
+            dense
+            outlined
+            rounded
+            class="q-mb-md filter-select"
+            behavior="dialog"
+          />
 
-          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px;">เรียงลำดับ</div>
-          <q-select v-model="sortOrder" :options="sortOptions" emit-value map-options dense outlined rounded class="q-mb-xl filter-select" behavior="dialog" />
+          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">
+            เรียงลำดับ
+          </div>
+          <q-select
+            v-model="sortOrder"
+            :options="sortOptions"
+            emit-value
+            map-options
+            dense
+            outlined
+            rounded
+            class="q-mb-xl filter-select"
+            behavior="dialog"
+          />
 
-          <q-btn unelevated rounded color="primary" label="เสร็จสิ้น" class="full-width text-weight-bold" style="height: 48px; font-size: 16px;" v-close-popup />
+          <q-btn
+            unelevated
+            rounded
+            color="primary"
+            label="เสร็จสิ้น"
+            class="full-width text-weight-bold"
+            style="height: 48px; font-size: 16px"
+            v-close-popup
+          />
         </q-card>
       </q-dialog>
 
       <!-- Active Filters Chips -->
       <div v-if="activeFilterCount > 0" class="row items-center q-gutter-x-sm q-mb-sm">
         <span class="text-caption text-grey-7 q-mr-xs q-pl-xs">กำลังกรอง:</span>
-        <q-chip v-if="activeFilter !== 'all'" removable @remove="activeFilter = 'all'" color="blue-1" text-color="primary" dense class="text-weight-medium">
-          {{ filters.find(f => f.value === activeFilter)?.label || activeFilter }}
+        <q-chip
+          v-if="activeFilter !== 'all'"
+          removable
+          @remove="activeFilter = 'all'"
+          color="blue-1"
+          text-color="primary"
+          dense
+          class="text-weight-medium"
+        >
+          {{ filters.find((f) => f.value === activeFilter)?.label || activeFilter }}
         </q-chip>
-        <q-chip v-if="selectedType !== 'ทั้งหมด'" removable @remove="selectedType = 'ทั้งหมด'" color="blue-1" text-color="primary" dense class="text-weight-medium">
+        <q-chip
+          v-if="selectedType !== 'ทั้งหมด'"
+          removable
+          @remove="selectedType = 'ทั้งหมด'"
+          color="blue-1"
+          text-color="primary"
+          dense
+          class="text-weight-medium"
+        >
           {{ selectedType }}
         </q-chip>
       </div>
@@ -116,20 +213,22 @@
         </div>
 
         <div v-else class="work-list q-gutter-y-md">
-
-            <q-card
-              v-for="task in tasks"
-              :key="task.id"
-              flat
-              bordered
-              class="work-card cursor-pointer"
-              style="border-radius: 12px;"
-              v-ripple
-              @click="viewDetail(task)"
-            >
+          <q-card
+            v-for="task in tasks"
+            :key="task.id"
+            flat
+            bordered
+            class="work-card cursor-pointer"
+            style="border-radius: 12px"
+            v-ripple
+            @click="viewDetail(task)"
+          >
             <q-card-section class="q-pa-md">
               <div class="row justify-between items-center q-mb-sm">
-                <div class="text-weight-bold text-dark ellipsis" style="font-size: 17px; max-width: 65%;">
+                <div
+                  class="text-weight-bold text-dark ellipsis"
+                  style="font-size: 17px; max-width: 65%"
+                >
                   {{ task.title }}
                 </div>
                 <div class="row items-center q-gutter-x-sm">
@@ -139,21 +238,31 @@
                   >
                     {{ task.status }}
                   </q-badge>
-                  <q-btn flat round dense icon="more_vert" color="grey-8" style="margin-right: -8px;" @click.stop>
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    icon="more_vert"
+                    color="grey-8"
+                    style="margin-right: -8px"
+                    @click.stop
+                  >
                     <q-menu auto-close anchor="bottom right" self="top right">
                       <q-list style="min-width: 150px">
                         <q-item clickable @click="editWork(task)">
-                          <q-item-section avatar style="min-width: 0; padding-right: 8px;">
+                          <q-item-section avatar style="min-width: 0; padding-right: 8px">
                             <q-icon name="edit" color="primary" size="20px" />
                           </q-item-section>
                           <q-item-section class="text-weight-medium">แก้ไขงาน</q-item-section>
                         </q-item>
                         <q-separator />
                         <q-item clickable @click="onDeleteClick(task)">
-                          <q-item-section avatar style="min-width: 0; padding-right: 8px;">
+                          <q-item-section avatar style="min-width: 0; padding-right: 8px">
                             <q-icon name="delete" color="negative" size="20px" />
                           </q-item-section>
-                          <q-item-section class="text-weight-medium text-negative">ลบงาน</q-item-section>
+                          <q-item-section class="text-weight-medium text-negative"
+                            >ลบงาน</q-item-section
+                          >
                         </q-item>
                       </q-list>
                     </q-menu>
@@ -161,11 +270,10 @@
                 </div>
               </div>
 
-              <div class="row items-center text-grey-7" style="font-size: 13px;">
+              <div class="row items-center text-grey-7" style="font-size: 13px">
                 <q-icon name="person" size="16px" class="q-mr-sm" />
-                <span class="ellipsis" style="max-width: 80%;">{{ task.customer }}</span>
+                <span class="ellipsis" style="max-width: 80%">{{ task.customer }}</span>
               </div>
-
             </q-card-section>
 
             <q-separator color="grey-2" inset />
@@ -176,7 +284,8 @@
                   <q-icon name="apartment" size="14px" class="q-mr-xs" /> {{ task.type || 'คอนโด' }}
                 </q-badge>
                 <q-badge color="grey-2" text-color="grey-8" class="tag-badge">
-                  <q-icon name="square_foot" size="14px" class="q-mr-xs" /> {{ task.area || '0' }} ตร.ม.
+                  <q-icon name="square_foot" size="14px" class="q-mr-xs" />
+                  {{ task.area || '0' }} ตร.ม.
                 </q-badge>
               </div>
             </q-card-actions>
@@ -209,11 +318,24 @@
         transition-show="jump-up"
         transition-hide="jump-down"
       >
-        <q-fab-action color="orange-8" text-color="white" icon="construction" label="งานก่อสร้าง" class="text-weight-bold custom-fab-action" @click="addNewWork('construction')" />
-        <q-fab-action color="blue-8" text-color="white" icon="home" label="ตรวจบ้าน" class="text-weight-bold custom-fab-action" @click="addNewWork('defect')" />
+        <q-fab-action
+          color="orange-8"
+          text-color="white"
+          icon="construction"
+          label="งานก่อสร้าง"
+          class="text-weight-bold custom-fab-action"
+          @click="addNewWork('construction')"
+        />
+        <q-fab-action
+          color="blue-8"
+          text-color="white"
+          icon="home"
+          label="ตรวจบ้าน"
+          class="text-weight-bold custom-fab-action"
+          @click="addNewWork('defect')"
+        />
       </q-fab>
     </q-page-sticky>
-
   </q-page>
 </template>
 
@@ -237,15 +359,15 @@ const searchTerm = ref('');
 const activeFilter = ref('all');
 const selectedType = ref('ทั้งหมด'); // ตัวเลือกประเภทบ้าน
 const selectedJobType = ref('ทั้งหมด'); // ตัวเลือกประเภทงาน
-const sortOrder = ref('desc');       // desc = ล่าสุด -> เก่า, asc = เก่า -> ล่าสุด
+const sortOrder = ref('desc'); // desc = ล่าสุด -> เก่า, asc = เก่า -> ล่าสุด
 
 // ตัวเลือกใน Dropdown
 const typeOptions = computed(() => {
-  return ['ทั้งหมด', ...houseTypeStore.houseTypes.map(ht => ht.name)];
+  return ['ทั้งหมด', ...houseTypeStore.houseTypes.map((ht) => ht.name)];
 });
 const sortOptions = [
   { label: 'ล่าสุด - เก่า', value: 'desc' },
-  { label: 'เก่า - ล่าสุด', value: 'asc' }
+  { label: 'เก่า - ล่าสุด', value: 'asc' },
 ];
 
 const showFilterDialog = ref(false);
@@ -292,26 +414,28 @@ interface TaskItem {
 // ==========================================
 const tasks = computed<TaskItem[]>(() => {
   let works = workStore.works;
-  
+
   // Local fallback filter in case backend doesn't support inspectionType param yet
   if (selectedJobType.value !== 'ทั้งหมด') {
-    works = works.filter(w => {
+    works = works.filter((w) => {
       const type = w.inspectionType || '';
       if (selectedJobType.value === 'งานก่อสร้าง') {
-        return type === 'CONSTRUCTION_INSPECTION' || type === 'ตรวจก่อสร้าง' || type === 'Construction';
+        return (
+          type === 'CONSTRUCTION_INSPECTION' || type === 'ตรวจก่อสร้าง' || type === 'Construction'
+        );
       } else {
         return type === 'DEFECT_INSPECTION' || type === 'ตรวจ Defect' || type === 'Defect';
       }
     });
   }
 
-  return works.map(work => {
+  return works.map((work) => {
     // Find matching status config from backend meta
-    const meta = workStore.statusMeta.find(m => m.key === work.status) || {
+    const meta = workStore.statusMeta.find((m) => m.key === work.status) || {
       label: work.status || 'รออนุมัติ',
       bgClass: 'bg-grey-1',
       textColor: 'grey-8',
-      key: 'others'
+      key: 'others',
     };
 
     let finalStatusLabel = meta.label;
@@ -321,13 +445,17 @@ const tasks = computed<TaskItem[]>(() => {
     if (work.rounds && work.rounds.length > 0) {
       // เรียงรอบตรวจตาม id หรือวันที่สร้างจากมากไปน้อยเพื่อเอารอบล่าสุด
       const sortedRounds = [...work.rounds].sort((a, b) => b.roundId - a.roundId);
-      const activeRound = sortedRounds.find(r => r.status === 'SCHEDULED' || r.status === 'Active');
+      const activeRound = sortedRounds.find(
+        (r) => r.status === 'SCHEDULED' || r.status === 'Active',
+      );
       if (activeRound && activeRound.scheduledDate) {
         latestActiveRoundDate = activeRound.scheduledDate;
       }
 
       if (work.status === 'Completed') {
-        const completedRound = sortedRounds.find(r => r.status === 'APPROVED' || r.status === 'COMPLETED');
+        const completedRound = sortedRounds.find(
+          (r) => r.status === 'APPROVED' || r.status === 'COMPLETED',
+        );
         if (completedRound) {
           finalStatusLabel = `เสร็จสิ้น ${completedRound.roundNumber ?? ''}`.trim();
         } else {
@@ -348,12 +476,10 @@ const tasks = computed<TaskItem[]>(() => {
       area: work.usableArea || 0,
       team: 'ไม่ระบุทีม', // Currently backend Work interface doesn't have team
       customer: work.customer?.fullName || 'ไม่ระบุลูกค้า',
-      date: latestActiveRoundDate || new Date().toISOString()
+      date: latestActiveRoundDate || new Date().toISOString(),
     };
   });
 });
-
-
 
 // ==========================================
 // ลอจิก Filter & Search & Sort
@@ -361,16 +487,13 @@ const tasks = computed<TaskItem[]>(() => {
 const filters = computed(() => {
   const allCount = workStore.statusMeta.reduce((sum, meta) => sum + meta.count, 0);
 
-  const dynamicFilters = workStore.statusMeta.map(meta => ({
+  const dynamicFilters = workStore.statusMeta.map((meta) => ({
     label: meta.label,
     value: meta.key,
     count: meta.count > 0 ? meta.count : undefined,
   }));
 
-  return [
-    { label: 'ทั้งหมด', value: 'all', count: allCount },
-    ...dynamicFilters
-  ];
+  return [{ label: 'ทั้งหมด', value: 'all', count: allCount }, ...dynamicFilters];
 });
 
 let searchTimeout: ReturnType<typeof setTimeout>;
@@ -388,13 +511,18 @@ watch([activeFilter, selectedType, selectedJobType, sortOrder], () => {
 });
 
 async function viewDetail(task: TaskItem): Promise<void> {
-  if (task.inspectionType === 'ตรวจ Defect') {
-    await router.push(`/admin/work/ins/${task.id}`);
-  } else {
+  const isConstruction =
+    task.inspectionType === 'CONSTRUCTION_INSPECTION' ||
+    task.inspectionType === 'ตรวจก่อสร้าง' ||
+    task.inspectionType === 'Construction' ||
+    task.inspectionType === 'งานก่อสร้าง';
+
+  if (isConstruction) {
     await router.push(`/admin/work/cons/${task.id}`);
+  } else {
+    await router.push(`/admin/work/ins/${task.id}`);
   }
 }
-
 
 const isFabClicked = ref(false);
 
@@ -402,7 +530,7 @@ function addNewWork(type: 'defect' | 'construction') {
   isFabClicked.value = false;
   void router.push({
     path: '/admin/work/create',
-    query: { type }
+    query: { type },
   });
 }
 
@@ -416,7 +544,7 @@ function onDeleteClick(task: TaskItem) {
     message: 'คุณแน่ใจหรือไม่ที่จะลบงานนี้? การกระทำนี้ไม่สามารถกู้คืนได้',
     persistent: true,
     ok: { label: 'ลบข้อมูล', color: 'negative', flat: true },
-    cancel: { label: 'ยกเลิก', color: 'grey-8', flat: true }
+    cancel: { label: 'ยกเลิก', color: 'grey-8', flat: true },
   }).onOk(() => {
     void (async () => {
       try {
@@ -457,7 +585,7 @@ async function fetchWorkList(): Promise<void> {
         sort: sortOrder.value,
         ...(selectedJobType.value !== 'ทั้งหมด' && { inspectionType: selectedJobType.value }),
       }),
-      houseTypeStore.houseTypes.length === 0 ? houseTypeStore.fetchHouseTypes() : Promise.resolve()
+      houseTypeStore.houseTypes.length === 0 ? houseTypeStore.fetchHouseTypes() : Promise.resolve(),
     ]);
   } catch (err: unknown) {
     error.value = 'เกิดข้อผิดพลาดในการโหลดข้อมูล โปรดลองใหม่อีกครั้ง';
@@ -510,8 +638,13 @@ onMounted((): void => {
   overflow-x: auto;
   display: flex;
 }
-.hide-scrollbar::-webkit-scrollbar { display: none; }
-.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
 .filter-chip {
   min-width: fit-content;
@@ -633,4 +766,3 @@ onMounted((): void => {
   justify-content: flex-start;
 }
 </style>
-

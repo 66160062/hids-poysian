@@ -475,7 +475,7 @@
                       </q-item-section>
                     </q-item>
                   </q-list>
-                  
+
                   <!-- Pagination -->
                   <div class="row justify-center q-mt-md q-mb-md" v-if="totalPages > 1">
                     <q-pagination
@@ -600,6 +600,32 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
+    <!-- Construction Report Dialog -->
+    <q-dialog v-model="showReportDialog" maximized transition-show="slide-up" transition-hide="slide-down">
+      <q-card class="bg-grey-1 column no-wrap full-height">
+        <q-toolbar class="bg-white shadow-1">
+          <q-btn flat round dense icon="close" v-close-popup />
+          <q-toolbar-title class="text-subtitle1 text-weight-bold">
+            รายงานการก่อสร้างประจำวัน รอบที่ {{ selectedRound?.roundNumber ?? '-' }}
+          </q-toolbar-title>
+          <q-btn
+            unelevated
+            color="positive"
+            icon="verified"
+            :label="approvalButtonLabel"
+            no-caps
+            :disable="!canApproveSelectedRound"
+            :loading="isApprovingRound"
+            @click="confirmApproveRound"
+          />
+        </q-toolbar>
+
+        <q-card-section class="col q-pa-md" style="overflow-y: auto;">
+          <ConstructionReportPdf v-if="selectedConstructionReport" :report="selectedConstructionReport" />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -610,6 +636,9 @@ import { useQuasar } from 'quasar';
 import { api } from 'src/boot/axios';
 import { useUserStore } from '../stores/useUser';
 import { useTeamStore } from '../stores/useTeam';
+import { useConstructionDailyReportStore } from 'src/stores/useConstructionDailyReport';
+import type { ExtendedConstructionReport } from 'src/stores/useConstructionDailyReport';
+import ConstructionReportPdf from 'src/components/ConstructionReportPdf.vue';
 import type { Defect } from 'src/models';
 import InspectionItemCard from '../components/InspectionItemCard.vue';
 
@@ -687,9 +716,13 @@ const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
 const userStore = useUserStore();
-
+const reportStore = useConstructionDailyReportStore();
 
 const jobId = computed(() => Number(route.params.id));
+
+const showReportDialog = ref(false);
+const selectedConstructionReport = ref<ExtendedConstructionReport | null>(null);
+const isLoadingReport = ref(false);
 
 const isLatestRoundNotCompleted = computed(() => {
   if (!inspectionRounds.value.length) return false;
@@ -758,7 +791,7 @@ const groupedDefects = computed<GroupedDefectItem[]>(() => {
     const group = map.get(key)!;
     group.totalItems++;
     group.defects.push(defect);
-    if (defect.status === 'PASS') group.passCount++;
+    if (defect.status === 'verified') group.passCount++;
     else group.failCount++;
   }
 
@@ -804,7 +837,7 @@ const defectEditForm = ref<{
 }>({
   description: '',
   severity: 'Minor',
-  status: 'PENDING_REPAIR',
+  status: 'pending_repair',
   subCategoryIds: [],
   file: null,
 });
@@ -815,9 +848,9 @@ const severityOptions = [
 ];
 
 const defectStatusOptions = [
-  { label: 'รอซ่อม', value: 'PENDING_REPAIR' },
-  { label: 'ผ่าน', value: 'PASS' },
-  { label: 'ปฏิเสธ', value: 'REJECTED' },
+  { label: 'รอซ่อม', value: 'pending_repair' },
+  { label: 'ผ่าน', value: 'verified' },
+  { label: 'ปฏิเสธ', value: 'rejected' },
 ];
 
 
@@ -826,7 +859,7 @@ const formatRoundDate = (dateStr: string) => {
   if (!dateStr) return '-';
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return dateStr;
-  
+
   const formattedDate = date.toLocaleDateString('th-TH', {
     day: '2-digit',
     month: '2-digit',
@@ -840,7 +873,7 @@ const formatRoundDate = (dateStr: string) => {
   } else if (hour === 13) {
     return `${formattedDate} (รอบบ่าย)`;
   }
-  
+
   return formattedDate;
 };
 
@@ -859,7 +892,7 @@ const mapRoundStatus = (status: string) => {
 
 const mapRoundToView = (round: RoundApiResponse) => {
   let inspectors: string[] = [];
-  
+
   if (round.teamMembers && round.teamMembers.length > 0) {
     inspectors = round.teamMembers.map(member => {
       if (member.team?.team_name) {
@@ -907,6 +940,7 @@ function applyRounds(rounds: RoundApiResponse[]) {
   inspectionRounds.value = rounds.map(mapRoundToView);
 }
 
+/*
 async function fetchDefectMasterData() {
   if (defectSubCategoryOptions.value.length > 0) return;
 
@@ -931,12 +965,13 @@ async function fetchDefectMasterData() {
     isLoadingDefectMaster.value = false;
   }
 }
+*/
 
 async function loadPageData() {
   isLoading.value = true;
   try {
     await Promise.all([
-      fetchJobDetails(), 
+      fetchJobDetails(),
       fetchTeamMembers(),
       teamStore.fetchTeams() // ดึงข้อมูลทีม
     ]);
@@ -1049,7 +1084,7 @@ const openGoogleMaps = () => {
   if (!jobData.value) return;
   const projectName = jobData.value.projectName || '';
   const addr = jobData.value.address;
-  
+
   const addressParts = [
     projectName,
     addr?.houseNumber ? `เลขที่ ${addr.houseNumber}` : '',
@@ -1060,9 +1095,9 @@ const openGoogleMaps = () => {
     addr?.province ? `จ.${addr.province}` : '',
     addr?.postalCode || ''
   ];
-  
+
   const searchQuery = addressParts.filter(Boolean).join(' ');
-  
+
   if (searchQuery.trim() && (projectName || addr?.province)) {
     const encodedQuery = encodeURIComponent(searchQuery);
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
@@ -1116,12 +1151,39 @@ function getDefectRoomLabel(defect: AdminDefect) {
 
 async function openRoundReview(round: RoundView) {
   selectedRound.value = round;
-  selectedDefect.value = null;
-  roundDefects.value = [];
-  roundDefectsError.value = '';
-  showRoundReviewDialog.value = true;
-
-  await Promise.all([fetchRoundDefects(round.id), fetchDefectMasterData()]);
+  isLoadingReport.value = true;
+  try {
+    const reportData = await reportStore.fetchReportByRound(round.id);
+    if (reportData) {
+      selectedConstructionReport.value = {
+        ...reportData,
+        round: {
+          roundNumber: round.roundNumber,
+          job: jobData.value,
+        },
+        contractorName: job.value.coordName || job.value.coordLine || '-',
+        reporterName: round.inspectors?.join(', ') || '-',
+      };
+      showReportDialog.value = true;
+    } else {
+      $q.notify({
+        message: 'ไม่พบข้อมูลรายงานก่อสร้างในรอบนี้',
+        color: 'warning',
+        icon: 'warning',
+        position: 'top',
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    $q.notify({
+      message: 'โหลดข้อมูลรายงานไม่สำเร็จ',
+      color: 'negative',
+      icon: 'error',
+      position: 'top',
+    });
+  } finally {
+    isLoadingReport.value = false;
+  }
 }
 
 async function fetchRoundDefects(roundId: number) {
@@ -1159,7 +1221,7 @@ function selectDefect(defect: AdminDefect) {
   defectEditForm.value = {
     description: defect.description || '',
     severity: defect.severity || 'Minor',
-    status: defect.status || 'PENDING_REPAIR',
+    status: defect.status || 'pending_repair',
     subCategoryIds: defect.subCategories?.map((item) => item.subCategoryId) ?? [],
     file: null,
   };

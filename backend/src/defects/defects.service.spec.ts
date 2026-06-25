@@ -72,7 +72,7 @@ describe('DefectsService', () => {
     });
 
     expect(result).toMatchObject({
-      status: DefectStatus.FIXED,
+      status: DefectStatus.REPAIRED,
       contractorNote: 'Done',
       contractorImageUrl: '/uploads/defects/done.jpg',
       contractorImageFileSize: 456,

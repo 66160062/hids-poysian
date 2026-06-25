@@ -142,10 +142,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import FilterChipGroup from 'src/components/FilterChipGroup.vue'
 import { useDefectList } from 'src/stores/useDefectlist'
+import { useLinkAccess } from 'src/stores/useLinkAccess'
 import { useRoute, useRouter } from 'vue-router'
 
 const showFilter = ref(false)
@@ -153,6 +154,7 @@ const showFilter = ref(false)
 const router    = useRouter()
 const route     = useRoute()
 const activeTab = computed(() => route.path.split('/').pop())
+const { projectId } = useLinkAccess()
 
 const {
   summary,
@@ -167,7 +169,20 @@ const {
   selectedStatuses,
   resetFilter,
   applyFilter,
+  fetchDefects,
 } = useDefectList()
+
+function getJobId(): number | null {
+  const queryJobId = route.query.jobId
+  if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId)
+  return projectId.value
+}
+
+onMounted(async () => {
+  const jobId = getJobId()
+  if (!jobId) return
+  await fetchDefects(jobId)
+})
 </script>
 
 <style scoped>

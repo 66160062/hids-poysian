@@ -66,58 +66,62 @@ export interface ConstructionDailyReportResponse {
   machines: MachinePayload[];
 }
 
+export interface ExtendedConstructionReport extends ConstructionDailyReportResponse {
+  round?: {
+    roundNumber: number;
+    job?: { projectName: string; [key: string]: unknown } | null;
+  };
+  contractorName?: string;
+  reporterName?: string;
+  position?: string;
+  images?: { imageUrl: string; caption?: string; placeholder?: boolean }[];
+}
+
 // ── Store ─────────────────────────────────────────────────────
 
-export const useConstructionDailyReportStore = defineStore(
-  'constructionDailyReport',
-  () => {
-    const isSubmitting = ref(false);
-    const submitError = ref<string | null>(null);
-
-    async function submitReport(
-      formData: FormData,
-    ): Promise<ConstructionDailyReportResponse> {
-      isSubmitting.value = true;
-      submitError.value = null;
-      try {
-        const { data } = await api.post<ConstructionDailyReportResponse>(
-          '/construction-daily-reports',
-          formData,
-          {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          }
-        );
-        return data;
-      } catch (err) {
-        const error = err as { response?: { data?: { message?: string } } };
-        submitError.value =
-          error.response?.data?.message ?? 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
-        throw err;
-      } finally {
-        isSubmitting.value = false;
-      }
+export const useConstructionDailyReportStore = defineStore('constructionDailyReport', () => {
+  const isSubmitting = ref(false);
+  const submitError = ref<string | null>(null);
+  async function submitReport(formData: FormData): Promise<ConstructionDailyReportResponse> {
+    isSubmitting.value = true;
+    submitError.value = null;
+    try {
+      const { data } = await api.post<ConstructionDailyReportResponse>(
+        '/construction-daily-reports',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        },
+      );
+      return data;
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      submitError.value = error.response?.data?.message ?? 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+      throw err;
+    } finally {
+      isSubmitting.value = false;
     }
+  }
 
-    async function fetchReportByRound(
-      roundId: number,
-    ): Promise<ConstructionDailyReportResponse | null> {
-      try {
-        const { data } = await api.get<ConstructionDailyReportResponse>(
-          `/construction-daily-reports/round/${roundId}`,
-        );
-        return data;
-      } catch {
-        return null;
-      }
+  async function fetchReportByRound(
+    roundId: number,
+  ): Promise<ConstructionDailyReportResponse | null> {
+    try {
+      const { data } = await api.get<ConstructionDailyReportResponse>(
+        `/construction-daily-reports/round/${roundId}`,
+      );
+      return data;
+    } catch {
+      return null;
     }
+  }
 
-    return {
-      isSubmitting,
-      submitError,
-      submitReport,
-      fetchReportByRound,
-    };
-  },
-);
+  return {
+    isSubmitting,
+    submitError,
+    submitReport,
+    fetchReportByRound,
+  };
+});

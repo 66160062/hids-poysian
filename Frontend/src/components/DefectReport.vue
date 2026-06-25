@@ -172,11 +172,11 @@
               <div class="info-row">
                 <span class="label">สถานะ:</span>
                 {{
-                  defect.status === 'PENDING_REPAIR'
+                  defect.status === 'pending_repair'
                     ? 'กำลังรอซ่อม'
-                    : defect.status === 'REJECTED'
+                    : defect.status === 'rejected'
                       ? 'ซ่อมไม่ผ่าน'
-                      : defect.status === 'CLOSED'
+                      : defect.status === 'verified'
                         ? 'ซ่อมผ่านแล้ว'
                         : defect.status
                 }}
@@ -247,7 +247,7 @@
                 </div>
                 <div class="info-row">
                   <span class="label">สถานะ:</span>
-                  {{ defect.status === 'PENDING_REPAIR' ? 'กำลังรอซ่อม' : defect.status }}
+                  {{ defect.status === 'pending_repair' ? 'กำลังรอซ่อม' : defect.status }}
                 </div>
                 <img loading="eager" :src="PoysianLogo" class="card-logo-watermark-img" />
               </div>
@@ -393,17 +393,17 @@ const summaryStats = computed(() => [
   },
   {
     label: 'กำลังรอซ่อม',
-    value: props.defects.filter((d) => d.status === 'PENDING_REPAIR').length,
+    value: props.defects.filter((d) => d.status === 'pending_repair').length,
     color: 'text-orange',
   },
   {
     label: 'ซ่อมไม่ผ่าน',
-    value: props.defects.filter((d) => d.status === 'REJECTED').length,
+    value: props.defects.filter((d) => d.status === 'rejected').length,
     color: 'text-negative',
   },
   {
     label: 'ซ่อมผ่านแล้ว',
-    value: props.defects.filter((d) => d.status === 'CLOSED').length,
+    value: props.defects.filter((d) => d.status === 'verified').length,
     color: 'text-positive',
   },
 ]);

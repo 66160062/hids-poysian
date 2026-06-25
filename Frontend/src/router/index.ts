@@ -37,6 +37,11 @@ export default defineRouter(function (/* { store, ssrContext } */) {
   Router.beforeEach((to, from, next) => {
     const auth = useAuthStore();
 
+    if (to.meta.publicLink) {
+      next();
+      return;
+    }
+
     if (to.meta.requiresAuth && !auth.token) {
       next('/login');
     } else {

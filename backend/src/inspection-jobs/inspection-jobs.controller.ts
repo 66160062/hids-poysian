@@ -20,10 +20,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { extname } from 'path';
 import { ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
 import { InspectionJobStatus } from './enums/inspection-job-status.enum';
+import { AuthService } from 'src/auth/auth.service';
 
 @Controller('inspection-jobs')
 export class InspectionJobsController {
-  constructor(private readonly inspectionJobsService: InspectionJobsService) {}
+  constructor(
+    private readonly inspectionJobsService: InspectionJobsService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'การตรวจใหม่' })
@@ -101,6 +105,18 @@ export class InspectionJobsController {
     @Query('inspectionType') inspectionType?: string,
   ) {
     return this.inspectionJobsService.getStatusMetadata(search, type, inspectionType);
+  }
+
+  @Get(':id/contractor-share')
+  @ApiOperation({ summary: 'สถานะลิงก์แชร์สำหรับผู้รับเหมา' })
+  getContractorShareStatus(@Param('id') id: string) {
+    return this.authService.getContractorShareStatus(+id);
+  }
+
+  @Patch(':id/contractor-share/revoke')
+  @ApiOperation({ summary: 'ปิดลิงก์แชร์สำหรับผู้รับเหมา' })
+  revokeContractorShare(@Param('id') id: string) {
+    return this.authService.revokeContractorShare(+id);
   }
 
   @Get(':id')
