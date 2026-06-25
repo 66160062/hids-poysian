@@ -179,28 +179,46 @@ export class DailyReportsService {
 
       await this.resolveTeamMember(manager, job, savedRound, createRoundDto);
 
-      // --- CLONE DEFECTS FROM LATEST ROUND ---
+      // --- CLONE SUMMARY ITEMS & DEFECTS FROM LATEST ROUND ---
       if (latestRound) {
+        // 1. Clone InspectionSummaryItem from previous round
+        const latestSummaryItems = await manager
+          .getRepository(InspectionSummaryItem)
+          .find({
+            where: { round: { roundId: latestRound.roundId } },
+            relations: ['template', 'option', 'refItem'],
+          });
+
+        if (latestSummaryItems.length > 0) {
+          // Copy summaryCompletedAt so UI recognises summary as already done
+          savedRound.summaryCompletedAt = latestRound.summaryCompletedAt;
+          await manager.getRepository(InspectionRound).save(savedRound);
+
+          const clonedItems = latestSummaryItems.map((item) =>
+            manager.getRepository(InspectionSummaryItem).create({
+              round: savedRound,
+              template: item.template,
+              option: item.option,
+              refItem: item.refItem ?? null,
+              detailValue: item.detailValue,
+            }),
+          );
+          await manager.getRepository(InspectionSummaryItem).save(clonedItems);
+        }
+
+        // 2. Clone non-verified defects from previous round
         const oldDefects = await manager.getRepository(Defect).find({
           where: { round: { roundId: latestRound.roundId } },
           relations: ['room', 'subRoom', 'floor', 'subCategories', 'inspector'],
         });
 
-        console.log(
-          `[DEBUG cloneDefects] oldDefects length: ${oldDefects.length}`,
-        );
-
         const defectsToClone = oldDefects.filter(
           (d) => d.status !== DefectStatus.VERIFIED,
         );
 
-        console.log(
-          `[DEBUG cloneDefects] defectsToClone length: ${defectsToClone.length}`,
-        );
-
         if (defectsToClone.length > 0) {
-          const clonedDefects = defectsToClone.map((d) => {
-            return manager.getRepository(Defect).create({
+          const clonedDefects = defectsToClone.map((d) =>
+            manager.getRepository(Defect).create({
               description: d.description,
               severity: d.severity,
               imageUrl: d.imageUrl,
@@ -215,25 +233,11 @@ export class DailyReportsService {
               floor: d.floor,
               subCategories: d.subCategories,
               inspector: d.inspector,
-            });
-          });
-          console.log(
-            `[DEBUG cloneDefects] mapped ${clonedDefects.length} cloned defects`,
+            }),
           );
-          try {
-            await manager
-              .getRepository(Defect)
-              .save(clonedDefects, { chunk: 100 });
-            console.log(
-              `[DEBUG cloneDefects] successfully saved cloned defects!`,
-            );
-          } catch (err) {
-            console.error(
-              `[DEBUG cloneDefects] Error saving cloned defects:`,
-              err,
-            );
-            throw err;
-          }
+          await manager
+            .getRepository(Defect)
+            .save(clonedDefects, { chunk: 100 });
         }
       }
 

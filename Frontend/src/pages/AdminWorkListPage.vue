@@ -452,20 +452,25 @@ const tasks = computed<TaskItem[]>(() => {
         latestActiveRoundDate = activeRound.scheduledDate;
       }
 
-      if (work.status === 'Completed') {
-        if (work.isReadyForRound2) {
-          finalStatusLabel = 'รอตรวจรอบ 2';
-          finalBgClass = 'bg-orange-1';
-          finalTextColor = 'orange-8';
+      const hasRound2OrMore = sortedRounds.some(
+        (r) => (r.roundNumber ?? 0) >= 2
+      );
+
+      // ถ้าผู้รับเหมาซ่อมเกิน 80% แล้ว และยังไม่มีการสร้างรอบ 2
+      if (work.isReadyForRound2 && !hasRound2OrMore) {
+        finalStatusLabel = 'รอตรวจรอบ 2';
+        finalBgClass = 'bg-orange-1';
+        finalTextColor = 'orange-8';
+      } 
+      // ถ้างานเสร็จสิ้นแล้ว (มีการอนุมัติรอบใดๆ เป็นรอบสุดท้าย หรืออนุมัติรอบ 2 ไปแล้ว)
+      else if (work.status === 'Completed') {
+        const completedRound = sortedRounds.find(
+          (r) => r.status === 'APPROVED' || r.status === 'COMPLETED',
+        );
+        if (completedRound) {
+          finalStatusLabel = `เสร็จสิ้น ${completedRound.roundNumber ?? ''}`.trim();
         } else {
-          const completedRound = sortedRounds.find(
-            (r) => r.status === 'APPROVED' || r.status === 'COMPLETED',
-          );
-          if (completedRound) {
-            finalStatusLabel = `เสร็จสิ้น ${completedRound.roundNumber ?? ''}`.trim();
-          } else {
-            finalStatusLabel = `เสร็จสิ้น ${sortedRounds[0]?.roundNumber ?? ''}`.trim();
-          }
+          finalStatusLabel = `เสร็จสิ้น ${sortedRounds[0]?.roundNumber ?? ''}`.trim();
         }
       }
     }

@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, In, Not } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { InspectionJob } from '../inspection-jobs/entities/inspection-job.entity';
 import { InspectionRound } from '../inspection-rounds/entities/inspection-round.entity';
-import { Defect, DefectStatus } from '../defects/entities/defect.entity';
+import { Defect } from '../defects/entities/defect.entity';
 import {
   DashboardResponse,
   DashboardTaskItem,
@@ -302,10 +302,17 @@ export class AdminService {
             latestRound.status === 'COMPLETED' ||
             latestRound.status === 'APPROVED'
           ) {
-            displayStatus = `เสร็จสิ้น ${latestRound.roundNumber}`;
-            statusBgClass = 'bg-green-1';
-            statusTextColor = 'positive';
-            statusKey = 'others';
+            if (latestRound.roundNumber >= 2) {
+              displayStatus = `เสร็จสิ้น ${latestRound.roundNumber}`;
+              statusBgClass = 'bg-green-1';
+              statusTextColor = 'positive';
+              statusKey = 'others';
+            } else {
+              displayStatus = 'กำลังดำเนินการ';
+              statusBgClass = 'bg-blue-1';
+              statusTextColor = 'primary';
+              statusKey = 'in_progress';
+            }
           } else if (latestRound.status === 'SUBMITTED') {
             displayStatus = 'รออนุมัติ';
             statusBgClass = 'bg-orange-1';
@@ -379,6 +386,13 @@ export class AdminService {
     statusTextColor: string;
   } {
     if (status === 'COMPLETED' || status === 'APPROVED') {
+      if (roundNumber && roundNumber < 2) {
+        return {
+          displayStatus: 'กำลังดำเนินการ',
+          statusBgClass: 'bg-blue-1',
+          statusTextColor: 'primary',
+        };
+      }
       return {
         displayStatus: roundNumber ? `เสร็จสิ้น ${roundNumber}` : 'เสร็จสิ้น',
         statusBgClass: 'bg-green-1',
@@ -482,13 +496,11 @@ export class AdminService {
         latestRound.status === 'APPROVED' ||
         latestRound.status === 'COMPLETED'
       ) {
-        const remainingDefects = await this.defectsRepo.count({
-          where: {
-            round: { roundId: In(sortedRounds.map((r) => r.roundId)) },
-            status: Not(DefectStatus.VERIFIED),
-          },
-        });
-        newStatus = remainingDefects === 0 ? 'Completed' : 'Active';
+        if (latestRound.roundNumber >= 2) {
+          newStatus = 'Completed';
+        } else {
+          newStatus = 'Active';
+        }
       } else if (latestRound.status === 'SUBMITTED') {
         newStatus = 'Pending';
       } else if (

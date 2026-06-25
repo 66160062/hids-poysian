@@ -8,7 +8,7 @@ import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspe
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Defect, DefectStatus } from 'src/defects/entities/defect.entity';
-
+import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
 @Injectable()
 export class InspectionRoundsService {
   constructor(
@@ -85,6 +85,48 @@ export class InspectionRoundsService {
         await queryRunner.manager.save(teamMember);
       }
 
+      if (latestRound) {
+        // Copy summaryCompletedAt from the previous round so UI recognizes summary as completed
+        savedRound.summaryCompletedAt = latestRound.summaryCompletedAt;
+        await queryRunner.manager.save(savedRound);
+
+        const latestItems = await queryRunner.manager.find(InspectionSummaryItem, {
+          where: { round: { roundId: latestRound.roundId } },
+          relations: ['template', 'option', 'refItem'],
+        });
+
+        if (latestItems.length > 0) {
+          const clonedItems = latestItems.map((item) =>
+            queryRunner.manager.create(InspectionSummaryItem, {
+              round: savedRound,
+              template: item.template,
+              option: item.option,
+              refItem: item.refItem,
+              detailValue: item.detailValue,
+            })
+          );
+          await queryRunner.manager.save(clonedItems);
+        }
+
+        const latestDefects = await queryRunner.manager.find(Defect, {
+          where: { round: { roundId: latestRound.roundId } },
+          relations: ['room', 'subRoom', 'floor', 'subCategories', 'inspector'],
+        });
+
+        if (latestDefects.length > 0) {
+          const clonedDefects = latestDefects.map((defect) =>
+            queryRunner.manager.create(Defect, {
+              ...defect,
+              defectId: undefined,
+              createdAt: undefined,
+              updatedAt: undefined,
+              round: savedRound,
+            })
+          );
+          await queryRunner.manager.save(clonedDefects);
+        }
+      }
+
       await queryRunner.commitTransaction();
       return savedRound;
     } catch (error) {
@@ -93,6 +135,83 @@ export class InspectionRoundsService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async backfillSummaries() {
+    const rounds = await this.inspectionRoundsRepo.find({
+      relations: ['job'],
+    });
+
+    let backfilledCount = 0;
+
+    for (const round of rounds) {
+      if (round.roundNumber > 1) {
+        const existingItems = await this.dataSource.manager.find(InspectionSummaryItem, {
+          where: { round: { roundId: round.roundId } }
+        });
+
+        if (existingItems.length === 0) {
+          const previousRound = await this.inspectionRoundsRepo.findOne({
+            where: { job: { jobId: round.job.jobId }, roundNumber: round.roundNumber - 1 }
+          });
+
+          if (previousRound) {
+            const previousItems = await this.dataSource.manager.find(InspectionSummaryItem, {
+              where: { round: { roundId: previousRound.roundId } },
+              relations: ['template', 'option', 'refItem']
+            });
+
+            if (previousItems.length > 0) {
+              const clonedItems = previousItems.map(item => this.dataSource.manager.create(InspectionSummaryItem, {
+                round: round,
+                template: item.template,
+                option: item.option,
+                refItem: item.refItem,
+                detailValue: item.detailValue
+              }));
+              await this.dataSource.manager.save(clonedItems);
+              backfilledCount++;
+            }
+          }
+        }
+      }
+    }
+    return backfilledCount;
+  }
+
+  async fixJobStatuses() {
+    const jobs = await this.inspectionJobsRepo.find();
+    let fixedCount = 0;
+
+    for (const job of jobs) {
+      const latestRound = await this.inspectionRoundsRepo.findOne({
+        where: { job: { jobId: job.jobId } },
+        order: { roundNumber: 'DESC' },
+      });
+
+      if (latestRound) {
+        let expectedStatus = job.status;
+
+        if (latestRound.status === 'APPROVED') {
+          if (latestRound.roundNumber >= 2) {
+            expectedStatus = 'Completed';
+          } else {
+            expectedStatus = 'Active';
+          }
+        } else if (latestRound.status === 'SUBMITTED') {
+          expectedStatus = 'Pending';
+        } else {
+          expectedStatus = 'Active';
+        }
+
+        if (job.status !== expectedStatus) {
+          job.status = expectedStatus;
+          await this.inspectionJobsRepo.save(job);
+          fixedCount++;
+        }
+      }
+    }
+    return fixedCount;
   }
 
   findAll() {
@@ -292,7 +411,11 @@ export class InspectionRoundsService {
       round.approvedAt = new Date();
 
       if (round.job) {
-        round.job.status = 'Completed';
+        if (round.roundNumber >= 2) {
+          round.job.status = 'Completed';
+        } else {
+          round.job.status = 'Active';
+        }
         await queryRunner.manager.save(round.job);
       }
 

@@ -220,7 +220,7 @@
       <div v-if="inspectionRounds.length > 0 && job.status === 'เสร็จสิ้น'" class="q-mb-lg">
         <div class="row items-center justify-between q-mb-sm">
           <div class="text-subtitle2 text-weight-bold">ความคืบหน้างานซ่อมของผู้รับเหมา</div>
-          <div class="text-caption text-weight-bold" :class="job.contractorProgress >= 80 ? 'text-positive' : 'text-orange'">
+          <div class="text-caption text-weight-bold" :class="job.contractorProgress >= 50 ? 'text-positive' : 'text-orange'">
             {{ Math.round(job.contractorProgress) }}%
           </div>
         </div>
@@ -228,11 +228,11 @@
           rounded
           size="10px"
           :value="job.contractorProgress / 100"
-          :color="job.contractorProgress >= 80 ? 'positive' : 'orange'"
+          :color="job.contractorProgress >= 50 ? 'positive' : 'orange'"
           class="q-mb-xs"
         />
         <div class="text-caption text-grey-6 text-right">
-          {{ job.contractorProgress >= 80 ? 'พร้อมสร้างรอบตรวจที่ 2 แล้ว' : 'ควรรอให้ถึง 80% ก่อนสร้างรอบถัดไป' }}
+          {{ job.contractorProgress >= 50 ? 'พร้อมสร้างรอบตรวจที่ 2 แล้ว' : 'ควรรอให้ถึง 50% ก่อนสร้างรอบถัดไป' }}
         </div>
       </div>
 
@@ -1684,10 +1684,10 @@ const formatDateDisplay = (dateStr: string) => {
 };
 
 const onCreateRound = () => {
-  if (job.value.status === 'เสร็จสิ้น' && job.value.contractorProgress < 80) {
+  if (job.value.status === 'เสร็จสิ้น' && job.value.contractorProgress < 50) {
     $q.dialog({
       title: 'แจ้งเตือนความคืบหน้างานซ่อม',
-      message: `ผู้รับเหมาซ่อมแซมไปได้เพียง ${Math.round(job.value.contractorProgress)}% ซึ่งยังไม่ถึงเกณฑ์ 80% คุณยืนยันที่จะสร้างรอบตรวจที่ 2 หรือไม่?`,
+      message: `ผู้รับเหมาซ่อมแซมไปได้เพียง ${Math.round(job.value.contractorProgress)}% ซึ่งยังไม่ถึงเกณฑ์ 50% คุณยืนยันที่จะสร้างรอบตรวจที่ 2 หรือไม่?`,
       cancel: { label: 'ยกเลิก', flat: true, color: 'grey-7' },
       ok: { label: 'ยืนยันสร้าง', color: 'primary' },
       persistent: true,
