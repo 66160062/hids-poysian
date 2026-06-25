@@ -98,7 +98,11 @@ export class AuthService {
     if (job.contractorShareEnabled && job.contractorShareToken) {
       return {
         token: job.contractorShareToken,
-        url: this.buildShareUrl(projectId, 'contractor', job.contractorShareToken),
+        url: this.buildShareUrl(
+          projectId,
+          'contractor',
+          job.contractorShareToken,
+        ),
         role: 'contractor',
         expires_at: null,
         admin_controlled: true,

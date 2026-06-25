@@ -8,6 +8,7 @@ import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { User } from 'src/users/entities/user.entity';
+import { Defect } from 'src/defects/entities/defect.entity';
 import { DailyReportsController } from './daily-reports.controller';
 import { DailyReportsService } from './daily-reports.service';
 
@@ -22,6 +23,7 @@ import { DailyReportsService } from './daily-reports.service';
       InspectionTeamMember,
       InspectionRound,
       InspectionSummaryItem,
+      Defect,
     ]),
   ],
   controllers: [DailyReportsController],

@@ -16,6 +16,7 @@ import { CreateDailyReportDto } from './dto/create-daily-report.dto';
 import { CreateDailyReportRoundDto } from './dto/create-daily-report-round.dto';
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
 import { Team } from 'src/teams/entities/team.entity';
+import { Defect, DefectStatus } from 'src/defects/entities/defect.entity';
 
 @Injectable()
 export class DailyReportsService {
@@ -177,6 +178,68 @@ export class DailyReportsService {
         .save(round);
 
       await this.resolveTeamMember(manager, job, savedRound, createRoundDto);
+
+      // --- CLONE SUMMARY ITEMS & DEFECTS FROM LATEST ROUND ---
+      if (latestRound) {
+        // 1. Clone InspectionSummaryItem from previous round
+        const latestSummaryItems = await manager
+          .getRepository(InspectionSummaryItem)
+          .find({
+            where: { round: { roundId: latestRound.roundId } },
+            relations: ['template', 'option', 'refItem'],
+          });
+
+        if (latestSummaryItems.length > 0) {
+          // Copy summaryCompletedAt so UI recognises summary as already done
+          savedRound.summaryCompletedAt = latestRound.summaryCompletedAt;
+          await manager.getRepository(InspectionRound).save(savedRound);
+
+          const clonedItems = latestSummaryItems.map((item) =>
+            manager.getRepository(InspectionSummaryItem).create({
+              round: savedRound,
+              template: item.template,
+              option: item.option,
+              refItem: item.refItem ?? null,
+              detailValue: item.detailValue,
+            }),
+          );
+          await manager.getRepository(InspectionSummaryItem).save(clonedItems);
+        }
+
+        // 2. Clone non-verified defects from previous round
+        const oldDefects = await manager.getRepository(Defect).find({
+          where: { round: { roundId: latestRound.roundId } },
+          relations: ['room', 'subRoom', 'floor', 'subCategories', 'inspector'],
+        });
+
+        const defectsToClone = oldDefects.filter(
+          (d) => d.status !== DefectStatus.VERIFIED,
+        );
+
+        if (defectsToClone.length > 0) {
+          const clonedDefects = defectsToClone.map((d) =>
+            manager.getRepository(Defect).create({
+              description: d.description,
+              severity: d.severity,
+              imageUrl: d.imageUrl,
+              imageFileSize: d.imageFileSize,
+              contractorImageUrl: d.contractorImageUrl,
+              contractorImageFileSize: d.contractorImageFileSize,
+              contractorNote: d.contractorNote,
+              status: d.status,
+              round: savedRound,
+              room: d.room,
+              subRoom: d.subRoom,
+              floor: d.floor,
+              subCategories: d.subCategories,
+              inspector: d.inspector,
+            }),
+          );
+          await manager
+            .getRepository(Defect)
+            .save(clonedDefects, { chunk: 100 });
+        }
+      }
 
       // Update job status to Active when a round is created
       job.status = 'Active';

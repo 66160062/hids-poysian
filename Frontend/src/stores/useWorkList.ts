@@ -12,6 +12,7 @@ export interface Work {
   projectImageUrl: string;
   status: string;
   createdAt: string;
+  isReadyForRound2?: boolean;
   customer?: {
     customerId: number;
     fullName: string;

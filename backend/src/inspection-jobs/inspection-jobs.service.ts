@@ -3,7 +3,7 @@ import { CreateInspectionJobDto } from './dto/create-inspection-job.dto';
 import { UpdateInspectionJobDto } from './dto/update-inspection-job.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InspectionJob } from './entities/inspection-job.entity';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { Address } from 'src/addresses/entities/address.entity';
 import { HouseType } from 'src/house-types/entities/house-type.entity';
@@ -23,6 +23,7 @@ export class InspectionJobsService {
     private readonly houseTypesRepo: Repository<HouseType>,
     @InjectRepository(Contractor)
     private readonly contractorsRepo: Repository<Contractor>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(createInspectionJobDto: CreateInspectionJobDto) {
@@ -122,7 +123,15 @@ export class InspectionJobsService {
 
     query
       .addSelect(
-        `CASE WHEN job.status = 'Draft' THEN 0 ELSE 1 END`,
+        `CASE 
+          WHEN job.status = 'Pending' THEN 1
+          WHEN job.status = 'Active' THEN 2
+          WHEN job.status = 'Draft' THEN 3
+          WHEN job.status = 'Completed' THEN 4
+          WHEN job.status = 'Locked' THEN 5
+          WHEN job.status = 'Cancelled' THEN 6
+          ELSE 7
+        END`,
         'status_order',
       )
       .orderBy('status_order', 'ASC')
@@ -132,8 +141,46 @@ export class InspectionJobsService {
 
     const [data, total] = await query.getManyAndCount();
 
+    // Fetch defect stats across ALL rounds for the job (to calculate contractor progress)
+    const enrichedData = await Promise.all(
+      data.map(async (job) => {
+        let progress = 0;
+        let isReadyForRound2 = false;
+
+        if (job.rounds && job.rounds.length > 0) {
+          const result = await this.dataSource.query(
+            `SELECT
+              COUNT(*) as total,
+              SUM(CASE WHEN d.status IN ('repaired', 'verified') THEN 1 ELSE 0 END) as repaired
+             FROM defect d
+             INNER JOIN inspection_round r ON d.round_id = r.round_id
+             WHERE r.job_id = $1`,
+            [job.jobId],
+          );
+
+          const totalDefects = Number(result[0].total) || 0;
+          const repairedDefects = Number(result[0].repaired) || 0;
+
+          if (totalDefects > 0) {
+            progress = (repairedDefects / totalDefects) * 100;
+            if (progress >= 50) {
+              isReadyForRound2 = true;
+            }
+          } else {
+            progress = 100; // ไม่มี defect ถือว่าพร้อมเลย
+          }
+        }
+
+        return {
+          ...job,
+          contractorProgress: progress,
+          isReadyForRound2,
+        };
+      }),
+    );
+
     return {
-      data,
+      data: enrichedData,
       meta: {
         total,
         page,
@@ -146,10 +193,42 @@ export class InspectionJobsService {
   async findOne(id: number) {
     const job = await this.inspectionsRepo.findOne({
       where: { jobId: id },
-      relations: ['customer', 'address', 'houseType', 'contractor'],
+      relations: ['customer', 'address', 'houseType', 'contractor', 'rounds'],
     });
     if (!job) throw new NotFoundException(`ไม่พบงานตรวจ ID ${id}`);
-    return job;
+
+    let progress = 0;
+    let isReadyForRound2 = false;
+
+    if (job.rounds && job.rounds.length > 0) {
+      const result = await this.dataSource.query(
+        `SELECT
+          COUNT(*) as total,
+          SUM(CASE WHEN d.status IN ('repaired', 'verified') THEN 1 ELSE 0 END) as repaired
+         FROM defect d
+         INNER JOIN inspection_round r ON d.round_id = r.round_id
+         WHERE r.job_id = $1`,
+        [job.jobId],
+      );
+
+      const totalDefects = Number(result[0].total) || 0;
+      const repairedDefects = Number(result[0].repaired) || 0;
+
+      if (totalDefects > 0) {
+        progress = (repairedDefects / totalDefects) * 100;
+        if (progress >= 50) {
+          isReadyForRound2 = true;
+        }
+      } else {
+        progress = 100;
+      }
+    }
+
+    return {
+      ...job,
+      contractorProgress: progress,
+      isReadyForRound2,
+    };
   }
 
   async update(id: number, updateInspectionJobDto: UpdateInspectionJobDto) {
