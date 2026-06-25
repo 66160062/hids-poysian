@@ -177,12 +177,7 @@ export class DailyReportsService {
         .getRepository(InspectionRound)
         .save(round);
 
-      const teamMember = await this.resolveTeamMember(
-        manager,
-        job,
-        savedRound,
-        createRoundDto,
-      );
+      await this.resolveTeamMember(manager, job, savedRound, createRoundDto);
 
       // --- CLONE DEFECTS FROM LATEST ROUND ---
       if (latestRound) {
@@ -270,12 +265,7 @@ export class DailyReportsService {
           .getRepository(InspectionRound)
           .save(firstRound);
 
-        const teamMember = await this.resolveTeamMember(
-          manager,
-          job,
-          savedFirstRound,
-          {},
-        );
+        await this.resolveTeamMember(manager, job, savedFirstRound, {});
 
         job.status = 'Active';
         await manager.getRepository(InspectionJob).save(job);
@@ -304,7 +294,7 @@ export class DailyReportsService {
           relations: ['inspector', 'team'],
         });
 
-      const clonedTeamMembers = await Promise.all(
+      await Promise.all(
         previousTeamMembers.map((member) =>
           manager.getRepository(InspectionTeamMember).save(
             manager.getRepository(InspectionTeamMember).create({

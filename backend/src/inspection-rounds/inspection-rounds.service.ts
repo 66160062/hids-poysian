@@ -3,7 +3,7 @@ import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InspectionRound } from './entities/inspection-round.entity';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { User } from 'src/users/entities/user.entity';
@@ -20,11 +20,12 @@ export class InspectionRoundsService {
     private readonly teamMembersRepo: Repository<InspectionTeamMember>,
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
-    @InjectRepository(Defect)
-    private readonly defectsRepo: Repository<Defect>,
+    private readonly dataSource: DataSource,
   ) {}
 
-  async create(createInspectionRoundDto: CreateInspectionRoundDto) {
+  async create(
+    createInspectionRoundDto: CreateInspectionRoundDto,
+  ): Promise<InspectionRound> {
     if (createInspectionRoundDto.scheduledDate) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -56,25 +57,40 @@ export class InspectionRoundsService {
       );
     }
 
-    const round = this.inspectionRoundsRepo.create({
-      ...createInspectionRoundDto,
-      job,
-    });
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    const savedRound = await this.inspectionRoundsRepo.save(round);
-
-    job.status = 'Active';
-    await this.inspectionJobsRepo.save(job);
-
-    if (createInspectionRoundDto.teamMemberId) {
-      const teamMember = await this.teamMembersRepo.findOneByOrFail({
-        id: createInspectionRoundDto.teamMemberId,
+    try {
+      const round = queryRunner.manager.create(InspectionRound, {
+        ...createInspectionRoundDto,
+        job,
       });
-      teamMember.round = savedRound;
-      await this.teamMembersRepo.save(teamMember);
-    }
 
-    return savedRound;
+      const savedRound = await queryRunner.manager.save(round);
+
+      job.status = 'Active';
+      await queryRunner.manager.save(job);
+
+      if (createInspectionRoundDto.teamMemberId) {
+        const teamMember = await queryRunner.manager.findOneByOrFail(
+          InspectionTeamMember,
+          {
+            id: createInspectionRoundDto.teamMemberId,
+          },
+        );
+        teamMember.round = savedRound;
+        await queryRunner.manager.save(teamMember);
+      }
+
+      await queryRunner.commitTransaction();
+      return savedRound;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   findAll() {
@@ -206,7 +222,7 @@ export class InspectionRoundsService {
     return this.inspectionRoundsRepo.save(round);
   }
 
-  async submit(id: number) {
+  async submit(id: number): Promise<InspectionRound> {
     const round = await this.inspectionRoundsRepo.findOneOrFail({
       where: { roundId: id },
       relations: ['job'],
@@ -229,18 +245,33 @@ export class InspectionRoundsService {
       );
     }
 
-    round.status = 'SUBMITTED';
-    round.submittedAt = new Date();
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (round.job) {
-      round.job.status = 'Pending';
-      await this.inspectionJobsRepo.save(round.job);
+    try {
+      round.status = 'SUBMITTED';
+      round.submittedAt = new Date();
+
+      if (round.job) {
+        round.job.status = 'Pending';
+        await queryRunner.manager.save(round.job);
+      }
+
+      const savedRound = await queryRunner.manager.save(round);
+      await queryRunner.commitTransaction();
+      return savedRound;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-    return this.inspectionRoundsRepo.save(round);
   }
 
-  async approveReport(id: number) {
+  async approveReport(
+    id: number,
+  ): Promise<{ data: InspectionRound; notification: any }> {
     const round = await this.inspectionRoundsRepo.findOneOrFail({
       where: { roundId: id },
       relations: ['job', 'teamMembers', 'teamMembers.inspector'],
@@ -250,21 +281,33 @@ export class InspectionRoundsService {
       throw new BadRequestException('Report must be submitted before approval');
     }
 
-    round.status = 'APPROVED';
-    round.approvedAt = new Date();
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (round.job) {
-      round.job.status = 'Completed';
-      await this.inspectionJobsRepo.save(round.job);
+    try {
+      round.status = 'APPROVED';
+      round.approvedAt = new Date();
+
+      if (round.job) {
+        round.job.status = 'Completed';
+        await queryRunner.manager.save(round.job);
+      }
+
+      const approvedRound = await queryRunner.manager.save(round);
+      await queryRunner.commitTransaction();
+
+      const notification = this.buildApprovalNotification(approvedRound);
+      return {
+        data: approvedRound,
+        notification,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-    const approvedRound = await this.inspectionRoundsRepo.save(round);
-    const notification = this.buildApprovalNotification(approvedRound);
-
-    return {
-      data: approvedRound,
-      notification,
-    };
   }
 
   private buildApprovalNotification(round: InspectionRound) {

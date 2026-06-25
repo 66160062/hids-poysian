@@ -8,6 +8,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { LinkTokenGuard } from './link-token.guard';
@@ -31,7 +32,12 @@ export class AuthController {
 
   @Get('verify-link')
   @UseGuards(LinkTokenGuard)
-  verifyLink(@Req() request) {
+  verifyLink(
+    @Req()
+    request: Request & {
+      user: { project_id: number; role: string; generation?: number };
+    },
+  ) {
     return {
       valid: true,
       payload: request.user,
