@@ -301,7 +301,10 @@ export class InspectionJobsService {
     const countsQuery = await query.getRawMany();
 
     const countMap: Record<string, number> = {};
-    for (const row of countsQuery) {
+    for (const row of countsQuery as {
+      status: string;
+      count: string | number;
+    }[]) {
       countMap[row.status] = Number(row.count);
     }
 
