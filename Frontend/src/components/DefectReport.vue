@@ -428,10 +428,18 @@ const allDefectGroups = computed(() => {
   return groups;
 });
 
+const orderedDefectGroups = computed(() => {
+  return Object.entries(allDefectGroups.value).sort(([, defectsA], [, defectsB]) => {
+    const orderA = defectsA[0]?.floor?.floorOrder ?? Number.MAX_SAFE_INTEGER;
+    const orderB = defectsB[0]?.floor?.floorOrder ?? Number.MAX_SAFE_INTEGER;
+    return orderA - orderB;
+  });
+});
+
 const allDefectChunks = computed(() => {
   const pages: { roomName: string; defects: Defect[] }[][] = [];
 
-  Object.entries(allDefectGroups.value).forEach(([roomName, defects]) => {
+  orderedDefectGroups.value.forEach(([roomName, defects]) => {
     for (let i = 0; i < defects.length; i += 6) {
       const chunk = defects.slice(i, i + 6);
       pages.push([{ roomName, defects: chunk }]);
