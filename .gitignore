@@ -1,3 +1,9 @@
 # AI files
 AGENTS.md
 AI_CONTEXT.md
+
+# Skills
+.claude/
+.agents/
+skills-lock.json
+CLAUDE.md
