@@ -83,7 +83,7 @@ export interface Defect {
   }[];
   room?: { roomName: string; roomId: number };
   subRoom?: { roomName: string; subRoomId: number } | null;
-  floor?: { floorId: number; label: string };
+  floor?: { floorId: number; label: string; floorOrder?: number };
 }
 
 export interface SummaryTemplateOption {
@@ -128,6 +128,7 @@ export interface SubRoom {
 export interface Floor {
   floorId: number;
   label: string;
+  floorOrder?: number;
 }
 
 export interface RoomTemplate {

@@ -6,4 +6,7 @@ export class Floor {
   floorId!: number;
   @Column()
   label!: string;
+
+  @Column({ name: 'floor_order', type: 'int', nullable: true })
+  floorOrder?: number;
 }
