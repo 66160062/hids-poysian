@@ -361,6 +361,10 @@ const projectFields = computed<FieldRow[]>(() => {
           .join(' ') || '-',
     },
     { label: 'พื้นที่', value: job ? `${job.usableArea} ตร.ม.` : '-' },
+    {
+      label: 'วันที่ตรวจ',
+      value: latestRound.value?.inspectedAt ? formatDate(latestRound.value.inspectedAt) : '-',
+    },
   ];
 });
 
@@ -375,18 +379,30 @@ const customerFields = computed<FieldRow[]>(() => {
   ];
 });
 
+const latestRound = computed(() => rounds.value[rounds.value.length - 1]);
+
+function formatDate(dateStr: string) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('th-TH', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
 const workflowSteps = computed(() => {
-  const latestRound = rounds.value[rounds.value.length - 1];
-  const nextRound = rounds.value.find((r) => r.roundNumber === (latestRound?.roundNumber ?? 0) + 1);
-  const isInspected = !!latestRound?.inspectedAt;
-  const isSubmitted = !!latestRound?.submittedAt;
+  const round = latestRound.value;
+  const nextRound = rounds.value.find((r) => r.roundNumber === (round?.roundNumber ?? 0) + 1);
+  const isInspected = !!round?.inspectedAt;
+  const isSubmitted = !!round?.submittedAt;
   const isRepairDone = totalDefects.value > 0 && passed.value === totalDefects.value;
   const isCompleted = jobData.value?.status === 'Completed';
 
   return [
     {
       icon: 'search',
-      label: `ตรวจรอบที่ ${latestRound?.roundNumber ?? 1}`,
+      label: `ตรวจรอบที่ ${round?.roundNumber ?? 1}`,
       status: isInspected ? 'done' : 'active',
     },
     {
@@ -401,7 +417,7 @@ const workflowSteps = computed(() => {
     },
     {
       icon: 'search',
-      label: `ตรวจรอบที่ ${(latestRound?.roundNumber ?? 1) + 1}`,
+      label: `ตรวจรอบที่ ${(round?.roundNumber ?? 1) + 1}`,
       status: nextRound?.inspectedAt ? 'done' : nextRound ? 'active' : 'pending',
     },
     {
