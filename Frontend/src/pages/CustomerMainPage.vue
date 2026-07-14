@@ -25,6 +25,20 @@
         class="full-width q-mb-md download-btn"
         unelevated
         size="md"
+        :loading="isLoadingPdf"
+        @click="handleExportAll"
+      />
+
+      <!-- Export by Category Btn -->
+      <q-btn
+        outline
+        color="primary"
+        icon="filter_alt"
+        label="Export เฉพาะประเภท"
+        class="full-width q-mb-md"
+        size="md"
+        :loading="isLoadingPdf"
+        @click="openCategoryDialog"
       />
 
       <!-- Project Info Card -->
@@ -245,6 +259,77 @@
       @click="review"
     />
     <ReviewDialog v-model="dialog" />
+
+    <!-- Export by Category Dialog -->
+    <q-dialog v-model="showCategoryDialog" position="bottom">
+      <q-card style="width: 100%; border-radius: 16px 16px 0 0; max-height: 85vh;">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="section-title">เลือกประเภทงานที่ต้องการ Export</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-scroll-area style="height: calc(85vh - 160px);">
+          <q-card-section class="q-pt-sm">
+            <q-checkbox
+              v-for="cat in availableCategories"
+              :key="cat.categoryId"
+              v-model="selectedCategoryIds"
+              :val="cat.categoryId"
+              :label="cat.name"
+              class="full-width q-mb-sm"
+            />
+            <div v-if="!availableCategories.length" class="text-grey-6 text-caption">
+              ไม่พบประเภทงานในรอบตรวจนี้
+            </div>
+          </q-card-section>
+        </q-scroll-area>
+
+        <q-card-actions class="q-px-md q-pb-md q-pt-sm" style="border-top: 1px solid #ebebeb;">
+          <q-btn flat label="ยกเลิก" color="grey-7" v-close-popup />
+          <q-space />
+          <q-btn
+            unelevated
+            icon="download"
+            label="Export"
+            color="primary"
+            rounded
+            :disable="!selectedCategoryIds.length"
+            @click="confirmCategoryExport"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- PDF Report Preview Dialog -->
+    <q-dialog v-model="showReportDialog" maximized transition-show="slide-up" transition-hide="slide-down">
+      <q-card class="bg-grey-3 column">
+        <q-toolbar class="bg-white text-dark shadow-2 z-top">
+          <q-btn flat round dense icon="close" v-close-popup />
+          <q-toolbar-title class="text-weight-bold" style="font-size: 16px;">
+            {{ activeCategoryFilter.length ? 'ตัวอย่างรายงาน (กรองตามประเภท)' : 'ตัวอย่างรายงาน' }}
+          </q-toolbar-title>
+          <q-btn
+            unelevated
+            color="primary"
+            icon="download"
+            label="ดาวน์โหลด PDF"
+            @click="pdfReportRef?.exportPdf()"
+          />
+        </q-toolbar>
+
+        <q-card-section class="col q-pa-none" style="overflow-y: auto; overflow-x: hidden;">
+          <DefectReport
+            v-if="pdfDataLoaded && pdfRound"
+            ref="pdfReportRef"
+            :round="pdfRound"
+            :defects="filteredPdfDefects"
+            :summaryItems="pdfSummaryItems"
+          />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
     <q-footer class="bg-white bottom-bar">
       <q-tabs :model-value="activeTab" @update:model-value="(tab) => router.push(`/app/${tab}`)">
         <q-tab name="overview" icon="home" label="ภาพรวม" />
@@ -259,11 +344,15 @@
 import { useDefectSummary } from 'src/stores/useDefectSummary';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useQuasar } from 'quasar';
 import ReviewDialog from 'src/components/ReviewDialog.vue';
+import DefectReport from 'src/components/DefectReport.vue';
 import { useLinkAccess } from 'src/stores/useLinkAccess';
 import { api } from 'src/boot/axios';
+import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
 
 const { isCustomerViewOnly, hasLinkAccess, projectId } = useLinkAccess();
+const $q = useQuasar();
 
 // ── Defect summary จาก stores ──────────────────────────────────────────
 const {
@@ -380,6 +469,89 @@ const customerFields = computed<FieldRow[]>(() => {
 });
 
 const latestRound = computed(() => rounds.value[rounds.value.length - 1]);
+
+// ── PDF Export ───────────────────────────────────────────────────────────
+const pdfRound = ref<InspectionRound | null>(null);
+const pdfDefects = ref<Defect[]>([]);
+const pdfSummaryItems = ref<InspectionSummaryItem[]>([]);
+const pdfDataLoaded = ref(false);
+const isLoadingPdf = ref(false);
+
+const showReportDialog = ref(false);
+const pdfReportRef = ref<InstanceType<typeof DefectReport> | null>(null);
+
+// [] = export ทั้งหมด, non-empty = export เฉพาะ categoryId ที่เลือก
+const activeCategoryFilter = ref<number[]>([]);
+
+const showCategoryDialog = ref(false);
+const selectedCategoryIds = ref<number[]>([]);
+
+const availableCategories = computed(() => {
+  const map = new Map<number, string>();
+  pdfDefects.value.forEach((d) =>
+    d.subCategories?.forEach((sc) => {
+      if (sc.category) map.set(sc.category.categoryId, sc.category.name);
+    }),
+  );
+  return [...map.entries()].map(([categoryId, name]) => ({ categoryId, name }));
+});
+
+const filteredPdfDefects = computed(() => {
+  if (!activeCategoryFilter.value.length) return pdfDefects.value;
+  return pdfDefects.value.filter((d) =>
+    d.subCategories?.some(
+      (sc) => sc.category && activeCategoryFilter.value.includes(sc.category.categoryId),
+    ),
+  );
+});
+
+async function ensurePdfDataLoaded() {
+  if (pdfDataLoaded.value) return true;
+  const roundId = latestRound.value?.roundId;
+  if (!roundId) {
+    $q.notify({ type: 'warning', message: 'ยังไม่มีข้อมูลรอบตรวจ' });
+    return false;
+  }
+  isLoadingPdf.value = true;
+  $q.loading.show({ message: 'กำลังเตรียมข้อมูลรายงาน...' });
+  try {
+    const [roundRes, defectsRes, summaryRes] = await Promise.all([
+      api.get(`/inspection-rounds/${roundId}`),
+      api.get(`/defects/round/${roundId}`),
+      api.get(`/inspection-summary-items/round/${roundId}`),
+    ]);
+    pdfRound.value = roundRes.data;
+    pdfDefects.value = defectsRes.data;
+    pdfSummaryItems.value = summaryRes.data;
+    pdfDataLoaded.value = true;
+    return true;
+  } catch (e) {
+    console.error(e);
+    $q.notify({ color: 'negative', message: 'เกิดข้อผิดพลาดในการดึงข้อมูลรายงาน' });
+    return false;
+  } finally {
+    isLoadingPdf.value = false;
+    $q.loading.hide();
+  }
+}
+
+async function handleExportAll() {
+  activeCategoryFilter.value = [];
+  if (!(await ensurePdfDataLoaded())) return;
+  showReportDialog.value = true;
+}
+
+async function openCategoryDialog() {
+  if (!(await ensurePdfDataLoaded())) return;
+  selectedCategoryIds.value = [];
+  showCategoryDialog.value = true;
+}
+
+function confirmCategoryExport() {
+  activeCategoryFilter.value = [...selectedCategoryIds.value];
+  showCategoryDialog.value = false;
+  showReportDialog.value = true;
+}
 
 function formatDate(dateStr: string) {
   if (!dateStr) return '';
