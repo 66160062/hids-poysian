@@ -34,7 +34,7 @@
         outline
         color="primary"
         icon="filter_alt"
-        label="Export เฉพาะประเภท"
+        label="ดาวน์โหลดรายงานเฉพาะประเภท"
         class="full-width q-mb-md"
         size="md"
         :loading="isLoadingPdf"
