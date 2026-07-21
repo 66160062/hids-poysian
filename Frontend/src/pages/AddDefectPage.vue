@@ -338,7 +338,7 @@ const onRoomChange = async () => {
 };
 
 const onSubRoomChange = () => {
-  // ไม่ต้อง clear floorId 
+  // ไม่ต้อง clear floorId
 };
 
 const onFloorChange = () => {
@@ -470,14 +470,7 @@ const handleNext = async () => {
       await inspectionStore.saveDefect(formData);
       await inspectionStore.fetchDefects(roundId);
 
-      // reset เฉพาะ step 2 คง room info ไว้
-      form.value.severity = '';
-      form.value.jobType = null;
-      form.value.defectTypes = [];
-      form.value.note = '';
-      imagePreview.value = null;
-      selectedFile.value = null;
-      step.value = 1;
+      step.value = 2;
 
       $q.notify({
         message: 'บันทึกข้อมูลสำเร็จ!',
@@ -545,20 +538,20 @@ onMounted(async () => {
         console.error(err);
       }
     }
-    
+
     if (defect) {
       form.value.roomId = defect.room?.roomId ?? null;
       form.value.subRoomId = defect.subRoom?.subRoomId ?? null;
       form.value.floorId = defect.floor?.floorId ?? null;
       form.value.severity = defect.severity;
       severityToggle.value = defect.severity === 'Minor';
-      
+
       if (defect.subCategories && defect.subCategories.length > 0) {
         form.value.jobType = defect.subCategories[0]?.category?.categoryId ?? null;
         form.value.defectTypes = defect.subCategories.map((s: { subCategoryId: number }) => s.subCategoryId);
       }
       form.value.note = defect.description !== '--' ? defect.description : '';
-      
+
       if (defect.imageUrl) {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
         imagePreview.value = defect.imageUrl.startsWith('http') ? defect.imageUrl : `${baseUrl}${defect.imageUrl}`;
