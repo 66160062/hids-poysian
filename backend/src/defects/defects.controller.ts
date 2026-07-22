@@ -10,7 +10,10 @@ import {
   UseInterceptors,
   UploadedFile,
   ParseIntPipe,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { DefectsService } from './defects.service';
 import { CreateDefectDto } from './dto/create-defect.dto';
 import { UpdateDefectDto } from './dto/update-defect.dto';
@@ -20,6 +23,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { extname } from 'path';
+import { LinkTokenGuard } from 'src/auth/link-token.guard';
+
+type LinkTokenPayload = {
+  project_id: number;
+  role: string;
+  generation?: number;
+};
 
 @Controller('defects')
 export class DefectsController {
@@ -69,6 +79,7 @@ export class DefectsController {
   }
 
   @Put('contractor-update')
+  @UseGuards(LinkTokenGuard)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -88,9 +99,11 @@ export class DefectsController {
   contractorUpdate(
     @UploadedFile() file: Express.Multer.File,
     @Body() contractorUpdateDto: ContractorUpdateDefectDto,
+    @Req() request: Request & { user: LinkTokenPayload },
   ) {
     return this.defectsService.contractorUpdate({
       ...contractorUpdateDto,
+      linkPayload: request.user,
       ...(file && {
         contractorImageUrl: '/uploads/defects/' + file.filename,
         contractorImageFileSize: file.size,
