@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateInspectionJobDto } from './dto/create-inspection-job.dto';
 import { UpdateInspectionJobDto } from './dto/update-inspection-job.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -235,6 +239,10 @@ export class InspectionJobsService {
     const inspectionJob = await this.inspectionsRepo.findOneBy({ jobId: id });
     if (!inspectionJob) throw new NotFoundException(`ไม่พบงานตรวจ ID ${id}`);
 
+    if (inspectionJob.status === InspectionJobStatus.Locked) {
+      throw new ForbiddenException('Locked jobs cannot be edited');
+    }
+
     if (updateInspectionJobDto.customerId) {
       const customer = await this.customersRepo.findOneBy({
         customerId: updateInspectionJobDto.customerId,
@@ -393,7 +401,14 @@ export class InspectionJobsService {
     }));
   }
 
-  remove(id: number) {
+  async remove(id: number) {
+    const inspectionJob = await this.inspectionsRepo.findOneBy({ jobId: id });
+    if (!inspectionJob) throw new NotFoundException(`ไม่พบงานตรวจ ID ${id}`);
+
+    if (inspectionJob.status === InspectionJobStatus.Locked) {
+      throw new ForbiddenException('Locked jobs cannot be edited');
+    }
+
     return this.inspectionsRepo.softDelete(id);
   }
 }
