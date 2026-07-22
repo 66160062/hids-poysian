@@ -10,6 +10,12 @@ import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub
 import { User } from 'src/users/entities/user.entity';
 import { DefectStatus } from './entities/defect.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
+import { InspectionJobStatus } from 'src/inspection-jobs/enums/inspection-job-status.enum';
+
+type LinkTokenPayload = {
+  project_id: number;
+  role: string;
+};
 
 @Injectable()
 export class DefectsService {
@@ -130,22 +136,43 @@ export class DefectsService {
     contractorUpdateDto: ContractorUpdateDefectDto & {
       contractorImageUrl?: string;
       contractorImageFileSize?: number;
+      linkPayload: LinkTokenPayload;
     },
   ) {
+    if (contractorUpdateDto.linkPayload.role !== 'contractor') {
+      throw new ForbiddenException('Only contractor links can update defects');
+    }
+
     const defect = await this.defectsRepo.findOneOrFail({
       where: { defectId: contractorUpdateDto.defectId },
       relations: ['round', 'round.job', 'round.job.contractor'],
     });
 
-    const assignedContractorId = defect.round?.job?.contractor?.contractorId;
-    if (assignedContractorId !== contractorUpdateDto.contractorId) {
+    const job = defect.round?.job;
+    if (!job || job.jobId !== contractorUpdateDto.linkPayload.project_id) {
+      throw new ForbiddenException('Defect does not belong to this project');
+    }
+
+    if (job.status === InspectionJobStatus.Locked) {
+      throw new ForbiddenException('Locked jobs cannot be edited');
+    }
+
+    const assignedContractorId = job.contractor?.contractorId;
+    if (!assignedContractorId) {
+      throw new ForbiddenException('No contractor is assigned to this job');
+    }
+
+    if (
+      contractorUpdateDto.contractorId !== undefined &&
+      assignedContractorId !== contractorUpdateDto.contractorId
+    ) {
       throw new ForbiddenException('Contractor cannot update this defect');
     }
 
     defect.status = DefectStatus.REPAIRED;
     defect.contractorNote = contractorUpdateDto.note ?? defect.contractorNote;
     defect.updatedBy = {
-      contractorId: contractorUpdateDto.contractorId,
+      contractorId: assignedContractorId,
     } as Contractor;
 
     if (contractorUpdateDto.contractorImageUrl) {

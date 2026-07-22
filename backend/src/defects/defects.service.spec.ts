@@ -54,6 +54,8 @@ describe('DefectsService', () => {
       contractorNote: null,
       round: {
         job: {
+          jobId: 12,
+          status: 'Active',
           contractor: {
             contractorId: 5,
           },
@@ -66,6 +68,7 @@ describe('DefectsService', () => {
     const result = await service.contractorUpdate({
       defectId: 11,
       contractorId: 5,
+      linkPayload: { project_id: 12, role: 'contractor' },
       note: 'Done',
       contractorImageUrl: '/uploads/defects/done.jpg',
       contractorImageFileSize: 456,
@@ -87,6 +90,8 @@ describe('DefectsService', () => {
       defectId: 11,
       round: {
         job: {
+          jobId: 12,
+          status: 'Active',
           contractor: {
             contractorId: 5,
           },
@@ -98,6 +103,53 @@ describe('DefectsService', () => {
       service.contractorUpdate({
         defectId: 11,
         contractorId: 6,
+        linkPayload: { project_id: 12, role: 'contractor' },
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('should reject contractor update when token belongs to another project', async () => {
+    defectsRepo.findOneOrFail.mockResolvedValue({
+      defectId: 11,
+      round: {
+        job: {
+          jobId: 12,
+          status: 'Active',
+          contractor: {
+            contractorId: 5,
+          },
+        },
+      },
+    });
+
+    await expect(
+      service.contractorUpdate({
+        defectId: 11,
+        contractorId: 5,
+        linkPayload: { project_id: 99, role: 'contractor' },
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('should reject contractor update for locked jobs', async () => {
+    defectsRepo.findOneOrFail.mockResolvedValue({
+      defectId: 11,
+      round: {
+        job: {
+          jobId: 12,
+          status: 'Locked',
+          contractor: {
+            contractorId: 5,
+          },
+        },
+      },
+    });
+
+    await expect(
+      service.contractorUpdate({
+        defectId: 11,
+        contractorId: 5,
+        linkPayload: { project_id: 12, role: 'contractor' },
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });

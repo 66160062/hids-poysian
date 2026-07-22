@@ -18,6 +18,6 @@ import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entit
   ],
   controllers: [AuthController],
   providers: [AuthService, LinkTokenGuard],
-  exports: [JwtModule, AuthService],
+  exports: [JwtModule, AuthService, LinkTokenGuard],
 })
 export class AuthModule {}

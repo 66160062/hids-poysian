@@ -12,6 +12,7 @@ import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { LinkTokenGuard } from './link-token.guard';
+import { AuthGuard } from './auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -23,6 +24,7 @@ export class AuthController {
   }
 
   @Get('generate-link')
+  @UseGuards(AuthGuard)
   generateLink(
     @Query('project_id', ParseIntPipe) projectId: number,
     @Query('role') role: string,
