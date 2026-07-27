@@ -34,7 +34,7 @@
         outline
         color="primary"
         icon="filter_alt"
-        label="Export เฉพาะประเภท"
+        label="ดาวน์โหลดรายงานเฉพาะประเภท"
         class="full-width q-mb-md"
         size="md"
         :loading="isLoadingPdf"
@@ -584,7 +584,7 @@ const workflowSteps = computed(() => {
     },
     {
       icon: 'build',
-      label: 'ซ่อมเสร็จสิ้น',
+      label: 'ซ่อมแซม',
       status: isRepairDone ? 'done' : totalDefects.value > 0 ? 'active' : 'pending',
     },
     {

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DefectsController } from './defects.controller';
 import { DefectsService } from './defects.service';
+import { AuthService } from 'src/auth/auth.service';
 
 jest.mock('uuid', () => ({
   v4: () => 'test-uuid',
@@ -17,7 +18,10 @@ describe('DefectsController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DefectsController],
-      providers: [{ provide: DefectsService, useValue: serviceMock }],
+      providers: [
+        { provide: DefectsService, useValue: serviceMock },
+        { provide: AuthService, useValue: { verifyLinkToken: jest.fn() } },
+      ],
     }).compile();
 
     controller = module.get<DefectsController>(DefectsController);
@@ -38,12 +42,15 @@ describe('DefectsController', () => {
       defectId: 7,
       contractorId: 3,
       note: 'Fixed',
-    });
+    }, {
+      user: { project_id: 12, role: 'contractor' },
+    } as never);
 
     expect(defectsService.contractorUpdate).toHaveBeenCalledWith({
       defectId: 7,
       contractorId: 3,
       note: 'Fixed',
+      linkPayload: { project_id: 12, role: 'contractor' },
       contractorImageUrl: '/uploads/defects/fixed.jpg',
       contractorImageFileSize: 1234,
     });
