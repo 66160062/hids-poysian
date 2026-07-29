@@ -429,20 +429,7 @@
                     {{ selectedRound.status }}
                   </q-chip>
                 </q-card-section>
-                
-                <q-card-section class="q-pt-none">
-                  <q-btn
-                    outline
-                    color="primary"
-                    icon="summarize"
-                    label="จัดการสรุปรายงานการตรวจ"
-                    class="full-width text-weight-bold bg-blue-1"
-                    style="border-radius: 8px"
-                    no-caps
-                    @click="goToSummaryReport(selectedRound)"
-                  />
-                </q-card-section>
-                <q-separator />
+
 
                 <div v-if="isLoadingRoundDefects" class="column items-center q-pa-xl">
                   <q-spinner color="primary" size="32px" />
@@ -538,106 +525,140 @@
             </div>
 
             <div class="col-12 col-md-7">
-              <q-card flat bordered class="card-round review-panel">
-                <q-card-section v-if="!selectedDefect" class="column items-center q-py-xl">
-                  <q-icon name="edit_note" size="56px" color="grey-4" />
-                  <div class="text-body2 text-grey-6 q-mt-sm text-center">
-                    {{ roundDefectsError ? 'ยังแก้ไขไม่ได้เพราะโหลด defect ไม่สำเร็จ' : 'เลือกรายการ defect เพื่อแก้ไข' }}
-                  </div>
-                </q-card-section>
-
-                <template v-else>
-                  <q-card-section>
-                    <div class="row items-center justify-between q-mb-md">
-                      <div>
-                        <div class="text-subtitle2 text-weight-bold">
-                          แก้ไข Defect #{{ selectedDefect.defectId }}
-                        </div>
-                        <div class="text-caption text-grey-6">{{ getDefectRoomLabel(selectedDefect) }}</div>
-                      </div>
-                      <q-btn
-                        flat
-                        round
-                        icon="open_in_full"
-                        color="primary"
-                        :disable="!selectedDefect.imageUrl"
-                        @click="viewDefectImage"
-                      />
-                    </div>
-
-                    <div class="column q-gutter-md">
-                      <q-input
-                        outlined
-                        dense
-                        type="textarea"
-                        rows="4"
-                        v-model="defectEditForm.description"
-                        label="รายละเอียด defect"
-                      />
-
-                      <q-select
-                        outlined
-                        dense
-                        emit-value
-                        map-options
-                        v-model="defectEditForm.severity"
-                        :options="severityOptions"
-                        label="ความรุนแรง"
-                      />
-
-                      <q-select
-                        outlined
-                        dense
-                        emit-value
-                        map-options
-                        v-model="defectEditForm.status"
-                        :options="defectStatusOptions"
-                        label="สถานะ"
-                      />
-
-                      <q-select
-                        outlined
-                        dense
-                        multiple
-                        use-chips
-                        emit-value
-                        map-options
-                        v-model="defectEditForm.subCategoryIds"
-                        :options="defectSubCategoryOptions"
-                        :loading="isLoadingDefectMaster"
-                        label="ประเภทตำหนิ"
-                      />
-
-                      <q-file
-                        outlined
-                        dense
-                        clearable
-                        accept="image/*"
-                        v-model="defectEditForm.file"
-                        label="เปลี่ยนรูป defect"
-                      >
-                        <template #prepend>
-                          <q-icon name="image" />
-                        </template>
-                      </q-file>
+              <q-card flat bordered class="card-round review-panel column no-wrap" style="height: 100%;">
+                <div class="col scroll">
+                  <q-card-section v-if="!selectedDefect" class="column items-center q-py-xl">
+                    <q-icon name="edit_note" size="56px" color="grey-4" />
+                    <div class="text-body2 text-grey-6 q-mt-sm text-center">
+                      {{ roundDefectsError ? 'ยังแก้ไขไม่ได้เพราะโหลด defect ไม่สำเร็จ' : 'เลือกรายการ defect เพื่อแก้ไข' }}
                     </div>
                   </q-card-section>
 
-                  <q-separator />
+                  <template v-else>
+                    <q-card-section>
+                      <div class="row items-center justify-between q-mb-md">
+                        <div>
+                          <div class="text-subtitle2 text-weight-bold">
+                            แก้ไข Defect #{{ selectedDefect.defectId }}
+                          </div>
+                          <div class="text-caption text-grey-6">{{ getDefectRoomLabel(selectedDefect) }}</div>
+                        </div>
+                      </div>
 
-                  <q-card-actions align="right" class="q-pa-md">
-                    <q-btn flat color="grey-7" label="ยกเลิก" no-caps @click="resetSelectedDefectForm" />
-                    <q-btn
-                      unelevated
-                      color="primary"
-                      icon="save"
-                      label="บันทึก"
-                      no-caps
-                      :loading="isSavingDefect"
-                      @click="saveDefectChanges"
-                    />
-                  </q-card-actions>
-                </template>
+                      <div class="q-mb-md text-center">
+                        <q-img
+                          v-if="selectedDefect.imageUrl"
+                          :src="getImageUrl(selectedDefect.imageUrl) ?? ''"
+                          style="max-height: 250px; border-radius: 8px; cursor: pointer"
+                          fit="contain"
+                          @click="viewDefectImage"
+                        >
+                          <template v-slot:error>
+                            <div class="absolute-full flex flex-center bg-grey-3 text-grey-7">
+                              ไม่สามารถโหลดรูปภาพได้
+                            </div>
+                          </template>
+                        </q-img>
+                        <div v-else class="bg-grey-2 flex flex-center" style="height: 150px; border-radius: 8px">
+                          <q-icon name="image_not_supported" size="40px" color="grey-5" />
+                        </div>
+                      </div>
+
+                      <div class="column q-gutter-md">
+                        <q-input
+                          outlined
+                          dense
+                          type="textarea"
+                          rows="4"
+                          v-model="defectEditForm.description"
+                          label="รายละเอียด defect"
+                        />
+
+                        <q-select
+                          outlined
+                          dense
+                          emit-value
+                          map-options
+                          v-model="defectEditForm.severity"
+                          :options="severityOptions"
+                          label="ความรุนแรง"
+                        />
+
+                        <q-select
+                          outlined
+                          dense
+                          multiple
+                          use-chips
+                          emit-value
+                          map-options
+                          v-model="defectEditForm.subCategoryIds"
+                          :options="defectSubCategoryOptions"
+                          :loading="isLoadingDefectMaster"
+                          label="ประเภทตำหนิ"
+                        />
+
+                        <q-file
+                          outlined
+                          dense
+                          clearable
+                          accept="image/*"
+                          v-model="defectEditForm.file"
+                          label="เปลี่ยนรูป defect"
+                        >
+                          <template #prepend>
+                            <q-icon name="image" />
+                          </template>
+                        </q-file>
+                      </div>
+                    </q-card-section>
+
+                    <q-separator />
+
+                    <q-card-actions align="right" class="q-pa-md">
+                      <q-btn flat color="grey-7" label="ยกเลิก" no-caps @click="resetSelectedDefectForm" />
+                      <q-btn
+                        unelevated
+                        color="primary"
+                        icon="save"
+                        label="บันทึก"
+                        no-caps
+                        :loading="isSavingDefect"
+                        @click="saveDefectChanges"
+                      />
+                    </q-card-actions>
+                  </template>
+                </div>
+
+                <!-- Report Management Section -->
+                <div class="col-auto bg-blue-grey-1 q-pa-md" style="border-radius: 0 0 16px 16px;">
+                  <div class="row items-center justify-between">
+                    <div class="text-subtitle2 text-weight-bold text-primary">จัดการรายงานการตรวจ</div>
+                    <div class="row q-gutter-x-sm">
+                      <q-btn
+                        unelevated
+                        color="primary"
+                        icon="summarize"
+                        label="สรุปรายงาน"
+                        class="text-weight-bold"
+                        style="border-radius: 8px"
+                        no-caps
+                        @click="goToSummaryReport(selectedRound)"
+                      />
+                      <q-btn
+                        v-if="selectedRound?.summaryCompletedAt"
+                        outline
+                        color="primary"
+                        icon="visibility"
+                        label="ดูรายงาน (PDF)"
+                        class="text-weight-bold"
+                        style="border-radius: 8px"
+                        no-caps
+                        :loading="isLoadingReport"
+                        @click="selectedRound && handleViewReport(selectedRound)"
+                      />
+                    </div>
+                  </div>
+                </div>
               </q-card>
             </div>
           </div>
@@ -653,6 +674,16 @@
           <q-toolbar-title class="text-subtitle1 text-weight-bold">
             รายงานการก่อสร้างประจำวัน รอบที่ {{ selectedRound?.roundNumber ?? '-' }}
           </q-toolbar-title>
+
+          <q-btn
+            unelevated
+            color="primary"
+            icon="download"
+            label="ดาวน์โหลด PDF"
+            no-caps
+            class="q-mr-sm"
+            @click="constructionPdfRef?.printPdf()"
+          />
 
           <q-btn
             unelevated
@@ -677,7 +708,7 @@
         </q-toolbar>
 
         <q-card-section class="col q-pa-md" style="overflow-y: auto;">
-          <ConstructionReportPdf v-if="selectedConstructionReport" :report="selectedConstructionReport" />
+          <ConstructionReportPdf ref="constructionPdfRef" v-if="selectedConstructionReport" :report="selectedConstructionReport" />
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -696,6 +727,8 @@ import type { ExtendedConstructionReport } from 'src/stores/useConstructionDaily
 import ConstructionReportPdf from 'src/components/ConstructionReportPdf.vue';
 import type { Defect } from 'src/models';
 import InspectionItemCard from '../components/InspectionItemCard.vue';
+
+const constructionPdfRef = ref<InstanceType<typeof ConstructionReportPdf> | null>(null);
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 
@@ -749,6 +782,7 @@ interface RoundApiResponse {
     inspector?: { fullName?: string };
     team?: { team_name?: string };
   }[];
+  summaryCompletedAt?: string | null;
 }
 
 interface RoundView {
@@ -758,6 +792,7 @@ interface RoundView {
   status: string;
   statusKey: string;
   inspectors?: string[];
+  summaryCompletedAt?: string | null;
 }
 
 interface DefectCategoryOption {
@@ -910,11 +945,7 @@ const severityOptions = [
   { label: 'Major', value: 'Major' },
 ];
 
-const defectStatusOptions = [
-  { label: 'รอซ่อม', value: 'pending_repair' },
-  { label: 'ผ่าน', value: 'verified' },
-  { label: 'ปฏิเสธ', value: 'rejected' },
-];
+
 
 
 
@@ -981,6 +1012,7 @@ const mapRoundToView = (round: RoundApiResponse) => {
     status: mapRoundStatus(round.status),
     statusKey: round.status,
     inspectors,
+    summaryCompletedAt: round.summaryCompletedAt,
   };
 };
 
@@ -1228,7 +1260,21 @@ function getDefectRoomLabel(defect: AdminDefect) {
 
 async function openRoundReview(round: RoundView) {
   selectedRound.value = round;
+  selectedDefect.value = null;
+  roundDefects.value = [];
+  roundDefectsError.value = '';
+  showRoundReviewDialog.value = true;
+
+  await fetchRoundDefects(round.id);
+}
+
+async function handleViewReport(round: RoundView) {
+  if (!round.summaryCompletedAt) {
+    $q.notify({ type: 'warning', message: 'กรุณาสรุปรายงานก่อนดูรายงาน' });
+    return;
+  }
   isLoadingReport.value = true;
+  $q.loading.show({ message: 'กำลังเตรียมข้อมูลรายงาน...' });
   try {
     const reportData = await reportStore.fetchReportByRound(round.id);
     if (reportData) {
@@ -1259,6 +1305,7 @@ async function openRoundReview(round: RoundView) {
       position: 'top',
     });
   } finally {
+    $q.loading.hide();
     isLoadingReport.value = false;
   }
 }
@@ -1269,9 +1316,7 @@ async function fetchRoundDefects(roundId: number) {
   try {
     const { data } = await api.get<AdminDefect[]>(`/defects/round/${roundId}`);
     roundDefects.value = data;
-    if (data.length > 0) {
-      selectDefect(data[0]!);
-    }
+    selectedDefect.value = null;
   } catch (error) {
     console.error('Failed to load round defects:', error);
     roundDefects.value = [];
