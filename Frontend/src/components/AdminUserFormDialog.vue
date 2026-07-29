@@ -17,8 +17,9 @@
         <q-form @submit="onSave" class="q-gutter-md">
           <!-- Profile Image (Mock Upload) -->
           <div class="row items-center q-mb-md">
-            <q-avatar size="64px" class="q-mr-md bg-grey-3">
-              <img :src="localForm.imageUrl && localForm.imageUrl.startsWith('blob:') ? localForm.imageUrl : getImageUrl(localForm.imageUrl) || '/project-images/unknown.jpg'" />
+            <q-avatar size="64px" class="q-mr-md" :class="displayImageUrl ? 'bg-grey-3' : 'bg-primary text-white'">
+              <img v-if="displayImageUrl" :src="displayImageUrl" />
+              <span v-else class="text-h4">{{ localForm.fullName?.charAt(0).toUpperCase() || 'A' }}</span>
             </q-avatar>
             <div class="col">
               <div class="text-subtitle2 text-grey-8 q-mb-xs">
@@ -175,7 +176,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import type { User } from 'src/models';
 
 const getImageUrl = (url?: string | null) => {
@@ -216,6 +217,16 @@ const emit = defineEmits(['update:modelValue', 'save']);
 
 const localForm = ref<Partial<User>>({});
 const profileImageFile = ref<File | null>(null);
+
+const displayImageUrl = computed(() => {
+  if (localForm.value.imageUrl && localForm.value.imageUrl.startsWith('blob:')) {
+    return localForm.value.imageUrl;
+  }
+  if (localForm.value.imageUrl && !localForm.value.imageUrl.includes('unknown.jpg')) {
+    return getImageUrl(localForm.value.imageUrl);
+  }
+  return null;
+});
 
 // Reset form when dialog opens
 watch(

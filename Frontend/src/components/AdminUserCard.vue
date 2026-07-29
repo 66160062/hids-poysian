@@ -1,9 +1,9 @@
 <template>
   <q-card flat bordered class="user-card">
     <q-card-section class="row items-start q-pa-sm">
-      <q-avatar size="56px" class="q-mr-md bg-grey-3">
-        <img :src="getImageUrl(user.imageUrl)" v-if="user.imageUrl" />
-        <q-icon name="person" color="grey-5" v-else />
+      <q-avatar size="56px" class="q-mr-md" :class="user.imageUrl && !user.imageUrl.includes('unknown.jpg') ? 'bg-grey-3' : 'bg-primary text-white'">
+        <img v-if="user.imageUrl && !user.imageUrl.includes('unknown.jpg')" :src="getImageUrl(user.imageUrl)" />
+        <span v-else class="text-h5">{{ user.fullName?.charAt(0).toUpperCase() || 'A' }}</span>
       </q-avatar>
 
       <div class="col">
