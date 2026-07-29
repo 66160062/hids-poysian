@@ -268,9 +268,29 @@ const onFileSelected = (event: Event) => {
   }
 };
 
-const loadUserData = () => {
+const loadUserData = async () => {
   const user = authStore.currentUser;
-  if (user) {
+  if (user && user.id) {
+    try {
+      // Fetch fresh data from backend to ensure we have the latest fields
+      const res = await api.get(`/users/${user.id}`);
+      if (res.data) {
+        form.value.full_name = res.data.fullName || '';
+        form.value.phone_number = res.data.phoneNumber || '';
+        form.value.email = res.data.email || '';
+        form.value.line_id = res.data.lineId || '';
+        
+        // Update store and local storage with fresh data
+        const updatedUser = { ...user, ...res.data };
+        authStore.user = updatedUser;
+        LocalStorage.set('user', updatedUser);
+        return;
+      }
+    } catch (error) {
+      console.error('Failed to fetch latest user data:', error);
+    }
+    
+    // Fallback to store data if fetch fails
     form.value.full_name = user.fullName || '';
     form.value.phone_number = user.phoneNumber || '';
     form.value.email = user.email || '';
@@ -279,7 +299,7 @@ const loadUserData = () => {
 };
 
 onMounted(() => {
-  loadUserData();
+  void loadUserData();
 });
 
 const goBack = () => {
