@@ -219,6 +219,10 @@ const printPdf = () => {
   window.print();
 };
 
+defineExpose({
+  printPdf
+});
+
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '-';
   const date = new Date(dateStr);
