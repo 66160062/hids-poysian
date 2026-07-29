@@ -24,18 +24,19 @@
           label="บันทึก"
           color="primary"
           class="text-weight-bold"
-          @click="saveChanges"
+          @click="submitForm"
         />
       </q-toolbar>
     </q-header>
 
     <q-page-container>
       <q-page class="admin-profile-page q-pb-xl">
-        <div class="q-pa-md">
+        <q-form ref="profileFormRef" @submit="saveChanges" class="q-pa-md">
           <div class="column items-center q-mb-xl">
             <div class="relative-position q-mb-md">
-              <q-avatar size="90px">
-                <img src="https://cdn.quasar.dev/img/avatar4.jpg" />
+              <q-avatar size="90px" :color="!displayImageUrl ? 'primary' : ''" :text-color="!displayImageUrl ? 'white' : ''" class="text-h3">
+                <img v-if="displayImageUrl" :src="displayImageUrl" />
+                <span v-else>{{ form.full_name?.charAt(0).toUpperCase() || 'A' }}</span>
               </q-avatar>
               <q-btn
                 round
@@ -44,7 +45,9 @@
                 size="sm"
                 class="absolute-bottom-right"
                 style="bottom: 0px; right: 0px; border: 2px solid white; transform: translate(10%, 10%);"
+                @click="triggerFileInput"
               />
+              <input type="file" accept="image/*" ref="fileInputRef" style="display: none" @change="onFileSelected" />
             </div>
             <div class="text-h6 text-weight-bold q-mb-xs">{{ form.full_name || 'ชื่อผู้ใช้' }}</div>
             <q-badge color="green-1" text-color="green-8" class="q-px-sm q-py-xs status-badge">
@@ -62,25 +65,36 @@
                 <q-input
                   v-model="form.full_name"
                   borderless
-                  label="ชื่อ นามสกุล"
+                  label="ชื่อ นามสกุล *"
                   stack-label
                   class="custom-input q-px-md q-py-xs"
+                  :rules="[(val) => !!val || 'กรุณาระบุชื่อ']"
+                  hide-bottom-space
                 />
                 <q-separator color="grey-2" />
                 <q-input
                   v-model="form.phone_number"
                   borderless
-                  label="เบอร์โทรศัพท์"
+                  label="เบอร์โทรศัพท์ *"
                   stack-label
                   class="custom-input q-px-md q-py-xs"
+                  mask="###-###-####"
+                  :rules="[
+                    (val) => !!val || 'กรุณาระบุเบอร์โทร',
+                    (val) => val.length === 12 || 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก',
+                  ]"
+                  hide-bottom-space
                 />
                 <q-separator color="grey-2" />
                 <q-input
                   v-model="form.email"
+                  type="email"
                   borderless
-                  label="ที่อยู่อีเมล"
+                  label="ที่อยู่อีเมล *"
                   stack-label
                   class="custom-input q-px-md q-py-xs"
+                  :rules="[(val) => !!val || 'กรุณาระบุอีเมล']"
+                  hide-bottom-space
                 />
                 <q-separator color="grey-2" />
                 <q-input
@@ -89,6 +103,7 @@
                   label="Line ID"
                   stack-label
                   class="custom-input q-px-md q-py-xs"
+                  hide-bottom-space
                 />
               </q-card-section>
             </q-card>
@@ -101,6 +116,7 @@
                 <q-input
                   v-model="passwordForm.oldPassword"
                   type="password"
+                  autocomplete="new-password"
                   borderless
                   label="รหัสผ่านปัจจุบัน"
                   stack-label
@@ -110,6 +126,7 @@
                 <q-input
                   v-model="passwordForm.newPassword"
                   type="password"
+                  autocomplete="new-password"
                   borderless
                   label="รหัสผ่านใหม่"
                   stack-label
@@ -119,6 +136,7 @@
                 <q-input
                   v-model="passwordForm.confirmPassword"
                   type="password"
+                  autocomplete="new-password"
                   borderless
                   label="ยืนยันรหัสผ่านใหม่"
                   stack-label
@@ -159,7 +177,7 @@
             </q-card>
           </div>
 
-        </div>
+        </q-form>
       </q-page>
     </q-page-container>
 
@@ -180,7 +198,7 @@
           no-caps
           style="border-radius: 8px; font-weight: 600; height: 44px;"
           label="บันทึกการเปลี่ยนแปลง"
-          @click="saveChanges"
+          @click="submitForm"
         />
       </div>
     </q-footer>
@@ -188,37 +206,115 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
+import { useQuasar, LocalStorage, QForm } from 'quasar';
+import { useAuthStore } from 'src/stores/useAuth';
+import { api } from 'src/boot/axios';
 
 const router = useRouter();
 const $q = useQuasar();
+const authStore = useAuthStore();
 
-// Mock ข้อมูลผู้ใช้ รวมถึงรหัสผ่าน (รหัสจำลองคือ '123456')
+const API_BASE_URL = import.meta.env.VITE_API_URL as string || 'http://localhost:3000';
+const getImageUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${API_BASE_URL}${path}`;
+};
+
+const profileFormRef = ref<QForm | null>(null);
+const submitForm = () => {
+  profileFormRef.value?.submit();
+};
+
 const form = ref({
-  full_name: 'Alex Thompson',
-  phone_number: '081-234-5678',
-  email: 'a.thompson@hids-admin.com',
-  line_id: '@alex_thompson',
-  password: 'password123'
+  full_name: '',
+  phone_number: '',
+  email: '',
+  line_id: '',
 });
 
-// ฟอร์มสำหรับเปลี่ยนรหัสผ่าน
 const passwordForm = ref({
   oldPassword: '',
   newPassword: '',
   confirmPassword: ''
 });
 
+const fileInputRef = ref<HTMLInputElement | null>(null);
+const selectedFile = ref<File | null>(null);
+const previewImage = ref<string | null>(null);
+
+const displayImageUrl = computed(() => {
+  if (previewImage.value) return previewImage.value;
+  if (authStore.currentUser?.imageUrl && !authStore.currentUser.imageUrl.includes('unknown.jpg')) {
+    return getImageUrl(authStore.currentUser.imageUrl);
+  }
+  return null;
+});
+
+const triggerFileInput = () => {
+  fileInputRef.value?.click();
+};
+
+const onFileSelected = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  if (target.files && target.files.length > 0) {
+    const file = target.files[0];
+    if (file) {
+      selectedFile.value = file;
+      previewImage.value = URL.createObjectURL(file);
+    }
+  }
+};
+
+const loadUserData = () => {
+  const user = authStore.currentUser;
+  if (user) {
+    form.value.full_name = user.fullName || '';
+    form.value.phone_number = user.phoneNumber || '';
+    form.value.email = user.email || '';
+    form.value.line_id = user.lineId || '';
+  }
+};
+
+onMounted(() => {
+  loadUserData();
+});
+
 const goBack = () => {
   router.back();
 };
 
-const saveChanges = () => {
-  // 1. ตรวจสอบเงื่อนไขถ้ายูสเซอร์มีการกรอกช่องเปลี่ยนรหัสผ่าน
-  if (passwordForm.value.oldPassword || passwordForm.value.newPassword) {
-    if (passwordForm.value.oldPassword !== form.value.password) {
+const saveChanges = async () => {
+  const user = authStore.currentUser;
+  if (!user) return;
+
+  if (!form.value.full_name || !form.value.phone_number || !form.value.email) {
+    $q.notify({
+      message: 'กรุณากรอกข้อมูลที่บังคับให้ครบถ้วน',
+      color: 'warning',
+      icon: 'warning',
+      position: 'top',
+    });
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('fullName', form.value.full_name);
+  formData.append('phoneNumber', form.value.phone_number);
+  formData.append('email', form.value.email);
+  if (form.value.line_id) formData.append('lineId', form.value.line_id);
+
+  if (passwordForm.value.newPassword) {
+    if (!passwordForm.value.oldPassword) {
+      $q.notify({ message: 'กรุณากรอกรหัสผ่านปัจจุบัน', color: 'negative', position: 'top' });
+      return;
+    }
+    try {
+      // Verify old password using login endpoint
+      await api.post('/auth/login', { email: user.email, password: passwordForm.value.oldPassword });
+    } catch {
       $q.notify({ message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง', color: 'negative', position: 'top' });
       return;
     }
@@ -230,23 +326,38 @@ const saveChanges = () => {
       $q.notify({ message: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร', color: 'warning', position: 'top' });
       return;
     }
-
-    // ถ้ารหัสผ่านผ่านเงื่อนไข ให้อัปเดตรหัสในตัวแปร form
-    form.value.password = passwordForm.value.newPassword;
-
-    // เคลียร์ช่องรหัสผ่านให้ว่างหลังจากกดเซฟ
-    passwordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' };
+    formData.append('password', passwordForm.value.newPassword);
   }
 
-  // 2. ส่งข้อมูลบันทึกตามปกติ
-  console.log('Data to save:', form.value);
+  if (selectedFile.value) {
+    formData.append('imageUrl', selectedFile.value);
+  }
 
-  $q.notify({
-    message: 'บันทึกข้อมูลเรียบร้อยแล้ว',
-    color: 'positive',
-    icon: 'check_circle',
-    position: 'top'
-  });
+  try {
+    $q.loading.show({ message: 'กำลังบันทึกข้อมูล...' });
+    const res = await api.patch(`/users/${user.id}`, formData);
+    
+    // Update local state
+    if (res.data) {
+      authStore.user = res.data;
+      LocalStorage.set('user', res.data);
+    }
+
+    passwordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' };
+    selectedFile.value = null;
+
+    $q.notify({
+      message: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+      color: 'positive',
+      icon: 'check_circle',
+      position: 'top'
+    });
+  } catch (error) {
+    console.error('Failed to update profile:', error);
+    $q.notify({ message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', color: 'negative', position: 'top' });
+  } finally {
+    $q.loading.hide();
+  }
 };
 
 const logout = () => {

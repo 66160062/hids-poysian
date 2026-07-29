@@ -27,7 +27,8 @@
             class="bg-primary text-white q-ml-sm cursor-pointer"
             @click="$router.push('/admin/profile')"
           >
-            A
+            <img v-if="currentUser?.imageUrl && !currentUser.imageUrl.includes('unknown.jpg')" :src="getImageUrl(currentUser.imageUrl) ?? ''" />
+            <span v-else>{{ currentUser?.fullName?.charAt(0).toUpperCase() || 'A' }}</span>
           </q-avatar>
         </div>
       </q-toolbar>
@@ -63,8 +64,20 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from 'src/stores/useAuth';
+
 const route = useRoute();
 const router = useRouter();
+
+const authStore = useAuthStore();
+const currentUser = computed(() => authStore.currentUser);
+
+const API_BASE_URL = import.meta.env.VITE_API_URL as string || 'http://localhost:3000';
+const getImageUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${API_BASE_URL}${path}`;
+};
 const currentTitle = computed(() => (route.meta.title as string) || 'Admin');
 const menuList = [
   { name: 'dashboard', label: 'หน้าหลัก', icon: 'home', link: '/admin' },

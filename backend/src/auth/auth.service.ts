@@ -43,6 +43,10 @@ export class AuthService {
         email: user.email,
         role: user.role,
         fullName: user.fullName,
+        phoneNumber: user.phoneNumber,
+        lineId: user.lineId,
+        imageUrl: user.imageUrl,
+        teamId: user.teamId || null,
       },
     };
   }
