@@ -83,6 +83,7 @@ const menuList = [
   { name: 'dashboard', label: 'หน้าหลัก', icon: 'home', link: '/admin' },
   { name: 'work', label: 'งาน', icon: 'business_center', link: '/admin/work' },
   { name: 'users', label: 'จัดการผู้ใช้', icon: 'group', link: '/admin/users' },
+  { name: 'teams', label: 'จัดการทีม', icon: 'groups', link: '/admin/teams' },
   { name: 'report', label: 'รายงาน', icon: 'bar_chart', link: '/admin/report' },
   { name: 'settings', label: 'ตั้งค่า', icon: 'settings', link: '/admin/settings' },
 ];
