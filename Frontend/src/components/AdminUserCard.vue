@@ -7,8 +7,18 @@
       </q-avatar>
 
       <div class="col">
-        <div class="row items-center justify-between">
-          <div class="text-weight-bold text-subtitle1">{{ user.fullName }}</div>
+        <div class="row items-center justify-between q-mb-none">
+          <div class="row items-center">
+            <div class="text-weight-bold text-subtitle1">{{ user.fullName }}</div>
+            <q-chip
+              dense
+              :color="user.role === 'admin' ? 'blue-2' : 'teal-2'"
+              :text-color="user.role === 'admin' ? 'blue-9' : 'teal-9'"
+              class="text-caption text-weight-bold q-ma-none q-ml-sm"
+            >
+              {{ user.role.toUpperCase() }}
+            </q-chip>
+          </div>
           <!-- Action Menu -->
           <q-btn flat round dense icon="more_vert" color="grey-7">
             <q-menu auto-close anchor="bottom right" self="top right">
@@ -30,20 +40,16 @@
           </q-btn>
         </div>
 
-        <!-- Badges -->
-        <div class="q-mb-xs">
-          <q-chip
-            dense
-            :color="user.role === 'admin' ? 'blue-2' : 'teal-2'"
-            :text-color="user.role === 'admin' ? 'blue-9' : 'teal-9'"
-            class="text-caption text-weight-bold q-ma-none"
-          >
-            {{ user.role.toUpperCase() }}
-          </q-chip>
-          
+        <!-- Team Subtitle -->
+        <div v-if="user.team" class="row items-center q-mb-xs">
+          <q-icon name="work" size="xs" color="primary" class="q-mr-xs" />
+          <span class="text-caption text-primary text-weight-medium">{{ user.team.team_name }}</span>
+        </div>
+        <div v-else class="row items-center q-mb-xs">
+          <span class="text-caption text-grey-5 text-italic">ไม่มีสังกัดทีม</span>
         </div>
 
-        <div class="text-caption text-grey-8 row items-center q-mt-sm">
+        <div class="text-caption text-grey-8 row items-center">
           <q-icon name="phone" size="xs" color="black" class="q-mr-xs" />
           {{ user.phoneNumber || '-' }}
         </div>

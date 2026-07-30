@@ -61,7 +61,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/PublicLinkEntryPage.vue'),
         props: {
           expectedRole: 'contractor',
-          redirectPath: '/contractor/repair-overview',
+          redirectPath: '/contractor/defect-list',
         },
       },
     ],
@@ -95,6 +95,11 @@ const routes: RouteRecordRaw[] = [
         path: 'users',
         component: () => import('pages/AdminUserManagementPage.vue'),
         meta: { title: 'จัดการผู้ใช้', icon: 'group' },
+      },
+      {
+        path: 'teams',
+        component: () => import('pages/AdminTeamManagementPage.vue'),
+        meta: { title: 'จัดการทีม', icon: 'groups' },
       },
       {
         path: 'menu',
@@ -219,7 +224,7 @@ const routes: RouteRecordRaw[] = [
   {
   path: '/contractor',
   component: () => import('layouts/ContractorScreen.vue'),
-  redirect: '/contractor/repair-overview',
+  redirect: '/contractor/defect-list',
   children: [
     { path: 'repair-overview', component: () => import('pages/ContractorMainPage.vue'),           meta: { title: 'จุดที่ต้องแก้ไข' } },
     { path: 'defect-list',     component: () => import('pages/ContractorRepairDefectListPage.vue'),          meta: { title: 'รายการ Defect' } },
