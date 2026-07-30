@@ -470,6 +470,8 @@ const handleNext = async () => {
       await inspectionStore.saveDefect(formData);
       await inspectionStore.fetchDefects(roundId);
 
+      imagePreview.value = null;
+      selectedFile.value = null;
       step.value = 2;
 
       $q.notify({
