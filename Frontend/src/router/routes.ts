@@ -235,6 +235,11 @@ const routes: RouteRecordRaw[] = [
 },
 
   {
+    // route headless สำหรับ Puppeteer เท่านั้น (backend/src/reports/reports.service.ts) — ไม่มี layout/UI รอบข้าง
+    path: '/print/report/:roundId',
+    component: () => import('pages/PrintDefectReportPage.vue'),
+  },
+  {
     path: '/:catchAll(.*)*',
     component: () => import('pages/ErrorNotFound.vue'),
   },

@@ -23,6 +23,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { LinkTokenGuard } from 'src/auth/link-token.guard';
 import { StorageService } from 'src/storage/storage.service';
+import { ReportsService } from 'src/reports/reports.service';
 
 type LinkTokenPayload = {
   project_id: number;
@@ -35,6 +36,7 @@ export class DefectsController {
   constructor(
     private readonly defectsService: DefectsService,
     private readonly storageService: StorageService,
+    private readonly reportsService: ReportsService,
   ) {}
 
   @Post()
@@ -44,13 +46,15 @@ export class DefectsController {
     @UploadedFile() file: Express.Multer.File,
     @Body() createDefectDto: CreateDefectDto,
   ) {
-    return this.defectsService.create({
+    const defect = await this.defectsService.create({
       ...createDefectDto,
       imageUrl: file
         ? await this.storageService.uploadImage(file.buffer, 'defects')
         : undefined,
       imageFileSize: file ? file.size : undefined,
     });
+    this.reportsService.scheduleRegeneration(defect.round.roundId);
+    return defect;
   }
 
   @Get()
@@ -77,7 +81,7 @@ export class DefectsController {
     @Body() contractorUpdateDto: ContractorUpdateDefectDto,
     @Req() request: Request & { user: LinkTokenPayload },
   ) {
-    return this.defectsService.contractorUpdate({
+    const defect = await this.defectsService.contractorUpdate({
       ...contractorUpdateDto,
       linkPayload: request.user,
       ...(file && {
@@ -88,6 +92,8 @@ export class DefectsController {
         contractorImageFileSize: file.size,
       }),
     });
+    this.reportsService.scheduleRegeneration(defect.round.roundId);
+    return defect;
   }
 
   @Patch(':id')
@@ -98,17 +104,21 @@ export class DefectsController {
     @UploadedFile() file: Express.Multer.File,
     @Body() updateDefectDto: UpdateDefectDto,
   ) {
-    return this.defectsService.update(id, {
+    const defect = await this.defectsService.update(id, {
       ...updateDefectDto,
       ...(file && {
         imageUrl: await this.storageService.uploadImage(file.buffer, 'defects'),
         imageFileSize: file.size,
       }),
     });
+    this.reportsService.scheduleRegeneration(defect.round.roundId);
+    return defect;
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.defectsService.remove(+id);
+  async remove(@Param('id') id: string) {
+    const defect = await this.defectsService.remove(+id);
+    this.reportsService.scheduleRegeneration(defect.round.roundId);
+    return defect;
   }
 }

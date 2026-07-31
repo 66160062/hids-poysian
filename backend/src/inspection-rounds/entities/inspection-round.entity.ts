@@ -52,6 +52,12 @@ export class InspectionRound {
   @Column({ type: 'timestamp', nullable: true })
   approvedAt!: Date;
 
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  lastPdfHash!: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  lastPdfUrl!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

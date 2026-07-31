@@ -435,6 +435,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { api } from 'src/boot/axios';
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
 import PoysianLogo from 'src/assets/Logos/Poysian.png';
 import LineLogo from 'src/assets/Logos/LINE.png';
@@ -635,7 +636,26 @@ function formatDate(dateStr: string) {
   });
 }
 
-function exportPdf() {
+// เช็ค cache PDF ที่ backend generate ไว้ล่วงหน้าก่อนเสมอ (backend/src/reports/reports.service.ts) —
+// มีแล้วเปิดโหลดทันที ไม่ต้อง render ฝั่ง client เลย ถ้ายังไม่มี (เช่นรอบแรกที่ debounce ยังไม่ settle)
+// ค่อย fallback ไปสร้างแบบเดิมผ่าน window.print()
+async function exportPdf() {
+  try {
+    const { data } = await api.get<{ url: string | null }>(
+      `/inspection-rounds/${props.round.roundId}/report`,
+    );
+    if (data.url) {
+      window.open(data.url, '_blank');
+      return;
+    }
+  } catch {
+    // เช็ค cache ไม่สำเร็จ ปล่อยผ่านไป fallback ด้านล่าง
+  }
+
+  exportPdfClientSide();
+}
+
+function exportPdfClientSide() {
   if (!reportRef.value) return;
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
