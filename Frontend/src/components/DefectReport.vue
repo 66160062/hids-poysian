@@ -136,22 +136,24 @@
               >
             </div>
           </div>
-          <div class="mini-chart">
-            <div v-for="cat in categoryCounts" :key="cat.name" class="mini-bar-col">
-              <div class="mini-bar-count">{{ cat.count }}</div>
-              <div v-if="cat.major > 0 && cat.minor > 0" class="mini-bar-split">
-                <span style="color: #ef4444">{{ cat.major }}</span>
-                <span>/</span>
-                <span style="color: #fb8c00">{{ cat.minor }}</span>
+          <div class="mini-chart mini-chart-category">
+            <div v-for="cat in categoryCounts" :key="cat.name" class="mini-bar-col mini-bar-col-category">
+              <div class="mini-bar-track">
+                <div class="mini-bar-count">{{ cat.count }}</div>
+                <div v-if="cat.major > 0 && cat.minor > 0" class="mini-bar-split">
+                  <span style="color: #ef4444">{{ cat.major }}</span>
+                  <span>/</span>
+                  <span style="color: #fb8c00">{{ cat.minor }}</span>
+                </div>
+                <div
+                  class="mini-bar-stack"
+                  :style="`height: ${Math.max((cat.count / maxCategoryCount) * 100, 8)}%`"
+                >
+                  <div :style="`height: ${cat.minorPct}%; background: #fb8c00`" />
+                  <div :style="`height: ${cat.majorPct}%; background: #ef4444`" />
+                </div>
               </div>
-              <div
-                class="mini-bar-stack"
-                :style="`height: ${Math.max((cat.count / maxCategoryCount) * 100, 8)}%`"
-              >
-                <div :style="`height: ${cat.minorPct}%; background: #fb8c00`" />
-                <div :style="`height: ${cat.majorPct}%; background: #ef4444`" />
-              </div>
-              <div class="mini-bar-label">{{ cat.name }}</div>
+              <div class="mini-bar-label mini-bar-label-category">{{ cat.name }}</div>
             </div>
           </div>
         </div>
@@ -812,12 +814,31 @@ const summaryChunks = computed(() => {
   border-radius: 4px;
   background: #fafbfc;
   padding: 10px 6px 6px;
+  overflow: hidden;
+}
+.mini-chart-category {
+  height: auto;
+  min-height: 190px;
+  align-items: flex-start;
+  overflow: visible;
 }
 .mini-bar-col {
   flex: 1;
   min-width: 0;
   max-width: 34px;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+.mini-bar-col-category {
+  height: auto;
+  justify-content: flex-start;
+}
+.mini-bar-track {
+  width: 100%;
+  height: 130px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -853,6 +874,11 @@ const summaryChunks = computed(() => {
   word-break: break-word;
   max-height: 24px;
   overflow: hidden;
+}
+.mini-bar-label-category {
+  font-size: 7px;
+  max-height: none;
+  overflow: visible;
 }
 .mini-bar-stack {
   width: 100%;
