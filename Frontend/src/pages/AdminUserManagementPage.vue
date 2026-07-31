@@ -72,7 +72,6 @@
 
     <!-- FAB Add Button -->
     <q-page-sticky position="bottom-right" :offset="[16, 16]" class="q-gutter-y-sm column">
-      <q-btn fab icon="groups" color="secondary" @click="showTeamDialog = true" />
       <q-btn fab icon="add" color="primary" @click="openCreateDialog" />
     </q-page-sticky>
 
@@ -85,9 +84,6 @@
       :teamOptions="teamOptions"
       @save="onSaveUser"
     />
-
-    <!-- Team Management Dialog -->
-    <AdminTeamManagementDialog v-model="showTeamDialog" />
   </q-page>
 </template>
 
@@ -96,7 +92,6 @@ import { ref, computed, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
 import AdminUserCard from 'src/components/AdminUserCard.vue';
 import AdminUserFormDialog from 'src/components/AdminUserFormDialog.vue';
-import AdminTeamManagementDialog from 'src/components/AdminTeamManagementDialog.vue';
 import { useTeamStore } from 'src/stores/useTeam';
 import { useUserStore } from 'src/stores/useUser';
 import type { User } from 'src/models';
@@ -124,7 +119,6 @@ const isLoading = computed(() => userStore.isLoading);
 const usersList = computed(() => userStore.users);
 const searchQuery = ref('');
 const activeRoleFilter = ref('all');
-const showTeamDialog = ref(false);
 
 // Computed filters
 const filteredUsers = computed(() => {

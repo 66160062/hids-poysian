@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { useContractorRepair } from 'src/stores/useContractormain';
+import { useLinkAccess } from 'src/stores/useLinkAccess';
 import { api } from 'src/boot/axios';
 
 export interface RepairDetail {
@@ -17,6 +18,7 @@ export interface RepairDetail {
 export function useRepairDetail(defectId: number) {
   const router = useRouter();
   const store = useContractorRepair();
+  const linkStore = useLinkAccess();
   const { allDefectItems, contractorId } = storeToRefs(store);
 
   const found = allDefectItems.value.find((d) => d.id === defectId);
@@ -56,7 +58,11 @@ export function useRepairDetail(defectId: number) {
       if (note.value) formData.append('note', note.value);
       formData.append('file', afterImageFile.value);
 
-      await api.put('/defects/contractor-update', formData);
+      await api.put('/defects/contractor-update', formData, {
+        params: {
+          token: linkStore.linkToken.value || ''
+        }
+      });
 
       savedAfterImage.value = afterImageUrl.value;
       savedNote.value = note.value;
