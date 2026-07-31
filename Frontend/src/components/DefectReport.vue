@@ -23,9 +23,10 @@
           <img
             loading="eager"
             :src="
-              round.job.projectImageUrl
-                ? `${apiUrl}${round.job.projectImageUrl}`
-                : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600'
+              resolveImageUrl(
+                round.job.projectImageUrl,
+                'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600',
+              )
             "
             style="
               width: 95%;
@@ -233,7 +234,7 @@
           <div v-for="defect in chunk" :key="defect.defectId" class="defect-card">
             <div class="badge-id">#{{ defect.defectId }}</div>
             <div class="badge-main" style="background: #ef4444">{{ defect.severity }}</div>
-            <img loading="eager" :src="defect.imageUrl ? `${apiUrl}${defect.imageUrl}` : 'https://via.placeholder.com/400x300?text=No+Image'" class="defect-img" />
+            <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image')" class="defect-img" />
             <div class="card-body">
               <div class="room-title">{{ getRoomShortName(defect) }}</div>
               <div class="info-row">
@@ -310,7 +311,7 @@
               >
                 {{ defect.severity }}
               </div>
-              <img loading="eager" :src="defect.imageUrl ? `${apiUrl}${defect.imageUrl}` : 'https://via.placeholder.com/400x300?text=No+Image'" class="defect-img" />
+              <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image')" class="defect-img" />
               <div class="card-body">
                 <div class="info-row">
                   <span class="label">ประเภทงาน:</span>
@@ -441,6 +442,14 @@ import FacebookLogo from 'src/assets/Logos/Facebook.png';
 import CallLogo from 'src/assets/Logos/Call.png';
 import GmailLogo from 'src/assets/Logos/Gmail.png';
 const apiUrl = import.meta.env.VITE_API_URL;
+
+// ค่า default เก่าในฐานข้อมูลที่ไม่เคยมีไฟล์จริงรองรับ (ข้อมูลเสียของระบบเดิม) ให้ตกไปใช้ placeholder แทน
+const KNOWN_BROKEN_IMAGE_PATHS = ['/defect-images/unknown.jpg'];
+
+const resolveImageUrl = (url: string | null | undefined, placeholder: string): string => {
+  if (!url || KNOWN_BROKEN_IMAGE_PATHS.includes(url)) return placeholder;
+  return url.startsWith('http') ? url : `${apiUrl}${url}`;
+};
 
 const props = defineProps<{
   round: InspectionRound;
