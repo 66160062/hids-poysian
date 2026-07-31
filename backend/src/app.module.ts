@@ -11,8 +11,6 @@ import { CustomersModule } from './customers/customers.module';
 import { Customer } from './customers/entities/customer.entity';
 import { AddressesModule } from './addresses/addresses.module';
 import { Address } from './addresses/entities/address.entity';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 import { HouseTypesModule } from './house-types/house-types.module';
 import { HouseType } from './house-types/entities/house-type.entity';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
@@ -57,6 +55,7 @@ import { AccidentReport } from './construction-daily-reports/entities/accident-r
 import { DailyMachine } from './construction-daily-reports/entities/daily-machine.entity';
 import { MachineType } from './construction-daily-reports/entities/machine-type.entity';
 import { DailyReportImage } from './construction-daily-reports/entities/daily-report-image.entity';
+import { StorageModule } from './storage/storage.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -114,10 +113,7 @@ import { DailyReportImage } from './construction-daily-reports/entities/daily-re
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),
     }),
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'uploads'),
-      serveRoot: '/uploads',
-    }),
+    StorageModule,
     AuthModule,
     UsersModule,
     InspectionJobsModule,
