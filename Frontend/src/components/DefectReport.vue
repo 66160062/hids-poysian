@@ -23,9 +23,10 @@
           <img
             loading="eager"
             :src="
-              round.job.projectImageUrl
-                ? `${apiUrl}${round.job.projectImageUrl}`
-                : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600'
+              resolveImageUrl(
+                round.job.projectImageUrl,
+                'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600',
+              )
             "
             style="
               width: 95%;
@@ -135,22 +136,24 @@
               >
             </div>
           </div>
-          <div class="mini-chart">
-            <div v-for="cat in categoryCounts" :key="cat.name" class="mini-bar-col">
-              <div class="mini-bar-count">{{ cat.count }}</div>
-              <div v-if="cat.major > 0 && cat.minor > 0" class="mini-bar-split">
-                <span style="color: #ef4444">{{ cat.major }}</span>
-                <span>/</span>
-                <span style="color: #fb8c00">{{ cat.minor }}</span>
+          <div class="mini-chart mini-chart-category">
+            <div v-for="cat in categoryCounts" :key="cat.name" class="mini-bar-col mini-bar-col-category">
+              <div class="mini-bar-track">
+                <div class="mini-bar-count">{{ cat.count }}</div>
+                <div v-if="cat.major > 0 && cat.minor > 0" class="mini-bar-split">
+                  <span style="color: #ef4444">{{ cat.major }}</span>
+                  <span>/</span>
+                  <span style="color: #fb8c00">{{ cat.minor }}</span>
+                </div>
+                <div
+                  class="mini-bar-stack"
+                  :style="`height: ${Math.max((cat.count / maxCategoryCount) * 100, 8)}%`"
+                >
+                  <div :style="`height: ${cat.minorPct}%; background: #fb8c00`" />
+                  <div :style="`height: ${cat.majorPct}%; background: #ef4444`" />
+                </div>
               </div>
-              <div
-                class="mini-bar-stack"
-                :style="`height: ${Math.max((cat.count / maxCategoryCount) * 100, 8)}%`"
-              >
-                <div :style="`height: ${cat.minorPct}%; background: #fb8c00`" />
-                <div :style="`height: ${cat.majorPct}%; background: #ef4444`" />
-              </div>
-              <div class="mini-bar-label">{{ cat.name }}</div>
+              <div class="mini-bar-label mini-bar-label-category">{{ cat.name }}</div>
             </div>
           </div>
         </div>
@@ -231,7 +234,7 @@
           <div v-for="defect in chunk" :key="defect.defectId" class="defect-card">
             <div class="badge-id">#{{ defect.defectId }}</div>
             <div class="badge-main" style="background: #ef4444">{{ defect.severity }}</div>
-            <img loading="eager" :src="defect.imageUrl ? `${apiUrl}${defect.imageUrl}` : 'https://via.placeholder.com/400x300?text=No+Image'" class="defect-img" />
+            <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image')" class="defect-img" />
             <div class="card-body">
               <div class="room-title">{{ getRoomShortName(defect) }}</div>
               <div class="info-row">
@@ -308,7 +311,7 @@
               >
                 {{ defect.severity }}
               </div>
-              <img loading="eager" :src="defect.imageUrl ? `${apiUrl}${defect.imageUrl}` : 'https://via.placeholder.com/400x300?text=No+Image'" class="defect-img" />
+              <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image')" class="defect-img" />
               <div class="card-body">
                 <div class="info-row">
                   <span class="label">ประเภทงาน:</span>
@@ -439,6 +442,19 @@ import FacebookLogo from 'src/assets/Logos/Facebook.png';
 import CallLogo from 'src/assets/Logos/Call.png';
 import GmailLogo from 'src/assets/Logos/Gmail.png';
 const apiUrl = import.meta.env.VITE_API_URL;
+
+// ค่า default เก่าในฐานข้อมูลที่ไม่เคยมีไฟล์จริงรองรับ (ข้อมูลเสียของระบบเดิม) — แทนที่ด้วยรูปจริงที่อัปโหลดเก็บไว้ใน Supabase Storage แล้ว
+const LEGACY_IMAGE_REPLACEMENTS: Record<string, string> = {
+  '/defect-images/unknown.jpg':
+    'https://wduuxuwwbesgrcmcsnxq.supabase.co/storage/v1/object/public/hids-uploads/defects/unknown2.jpg',
+};
+
+const resolveImageUrl = (url: string | null | undefined, placeholder: string): string => {
+  if (!url) return placeholder;
+  const replacement = LEGACY_IMAGE_REPLACEMENTS[url];
+  if (replacement) return replacement;
+  return url.startsWith('http') ? url : `${apiUrl}${url}`;
+};
 
 const props = defineProps<{
   round: InspectionRound;
@@ -778,12 +794,31 @@ const summaryChunks = computed(() => {
   border-radius: 4px;
   background: #fafbfc;
   padding: 10px 6px 6px;
+  overflow: hidden;
+}
+.mini-chart-category {
+  height: auto;
+  min-height: 190px;
+  align-items: flex-start;
+  overflow: visible;
 }
 .mini-bar-col {
   flex: 1;
   min-width: 0;
   max-width: 34px;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+.mini-bar-col-category {
+  height: auto;
+  justify-content: flex-start;
+}
+.mini-bar-track {
+  width: 100%;
+  height: 130px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -819,6 +854,11 @@ const summaryChunks = computed(() => {
   word-break: break-word;
   max-height: 24px;
   overflow: hidden;
+}
+.mini-bar-label-category {
+  font-size: 7px;
+  max-height: none;
+  overflow: visible;
 }
 .mini-bar-stack {
   width: 100%;
