@@ -534,6 +534,7 @@
 import { ref, computed, onUnmounted, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
+import imageCompression from 'browser-image-compression';
 import { useConstructionDailyReportStore } from 'src/stores/useConstructionDailyReport';
 import type { ConstructionDailyReportPayload, MachinePayload, PersonnelPayload } from 'src/stores/useConstructionDailyReport';
 
@@ -934,6 +935,15 @@ const removeNote = (id: number) => {
   notesList.value = notesList.value.filter(n => n.id !== id);
 };
 
+// บีบอัดรูปก่อนส่ง — endpoint นี้ส่งได้ถึง 20 รูป/panorama ใน request เดียว ถ้าไม่บีบอัดก่อนเสี่ยง timeout บนเน็ตหน้างาน
+const compressImage = async (file: File): Promise<File> => {
+  try {
+    return await imageCompression(file, { maxSizeMB: 1, maxWidthOrHeight: 1024, useWebWorker: true });
+  } catch {
+    return file;
+  }
+};
+
 // 7. Submit — แปลง form data เป็น API payload แล้วส่ง POST
 const submitReport = async () => {
   // Validation
@@ -1039,14 +1049,14 @@ const submitReport = async () => {
     formData.append('payload', JSON.stringify(payload));
 
     if (panoramaFile.value) {
-      formData.append('panoramaFile', panoramaFile.value);
+      formData.append('panoramaFile', await compressImage(panoramaFile.value));
     }
 
     if (photos.value && photos.value.length > 0) {
-      photos.value.forEach((photo) => {
-        formData.append('photos', photo.file);
+      for (const photo of photos.value) {
+        formData.append('photos', await compressImage(photo.file));
         formData.append('photoWorkDetailNames', photo.workDetailName || '');
-      });
+      }
     }
 
     await store.submitReport(formData);

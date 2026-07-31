@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
@@ -18,14 +17,6 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, documentFactory);
 
   app.enableCors();
-
-  const staticPath = join(process.cwd(), 'uploads');
-  app.useStaticAssets(staticPath, { prefix: '/uploads' });
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads',
-    index: false,
-    redirect: false,
-  });
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 

@@ -265,7 +265,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import imageCompression from 'browser-image-compression';
 import { useInspectionStore } from 'src/stores/useInspection';
 import { api } from 'src/boot/axios';
 import { useQuasar } from 'quasar';
@@ -374,19 +373,12 @@ const cameraInput = ref<HTMLInputElement | null>(null);
 const triggerGallery = () => galleryInput.value?.click();
 const triggerCamera = () => cameraInput.value?.click();
 
-const onFileSelected = async (event: Event) => {
+const onFileSelected = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
   if (file) {
-    try {
-      const options = { maxSizeMB: 1, maxWidthOrHeight: 1024, useWebWorker: true };
-      const compressedFile = await imageCompression(file, options);
-      selectedFile.value = compressedFile;
-      imagePreview.value = URL.createObjectURL(compressedFile);
-    } catch {
-      selectedFile.value = file;
-      imagePreview.value = URL.createObjectURL(file);
-    }
+    selectedFile.value = file;
+    imagePreview.value = URL.createObjectURL(file);
   }
   target.value = '';
 };

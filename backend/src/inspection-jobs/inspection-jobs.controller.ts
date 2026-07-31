@@ -15,13 +15,12 @@ import { InspectionJobsService } from './inspection-jobs.service';
 import { CreateInspectionJobDto } from './dto/create-inspection-job.dto';
 import { UpdateInspectionJobDto } from './dto/update-inspection-job.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { v4 as uuidv4 } from 'uuid';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
 import { ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
 import { InspectionJobStatus } from './enums/inspection-job-status.enum';
 import { AuthService } from 'src/auth/auth.service';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { StorageService } from 'src/storage/storage.service';
 
 @Controller('inspection-jobs')
 @UseGuards(AuthGuard)
@@ -29,6 +28,7 @@ export class InspectionJobsController {
   constructor(
     private readonly inspectionJobsService: InspectionJobsService,
     private readonly authService: AuthService,
+    private readonly storageService: StorageService,
   ) {}
 
   @Post()
@@ -41,18 +41,10 @@ export class InspectionJobsController {
         { name: 'projectImageUrl', maxCount: 1 },
         { name: 'housePlanUrl', maxCount: 1 },
       ],
-      {
-        storage: diskStorage({
-          destination: './uploads/inspection_jobs',
-          filename: (req, file, cb) => {
-            const uniqueFileName = uuidv4() + extname(file.originalname);
-            cb(null, uniqueFileName);
-          },
-        }),
-      },
+      { storage: memoryStorage() },
     ),
   )
-  create(
+  async create(
     @UploadedFiles()
     files: {
       projectImageUrl?: Express.Multer.File[];
@@ -66,10 +58,16 @@ export class InspectionJobsController {
     return this.inspectionJobsService.create({
       ...createInspectionJobDto,
       projectImageUrl: projectImage
-        ? '/uploads/inspection_jobs/' + projectImage.filename
+        ? await this.storageService.uploadImage(
+            projectImage.buffer,
+            'inspection_jobs',
+          )
         : '/uploads/inspection_jobs/unknown.jpg',
       housePlanUrl: housePlan
-        ? '/uploads/inspection_jobs/' + housePlan.filename
+        ? await this.storageService.uploadImage(
+            housePlan.buffer,
+            'inspection_jobs',
+          )
         : createInspectionJobDto.housePlanUrl || '',
     });
   }
@@ -140,18 +138,10 @@ export class InspectionJobsController {
         { name: 'projectImageUrl', maxCount: 1 },
         { name: 'housePlanUrl', maxCount: 1 },
       ],
-      {
-        storage: diskStorage({
-          destination: './uploads/inspection_jobs',
-          filename: (req, file, cb) => {
-            const uniqueFileName = uuidv4() + extname(file.originalname);
-            cb(null, uniqueFileName);
-          },
-        }),
-      },
+      { storage: memoryStorage() },
     ),
   )
-  update(
+  async update(
     @Param('id') id: string,
     @UploadedFiles()
     files: {
@@ -166,10 +156,16 @@ export class InspectionJobsController {
     return this.inspectionJobsService.update(+id, {
       ...updateInspectionJobDto,
       projectImageUrl: projectImage
-        ? '/uploads/inspection_jobs/' + projectImage.filename
+        ? await this.storageService.uploadImage(
+            projectImage.buffer,
+            'inspection_jobs',
+          )
         : updateInspectionJobDto.projectImageUrl,
       housePlanUrl: housePlan
-        ? '/uploads/inspection_jobs/' + housePlan.filename
+        ? await this.storageService.uploadImage(
+            housePlan.buffer,
+            'inspection_jobs',
+          )
         : updateInspectionJobDto.housePlanUrl,
     });
   }

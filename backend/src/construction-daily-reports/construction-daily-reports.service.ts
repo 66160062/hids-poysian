@@ -11,10 +11,14 @@ import { CreateConstructionDailyReportDto } from './dto/create-construction-dail
 
 import { DailyReportImage } from './entities/daily-report-image.entity';
 import { User } from 'src/users/entities/user.entity';
+import { StorageService } from 'src/storage/storage.service';
 
 @Injectable()
 export class ConstructionDailyReportsService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly storageService: StorageService,
+  ) {}
 
   async create(
     payloadStr: string,
@@ -132,12 +136,16 @@ export class ConstructionDailyReportsService {
       let sequenceCount = 1;
 
       if (files?.panoramaFile?.[0]) {
+        const panoramaUrl = await this.storageService.uploadImage(
+          files.panoramaFile[0].buffer,
+          'construction_daily_reports',
+        );
         images.push(
           manager.getRepository(DailyReportImage).create({
             dailyReport: savedReport,
             sequence: sequenceCount++,
             imageType: 'PANORAMA',
-            imageUrl: `/uploads/${files.panoramaFile[0].filename}`,
+            imageUrl: panoramaUrl,
             caption: 'Panorama View',
           }),
         );
@@ -147,13 +155,21 @@ export class ConstructionDailyReportsService {
         const names = Array.isArray(photoWorkDetailNames)
           ? photoWorkDetailNames
           : [photoWorkDetailNames];
-        files.photos.forEach((file, index) => {
+        const photoUrls = await Promise.all(
+          files.photos.map((file) =>
+            this.storageService.uploadImage(
+              file.buffer,
+              'construction_daily_reports',
+            ),
+          ),
+        );
+        photoUrls.forEach((url, index) => {
           images.push(
             manager.getRepository(DailyReportImage).create({
               dailyReport: savedReport,
               sequence: sequenceCount++,
               imageType: 'WORK_DETAIL',
-              imageUrl: `/uploads/${file.filename}`,
+              imageUrl: url,
               caption: names[index] || '',
             }),
           );

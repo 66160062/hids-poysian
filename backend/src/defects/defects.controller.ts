@@ -20,10 +20,9 @@ import { UpdateDefectDto } from './dto/update-defect.dto';
 import { ContractorUpdateDefectDto } from './dto/contractor-update-defect.dto';
 import { ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { v4 as uuidv4 } from 'uuid';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
 import { LinkTokenGuard } from 'src/auth/link-token.guard';
+import { StorageService } from 'src/storage/storage.service';
 
 type LinkTokenPayload = {
   project_id: number;
@@ -33,32 +32,23 @@ type LinkTokenPayload = {
 
 @Controller('defects')
 export class DefectsController {
-  constructor(private readonly defectsService: DefectsService) {}
+  constructor(
+    private readonly defectsService: DefectsService,
+    private readonly storageService: StorageService,
+  ) {}
 
   @Post()
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads/defects',
-        filename: (req, file, cb) => {
-          let ext = extname(file.originalname);
-          if (!ext && file.mimetype) {
-            ext = `.${file.mimetype.split('/')[1]}`;
-          }
-          const uniqueFileName = uuidv4() + ext;
-          cb(null, uniqueFileName);
-        },
-      }),
-    }),
-  )
-  create(
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  async create(
     @UploadedFile() file: Express.Multer.File,
     @Body() createDefectDto: CreateDefectDto,
   ) {
     return this.defectsService.create({
       ...createDefectDto,
-      imageUrl: file ? '/uploads/defects/' + file.filename : undefined,
+      imageUrl: file
+        ? await this.storageService.uploadImage(file.buffer, 'defects')
+        : undefined,
       imageFileSize: file ? file.size : undefined,
     });
   }
@@ -81,22 +71,8 @@ export class DefectsController {
   @Put('contractor-update')
   @UseGuards(LinkTokenGuard)
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads/defects',
-        filename: (req, file, cb) => {
-          let ext = extname(file.originalname);
-          if (!ext && file.mimetype) {
-            ext = `.${file.mimetype.split('/')[1]}`;
-          }
-          const uniqueFileName = uuidv4() + ext;
-          cb(null, uniqueFileName);
-        },
-      }),
-    }),
-  )
-  contractorUpdate(
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  async contractorUpdate(
     @UploadedFile() file: Express.Multer.File,
     @Body() contractorUpdateDto: ContractorUpdateDefectDto,
     @Req() request: Request & { user: LinkTokenPayload },
@@ -105,7 +81,10 @@ export class DefectsController {
       ...contractorUpdateDto,
       linkPayload: request.user,
       ...(file && {
-        contractorImageUrl: '/uploads/defects/' + file.filename,
+        contractorImageUrl: await this.storageService.uploadImage(
+          file.buffer,
+          'defects',
+        ),
         contractorImageFileSize: file.size,
       }),
     });
@@ -113,22 +92,8 @@ export class DefectsController {
 
   @Patch(':id')
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads/defects',
-        filename: (req, file, cb) => {
-          let ext = extname(file.originalname);
-          if (!ext && file.mimetype) {
-            ext = `.${file.mimetype.split('/')[1]}`;
-          }
-          const uniqueFileName = uuidv4() + ext;
-          cb(null, uniqueFileName);
-        },
-      }),
-    }),
-  )
-  update(
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  async update(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File,
     @Body() updateDefectDto: UpdateDefectDto,
@@ -136,7 +101,7 @@ export class DefectsController {
     return this.defectsService.update(id, {
       ...updateDefectDto,
       ...(file && {
-        imageUrl: '/uploads/defects/' + file.filename,
+        imageUrl: await this.storageService.uploadImage(file.buffer, 'defects'),
         imageFileSize: file.size,
       }),
     });
