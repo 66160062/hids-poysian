@@ -443,11 +443,16 @@ import CallLogo from 'src/assets/Logos/Call.png';
 import GmailLogo from 'src/assets/Logos/Gmail.png';
 const apiUrl = import.meta.env.VITE_API_URL;
 
-// ค่า default เก่าในฐานข้อมูลที่ไม่เคยมีไฟล์จริงรองรับ (ข้อมูลเสียของระบบเดิม) ให้ตกไปใช้ placeholder แทน
-const KNOWN_BROKEN_IMAGE_PATHS = ['/defect-images/unknown.jpg'];
+// ค่า default เก่าในฐานข้อมูลที่ไม่เคยมีไฟล์จริงรองรับ (ข้อมูลเสียของระบบเดิม) — แทนที่ด้วยรูปจริงที่อัปโหลดเก็บไว้ใน Supabase Storage แล้ว
+const LEGACY_IMAGE_REPLACEMENTS: Record<string, string> = {
+  '/defect-images/unknown.jpg':
+    'https://wduuxuwwbesgrcmcsnxq.supabase.co/storage/v1/object/public/hids-uploads/defects/unknown.jpg',
+};
 
 const resolveImageUrl = (url: string | null | undefined, placeholder: string): string => {
-  if (!url || KNOWN_BROKEN_IMAGE_PATHS.includes(url)) return placeholder;
+  if (!url) return placeholder;
+  const replacement = LEGACY_IMAGE_REPLACEMENTS[url];
+  if (replacement) return replacement;
   return url.startsWith('http') ? url : `${apiUrl}${url}`;
 };
 
