@@ -14,12 +14,14 @@ import { InspectionRoundsService } from './inspection-rounds.service';
 import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { ReportsService } from 'src/reports/reports.service';
 
 @Controller('inspection-rounds')
 @UseGuards(AuthGuard)
 export class InspectionRoundsController {
   constructor(
     private readonly inspectionRoundsService: InspectionRoundsService,
+    private readonly reportsService: ReportsService,
   ) {}
 
   @Post()
@@ -51,6 +53,13 @@ export class InspectionRoundsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.inspectionRoundsService.findOne(+id);
+  }
+
+  // เช็ค cache PDF เดิม ไม่ trigger การ generate ใดๆ ทั้งสิ้น
+  @Get(':id/report')
+  async getReport(@Param('id') id: string) {
+    const url = await this.reportsService.getCachedReportUrl(+id);
+    return { url };
   }
 
   @Patch(':id/confirm-inspection')

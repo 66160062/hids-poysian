@@ -99,7 +99,10 @@ export class DefectsService {
       imageFileSize?: number;
     },
   ) {
-    const defect = await this.defectsRepo.findOneByOrFail({ defectId: id });
+    const defect = await this.defectsRepo.findOneOrFail({
+      where: { defectId: id },
+      relations: ['round'],
+    });
 
     // Assign primitive properties
     defect.description = updateDefectDto.description ?? defect.description;
@@ -186,7 +189,10 @@ export class DefectsService {
   }
 
   async remove(id: number) {
-    const defect = await this.defectsRepo.findOneByOrFail({ defectId: id });
+    const defect = await this.defectsRepo.findOneOrFail({
+      where: { defectId: id },
+      relations: ['round'],
+    });
     return this.defectsRepo.remove(defect);
   }
 

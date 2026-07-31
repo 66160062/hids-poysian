@@ -56,6 +56,7 @@ import { DailyMachine } from './construction-daily-reports/entities/daily-machin
 import { MachineType } from './construction-daily-reports/entities/machine-type.entity';
 import { DailyReportImage } from './construction-daily-reports/entities/daily-report-image.entity';
 import { StorageModule } from './storage/storage.module';
+import { ReportsModule } from './reports/reports.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -114,6 +115,7 @@ import { StorageModule } from './storage/storage.module';
       namingStrategy: new SnakeNamingStrategy(),
     }),
     StorageModule,
+    ReportsModule,
     AuthModule,
     UsersModule,
     InspectionJobsModule,

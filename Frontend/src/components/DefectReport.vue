@@ -23,9 +23,10 @@
           <img
             loading="eager"
             :src="
-              round.job.projectImageUrl
-                ? `${apiUrl}${round.job.projectImageUrl}`
-                : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600'
+              resolveImageUrl(
+                round.job.projectImageUrl,
+                'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600',
+              )
             "
             style="
               width: 95%;
@@ -231,7 +232,7 @@
           <div v-for="defect in chunk" :key="defect.defectId" class="defect-card">
             <div class="badge-id">#{{ defect.defectId }}</div>
             <div class="badge-main" style="background: #ef4444">{{ defect.severity }}</div>
-            <img loading="eager" :src="defect.imageUrl ? `${apiUrl}${defect.imageUrl}` : 'https://via.placeholder.com/400x300?text=No+Image'" class="defect-img" />
+            <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image')" class="defect-img" />
             <div class="card-body">
               <div class="room-title">{{ getRoomShortName(defect) }}</div>
               <div class="info-row">
@@ -308,7 +309,7 @@
               >
                 {{ defect.severity }}
               </div>
-              <img loading="eager" :src="defect.imageUrl ? `${apiUrl}${defect.imageUrl}` : 'https://via.placeholder.com/400x300?text=No+Image'" class="defect-img" />
+              <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image')" class="defect-img" />
               <div class="card-body">
                 <div class="info-row">
                   <span class="label">ประเภทงาน:</span>
@@ -432,6 +433,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { api } from 'src/boot/axios';
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
 import PoysianLogo from 'src/assets/Logos/Poysian.png';
 import LineLogo from 'src/assets/Logos/LINE.png';
@@ -439,6 +441,19 @@ import FacebookLogo from 'src/assets/Logos/Facebook.png';
 import CallLogo from 'src/assets/Logos/Call.png';
 import GmailLogo from 'src/assets/Logos/Gmail.png';
 const apiUrl = import.meta.env.VITE_API_URL;
+
+// ค่า default เก่าในฐานข้อมูลที่ไม่เคยมีไฟล์จริงรองรับ (ข้อมูลเสียของระบบเดิม) — แทนที่ด้วยรูปจริงที่อัปโหลดเก็บไว้ใน Supabase Storage แล้ว
+const LEGACY_IMAGE_REPLACEMENTS: Record<string, string> = {
+  '/defect-images/unknown.jpg':
+    'https://wduuxuwwbesgrcmcsnxq.supabase.co/storage/v1/object/public/hids-uploads/defects/unknown2.jpg',
+};
+
+const resolveImageUrl = (url: string | null | undefined, placeholder: string): string => {
+  if (!url) return placeholder;
+  const replacement = LEGACY_IMAGE_REPLACEMENTS[url];
+  if (replacement) return replacement;
+  return url.startsWith('http') ? url : `${apiUrl}${url}`;
+};
 
 const props = defineProps<{
   round: InspectionRound;
@@ -619,7 +634,26 @@ function formatDate(dateStr: string) {
   });
 }
 
-function exportPdf() {
+// เช็ค cache PDF ที่ backend generate ไว้ล่วงหน้าก่อนเสมอ (backend/src/reports/reports.service.ts) —
+// มีแล้วเปิดโหลดทันที ไม่ต้อง render ฝั่ง client เลย ถ้ายังไม่มี (เช่นรอบแรกที่ debounce ยังไม่ settle)
+// ค่อย fallback ไปสร้างแบบเดิมผ่าน window.print()
+async function exportPdf() {
+  try {
+    const { data } = await api.get<{ url: string | null }>(
+      `/inspection-rounds/${props.round.roundId}/report`,
+    );
+    if (data.url) {
+      window.open(data.url, '_blank');
+      return;
+    }
+  } catch {
+    // เช็ค cache ไม่สำเร็จ ปล่อยผ่านไป fallback ด้านล่าง
+  }
+
+  exportPdfClientSide();
+}
+
+function exportPdfClientSide() {
   if (!reportRef.value) return;
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
