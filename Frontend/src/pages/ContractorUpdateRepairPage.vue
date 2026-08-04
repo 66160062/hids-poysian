@@ -129,10 +129,17 @@
           <div class="text-body2 text-grey-6">รอวิศวกรตรวจสอบ</div>
         </q-card-section>
         <q-card-actions align="center" class="q-pb-md">
-          <q-btn unelevated color="primary" label="ตกลง" style="min-width:120px; border-radius:10px;" @click="confirmSuccess" />
+          <q-btn unelevated color="primary" label="ตกลง" style="min-width:120px; border-radius:10px;" @click="openRatingAfterSuccess" />
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <ReviewDialog
+      v-model="showRatingDialog"
+      :job-id="repairJobId"
+      :defect-id="defectId"
+      @closed="confirmSuccess"
+    />
 
   </q-page>
 </template>
@@ -142,11 +149,15 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRepairDetail } from 'src/stores/useContractorRepairDetail'
 import { useLinkAccess } from 'src/stores/useLinkAccess'
+import { useContractorRepair } from 'src/stores/useContractormain'
+import ReviewDialog from 'src/components/ReviewDialog.vue'
 
 const route     = useRoute()
 const { isCustomerViewOnly } = useLinkAccess()
+const contractorRepair = useContractorRepair()
 const defectId  = Number(route.params.id)
 const fileInput = ref<HTMLInputElement>()
+const showRatingDialog = ref(false)
 
 //  destructure ก่อน
 const {
@@ -169,6 +180,11 @@ const isReadOnly = computed(
   () => isCustomerViewOnly.value || defect.value.status === 'repaired' || defect.value.status === 'verified',
 )
 const isPassed   = computed(() => defect.value.status === 'verified')
+const repairJobId = computed(() => {
+  const queryJobId = route.query.jobId
+  if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId)
+  return contractorRepair.currentJobId
+})
 
 const onFileChange = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0]
@@ -181,6 +197,10 @@ const onFileChange = (e: Event) => {
 
 const triggerCamera   = () => fileInput.value?.click()
 const clearAfterImage = () => { afterImageUrl.value = ''; afterImageFile.value = null }
+const openRatingAfterSuccess = () => {
+  showSuccess.value = false
+  showRatingDialog.value = true
+}
 </script>
 
 <style scoped>

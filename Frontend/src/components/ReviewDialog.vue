@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="dialog" position="bottom">
+  <q-dialog v-model="dialog" position="bottom" @hide="emit('closed')">
     <q-card style="width: 100%; max-width: 480px; border-radius: 16px 16px 0 0;">
 
       <!-- Header -->
@@ -11,20 +11,9 @@
 
       <q-card-section>
 
-        <!-- Rating Stars -->
         <div class="text-subtitle2 q-mb-sm">ความพึงพอใจ</div>
-        <div class="row justify-center q-mb-md">
-          <q-rating
-            v-model="form.rating"
-            size="2.5em"
-            color="amber"
-            icon="star_border"
-            icon-selected="star"
-          />
-        </div>
-        <div class="text-center text-caption text-grey-6 q-mb-md">{{ ratingLabel }}</div>
+        <StarRating v-model="form.rating" class="q-mb-md" />
 
-        <!-- Comment -->
         <div class="text-subtitle2 q-mb-sm">ความคิดเห็นเพิ่มเติม</div>
         <q-input
           v-model="form.comment"
@@ -34,6 +23,8 @@
           rows="4"
           placeholder="บอกเล่าประสบการณ์ที่ได้รับ..."
           bg-color="grey-1"
+          maxlength="500"
+          counter
         />
 
       </q-card-section>
@@ -52,7 +43,8 @@
           label="ส่งรีวิว"
           color="primary"
           class="col"
-          :disable="form.rating === 0"
+          :loading="isSubmitting"
+          :disable="form.rating === 0 || isSubmitting"
           @click="submit"
         />
       </q-card-actions>
@@ -62,33 +54,59 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { reactive, ref, watch } from 'vue';
+import { useQuasar } from 'quasar';
+import { api } from 'src/boot/axios';
+import StarRating from 'src/components/StarRating.vue';
 
-const dialog = defineModel<boolean>({ default: false })
+const dialog = defineModel<boolean>({ default: false });
 
-const form = ref({
-  rating:  0,
+const props = defineProps<{
+  jobId?: number | null;
+  roundId?: number | null;
+  defectId?: number | null;
+}>();
+
+const emit = defineEmits<{
+  submitted: [];
+  closed: [];
+}>();
+
+const $q = useQuasar();
+const isSubmitting = ref(false);
+
+const form = reactive({
+  rating: 0,
   comment: '',
-})
+});
 
-const ratingLabel = computed(() => {
-  const labels: Record<number, string> = {
-    1: 'แย่มาก',
-    2: 'แย่',
-    3: 'พอใช้',
-    4: 'ดี',
-    5: 'ดีมาก',
+watch(dialog, (isOpen) => {
+  if (!isOpen) return;
+  form.rating = 0;
+  form.comment = '';
+});
+
+const submit = async () => {
+  if (form.rating === 0 || isSubmitting.value) return;
+
+  isSubmitting.value = true;
+  try {
+    await api.post('/ratings', {
+      jobId: props.jobId ?? undefined,
+      roundId: props.roundId ?? undefined,
+      defectId: props.defectId ?? undefined,
+      rating: form.rating,
+      comment: form.comment.trim(),
+    });
+
+    $q.notify({ type: 'positive', message: 'ส่งรีวิวเรียบร้อยแล้ว' });
+    dialog.value = false;
+    emit('submitted');
+  } catch (error) {
+    console.error(error);
+    $q.notify({ type: 'negative', message: 'ส่งรีวิวไม่สำเร็จ กรุณาลองใหม่' });
+  } finally {
+    isSubmitting.value = false;
   }
-  return labels[form.value.rating] ?? 'เลือกคะแนน'
-})
-
-const submit = () => {
-  // TODO: เชื่อม API POST /api/reviews
-  // await fetch('/api/reviews', {
-  //   method: 'POST',
-  //   body: JSON.stringify({ jobId, rating: form.value.rating, comment: form.value.comment })
-  // })
-  console.log('submit review:', form.value)
-  dialog.value = false
-}
+};
 </script>
