@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Request } from 'express';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 
@@ -34,7 +35,7 @@ describe('AuthController', () => {
     expect(
       controller.verifyLink({
         user: { project_id: 7, role: 'contractor' },
-      }),
+      } as Request & { user: { project_id: number; role: string } }),
     ).toEqual({
       valid: true,
       payload: { project_id: 7, role: 'contractor' },

@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Injectable } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,9 +12,6 @@ const PUBLIC_URL_PREFIX = `/storage/v1/object/public/${BUCKET}/`;
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
-
-@Injectable()
-export class StorageService {
   private readonly client = createClient(
     process.env.SUPABASE_URL ?? '',
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
@@ -59,12 +55,6 @@ export class StorageService {
       .from(BUCKET)
       .upload(path, buffer, {
         contentType,
-    const path = `${folder}/${uuidv4()}.jpg`;
-
-    const { error } = await this.client.storage
-      .from(BUCKET)
-      .upload(path, outputBuffer, {
-        contentType: 'image/jpeg',
         upsert: false,
       });
 
