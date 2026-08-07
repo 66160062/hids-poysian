@@ -4,6 +4,7 @@ import { DataSource, EntityManager } from 'typeorm';
 import { ConstructionDailyReportsService } from './construction-daily-reports.service';
 import { CreateConstructionDailyReportDto } from './dto/create-construction-daily-report.dto';
 import { PersonnelType } from './entities/daily-personnel.entity';
+import { StorageService } from 'src/storage/storage.service';
 
 describe('ConstructionDailyReportsService', () => {
   let service: ConstructionDailyReportsService;
@@ -103,6 +104,10 @@ describe('ConstructionDailyReportsService', () => {
       providers: [
         ConstructionDailyReportsService,
         { provide: DataSource, useValue: mockDataSource },
+        {
+          provide: StorageService,
+          useValue: { uploadImage: jest.fn().mockResolvedValue('https://example.com/mock.jpg') },
+        },
       ],
     }).compile();
 
@@ -309,11 +314,14 @@ describe('ConstructionDailyReportsService', () => {
           where: { round: { roundId: 1 } },
           relations: [
             'round',
+            'round.job',
             'workItems',
             'personnels',
             'issues',
             'accidents',
             'machines',
+            'images',
+            'createdBy',
           ],
         }),
       );
