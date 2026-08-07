@@ -56,7 +56,7 @@ export class ConstructionDailyReportsService {
           contractorName: dto.contractorName,
           reporterName: dto.reporterName,
           position: dto.position,
-          createdBy: userId ? ({ id: userId } as User) : undefined,
+          createdBy: userId ? { id: userId } : undefined,
         });
       const savedReport: ConstructionDailyReport = await manager
         .getRepository(ConstructionDailyReport)
