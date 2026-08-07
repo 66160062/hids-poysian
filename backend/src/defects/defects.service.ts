@@ -52,10 +52,10 @@ export class DefectsService {
     const defect = this.defectsRepo.create({
       ...createDefectDto,
       round,
-      room: { roomId: createDefectDto.roomId } as any,
-      floor: { floorId: createDefectDto.floorId } as any,
+      room: { roomId: createDefectDto.roomId },
+      floor: { floorId: createDefectDto.floorId },
       subRoom: createDefectDto.subRoomId
-        ? ({ subRoomId: createDefectDto.subRoomId } as any)
+        ? { subRoomId: createDefectDto.subRoomId }
         : null,
       subCategories,
       inspector,
