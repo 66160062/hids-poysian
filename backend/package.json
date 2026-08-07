@@ -82,7 +82,11 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "moduleNameMapper": {
-      "^src/(.*)$": "<rootDir>/$1"
+      "^src/(.*)$": "<rootDir>/$1",
+      "^uuid$": "<rootDir>/../__mocks__/uuid.js",
+      "^sharp$": "<rootDir>/../__mocks__/sharp.js",
+      "^puppeteer$": "<rootDir>/../__mocks__/puppeteer.js",
+      "^@supabase/supabase-js$": "<rootDir>/../__mocks__/@supabase/supabase-js.js"
     },
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
