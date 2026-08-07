@@ -16,7 +16,7 @@
 
       <div v-else-if="jobData" class="q-px-lg q-pb-md col column">
         <q-img loading="eager"
-          :src="jobData.job.projectImageUrl ? `${apiUrl}${jobData.job.projectImageUrl}` : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600'"
+          :src="jobData.job.projectImageUrl ? getImageUrl(jobData.job.projectImageUrl) : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600'"
           style="border-radius: 8px; height: 250px; margin-top: 20px"
           fit="cover"
           class="q-mb-md q-mt-sm"
@@ -295,6 +295,11 @@ const router = useRouter();
 
 const isMobile = computed(() => $q.screen.lt.md);
 const loading = ref(true);
+
+const getImageUrl = (url?: string) => {
+  if (!url) return '';
+  return url.startsWith('http') || url.startsWith('blob:') ? url : `${apiUrl}${url}`;
+};
 
 const isDefect = (type?: string) => type === 'DEFECT_INSPECTION' || type === 'Defect' || type === 'ตรวจ Defect';
 const isConstruction = (type?: string) => type === 'CONSTRUCTION_INSPECTION' || type === 'Construction' || type === 'ตรวจก่อสร้าง';

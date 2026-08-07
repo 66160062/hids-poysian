@@ -77,6 +77,11 @@ const openGoogleMaps = () => {
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
+const getImageUrl = (url?: string) => {
+  if (!url) return '';
+  return url.startsWith('http') || url.startsWith('blob:') ? url : `${apiUrl}${url}`;
+};
+
 const isDefect = (type?: string) => type === 'DEFECT_INSPECTION' || type === 'Defect' || type === 'ตรวจ Defect';
 const isConstruction = (type?: string) => type === 'CONSTRUCTION_INSPECTION' || type === 'Construction' || type === 'ตรวจก่อสร้าง';
 </script>
@@ -88,7 +93,7 @@ const isConstruction = (type?: string) => type === 'CONSTRUCTION_INSPECTION' || 
         <q-img loading="eager"
           :src="
             item.job.projectImageUrl
-              ? `${apiUrl}${item.job.projectImageUrl}`
+              ? getImageUrl(item.job.projectImageUrl)
               : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=300'
           "
           class="col"
