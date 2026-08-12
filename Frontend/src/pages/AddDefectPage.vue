@@ -253,6 +253,7 @@
           :label="step === 1 ? 'ถัดไป' : 'บันทึก'"
           :icon-right="step === 1 ? 'chevron_right' : ''"
           :loading="inspectionStore.isLoading"
+          :disable="isSubmitting"
           class="text-weight-bold"
           style="border-radius: 8px; padding: 8px 24px"
           @click="handleNext"
@@ -390,6 +391,24 @@ const handleBack = () => {
   else router.back();
 };
 
+const isDuplicateDefect = () => {
+  const selectedTypes = [...form.value.defectTypes].sort((a, b) => a - b);
+
+  return inspectionStore.defects.some((d) => {
+    if ((d.room?.roomId ?? null) !== form.value.roomId) return false;
+    if ((d.subRoom?.subRoomId ?? null) !== form.value.subRoomId) return false;
+    if ((d.floor?.floorId ?? null) !== form.value.floorId) return false;
+    if (d.severity !== form.value.severity) return false;
+    if (d.description !== (form.value.note || '-')) return false;
+
+    const existingTypes = d.subCategories.map((s) => s.subCategoryId).sort((a, b) => a - b);
+    if (existingTypes.length !== selectedTypes.length) return false;
+    return existingTypes.every((id, i) => id === selectedTypes[i]);
+  });
+};
+
+const isSubmitting = ref(false);
+
 const handleNext = async () => {
   if (step.value === 1) {
     if (!form.value.roomId) {
@@ -420,6 +439,18 @@ const handleNext = async () => {
     });
     return;
   }
+
+  if (!isEditMode.value && isDuplicateDefect()) {
+    $q.notify({
+      message: 'มีรายการ Defect นี้อยู่แล้วในห้อง/ชั้นเดียวกัน',
+      color: 'negative',
+      icon: 'warning',
+    });
+    return;
+  }
+
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
 
   try {
     const formData = new FormData();
@@ -475,6 +506,8 @@ const handleNext = async () => {
     }
   } catch {
     $q.notify({ message: 'เกิดข้อผิดพลาดในการบันทึก', color: 'negative', icon: 'error' });
+  } finally {
+    isSubmitting.value = false;
   }
 };
 
