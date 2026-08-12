@@ -46,9 +46,7 @@ describe('AuthGuard', () => {
     const context = createContext({ authorization: 'Bearer good-token' });
 
     expect(guard.canActivate(context)).toBe(true);
-    expect(jwtService.verify).toHaveBeenCalledWith('good-token', {
-      secret: 'secretKey',
-    });
+    expect(jwtService.verify).toHaveBeenCalledWith('good-token');
     expect(
       (context.switchToHttp().getRequest() as { user: unknown }).user,
     ).toEqual({ sub: 1, role: 'admin' });
