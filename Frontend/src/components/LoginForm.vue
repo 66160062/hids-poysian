@@ -5,7 +5,14 @@
     </q-card-section>
 
     <q-card-section>
-      <q-input v-model="email" placeholder="อีเมล" outlined dense class="q-mb-md" />
+      <q-input
+        v-model="email"
+        placeholder="อีเมล"
+        outlined
+        dense
+        class="q-mb-md"
+        @keyup.enter="handleLogin"
+      />
 
       <q-input
         v-model="password"
@@ -13,6 +20,7 @@
         placeholder="รหัสผ่าน"
         outlined
         dense
+        @keyup.enter="handleLogin"
       >
         <template v-slot:append>
           <q-icon
@@ -59,6 +67,8 @@ const showPassword = ref(false);
 const errorMessage = ref('');
 
 const handleLogin = async () => {
+  if (!email.value || !password.value || loading.value) return;
+
   loading.value = true;
   errorMessage.value = '';
 
