@@ -50,15 +50,18 @@ export function useDefectList() {
   const allDefectItems = ref<DefectItem[]>([])
   const isLoading = ref(false)
 
-  async function fetchDefects(jobId: number) {
+  async function fetchDefects(jobId: number, linkToken?: string | null) {
     isLoading.value = true
+    const params = linkToken ? { token: linkToken } : {}
     try {
-      const { data: rounds } = await api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`)
+      const { data: rounds } = await api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`, {
+        params,
+      })
 
       const defectLists = await Promise.all(
         rounds.map((round) =>
           api
-            .get<DefectResponse[]>(`/defects/round/${round.roundId}`)
+            .get<DefectResponse[]>(`/defects/round/${round.roundId}`, { params })
             .then((res) => res.data),
         ),
       )

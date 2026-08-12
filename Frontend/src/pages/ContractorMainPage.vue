@@ -147,10 +147,12 @@ import { useContractorRepair } from 'src/stores/useContractormain'
 import { useLinkAccess } from 'src/stores/useLinkAccess'
 
 const route = useRoute()
-const { projectId } = useLinkAccess()
+const { hasLinkAccess, projectId, linkToken } = useLinkAccess()
 const { search, stats, error, filteredRooms, tagColor, fetchRepairData, goToDefectList, goToAllDefects } = useContractorRepair()
 
 function getJobId(): number | null {
+  // ลิงก์ผู้รับเหมาที่ verify แล้วต้องยึด jobId จาก token เสมอ ห้ามให้ query string ทับ
+  if (hasLinkAccess.value) return projectId.value
   const queryJobId = route.query.jobId
   if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId)
   return projectId.value
@@ -159,7 +161,7 @@ function getJobId(): number | null {
 async function loadData() {
   const jobId = getJobId()
   if (!jobId) return
-  await fetchRepairData(jobId)
+  await fetchRepairData(jobId, linkToken.value)
 }
 
 onMounted(loadData)

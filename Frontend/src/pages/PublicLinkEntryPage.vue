@@ -75,10 +75,9 @@ onMounted(async () => {
 
     setAccess(accessPayload, token);
 
-    await router.replace({
-      path: props.redirectPath,
-      query: { jobId: String(projectId) },
-    });
+    // ไม่ใส่ jobId ลง query อีกต่อไป — หน้าปลายทางอ่าน jobId จาก token ที่ verify แล้วใน
+    // useLinkAccess เท่านั้น ป้องกันไม่ให้แก้ URL แล้วสลับไปดูข้อมูลงานอื่นได้
+    await router.replace({ path: props.redirectPath });
   } catch (err) {
     isVerifying.value = false;
     const message =

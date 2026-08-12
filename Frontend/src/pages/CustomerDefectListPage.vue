@@ -154,7 +154,7 @@ const showFilter = ref(false)
 const router    = useRouter()
 const route     = useRoute()
 const activeTab = computed(() => route.path.split('/').pop())
-const { projectId } = useLinkAccess()
+const { hasLinkAccess, projectId, linkToken } = useLinkAccess()
 
 const {
   summary,
@@ -173,6 +173,7 @@ const {
 } = useDefectList()
 
 function getJobId(): number | null {
+  if (hasLinkAccess.value) return projectId.value
   const queryJobId = route.query.jobId
   if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId)
   return projectId.value
@@ -181,7 +182,7 @@ function getJobId(): number | null {
 onMounted(async () => {
   const jobId = getJobId()
   if (!jobId) return
-  await fetchDefects(jobId)
+  await fetchDefects(jobId, linkToken.value)
 })
 </script>
 

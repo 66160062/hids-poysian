@@ -117,10 +117,11 @@ import { useReport } from 'src/stores/useCustomerReport'
 import { useLinkAccess } from 'src/stores/useLinkAccess'
 
 const route = useRoute()
-const { projectId } = useLinkAccess()
+const { hasLinkAccess, projectId, linkToken } = useLinkAccess()
 const { reportSections, fetchReport } = useReport()
 
 function getJobId(): number | null {
+  if (hasLinkAccess.value) return projectId.value
   const queryJobId = route.query.jobId
   if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId)
   return projectId.value
@@ -129,7 +130,7 @@ function getJobId(): number | null {
 onMounted(async () => {
   const jobId = getJobId()
   if (!jobId) return
-  await fetchReport(jobId)
+  await fetchReport(jobId, linkToken.value)
 })
 </script>
 

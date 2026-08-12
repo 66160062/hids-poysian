@@ -53,10 +53,13 @@ export function useReport() {
   const reportSections = reactive<ReportSection[]>([])
   const isLoading = ref(false)
 
-  async function fetchReport(jobId: number) {
+  async function fetchReport(jobId: number, linkToken?: string | null) {
     isLoading.value = true
+    const params = linkToken ? { token: linkToken } : {}
     try {
-      const { data: rounds } = await api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`)
+      const { data: rounds } = await api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`, {
+        params,
+      })
       const latestRound = rounds[rounds.length - 1]
       if (!latestRound) {
         reportSections.splice(0, reportSections.length)
@@ -65,7 +68,10 @@ export function useReport() {
 
       const [{ data: templates }, { data: items }] = await Promise.all([
         api.get<SummaryTemplateResponse[]>('/summary-templates'),
-        api.get<SummaryItemResponse[]>(`/inspection-summary-items/round/${latestRound.roundId}`),
+        api.get<SummaryItemResponse[]>(
+          `/inspection-summary-items/round/${latestRound.roundId}`,
+          { params },
+        ),
       ])
 
       const sectionsMap = new Map<string, ReportItem[]>()

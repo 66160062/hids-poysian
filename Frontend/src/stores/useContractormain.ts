@@ -117,19 +117,22 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
   });
 
   // ── API INTEGRATION ──────────────────────────────────────────────────────
-  const fetchRepairData = async (jobId: number) => {
+  const fetchRepairData = async (jobId: number, linkToken?: string | null) => {
     loading.value = true;
     error.value = null;
     currentJobId.value = jobId;
+    const params = linkToken ? { token: linkToken } : {};
     try {
       const [{ data: job }, { data: roundsData }] = await Promise.all([
-        api.get<JobResponse>(`/inspection-jobs/${jobId}`),
-        api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`),
+        api.get<JobResponse>(`/inspection-jobs/${jobId}`, { params }),
+        api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`, { params }),
       ]);
       contractorId.value = job.contractor?.contractorId ?? null;
       const defectLists = await Promise.all(
         roundsData.map((round) =>
-          api.get<DefectResponse[]>(`/defects/round/${round.roundId}`).then((res) => res.data),
+          api
+            .get<DefectResponse[]>(`/defects/round/${round.roundId}`, { params })
+            .then((res) => res.data),
         ),
       );
       const defects = defectLists.flat();

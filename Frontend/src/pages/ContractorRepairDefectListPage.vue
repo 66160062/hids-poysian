@@ -205,13 +205,15 @@ import FilterChipGroup from 'src/components/FilterChipGroup.vue';
 
 const route = useRoute();
 const router = useRouter();
-const { projectId } = useLinkAccess();
+const { hasLinkAccess, projectId, linkToken } = useLinkAccess();
 
 const store = useContractorRepair();
 const { rooms, allDefectItems, error } = storeToRefs(store); // ✅ storeToRefs สำหรับ state
 const { getDefectsByRoom, fetchRepairData } = store; // ✅ function ใช้ตรงๆ
 
 function getJobId(): number | null {
+  // ลิงก์ผู้รับเหมาที่ verify แล้วต้องยึด jobId จาก token เสมอ ห้ามให้ query string ทับ
+  if (hasLinkAccess.value) return projectId.value;
   const queryJobId = route.query.jobId;
   if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId);
   return projectId.value;
@@ -220,7 +222,7 @@ function getJobId(): number | null {
 async function loadData() {
   const jobId = getJobId();
   if (!jobId) return;
-  await fetchRepairData(jobId);
+  await fetchRepairData(jobId, linkToken.value);
 }
 
 // โหลดข้อมูลเองถ้ายังไม่มีใน store (เช่น เปิดลิงก์ตรงมาที่หน้านี้ ไม่ได้ผ่านหน้า repair-overview มาก่อน)
