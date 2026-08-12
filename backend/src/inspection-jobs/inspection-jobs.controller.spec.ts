@@ -30,9 +30,7 @@ describe('InspectionJobsController', () => {
       ],
     }).compile();
 
-    controller = module.get<InspectionJobsController>(
-      InspectionJobsController,
-    );
+    controller = module.get<InspectionJobsController>(InspectionJobsController);
     service = module.get(InspectionJobsService);
     storage = module.get(StorageService);
   });
@@ -56,13 +54,16 @@ describe('InspectionJobsController', () => {
     storage.uploadImage
       .mockResolvedValueOnce('https://example.com/project.jpg')
       .mockResolvedValueOnce('https://example.com/plan.jpg');
-    const projectImageUrl = [{ buffer: Buffer.from('p') }] as Express.Multer.File[];
-    const housePlanUrl = [{ buffer: Buffer.from('h') }] as Express.Multer.File[];
+    const projectImageUrl = [
+      { buffer: Buffer.from('p') },
+    ] as Express.Multer.File[];
+    const housePlanUrl = [
+      { buffer: Buffer.from('h') },
+    ] as Express.Multer.File[];
 
-    await controller.create(
-      { projectImageUrl, housePlanUrl },
-      { title: 'บ้านเดี่ยว' } as never,
-    );
+    await controller.create({ projectImageUrl, housePlanUrl }, {
+      title: 'บ้านเดี่ยว',
+    } as never);
 
     expect(service.create).toHaveBeenCalledWith({
       title: 'บ้านเดี่ยว',
@@ -72,7 +73,15 @@ describe('InspectionJobsController', () => {
   });
 
   it('treats the "all" status filter as no filter at all', () => {
-    controller.findAll(1, 10, 'all', undefined, undefined, undefined, undefined);
+    controller.findAll(
+      1,
+      10,
+      'all',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    );
 
     expect(service.findAll).toHaveBeenCalledWith(
       1,
@@ -89,7 +98,7 @@ describe('InspectionJobsController', () => {
     controller.findAll(
       undefined,
       undefined,
-      'Active' as never,
+      'Active',
       undefined,
       undefined,
       undefined,
@@ -111,7 +120,9 @@ describe('InspectionJobsController', () => {
     await controller.update(
       '4',
       {},
-      { housePlanUrl: 'https://example.com/old-plan.jpg' } as never,
+      {
+        housePlanUrl: 'https://example.com/old-plan.jpg',
+      },
     );
 
     expect(storage.uploadImage).not.toHaveBeenCalled();

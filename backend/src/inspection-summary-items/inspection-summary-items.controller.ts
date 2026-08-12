@@ -7,10 +7,12 @@ import {
   Param,
   Delete,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { InspectionSummaryItemsService } from './inspection-summary-items.service';
 import { CreateInspectionSummaryItemDto } from './dto/create-inspection-summary-item.dto';
 import { UpdateInspectionSummaryItemDto } from './dto/update-inspection-summary-item.dto';
+import { RoundAccessGuard } from 'src/auth/round-access.guard';
 
 @Controller('inspection-summary-items')
 export class InspectionSummaryItemsController {
@@ -33,6 +35,7 @@ export class InspectionSummaryItemsController {
   }
 
   @Get('round/:roundId')
+  @UseGuards(RoundAccessGuard)
   findByRound(@Param('roundId', ParseIntPipe) roundId: number) {
     return this.inspectionSummaryItemsService.findByRound(roundId);
   }

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -190,6 +191,41 @@ export class AuthService {
       }
     }
 
+    return payload;
+  }
+
+  // ใช้โดย JobAccessGuard/RoundAccessGuard: ลอง verify staff/system JWT (Bearer) ก่อน
+  // ไม่ throw ถ้าไม่มีหรือไม่ผ่าน — เผื่อ caller อยากลอง fallback เป็น link token ต่อ
+  tryVerifyBearerToken(authHeader?: string): Record<string, unknown> | null {
+    if (!authHeader) return null;
+    const token = authHeader.split(' ')[1];
+    if (!token) return null;
+    try {
+      return this.jwtService.verify<Record<string, unknown>>(token);
+    } catch {
+      return null;
+    }
+  }
+
+  // Guard ร่วมสำหรับ endpoint ที่ทั้ง staff (Bearer) และลูกค้า/ผู้รับเหมาที่ถือลิงก์ (?token=)
+  // ต้องเข้าถึงได้ — staff ผ่านได้เสมอ (trust model เดิม), ส่วนเจ้าของลิงก์ต้องมี project_id
+  // ตรงกับ jobId ของ resource ที่ขอมาเท่านั้น ป้องกันการสลับ jobId ใน URL เพื่อดูงานอื่น
+  async verifyJobAccess(
+    authHeader: string | undefined,
+    linkToken: unknown,
+    jobId: number,
+  ): Promise<Record<string, unknown>> {
+    const staffPayload = this.tryVerifyBearerToken(authHeader);
+    if (staffPayload) return staffPayload;
+
+    if (typeof linkToken !== 'string' || !linkToken) {
+      throw new UnauthorizedException('Token not found');
+    }
+
+    const payload = await this.verifyLinkToken(linkToken);
+    if (payload.project_id !== jobId) {
+      throw new ForbiddenException('ลิงก์นี้ไม่มีสิทธิ์เข้าถึงข้อมูลนี้');
+    }
     return payload;
   }
 }

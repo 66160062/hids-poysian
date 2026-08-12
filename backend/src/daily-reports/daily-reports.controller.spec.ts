@@ -1,11 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DailyReportsController } from './daily-reports.controller';
 import { DailyReportsService } from './daily-reports.service';
+import { AuthService } from 'src/auth/auth.service';
 
 describe('DailyReportsController', () => {
   let controller: DailyReportsController;
   let service: jest.Mocked<
-    Pick<DailyReportsService, 'findRoundsByJob' | 'createRound' | 'cloneLatestRound'>
+    Pick<
+      DailyReportsService,
+      'findRoundsByJob' | 'createRound' | 'cloneLatestRound'
+    >
   >;
 
   beforeEach(async () => {
@@ -17,7 +21,10 @@ describe('DailyReportsController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DailyReportsController],
-      providers: [{ provide: DailyReportsService, useValue: serviceMock }],
+      providers: [
+        { provide: DailyReportsService, useValue: serviceMock },
+        { provide: AuthService, useValue: { verifyJobAccess: jest.fn() } },
+      ],
     }).compile();
 
     controller = module.get<DailyReportsController>(DailyReportsController);

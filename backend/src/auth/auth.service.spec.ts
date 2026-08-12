@@ -2,13 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 
 describe('AuthService', () => {
   let service: AuthService;
-  let jwtService: { signAsync: jest.Mock; verifyAsync: jest.Mock };
+  let jwtService: {
+    signAsync: jest.Mock;
+    verifyAsync: jest.Mock;
+    verify: jest.Mock;
+  };
   let jobsRepo: {
     findOneBy: jest.Mock;
     save: jest.Mock;
@@ -18,6 +22,7 @@ describe('AuthService', () => {
     jwtService = {
       signAsync: jest.fn().mockResolvedValue('signed-link-token'),
       verifyAsync: jest.fn(),
+      verify: jest.fn(),
     };
     jobsRepo = {
       findOneBy: jest.fn(),
@@ -172,5 +177,80 @@ describe('AuthService', () => {
         contractorShareToken: null,
       }),
     );
+  });
+
+  describe('tryVerifyBearerToken', () => {
+    it('returns null when no header is present', () => {
+      expect(service.tryVerifyBearerToken(undefined)).toBeNull();
+    });
+
+    it('returns null when the header has no token part', () => {
+      expect(service.tryVerifyBearerToken('Bearer')).toBeNull();
+    });
+
+    it('returns null when the token fails verification', () => {
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('invalid');
+      });
+
+      expect(service.tryVerifyBearerToken('Bearer bad-token')).toBeNull();
+    });
+
+    it('returns the decoded payload for a valid staff token', () => {
+      jwtService.verify.mockReturnValue({ sub: 1, role: 'admin' });
+
+      expect(service.tryVerifyBearerToken('Bearer good-token')).toEqual({
+        sub: 1,
+        role: 'admin',
+      });
+    });
+  });
+
+  describe('verifyJobAccess', () => {
+    it('trusts a valid staff Bearer token regardless of jobId', async () => {
+      jwtService.verify.mockReturnValue({ sub: 1, role: 'admin' });
+
+      await expect(
+        service.verifyJobAccess('Bearer good-token', undefined, 999),
+      ).resolves.toEqual({ sub: 1, role: 'admin' });
+    });
+
+    it('rejects when there is no staff token and no link token', async () => {
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('invalid');
+      });
+
+      await expect(
+        service.verifyJobAccess(undefined, undefined, 12),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('allows a link token whose project_id matches the requested job', async () => {
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('invalid');
+      });
+      jwtService.verifyAsync.mockResolvedValue({
+        project_id: 12,
+        role: 'customer',
+      });
+
+      await expect(
+        service.verifyJobAccess(undefined, 'link-token', 12),
+      ).resolves.toEqual({ project_id: 12, role: 'customer' });
+    });
+
+    it('rejects a link token whose project_id does not match the requested job', async () => {
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('invalid');
+      });
+      jwtService.verifyAsync.mockResolvedValue({
+        project_id: 12,
+        role: 'customer',
+      });
+
+      await expect(
+        service.verifyJobAccess(undefined, 'link-token', 99),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
   });
 });

@@ -22,6 +22,7 @@ import { ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { LinkTokenGuard } from 'src/auth/link-token.guard';
+import { RoundAccessGuard } from 'src/auth/round-access.guard';
 import { StorageService } from 'src/storage/storage.service';
 import { ReportsService } from 'src/reports/reports.service';
 
@@ -63,6 +64,7 @@ export class DefectsController {
   }
 
   @Get('round/:roundId')
+  @UseGuards(RoundAccessGuard)
   findByRound(@Param('roundId', ParseIntPipe) roundId: number) {
     return this.defectsService.findByRound(roundId);
   }

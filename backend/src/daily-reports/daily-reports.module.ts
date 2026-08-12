@@ -11,6 +11,7 @@ import { User } from 'src/users/entities/user.entity';
 import { Defect } from 'src/defects/entities/defect.entity';
 import { DailyReportsController } from './daily-reports.controller';
 import { DailyReportsService } from './daily-reports.service';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { DailyReportsService } from './daily-reports.service';
       InspectionSummaryItem,
       Defect,
     ]),
+    AuthModule,
   ],
   controllers: [DailyReportsController],
   providers: [DailyReportsService],

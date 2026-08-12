@@ -20,10 +20,10 @@ import { ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
 import { InspectionJobStatus } from './enums/inspection-job-status.enum';
 import { AuthService } from 'src/auth/auth.service';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { JobAccessGuard } from 'src/auth/job-access.guard';
 import { StorageService } from 'src/storage/storage.service';
 
 @Controller('inspection-jobs')
-@UseGuards(AuthGuard)
 export class InspectionJobsController {
   constructor(
     private readonly inspectionJobsService: InspectionJobsService,
@@ -32,6 +32,7 @@ export class InspectionJobsController {
   ) {}
 
   @Post()
+  @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'การตรวจใหม่' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ description: 'ข้อมูลการตรวจ', type: CreateInspectionJobDto })
@@ -73,6 +74,7 @@ export class InspectionJobsController {
   }
 
   @Get()
+  @UseGuards(AuthGuard)
   findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
@@ -98,6 +100,7 @@ export class InspectionJobsController {
   }
 
   @Get('statuses/meta')
+  @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'ข้อมูลสถานะงานและจำนวน' })
   getStatusMetadata(
     @Query('search') search?: string,
@@ -112,23 +115,28 @@ export class InspectionJobsController {
   }
 
   @Get(':id/contractor-share')
+  @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'สถานะลิงก์แชร์สำหรับผู้รับเหมา' })
   getContractorShareStatus(@Param('id') id: string) {
     return this.authService.getContractorShareStatus(+id);
   }
 
   @Patch(':id/contractor-share/revoke')
+  @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'ปิดลิงก์แชร์สำหรับผู้รับเหมา' })
   revokeContractorShare(@Param('id') id: string) {
     return this.authService.revokeContractorShare(+id);
   }
 
+  // ทั้ง staff (Bearer) และเจ้าของลิงก์ลูกค้า/ผู้รับเหมา (?token=) เรียกใช้ตัวนี้ร่วมกัน
   @Get(':id')
+  @UseGuards(JobAccessGuard)
   findOne(@Param('id') id: string) {
     return this.inspectionJobsService.findOne(+id);
   }
 
   @Patch(':id')
+  @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'อัปเดตการตรวจ' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ description: 'ข้อมูลการตรวจ', type: UpdateInspectionJobDto })
@@ -171,6 +179,7 @@ export class InspectionJobsController {
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard)
   remove(@Param('id') id: string) {
     return this.inspectionJobsService.remove(+id);
   }

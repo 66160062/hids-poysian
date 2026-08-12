@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DailyReportsService } from './daily-reports.service';
 import { CreateDailyReportDto } from './dto/create-daily-report.dto';
 import { CreateDailyReportRoundDto } from './dto/create-daily-report-round.dto';
+import { JobAccessGuard } from 'src/auth/job-access.guard';
 
 @ApiTags('daily-reports')
 @Controller('daily-reports')
@@ -15,6 +16,7 @@ export class DailyReportsController {
   }
 
   @Get(':id/rounds')
+  @UseGuards(JobAccessGuard)
   @ApiOperation({ summary: 'ดึงรอบการตรวจทั้งหมดของงาน' })
   findRoundsByJob(@Param('id') id: string) {
     return this.dailyReportsService.findRoundsByJob(+id);

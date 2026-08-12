@@ -1,13 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { InspectionRoundsController } from './inspection-rounds.controller';
 import { InspectionRoundsService } from './inspection-rounds.service';
 import { ReportsService } from 'src/reports/reports.service';
+import { AuthService } from 'src/auth/auth.service';
+import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 
 describe('InspectionRoundsController', () => {
   let controller: InspectionRoundsController;
   let service: jest.Mocked<
-    Pick<InspectionRoundsService, 'findByWeek' | 'findByMonth' | 'submit' | 'approveReport'>
+    Pick<
+      InspectionRoundsService,
+      'findByWeek' | 'findByMonth' | 'submit' | 'approveReport'
+    >
   >;
   let reports: jest.Mocked<Pick<ReportsService, 'getCachedReportUrl'>>;
 
@@ -26,6 +32,8 @@ describe('InspectionRoundsController', () => {
         { provide: InspectionRoundsService, useValue: serviceMock },
         { provide: ReportsService, useValue: reportsMock },
         { provide: JwtService, useValue: { verify: jest.fn() } },
+        { provide: AuthService, useValue: { verifyJobAccess: jest.fn() } },
+        { provide: getRepositoryToken(InspectionRound), useValue: {} },
       ],
     }).compile();
 

@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { InspectionSummaryItemsController } from './inspection-summary-items.controller';
 import { InspectionSummaryItemsService } from './inspection-summary-items.service';
+import { AuthService } from 'src/auth/auth.service';
+import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 
 describe('InspectionSummaryItemsController', () => {
   let controller: InspectionSummaryItemsController;
@@ -23,6 +26,8 @@ describe('InspectionSummaryItemsController', () => {
       controllers: [InspectionSummaryItemsController],
       providers: [
         { provide: InspectionSummaryItemsService, useValue: serviceMock },
+        { provide: AuthService, useValue: { verifyJobAccess: jest.fn() } },
+        { provide: getRepositoryToken(InspectionRound), useValue: {} },
       ],
     }).compile();
 

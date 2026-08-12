@@ -6,6 +6,7 @@ import { InspectionSummaryItem } from './entities/inspection-summary-item.entity
 import { SummaryTemplatesModule } from 'src/summary-templates/summary-templates.module';
 import { SummaryTemplateOptionsModule } from 'src/summary-template-options/summary-template-options.module';
 import { InspectionRoundsModule } from 'src/inspection-rounds/inspection-rounds.module';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { InspectionRoundsModule } from 'src/inspection-rounds/inspection-rounds.
     SummaryTemplatesModule,
     SummaryTemplateOptionsModule,
     InspectionRoundsModule,
+    AuthModule,
   ],
   controllers: [InspectionSummaryItemsController],
   providers: [InspectionSummaryItemsService],

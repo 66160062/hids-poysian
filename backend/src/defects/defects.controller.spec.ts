@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { DefectsController } from './defects.controller';
 import { DefectsService } from './defects.service';
 import { StorageService } from 'src/storage/storage.service';
 import { ReportsService } from 'src/reports/reports.service';
 import { AuthService } from 'src/auth/auth.service';
+import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 
 describe('DefectsController', () => {
   let controller: DefectsController;
@@ -24,7 +26,11 @@ describe('DefectsController', () => {
         { provide: DefectsService, useValue: serviceMock },
         { provide: StorageService, useValue: storageMock },
         { provide: ReportsService, useValue: reportsMock },
-        { provide: AuthService, useValue: { verifyLinkToken: jest.fn() } },
+        {
+          provide: AuthService,
+          useValue: { verifyLinkToken: jest.fn(), verifyJobAccess: jest.fn() },
+        },
+        { provide: getRepositoryToken(InspectionRound), useValue: {} },
       ],
     }).compile();
 
@@ -45,7 +51,10 @@ describe('DefectsController', () => {
     defectsService.contractorUpdate.mockResolvedValue({
       round: { roundId: 9 },
     } as never);
-    const file = { buffer: Buffer.from('img'), size: 1234 } as Express.Multer.File;
+    const file = {
+      buffer: Buffer.from('img'),
+      size: 1234,
+    } as Express.Multer.File;
 
     await controller.contractorUpdate(
       file,
@@ -53,7 +62,10 @@ describe('DefectsController', () => {
       { user: { project_id: 12, role: 'contractor' } } as never,
     );
 
-    expect(storageService.uploadImage).toHaveBeenCalledWith(file.buffer, 'defects');
+    expect(storageService.uploadImage).toHaveBeenCalledWith(
+      file.buffer,
+      'defects',
+    );
     expect(defectsService.contractorUpdate).toHaveBeenCalledWith({
       defectId: 7,
       contractorId: 3,
