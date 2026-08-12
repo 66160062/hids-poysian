@@ -3,7 +3,7 @@
     <!-- Header label -->
 
     <div class="q-px-md q-pb-xl">
-      <q-banner
+      <!-- <q-banner
         v-if="hasLinkAccess && isCustomerViewOnly"
         dense
         rounded
@@ -13,7 +13,7 @@
           <q-icon name="visibility" color="primary" />
         </template>
         โหมดดูอย่างเดียว · ลิงก์มีเวลาจำกัด ไม่ต้อง login
-      </q-banner>
+      </q-banner> -->
 
       <!-- div class="text-h5 text-weight-bold text-center q-py-md">ภาพรวม</div> -->
 
@@ -231,7 +231,7 @@
       <q-card flat bordered class="info-card q-mb-xl">
         <q-card-section>
           <div class="section-title q-mb-md">อัพเดตล่าสุด</div>
-          <q-list dense>
+          <q-list v-if="updates.length" dense>
             <q-item v-for="(item, i) in updates" :key="i" class="q-px-none q-py-sm">
               <q-item-section avatar style="min-width: 20px">
                 <q-icon name="circle" :color="item.color" size="10px" />
@@ -245,6 +245,7 @@
               </q-item-section>
             </q-item>
           </q-list>
+          <div v-else class="text-body2 text-grey-6">ยังไม่มีความเคลื่อนไหว</div>
         </q-card-section>
       </q-card>
     </div>
@@ -351,7 +352,10 @@ import { useLinkAccess } from 'src/stores/useLinkAccess';
 import { api } from 'src/boot/axios';
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
 
-const { isCustomerViewOnly, hasLinkAccess, projectId } = useLinkAccess();
+const { isCustomerViewOnly, hasLinkAccess, projectId, linkToken } = useLinkAccess();
+const linkParams = computed(() =>
+  linkToken.value ? { token: linkToken.value } : {},
+);
 const $q = useQuasar();
 
 // ── Defect summary จาก stores ──────────────────────────────────────────
@@ -421,6 +425,10 @@ interface FieldRow {
 }
 
 function getJobId(): number | null {
+  // ลิงก์ลูกค้าที่ verify แล้วต้องยึด jobId จาก token เสมอ ห้ามให้ query string ทับ
+  // (ป้องกันแก้ ?jobId= ใน URL แล้วดูข้อมูลงานอื่น) — fallback ไปที่ query เฉพาะตอนที่ไม่มี
+  // link token เลย (เช่น staff ที่ login ปกติแล้วเปิดหน้านี้เพื่อ preview)
+  if (hasLinkAccess.value) return projectId.value;
   const queryJobId = route.query.jobId;
   if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId);
   return projectId.value;
@@ -516,9 +524,9 @@ async function ensurePdfDataLoaded() {
   $q.loading.show({ message: 'กำลังเตรียมข้อมูลรายงาน...' });
   try {
     const [roundRes, defectsRes, summaryRes] = await Promise.all([
-      api.get(`/inspection-rounds/${roundId}`),
-      api.get(`/defects/round/${roundId}`),
-      api.get(`/inspection-summary-items/round/${roundId}`),
+      api.get(`/inspection-rounds/${roundId}`, { params: linkParams.value }),
+      api.get(`/defects/round/${roundId}`, { params: linkParams.value }),
+      api.get(`/inspection-summary-items/round/${roundId}`, { params: linkParams.value }),
     ]);
     pdfRound.value = roundRes.data;
     pdfDefects.value = defectsRes.data;
@@ -600,35 +608,50 @@ const workflowSteps = computed(() => {
   ];
 });
 
-// ไม่มี endpoint สำหรับ activity log ในระบบปัจจุบัน จึงยังเป็น mock
-const updates = [
-  {
-    color: 'green',
-    title: 'ผู้รับเหมาแก้ไขเพิ่ม 6 รายการแล้ว',
-    sub: 'งานสี: ห้องนั่งเล่น • ห้องนอนชั้น2',
-    date: 'วันนี้',
-  },
-  {
-    color: 'orange',
-    title: 'ส่งรายงาน PDF ให้คุณสมชายแล้ว',
-    sub: 'ครั้งที่ 1 · 132 รายการ',
-    date: 'เมื่อวาน',
-  },
-  { color: 'blue', title: 'รอวิศวกรเข้าตรวจ', sub: 'วันที่ตรวจ : 21 ก.พ. 2569', date: '15 ก.พ.' },
-];
+interface ActivityLogResponse {
+  activityId: number;
+  color: 'green' | 'orange' | 'blue' | 'purple';
+  title: string;
+  sub?: string | null;
+  createdAt: string;
+}
+
+const activityLogs = ref<ActivityLogResponse[]>([]);
+
+function formatUpdateDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diffDays = Math.round((startOfDay(now) - startOfDay(date)) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'วันนี้';
+  if (diffDays === 1) return 'เมื่อวาน';
+  return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+}
+
+const updates = computed(() =>
+  activityLogs.value.map((log) => ({
+    color: log.color,
+    title: log.title,
+    sub: log.sub ?? '',
+    date: formatUpdateDate(log.createdAt),
+  })),
+);
 
 onMounted(async () => {
   const jobId = getJobId();
   if (!jobId) return;
 
-  const [jobRes, roundsRes] = await Promise.all([
-    api.get<JobResponse>(`/inspection-jobs/${jobId}`),
-    api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`),
+  const [jobRes, roundsRes, activityLogsRes] = await Promise.all([
+    api.get<JobResponse>(`/inspection-jobs/${jobId}`, { params: linkParams.value }),
+    api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`, { params: linkParams.value }),
+    api.get<ActivityLogResponse[]>(`/activity-logs/${jobId}`, { params: linkParams.value }),
   ]);
   jobData.value = jobRes.data;
   rounds.value = roundsRes.data;
+  activityLogs.value = activityLogsRes.data;
 
-  await fetchSummary(jobId);
+  await fetchSummary(jobId, linkToken.value);
 });
 </script>
 
