@@ -15,11 +15,11 @@
           <div class="text-caption text-grey-7">หน้า | 1 / {{ totalPages }}</div>
         </div>
 
-        <div class="row justify-center q-py-sm">
-          <img loading="eager" :src="PoysianLogo" style="height: 100px; object-fit: contain" />
+        <div class="row justify-center q-py-xs">
+          <img loading="eager" :src="PoysianLogo" style="height: 70px; object-fit: contain" />
         </div>
 
-        <div class="row justify-center q-mb-md">
+        <div class="row justify-center q-mb-sm">
           <img
             loading="eager"
             :src="
@@ -28,17 +28,11 @@
                 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600',
               )
             "
-            style="
-              width: 95%;
-              max-height: 200px;
-              object-fit: cover;
-              border-radius: 8px;
-              margin-bottom: 16px;
-            "
+            style="width: 95%; max-height: 150px; object-fit: cover; border-radius: 8px"
           />
         </div>
 
-        <div class="row q-col-gutter-md q-px-md q-mb-md">
+        <div class="row q-col-gutter-md q-px-md q-mb-sm">
           <div class="col-6">
             <div class="section-title q-mb-xs">ข้อมูลโครงการ</div>
             <div class="info-box q-pa-sm">
@@ -112,7 +106,7 @@
           </div>
         </div>
 
-        <div class="row q-col-gutter-sm q-px-md q-mb-md">
+        <div class="row q-col-gutter-sm q-px-md q-mb-sm">
           <div v-for="stat in summaryStats" :key="stat.label" class="col-2">
             <div class="text-center q-pa-sm stat-card">
               <div class="text-caption" style="font-size: 10px">
@@ -124,7 +118,7 @@
           </div>
         </div>
 
-        <div class="q-px-md q-mb-md">
+        <div class="q-px-md q-mb-sm">
           <div class="row items-center justify-between q-mb-xs">
             <div class="section-title" style="margin-bottom: 0">จำนวน Defect ตามประเภทงาน</div>
             <div class="mini-legend">
@@ -158,7 +152,7 @@
           </div>
         </div>
 
-        <div class="row q-col-gutter-sm q-px-md q-mb-md">
+        <div class="row q-col-gutter-sm q-px-md q-mb-sm">
           <div class="col-6">
             <div class="section-title q-mb-xs">จำนวน Defect ตามชั้น</div>
             <div class="mini-chart">
@@ -175,7 +169,7 @@
           <div class="col-6">
             <div class="section-title q-mb-xs">สถานะการซ่อม</div>
             <div class="mini-chart donut-panel">
-              <svg viewBox="0 0 42 42" width="100" height="100" class="donut-svg">
+              <svg viewBox="0 0 42 42" width="80" height="80" class="donut-svg">
                 <circle
                   v-for="seg in statusDonutSegments"
                   :key="seg.key"
@@ -798,14 +792,14 @@ const summaryChunks = computed(() => {
   border: 1px solid #e0e0e0;
   border-radius: 4px;
   background: #fafafa;
-  min-height: 85px;
+  min-height: 65px;
 }
 .stat-card {
   border: 1px solid #e0e0e0;
   border-radius: 8px;
 }
 .mini-chart {
-  height: 150px;
+  height: 115px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -813,12 +807,12 @@ const summaryChunks = computed(() => {
   border: 1px solid #e2e6ea;
   border-radius: 4px;
   background: #fafbfc;
-  padding: 10px 6px 6px;
+  padding: 8px 6px 6px;
   overflow: hidden;
 }
 .mini-chart-category {
   height: auto;
-  min-height: 190px;
+  min-height: 150px;
   align-items: flex-start;
   overflow: visible;
 }
@@ -838,7 +832,7 @@ const summaryChunks = computed(() => {
 }
 .mini-bar-track {
   width: 100%;
-  height: 130px;
+  height: 95px;
   display: flex;
   flex-direction: column;
   align-items: center;
