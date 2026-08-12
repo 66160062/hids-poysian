@@ -57,6 +57,8 @@ import { MachineType } from './construction-daily-reports/entities/machine-type.
 import { DailyReportImage } from './construction-daily-reports/entities/daily-report-image.entity';
 import { StorageModule } from './storage/storage.module';
 import { ReportsModule } from './reports/reports.module';
+import { ActivityLogsModule } from './activity-logs/activity-logs.module';
+import { ActivityLog } from './activity-logs/entities/activity-log.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -110,12 +112,14 @@ import { ReportsModule } from './reports/reports.module';
         DailyMachine,
         MachineType,
         DailyReportImage,
+        ActivityLog,
       ],
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),
     }),
     StorageModule,
     ReportsModule,
+    ActivityLogsModule,
     AuthModule,
     UsersModule,
     InspectionJobsModule,

@@ -7,20 +7,35 @@ import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round
 
 import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub-category.entity';
 import { User } from 'src/users/entities/user.entity';
+import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 
 describe('DefectsService', () => {
   let service: DefectsService;
   let defectsRepo: {
     findOneOrFail: jest.Mock;
+    findOne: jest.Mock;
+    create: jest.Mock;
     save: jest.Mock;
+  };
+  let activityLogsService: { log: jest.Mock; logForRound: jest.Mock };
+  let repoMock: {
+    findOneByOrFail: jest.Mock;
+    findBy: jest.Mock;
+    create: jest.Mock;
+    save: jest.Mock;
+    find: jest.Mock;
+    findOneOrFail: jest.Mock;
+    remove: jest.Mock;
   };
 
   beforeEach(async () => {
     defectsRepo = {
       findOneOrFail: jest.fn(),
+      findOne: jest.fn(),
+      create: jest.fn(),
       save: jest.fn(),
     };
-    const repoMock = {
+    repoMock = {
       findOneByOrFail: jest.fn(),
       findBy: jest.fn(),
       create: jest.fn(),
@@ -29,6 +44,7 @@ describe('DefectsService', () => {
       findOneOrFail: jest.fn(),
       remove: jest.fn(),
     };
+    activityLogsService = { log: jest.fn(), logForRound: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -38,6 +54,7 @@ describe('DefectsService', () => {
 
         { provide: getRepositoryToken(DefectSubCategory), useValue: repoMock },
         { provide: getRepositoryToken(User), useValue: repoMock },
+        { provide: ActivityLogsService, useValue: activityLogsService },
       ],
     }).compile();
 
@@ -46,6 +63,35 @@ describe('DefectsService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('logs a DEFECT_CREATED activity with the room/sub-room as the location', async () => {
+    repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7 });
+    repoMock.findBy.mockResolvedValue([]);
+    defectsRepo.create.mockImplementation((value) => value);
+    defectsRepo.save.mockResolvedValue({ defectId: 99 });
+    defectsRepo.findOne.mockResolvedValue({
+      defectId: 99,
+      round: { roundId: 7 },
+      room: { roomName: 'ห้องนั่งเล่น' },
+      subRoom: { roomName: 'ห้องนอนชั้น2' },
+    });
+
+    await service.create({
+      roundId: 7,
+      subCategoryIds: [],
+      inspectorId: 1,
+      roomId: 3,
+      floorId: 1,
+    } as never);
+
+    expect(activityLogsService.logForRound).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({
+        type: 'defect_created',
+        sub: 'ห้องนั่งเล่น • ห้องนอนชั้น2',
+      }),
+    );
   });
 
   it('should update contractor image, note, status, and updatedBy for assigned contractor', async () => {
@@ -83,6 +129,11 @@ describe('DefectsService', () => {
         contractorId: 5,
       },
     });
+    expect(activityLogsService.log).toHaveBeenCalledWith(
+      12,
+      expect.objectContaining({ type: 'defect_repaired' }),
+      undefined,
+    );
   });
 
   it('should reject contractor update when defect belongs to another contractor', async () => {

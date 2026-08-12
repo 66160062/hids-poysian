@@ -8,6 +8,7 @@ import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entit
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Defect } from 'src/defects/entities/defect.entity';
+import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 
 function createQueryRunnerMock() {
   return {
@@ -36,7 +37,13 @@ describe('InspectionRoundsService', () => {
     softRemove: jest.Mock;
     createQueryBuilder: jest.Mock;
   };
-  let jobsRepo: { findOneByOrFail: jest.Mock; find: jest.Mock; save: jest.Mock };
+  let jobsRepo: {
+    findOneByOrFail: jest.Mock;
+    find: jest.Mock;
+    save: jest.Mock;
+  };
+  let defectsRepo: { count: jest.Mock };
+  let activityLogsService: { log: jest.Mock; logForRound: jest.Mock };
   let queryRunner: ReturnType<typeof createQueryRunnerMock>;
   let dataSource: { createQueryRunner: jest.Mock };
 
@@ -51,6 +58,8 @@ describe('InspectionRoundsService', () => {
       createQueryBuilder: jest.fn(),
     };
     jobsRepo = { findOneByOrFail: jest.fn(), find: jest.fn(), save: jest.fn() };
+    defectsRepo = { count: jest.fn().mockResolvedValue(0) };
+    activityLogsService = { log: jest.fn(), logForRound: jest.fn() };
     queryRunner = createQueryRunnerMock();
     dataSource = { createQueryRunner: jest.fn(() => queryRunner) };
 
@@ -61,8 +70,9 @@ describe('InspectionRoundsService', () => {
         { provide: getRepositoryToken(InspectionJob), useValue: jobsRepo },
         { provide: getRepositoryToken(InspectionTeamMember), useValue: {} },
         { provide: getRepositoryToken(User), useValue: {} },
-        { provide: getRepositoryToken(Defect), useValue: {} },
+        { provide: getRepositoryToken(Defect), useValue: defectsRepo },
         { provide: DataSource, useValue: dataSource },
+        { provide: ActivityLogsService, useValue: activityLogsService },
       ],
     }).compile();
 
@@ -96,7 +106,10 @@ describe('InspectionRoundsService', () => {
     });
 
     it('allows creating a new round once the previous one is approved', async () => {
-      jobsRepo.findOneByOrFail.mockResolvedValue({ jobId: 1, status: 'Active' });
+      jobsRepo.findOneByOrFail.mockResolvedValue({
+        jobId: 1,
+        status: 'Active',
+      });
       roundsRepo.findOne.mockResolvedValue({
         status: 'APPROVED',
         roundId: 5,
@@ -108,10 +121,18 @@ describe('InspectionRoundsService', () => {
       expect(queryRunner.startTransaction).toHaveBeenCalled();
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
       expect(result).toMatchObject({ jobId: 1 });
+      expect(activityLogsService.log).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ type: 'round_scheduled' }),
+        undefined,
+      );
     });
 
     it('rolls back the transaction when saving fails', async () => {
-      jobsRepo.findOneByOrFail.mockResolvedValue({ jobId: 1, status: 'Active' });
+      jobsRepo.findOneByOrFail.mockResolvedValue({
+        jobId: 1,
+        status: 'Active',
+      });
       roundsRepo.findOne.mockResolvedValue(null);
       queryRunner.manager.save.mockRejectedValueOnce(new Error('db error'));
 
@@ -141,7 +162,7 @@ describe('InspectionRoundsService', () => {
       roundsRepo.save.mockImplementation((value) => value);
 
       await expect(
-        service.update(1, { status: 'READY' } as never),
+        service.update(1, { status: 'READY' }),
       ).resolves.toMatchObject({ roundId: 1, status: 'READY' });
     });
   });
@@ -177,13 +198,23 @@ describe('InspectionRoundsService', () => {
         roundId: 1,
         inspectedAt: new Date(),
         summaryCompletedAt: null,
-        job: { inspectionType: 'CONSTRUCTION_INSPECTION', status: 'Active' },
+        job: {
+          jobId: 4,
+          inspectionType: 'CONSTRUCTION_INSPECTION',
+          status: 'Active',
+        },
       });
+      defectsRepo.count.mockResolvedValueOnce(3);
 
       const result = await service.submit(1);
 
       expect(result).toMatchObject({ status: 'SUBMITTED' });
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
+      expect(activityLogsService.log).toHaveBeenCalledWith(
+        4,
+        expect.objectContaining({ type: 'round_submitted', sub: '3 รายการ' }),
+        1,
+      );
     });
   });
 
@@ -215,6 +246,11 @@ describe('InspectionRoundsService', () => {
         type: 'REPORT_APPROVED',
         recipientUserId: 9,
       });
+      expect(activityLogsService.log).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ type: 'round_approved' }),
+        1,
+      );
     });
 
     it('marks the job Active when approving round 1', async () => {
@@ -240,6 +276,10 @@ describe('InspectionRoundsService', () => {
       const result = await service.confirmInspection(1);
 
       expect(result.inspectedAt).toBeInstanceOf(Date);
+      expect(activityLogsService.logForRound).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ type: 'round_inspected' }),
+      );
     });
 
     it('stamps summaryCompletedAt on the loaded round', async () => {

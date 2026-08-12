@@ -5,6 +5,7 @@ import { ReportsService } from './reports.service';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { Defect } from 'src/defects/entities/defect.entity';
 import { StorageService } from 'src/storage/storage.service';
+import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import puppeteer from 'puppeteer';
 
 describe('ReportsService', () => {
@@ -13,15 +14,19 @@ describe('ReportsService', () => {
   let defectRepo: { find: jest.Mock };
   let storageService: { uploadPdf: jest.Mock; deleteFile: jest.Mock };
   let jwtService: { sign: jest.Mock };
+  let activityLogsService: { logForRound: jest.Mock };
 
   beforeEach(async () => {
     roundRepo = { findOneBy: jest.fn(), save: jest.fn() };
     defectRepo = { find: jest.fn() };
     storageService = {
-      uploadPdf: jest.fn().mockResolvedValue('https://example.com/reports/new.pdf'),
+      uploadPdf: jest
+        .fn()
+        .mockResolvedValue('https://example.com/reports/new.pdf'),
       deleteFile: jest.fn(),
     };
     jwtService = { sign: jest.fn().mockReturnValue('system-token') };
+    activityLogsService = { logForRound: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -30,6 +35,7 @@ describe('ReportsService', () => {
         { provide: getRepositoryToken(Defect), useValue: defectRepo },
         { provide: StorageService, useValue: storageService },
         { provide: JwtService, useValue: jwtService },
+        { provide: ActivityLogsService, useValue: activityLogsService },
       ],
     }).compile();
 
@@ -118,6 +124,10 @@ describe('ReportsService', () => {
         'https://example.com/reports/old.pdf',
       );
       expect(mockBrowser.close).toHaveBeenCalled();
+      expect(activityLogsService.logForRound).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ type: 'report_pdf_updated' }),
+      );
     });
 
     it('closes the browser even when rendering throws', async () => {
@@ -162,7 +172,7 @@ describe('ReportsService', () => {
       service.scheduleRegeneration(1);
       service.scheduleRegeneration(1);
 
-      jest.advanceTimersByTime(10_000);
+      jest.advanceTimersByTime(30_000);
 
       expect(spy).toHaveBeenCalledTimes(1);
       jest.useRealTimers();

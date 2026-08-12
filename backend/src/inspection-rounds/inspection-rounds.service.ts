@@ -9,6 +9,8 @@ import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entit
 import { User } from 'src/users/entities/user.entity';
 import { Defect, DefectStatus } from 'src/defects/entities/defect.entity';
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
+import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
+import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity';
 @Injectable()
 export class InspectionRoundsService {
   constructor(
@@ -23,7 +25,16 @@ export class InspectionRoundsService {
     @InjectRepository(Defect)
     private readonly defectsRepo: Repository<Defect>,
     private readonly dataSource: DataSource,
+    private readonly activityLogsService: ActivityLogsService,
   ) {}
+
+  private formatThaiDate(date: Date): string {
+    return date.toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
 
   async create(
     createInspectionRoundDto: CreateInspectionRoundDto,
@@ -131,6 +142,20 @@ export class InspectionRoundsService {
       }
 
       await queryRunner.commitTransaction();
+
+      void this.activityLogsService.log(
+        job.jobId,
+        {
+          type: ActivityLogType.ROUND_SCHEDULED,
+          color: 'blue',
+          title: `นัดหมายตรวจรอบที่ ${savedRound.roundNumber}`,
+          sub: savedRound.scheduledDate
+            ? `วันที่ตรวจ: ${this.formatThaiDate(new Date(savedRound.scheduledDate))}`
+            : undefined,
+        },
+        savedRound.roundId,
+      );
+
       return savedRound;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -346,7 +371,15 @@ export class InspectionRoundsService {
       roundId: id,
     });
     round.inspectedAt = new Date();
-    return this.inspectionRoundsRepo.save(round);
+    const saved = await this.inspectionRoundsRepo.save(round);
+
+    void this.activityLogsService.logForRound(id, {
+      type: ActivityLogType.ROUND_INSPECTED,
+      color: 'blue',
+      title: `วิศวกรเข้าตรวจรอบที่ ${saved.roundNumber} เสร็จสิ้น`,
+    });
+
+    return saved;
   }
 
   async confirmSummary(id: number) {
@@ -395,6 +428,23 @@ export class InspectionRoundsService {
 
       const savedRound = await queryRunner.manager.save(round);
       await queryRunner.commitTransaction();
+
+      if (savedRound.job) {
+        const defectCount = await this.defectsRepo.count({
+          where: { round: { roundId: id } },
+        });
+        void this.activityLogsService.log(
+          savedRound.job.jobId,
+          {
+            type: ActivityLogType.ROUND_SUBMITTED,
+            color: 'orange',
+            title: `ส่งรายงานรอบที่ ${savedRound.roundNumber} ให้ลูกค้าตรวจสอบแล้ว`,
+            sub: `${defectCount} รายการ`,
+          },
+          savedRound.roundId,
+        );
+      }
+
       return savedRound;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -435,6 +485,18 @@ export class InspectionRoundsService {
 
       const approvedRound = await queryRunner.manager.save(round);
       await queryRunner.commitTransaction();
+
+      if (approvedRound.job) {
+        void this.activityLogsService.log(
+          approvedRound.job.jobId,
+          {
+            type: ActivityLogType.ROUND_APPROVED,
+            color: 'green',
+            title: `ลูกค้าอนุมัติรายงานรอบที่ ${approvedRound.roundNumber} แล้ว`,
+          },
+          approvedRound.roundId,
+        );
+      }
 
       const notification = this.buildApprovalNotification(approvedRound);
       return {

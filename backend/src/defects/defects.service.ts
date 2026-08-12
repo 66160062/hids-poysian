@@ -11,6 +11,11 @@ import { User } from 'src/users/entities/user.entity';
 import { DefectStatus } from './entities/defect.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
 import { InspectionJobStatus } from 'src/inspection-jobs/enums/inspection-job-status.enum';
+import {
+  ActivityLogsService,
+  LogEntryInput,
+} from 'src/activity-logs/activity-logs.service';
+import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity';
 
 type LinkTokenPayload = {
   project_id: number;
@@ -31,7 +36,23 @@ export class DefectsService {
 
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
+
+    private readonly activityLogsService: ActivityLogsService,
   ) {}
+
+  // ประกอบข้อความ "ห้องนั่งเล่น • ห้องนอนชั้น2" จาก room/subRoom ของ defect ที่ผ่านการ save แล้ว
+  private buildLocationSub(defect: Defect): string | undefined {
+    const parts = [defect.room?.roomName, defect.subRoom?.roomName].filter(
+      (part): part is string => !!part,
+    );
+    return parts.length ? parts.join(' • ') : undefined;
+  }
+
+  private logDefectActivity(defect: Defect, entry: LogEntryInput) {
+    const roundId = defect.round?.roundId;
+    if (!roundId) return;
+    void this.activityLogsService.logForRound(roundId, entry);
+  }
 
   async create(
     createDefectDto: CreateDefectDto & {
@@ -62,7 +83,22 @@ export class DefectsService {
       imageFileSize: createDefectDto.imageFileSize,
     });
 
-    return this.defectsRepo.save(defect);
+    const saved = await this.defectsRepo.save(defect);
+
+    const savedWithLocation = await this.defectsRepo.findOne({
+      where: { defectId: saved.defectId },
+      relations: ['room', 'subRoom', 'round'],
+    });
+    if (savedWithLocation) {
+      this.logDefectActivity(savedWithLocation, {
+        type: ActivityLogType.DEFECT_CREATED,
+        color: 'purple',
+        title: 'พบข้อบกพร่องใหม่',
+        sub: this.buildLocationSub(savedWithLocation),
+      });
+    }
+
+    return saved;
   }
 
   findAll() {
@@ -148,7 +184,13 @@ export class DefectsService {
 
     const defect = await this.defectsRepo.findOneOrFail({
       where: { defectId: contractorUpdateDto.defectId },
-      relations: ['round', 'round.job', 'round.job.contractor'],
+      relations: [
+        'round',
+        'round.job',
+        'round.job.contractor',
+        'room',
+        'subRoom',
+      ],
     });
 
     const job = defect.round?.job;
@@ -185,7 +227,20 @@ export class DefectsService {
         defect.contractorImageFileSize;
     }
 
-    return this.defectsRepo.save(defect);
+    const saved = await this.defectsRepo.save(defect);
+
+    void this.activityLogsService.log(
+      job.jobId,
+      {
+        type: ActivityLogType.DEFECT_REPAIRED,
+        color: 'green',
+        title: 'ผู้รับเหมาแก้ไขข้อบกพร่องแล้ว',
+        sub: this.buildLocationSub(saved),
+      },
+      saved.round?.roundId,
+    );
+
+    return saved;
   }
 
   async remove(id: number) {

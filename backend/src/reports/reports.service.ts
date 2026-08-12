@@ -7,8 +7,10 @@ import puppeteer from 'puppeteer';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { Defect } from 'src/defects/entities/defect.entity';
 import { StorageService } from 'src/storage/storage.service';
+import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
+import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity';
 
-const DEBOUNCE_MS = 10_000;
+const DEBOUNCE_MS = 30_000;
 const REPORT_READY_SELECTOR = '[data-report-ready="true"]';
 
 @Injectable()
@@ -23,6 +25,7 @@ export class ReportsService {
     private readonly defectRepo: Repository<Defect>,
     private readonly storageService: StorageService,
     private readonly jwtService: JwtService,
+    private readonly activityLogsService: ActivityLogsService,
   ) {}
 
   // เรียกจาก defects controller ทุกครั้งที่ defect ในรอบตรวจเปลี่ยน (สร้าง/แก้ไข/ลบ) — fire-and-forget ไม่บล็อก request
@@ -76,6 +79,12 @@ export class ReportsService {
     if (previousUrl && previousUrl !== url) {
       await this.storageService.deleteFile(previousUrl);
     }
+
+    void this.activityLogsService.logForRound(roundId, {
+      type: ActivityLogType.REPORT_PDF_UPDATED,
+      color: 'orange',
+      title: `อัปเดตรายงาน PDF รอบที่ ${round.roundNumber} แล้ว`,
+    });
 
     return url;
   }
