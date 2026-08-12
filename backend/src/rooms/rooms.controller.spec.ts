@@ -4,10 +4,16 @@ import { RoomsService } from './rooms.service';
 
 describe('RoomsController', () => {
   let controller: RoomsController;
-  let service: jest.Mocked<Pick<RoomsService, 'findOne' | 'remove'>>;
+  let service: jest.Mocked<Pick<RoomsService, 'findOne' | 'remove' | 'create' | 'findAll' | 'update'>>;
 
   beforeEach(async () => {
-    const serviceMock = { findOne: jest.fn(), remove: jest.fn() };
+    const serviceMock = {
+      findOne: jest.fn(),
+      remove: jest.fn(),
+      create: jest.fn(),
+      findAll: jest.fn(),
+      update: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RoomsController],
@@ -26,5 +32,36 @@ describe('RoomsController', () => {
     controller.findOne('3');
 
     expect(service.findOne).toHaveBeenCalledWith(3);
+  });
+
+  it('passes the create dto straight through to the service', () => {
+    const dto = { roomName: 'ห้องนอน' } as never;
+
+    controller.create(dto);
+
+    expect(service.create).toHaveBeenCalledWith(dto);
+  });
+
+  it('findAll(): should call service.findAll() without arguments', () => {
+    controller.findAll();
+    
+    expect(service.findAll).toHaveBeenCalled();
+  });
+
+  it('update(): should call service.update() with correct parameters', () => {
+    const id = '5';
+    const dto = { roomName: 'ห้องครัว' } as never;
+
+    controller.update(id, dto);
+
+    expect(service.update).toHaveBeenCalledWith(5, dto);
+  });
+
+  it('remove(): should call service.remove() with correct parameter', () => {
+    const id = '5';
+
+    controller.remove(id);
+
+    expect(service.remove).toHaveBeenCalledWith(5);
   });
 });
