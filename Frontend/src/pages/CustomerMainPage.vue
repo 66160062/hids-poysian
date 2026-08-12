@@ -585,7 +585,7 @@ const workflowSteps = computed(() => {
     {
       icon: 'build',
       label: 'ซ่อมแซม',
-      status: isRepairDone ? 'done' : totalDefects.value > 0 ? 'active' : 'pending',
+      status: !isSubmitted ? 'pending' : isRepairDone ? 'done' : 'active',
     },
     {
       icon: 'search',
