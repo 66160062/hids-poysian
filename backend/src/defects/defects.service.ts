@@ -8,6 +8,8 @@ import { ContractorUpdateDefectDto } from './dto/contractor-update-defect.dto';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub-category.entity';
 import { User } from 'src/users/entities/user.entity';
+import { Room } from 'src/rooms/entities/room.entity';
+import { SubRoom } from 'src/sub-rooms/entities/sub-room.entity';
 import { DefectStatus } from './entities/defect.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
 import { InspectionJobStatus } from 'src/inspection-jobs/enums/inspection-job-status.enum';
@@ -37,6 +39,12 @@ export class DefectsService {
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
 
+    @InjectRepository(Room)
+    private readonly roomsRepo: Repository<Room>,
+
+    @InjectRepository(SubRoom)
+    private readonly subRoomsRepo: Repository<SubRoom>,
+
     private readonly activityLogsService: ActivityLogsService,
   ) {}
 
@@ -60,24 +68,32 @@ export class DefectsService {
       imageFileSize?: number;
     },
   ) {
-    const round = await this.roundsRepo.findOneByOrFail({
-      roundId: createDefectDto.roundId,
-    });
-    const subCategories = await this.subCategoriesRepo.findBy({
-      subCategoryId: In(createDefectDto.subCategoryIds),
-    });
-    const inspector = await this.usersRepo.findOneByOrFail({
-      id: createDefectDto.inspectorId,
-    });
+    const [round, subCategories, inspector, room, subRoom] = await Promise.all([
+      this.roundsRepo.findOneByOrFail({
+        roundId: createDefectDto.roundId,
+      }),
+      this.subCategoriesRepo.findBy({
+        subCategoryId: In(createDefectDto.subCategoryIds),
+      }),
+      this.usersRepo.findOneByOrFail({
+        id: createDefectDto.inspectorId,
+      }),
+      this.roomsRepo.findOneByOrFail({
+        roomId: createDefectDto.roomId,
+      }),
+      createDefectDto.subRoomId
+        ? this.subRoomsRepo.findOneBy({
+            subRoomId: createDefectDto.subRoomId,
+          })
+        : Promise.resolve(null),
+    ]);
 
     const defect = this.defectsRepo.create({
       ...createDefectDto,
       round,
-      room: { roomId: createDefectDto.roomId },
+      room,
       floor: { floorId: createDefectDto.floorId },
-      subRoom: createDefectDto.subRoomId
-        ? { subRoomId: createDefectDto.subRoomId }
-        : null,
+      subRoom,
       subCategories,
       inspector,
       imageFileSize: createDefectDto.imageFileSize,
@@ -85,18 +101,12 @@ export class DefectsService {
 
     const saved = await this.defectsRepo.save(defect);
 
-    const savedWithLocation = await this.defectsRepo.findOne({
-      where: { defectId: saved.defectId },
-      relations: ['room', 'subRoom', 'round'],
+    this.logDefectActivity(saved, {
+      type: ActivityLogType.DEFECT_CREATED,
+      color: 'purple',
+      title: 'พบข้อบกพร่องใหม่',
+      sub: this.buildLocationSub(saved),
     });
-    if (savedWithLocation) {
-      this.logDefectActivity(savedWithLocation, {
-        type: ActivityLogType.DEFECT_CREATED,
-        color: 'purple',
-        title: 'พบข้อบกพร่องใหม่',
-        sub: this.buildLocationSub(savedWithLocation),
-      });
-    }
 
     return saved;
   }

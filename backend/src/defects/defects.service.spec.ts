@@ -7,6 +7,8 @@ import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round
 
 import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub-category.entity';
 import { User } from 'src/users/entities/user.entity';
+import { Room } from 'src/rooms/entities/room.entity';
+import { SubRoom } from 'src/sub-rooms/entities/sub-room.entity';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 
 describe('DefectsService', () => {
@@ -27,6 +29,8 @@ describe('DefectsService', () => {
     findOneOrFail: jest.Mock;
     remove: jest.Mock;
   };
+  let roomsRepo: { findOneByOrFail: jest.Mock };
+  let subRoomsRepo: { findOneBy: jest.Mock };
 
   beforeEach(async () => {
     defectsRepo = {
@@ -44,6 +48,8 @@ describe('DefectsService', () => {
       findOneOrFail: jest.fn(),
       remove: jest.fn(),
     };
+    roomsRepo = { findOneByOrFail: jest.fn() };
+    subRoomsRepo = { findOneBy: jest.fn() };
     activityLogsService = { log: jest.fn(), logForRound: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -54,6 +60,8 @@ describe('DefectsService', () => {
 
         { provide: getRepositoryToken(DefectSubCategory), useValue: repoMock },
         { provide: getRepositoryToken(User), useValue: repoMock },
+        { provide: getRepositoryToken(Room), useValue: roomsRepo },
+        { provide: getRepositoryToken(SubRoom), useValue: subRoomsRepo },
         { provide: ActivityLogsService, useValue: activityLogsService },
       ],
     }).compile();
@@ -68,14 +76,50 @@ describe('DefectsService', () => {
   it('logs a DEFECT_CREATED activity with the room/sub-room as the location', async () => {
     repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7 });
     repoMock.findBy.mockResolvedValue([]);
-    defectsRepo.create.mockImplementation((value) => value);
-    defectsRepo.save.mockResolvedValue({ defectId: 99 });
-    defectsRepo.findOne.mockResolvedValue({
-      defectId: 99,
-      round: { roundId: 7 },
-      room: { roomName: 'ห้องนั่งเล่น' },
-      subRoom: { roomName: 'ห้องนอนชั้น2' },
+    roomsRepo.findOneByOrFail.mockResolvedValue({
+      roomId: 3,
+      roomName: 'ห้องนั่งเล่น',
     });
+    subRoomsRepo.findOneBy.mockResolvedValue({
+      subRoomId: 5,
+      roomName: 'ห้องนอนชั้น2',
+    });
+    defectsRepo.create.mockImplementation((value) => value);
+    defectsRepo.save.mockImplementation((value) => ({
+      ...value,
+      defectId: 99,
+    }));
+
+    await service.create({
+      roundId: 7,
+      subCategoryIds: [],
+      inspectorId: 1,
+      roomId: 3,
+      subRoomId: 5,
+      floorId: 1,
+    } as never);
+
+    expect(activityLogsService.logForRound).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({
+        type: 'defect_created',
+        sub: 'ห้องนั่งเล่น • ห้องนอนชั้น2',
+      }),
+    );
+  });
+
+  it('skips the sub-room lookup and location segment when no sub-room is given', async () => {
+    repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7 });
+    repoMock.findBy.mockResolvedValue([]);
+    roomsRepo.findOneByOrFail.mockResolvedValue({
+      roomId: 3,
+      roomName: 'ห้องนั่งเล่น',
+    });
+    defectsRepo.create.mockImplementation((value) => value);
+    defectsRepo.save.mockImplementation((value) => ({
+      ...value,
+      defectId: 99,
+    }));
 
     await service.create({
       roundId: 7,
@@ -85,11 +129,12 @@ describe('DefectsService', () => {
       floorId: 1,
     } as never);
 
+    expect(subRoomsRepo.findOneBy).not.toHaveBeenCalled();
     expect(activityLogsService.logForRound).toHaveBeenCalledWith(
       7,
       expect.objectContaining({
         type: 'defect_created',
-        sub: 'ห้องนั่งเล่น • ห้องนอนชั้น2',
+        sub: 'ห้องนั่งเล่น',
       }),
     );
   });
