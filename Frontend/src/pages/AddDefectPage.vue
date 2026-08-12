@@ -391,20 +391,53 @@ const handleBack = () => {
   else router.back();
 };
 
+// defect ที่กด "บันทึก" ไปแล้วแต่ยังบันทึกลงหลังบ้านไม่เสร็จ (fire-and-forget)
+// เก็บไว้เช็คซ้ำกันเอง เพราะ inspectionStore.defects ยังไม่ได้อัปเดตจนกว่า fetchDefects จะเสร็จ
+interface PendingDefect {
+  roomId: number | null;
+  subRoomId: number | null;
+  floorId: number | null;
+  severity: string;
+  note: string;
+  types: number[];
+}
+const pendingDefects = ref<PendingDefect[]>([]);
+
 const isDuplicateDefect = () => {
   const selectedTypes = [...form.value.defectTypes].sort((a, b) => a - b);
 
-  return inspectionStore.defects.some((d) => {
-    if ((d.room?.roomId ?? null) !== form.value.roomId) return false;
-    if ((d.subRoom?.subRoomId ?? null) !== form.value.subRoomId) return false;
-    if ((d.floor?.floorId ?? null) !== form.value.floorId) return false;
-    if (d.severity !== form.value.severity) return false;
-    if (d.description !== (form.value.note || '-')) return false;
+  const matchesCurrentForm = (
+    roomId: number | null,
+    subRoomId: number | null,
+    floorId: number | null,
+    severity: string,
+    note: string,
+    types: number[],
+  ) => {
+    if (roomId !== form.value.roomId) return false;
+    if (subRoomId !== form.value.subRoomId) return false;
+    if (floorId !== form.value.floorId) return false;
+    if (severity !== form.value.severity) return false;
+    if (note !== (form.value.note || '-')) return false;
+    if (types.length !== selectedTypes.length) return false;
+    return types.every((id, i) => id === selectedTypes[i]);
+  };
 
-    const existingTypes = d.subCategories.map((s) => s.subCategoryId).sort((a, b) => a - b);
-    if (existingTypes.length !== selectedTypes.length) return false;
-    return existingTypes.every((id, i) => id === selectedTypes[i]);
-  });
+  const duplicateInStore = inspectionStore.defects.some((d) =>
+    matchesCurrentForm(
+      d.room?.roomId ?? null,
+      d.subRoom?.subRoomId ?? null,
+      d.floor?.floorId ?? null,
+      d.severity,
+      d.description,
+      d.subCategories.map((s) => s.subCategoryId).sort((a, b) => a - b),
+    ),
+  );
+  if (duplicateInStore) return true;
+
+  return pendingDefects.value.some((p) =>
+    matchesCurrentForm(p.roomId, p.subRoomId, p.floorId, p.severity, p.note, [...p.types].sort((a, b) => a - b)),
+  );
 };
 
 const isSubmitting = ref(false);
@@ -449,37 +482,36 @@ const handleNext = async () => {
     return;
   }
 
-  if (isSubmitting.value) return;
-  isSubmitting.value = true;
+  const formData = new FormData();
+  formData.append('roundId', String(roundId));
+  formData.append('roomId', String(form.value.roomId));
+  if (form.value.subRoomId) {
+    formData.append('subRoomId', String(form.value.subRoomId));
+  }
+  formData.append('floorId', String(form.value.floorId));
+  formData.append('inspectorId', '1'); // TODO: ดึงจาก auth store
+  formData.append('severity', form.value.severity);
+  formData.append('description', form.value.note || '-');
 
-  try {
-    const formData = new FormData();
-    formData.append('roundId', String(roundId));
-    formData.append('roomId', String(form.value.roomId));
-    if (form.value.subRoomId) {
-      formData.append('subRoomId', String(form.value.subRoomId));
-    }
-    formData.append('floorId', String(form.value.floorId));
-    formData.append('inspectorId', '1'); // TODO: ดึงจาก auth store
-    formData.append('severity', form.value.severity);
-    formData.append('description', form.value.note || '-');
+  if (!isEditMode.value) {
+    formData.append('status', 'pending_repair');
+  } else if (actionFromQuery === 'fail') {
+    formData.append('status', 'pending_repair');
+  }
 
-    if (!isEditMode.value) {
-      formData.append('status', 'pending_repair');
-    } else if (actionFromQuery === 'fail') {
-      formData.append('status', 'pending_repair');
-    }
+  // ส่ง subCategoryIds[] ทุกตัวที่เลือก
+  form.value.defectTypes.forEach((id) => {
+    formData.append('subCategoryIds', String(id));
+  });
 
-    // ส่ง subCategoryIds[] ทุกตัวที่เลือก
-    form.value.defectTypes.forEach((id) => {
-      formData.append('subCategoryIds', String(id));
-    });
+  if (selectedFile.value) {
+    formData.append('file', selectedFile.value);
+  }
 
-    if (selectedFile.value) {
-      formData.append('file', selectedFile.value);
-    }
-
-    if (isEditMode.value) {
+  if (isEditMode.value) {
+    if (isSubmitting.value) return;
+    isSubmitting.value = true;
+    try {
       await inspectionStore.updateDefect(Number(defectIdFromQuery), formData);
       await inspectionStore.fetchDefects(roundId);
       $q.notify({
@@ -489,26 +521,47 @@ const handleNext = async () => {
         timeout: 1500,
       });
       router.back();
-    } else {
+    } catch {
+      $q.notify({ message: 'เกิดข้อผิดพลาดในการบันทึก', color: 'negative', icon: 'error' });
+    } finally {
+      isSubmitting.value = false;
+    }
+    return;
+  }
+
+  // สร้างใหม่: เช็คเงื่อนไขผ่านแล้วเคลียร์ฟอร์มให้กรอกตัวถัดไปได้ทันที
+  // ส่วนการบันทึกลงหลังบ้านให้ทำงานต่อเบื้องหลังโดยไม่บล็อก UI
+  const pending: PendingDefect = {
+    roomId: form.value.roomId,
+    subRoomId: form.value.subRoomId,
+    floorId: form.value.floorId,
+    severity: form.value.severity,
+    note: form.value.note || '-',
+    types: [...form.value.defectTypes],
+  };
+  pendingDefects.value.push(pending);
+
+  imagePreview.value = null;
+  selectedFile.value = null;
+  step.value = 2;
+
+  void (async () => {
+    try {
       await inspectionStore.saveDefect(formData);
       await inspectionStore.fetchDefects(roundId);
-
-      imagePreview.value = null;
-      selectedFile.value = null;
-      step.value = 2;
-
       $q.notify({
         message: 'บันทึกข้อมูลสำเร็จ!',
         color: 'positive',
         icon: 'check_circle',
         timeout: 1500,
       });
+    } catch {
+      $q.notify({ message: 'เกิดข้อผิดพลาดในการบันทึก', color: 'negative', icon: 'error' });
+    } finally {
+      const idx = pendingDefects.value.indexOf(pending);
+      if (idx !== -1) pendingDefects.value.splice(idx, 1);
     }
-  } catch {
-    $q.notify({ message: 'เกิดข้อผิดพลาดในการบันทึก', color: 'negative', icon: 'error' });
-  } finally {
-    isSubmitting.value = false;
-  }
+  })();
 };
 
 const handleDelete = () => {
