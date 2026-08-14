@@ -249,7 +249,7 @@
       </q-card>
     </div>
     <q-btn
-      v-if="!(hasLinkAccess && isCustomerViewOnly)"
+      v-if="hasLinkAccess && isCustomerViewOnly"
       color="primary"
       icon="star"
       label="รีวิวและให้คะแนน"
