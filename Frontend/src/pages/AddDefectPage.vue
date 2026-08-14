@@ -22,7 +22,26 @@
         @click="handleDelete"
         style="z-index: 10"
       />
-      <q-img v-if="imagePreview" :src="imagePreview" class="fit" fit="cover" />
+      <template v-if="imagePreview">
+        <q-img
+          :src="imagePreview"
+          class="fit"
+          fit="cover"
+          style="cursor: pointer"
+          @click="annotationDialog = true"
+        />
+        <q-btn
+          round
+          dense
+          color="white"
+          text-color="primary"
+          icon="edit"
+          size="sm"
+          class="absolute-bottom-left q-mb-md q-ml-sm shadow-1"
+          style="z-index: 10"
+          @click="annotationDialog = true"
+        />
+      </template>
       <div v-else class="column items-center text-grey-5">
         <q-icon name="image" size="80px" color="grey-4" />
         <div class="text-subtitle1 text-weight-medium q-mt-sm">ไม่มีรูปภาพ</div>
@@ -50,6 +69,13 @@
         @change="onFileSelected"
       />
     </div>
+
+    <ImageAnnotationDialog
+      v-if="imagePreview"
+      v-model="annotationDialog"
+      :image-src="imagePreview"
+      @save="onAnnotationSave"
+    />
 
     <div
       class="bg-white col q-pa-lg flex column shadow-up-2"
@@ -269,6 +295,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useInspectionStore } from 'src/stores/useInspection';
 import { api } from 'src/boot/axios';
 import { useQuasar } from 'quasar';
+import ImageAnnotationDialog from 'src/components/ImageAnnotationDialog.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -370,6 +397,7 @@ const imagePreview = ref<string | null>(null);
 const selectedFile = ref<File | null>(null);
 const galleryInput = ref<HTMLInputElement | null>(null);
 const cameraInput = ref<HTMLInputElement | null>(null);
+const annotationDialog = ref(false);
 
 const triggerGallery = () => galleryInput.value?.click();
 const triggerCamera = () => cameraInput.value?.click();
@@ -382,6 +410,15 @@ const onFileSelected = (event: Event) => {
     imagePreview.value = URL.createObjectURL(file);
   }
   target.value = '';
+};
+
+const onAnnotationSave = (file: File, previewUrl: string) => {
+  const oldPreview = imagePreview.value;
+  selectedFile.value = file;
+  imagePreview.value = previewUrl;
+  if (oldPreview?.startsWith('blob:')) {
+    URL.revokeObjectURL(oldPreview);
+  }
 };
 
 // ── Navigation & Submit ───────────────────────────────────────
