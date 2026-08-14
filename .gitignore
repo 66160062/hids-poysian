@@ -8,3 +8,5 @@ AI_CONTEXT.md
 skills-lock.json
 CLAUDE.md
 CHANGELOG.md
+node_modules/
+*/node_modules/
