@@ -11,6 +11,7 @@ import { InspectionJobsModule } from 'src/inspection-jobs/inspection-jobs.module
 import { InspectionTeamMembersModule } from 'src/inspection-team-members/inspection-team-members.module';
 import { UsersModule } from 'src/users/users.module';
 import { AuthModule } from 'src/auth/auth.module';
+import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AuthModule } from 'src/auth/auth.module';
     InspectionTeamMembersModule,
     UsersModule,
     AuthModule,
+    MailModule,
   ],
   controllers: [InspectionRoundsController, ProjectApprovalController],
   providers: [InspectionRoundsService],

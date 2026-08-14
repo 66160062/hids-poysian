@@ -11,6 +11,7 @@ import { Defect, DefectStatus } from 'src/defects/entities/defect.entity';
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity';
+import { MailService } from 'src/mail/mail.service';
 @Injectable()
 export class InspectionRoundsService {
   constructor(
@@ -26,6 +27,7 @@ export class InspectionRoundsService {
     private readonly defectsRepo: Repository<Defect>,
     private readonly dataSource: DataSource,
     private readonly activityLogsService: ActivityLogsService,
+    private readonly mailService: MailService,
   ) {}
 
   private formatThaiDate(date: Date): string {
@@ -459,7 +461,12 @@ export class InspectionRoundsService {
   ): Promise<{ data: InspectionRound; notification: any }> {
     const round = await this.inspectionRoundsRepo.findOneOrFail({
       where: { roundId: id },
-      relations: ['job', 'teamMembers', 'teamMembers.inspector'],
+      relations: [
+        'job',
+        'job.customer',
+        'teamMembers',
+        'teamMembers.inspector',
+      ],
     });
 
     if (round.status !== 'SUBMITTED') {
@@ -496,6 +503,17 @@ export class InspectionRoundsService {
           },
           approvedRound.roundId,
         );
+      }
+
+      if (approvedRound.job?.customer?.email) {
+        void this.mailService.sendRoundApprovedEmail({
+          to: approvedRound.job.customer.email,
+          customerName: approvedRound.job.customer.fullName,
+          jobTitle: approvedRound.job.projectName,
+          roundNumber: approvedRound.roundNumber,
+          pdfUrl: approvedRound.lastPdfUrl,
+          portalUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:9000'}/customer/report`,
+        });
       }
 
       const notification = this.buildApprovalNotification(approvedRound);
