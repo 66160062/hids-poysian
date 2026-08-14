@@ -43,9 +43,9 @@
           label="ส่งรีวิว"
           color="primary"
           class="col"
+          :disable="form.rating === 0"
           :loading="isSubmitting"
-          :disable="form.rating === 0 || isSubmitting"
-          @click="submit"
+          @click="submitRating"
         />
       </q-card-actions>
 
@@ -54,26 +54,15 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue';
-import { useQuasar } from 'quasar';
-import { api } from 'src/boot/axios';
-import StarRating from 'src/components/StarRating.vue';
+import { ref, computed } from 'vue'
+import { useQuasar } from 'quasar'
+import { api } from 'src/boot/axios'
+import { useLinkAccess } from 'src/stores/useLinkAccess'
 
-const dialog = defineModel<boolean>({ default: false });
-
-const props = defineProps<{
-  jobId?: number | null;
-  roundId?: number | null;
-  defectId?: number | null;
-}>();
-
-const emit = defineEmits<{
-  submitted: [];
-  closed: [];
-}>();
-
-const $q = useQuasar();
-const isSubmitting = ref(false);
+const dialog = defineModel<boolean>({ default: false })
+const $q = useQuasar()
+const { linkToken } = useLinkAccess()
+const isSubmitting = ref(false)
 
 const form = reactive({
   rating: 0,
@@ -108,5 +97,37 @@ const submit = async () => {
   } finally {
     isSubmitting.value = false;
   }
-};
+  return labels[form.value.rating] ?? 'เลือกคะแนน'
+})
+
+const submitRating = async () => {
+  if (!linkToken.value || isSubmitting.value) return
+
+  isSubmitting.value = true
+  try {
+    await api.post('/ratings', {
+      score: form.value.rating,
+      comment: form.value.comment,
+      token: linkToken.value,
+    })
+    $q.notify({ type: 'positive', message: 'ขอบคุณสำหรับคำแนะนำ' })
+    form.value = { rating: 0, comment: '' }
+    dialog.value = false
+  } catch (error) {
+    console.error('Unable to submit rating:', error)
+    const isDuplicate =
+      typeof error === 'object' &&
+      error !== null &&
+      'response' in error &&
+      (error as { response?: { status?: number } }).response?.status === 409
+    $q.notify({
+      type: 'negative',
+      message: isDuplicate
+        ? 'ลิงก์นี้ส่งรีวิวไปแล้ว'
+        : 'ไม่สามารถส่งรีวิวได้ กรุณาลองใหม่',
+    })
+  } finally {
+    isSubmitting.value = false
+  }
+}
 </script>
