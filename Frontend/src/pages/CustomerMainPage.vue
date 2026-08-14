@@ -258,7 +258,11 @@
       size="md"
       @click="review"
     />
-    <ReviewDialog v-model="dialog" />
+    <ReviewDialog
+      v-model="dialog"
+      :job-id="currentJobId"
+      :round-id="latestRound?.roundId ?? null"
+    />
 
     <!-- Export by Category Dialog -->
     <q-dialog v-model="showCategoryDialog" position="bottom">
@@ -425,6 +429,8 @@ function getJobId(): number | null {
   if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId);
   return projectId.value;
 }
+
+const currentJobId = computed(() => getJobId());
 
 const projectFields = computed<FieldRow[]>(() => {
   const job = jobData.value;
