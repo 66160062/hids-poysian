@@ -12,7 +12,7 @@ export class LinkTokenGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const token = request.query?.token;
+    const token = request.query?.token ?? request.body?.token;
 
     if (typeof token !== 'string' || !token) {
       throw new UnauthorizedException('Token not found');

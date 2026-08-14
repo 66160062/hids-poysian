@@ -53,7 +53,8 @@
           color="primary"
           class="col"
           :disable="form.rating === 0"
-          @click="submit"
+          :loading="isSubmitting"
+          @click="submitRating"
         />
       </q-card-actions>
 
@@ -63,8 +64,14 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useQuasar } from 'quasar'
+import { api } from 'src/boot/axios'
+import { useLinkAccess } from 'src/stores/useLinkAccess'
 
 const dialog = defineModel<boolean>({ default: false })
+const $q = useQuasar()
+const { linkToken } = useLinkAccess()
+const isSubmitting = ref(false)
 
 const form = ref({
   rating:  0,
@@ -82,13 +89,34 @@ const ratingLabel = computed(() => {
   return labels[form.value.rating] ?? 'เลือกคะแนน'
 })
 
-const submit = () => {
-  // TODO: เชื่อม API POST /api/reviews
-  // await fetch('/api/reviews', {
-  //   method: 'POST',
-  //   body: JSON.stringify({ jobId, rating: form.value.rating, comment: form.value.comment })
-  // })
-  console.log('submit review:', form.value)
-  dialog.value = false
+const submitRating = async () => {
+  if (!linkToken.value || isSubmitting.value) return
+
+  isSubmitting.value = true
+  try {
+    await api.post('/ratings', {
+      score: form.value.rating,
+      comment: form.value.comment,
+      token: linkToken.value,
+    })
+    $q.notify({ type: 'positive', message: 'ขอบคุณสำหรับคำแนะนำ' })
+    form.value = { rating: 0, comment: '' }
+    dialog.value = false
+  } catch (error) {
+    console.error('Unable to submit rating:', error)
+    const isDuplicate =
+      typeof error === 'object' &&
+      error !== null &&
+      'response' in error &&
+      (error as { response?: { status?: number } }).response?.status === 409
+    $q.notify({
+      type: 'negative',
+      message: isDuplicate
+        ? 'ลิงก์นี้ส่งรีวิวไปแล้ว'
+        : 'ไม่สามารถส่งรีวิวได้ กรุณาลองใหม่',
+    })
+  } finally {
+    isSubmitting.value = false
+  }
 }
 </script>

@@ -27,6 +27,10 @@ const props = defineProps<{
 const route = useRoute();
 const router = useRouter();
 const { setAccess } = useLinkAccess();
+const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(
+  /\/+$/,
+  '',
+);
 
 const isVerifying = ref(true);
 const errorMessage = ref('');
@@ -53,7 +57,7 @@ onMounted(async () => {
     const { data } = await axios.get<{
       valid: boolean;
       payload: { project_id: number; role: string; exp?: number };
-    }>(`${import.meta.env.VITE_API_URL}/auth/verify-link`, {
+    }>(`${apiBaseUrl}/auth/verify-link`, {
       params: { token },
     });
 
