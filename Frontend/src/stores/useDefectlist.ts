@@ -5,6 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL as string
 
 // ── Types ────────────────────────────────────────────────────────────────────
 export interface DefectItem {
+  defectId:      number
   image:         string
   location:      string
   jobType:       string
@@ -77,6 +78,7 @@ export function useDefectList() {
         const floorLabel = defect.floor?.label ? `ชั้น${defect.floor.label}` : '-'
 
         return {
+          defectId: defect.defectId,
           image: defect.imageUrl
             ? defect.imageUrl.startsWith('http')
               ? defect.imageUrl

@@ -34,6 +34,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/CustomerReportPage.vue'),
         meta: { title: 'สรุปรายงาน' },
       },
+      {
+        path: 'defect-detail/:id',
+        name: 'customerDefectDetail',
+        component: () => import('pages/ContractorUpdateRepairPage.vue'),
+        meta: { title: 'รายละเอียด Defect' },
+      },
     ],
   },
   {
