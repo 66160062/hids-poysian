@@ -3,7 +3,7 @@ import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InspectionRound } from './entities/inspection-round.entity';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, Not } from 'typeorm';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { User } from 'src/users/entities/user.entity';
@@ -125,7 +125,10 @@ export class InspectionRoundsService {
         }
 
         const latestDefects = await queryRunner.manager.find(Defect, {
-          where: { round: { roundId: latestRound.roundId } },
+          where: {
+            round: { roundId: latestRound.roundId },
+            status: Not(DefectStatus.VERIFIED),
+          },
           relations: ['room', 'subRoom', 'floor', 'subCategories', 'inspector'],
         });
 
