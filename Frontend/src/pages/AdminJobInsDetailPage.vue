@@ -158,7 +158,7 @@
               />
             </div>
             <div v-if="customerLinkExpiresAt" class="text-caption text-grey-5 q-mt-xs">
-              ลิงก์หมดอายุใน 15 นาที · ไม่ต้อง login
+              ลิงก์หมดอายุใน 365 วัน · ไม่ต้อง login
             </div>
           </div>
 
