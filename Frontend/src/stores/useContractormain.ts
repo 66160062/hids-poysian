@@ -128,14 +128,11 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
         api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`, { params }),
       ]);
       contractorId.value = job.contractor?.contractorId ?? null;
-      const defectLists = await Promise.all(
-        roundsData.map((round) =>
-          api
-            .get<DefectResponse[]>(`/defects/round/${round.roundId}`, { params })
-            .then((res) => res.data),
-        ),
-      );
-      const defects = defectLists.flat();
+      // roundsData มาเรียงตาม roundNumber ASC — เอาเฉพาะรอบล่าสุด ไม่รวมรอบก่อนหน้า
+      const latestRound = roundsData[roundsData.length - 1];
+      const { data: defects } = latestRound
+        ? await api.get<DefectResponse[]>(`/defects/round/${latestRound.roundId}`, { params })
+        : { data: [] as DefectResponse[] };
 
       const roomMap = new Map<string, RepairRoom>();
       const items: DefectItem[] = [];
