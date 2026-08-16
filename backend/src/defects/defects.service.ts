@@ -24,6 +24,9 @@ type LinkTokenPayload = {
   role: string;
 };
 
+// รอบตรวจที่ยื่นอนุมัติ (หรืออนุมัติแล้ว) ห้ามแก้ไข/ลบ defect — ต้องตรงกับ LOCKED_STATUSES ฝั่ง frontend (useRoundLock.ts)
+const LOCKED_ROUND_STATUSES = ['SUBMITTED', 'APPROVED'];
+
 @Injectable()
 export class DefectsService {
   constructor(
@@ -88,6 +91,12 @@ export class DefectsService {
         : Promise.resolve(null),
     ]);
 
+    if (LOCKED_ROUND_STATUSES.includes(round.status)) {
+      throw new ForbiddenException(
+        'Round is submitted or approved and cannot be edited',
+      );
+    }
+
     const defect = this.defectsRepo.create({
       ...createDefectDto,
       round,
@@ -133,6 +142,7 @@ export class DefectsService {
         'subRoom',
         'floor',
         'subCategories',
+        'subCategories.category',
         'inspector',
       ],
     });
@@ -149,6 +159,12 @@ export class DefectsService {
       where: { defectId: id },
       relations: ['round'],
     });
+
+    if (defect.round && LOCKED_ROUND_STATUSES.includes(defect.round.status)) {
+      throw new ForbiddenException(
+        'Round is submitted or approved and cannot be edited',
+      );
+    }
 
     // Assign primitive properties
     defect.description = updateDefectDto.description ?? defect.description;
@@ -258,6 +274,13 @@ export class DefectsService {
       where: { defectId: id },
       relations: ['round'],
     });
+
+    if (defect.round && LOCKED_ROUND_STATUSES.includes(defect.round.status)) {
+      throw new ForbiddenException(
+        'Round is submitted or approved and cannot be edited',
+      );
+    }
+
     return this.defectsRepo.remove(defect);
   }
 
