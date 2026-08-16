@@ -84,6 +84,17 @@ const getImageUrl = (url?: string) => {
 
 const isDefect = (type?: string) => type === 'DEFECT_INSPECTION' || type === 'Defect' || type === 'ตรวจ Defect';
 const isConstruction = (type?: string) => type === 'CONSTRUCTION_INSPECTION' || type === 'Construction' || type === 'ตรวจก่อสร้าง';
+
+const statusBadgeColor = (status: string) => {
+  if (status === 'APPROVED' || status === 'COMPLETED') return 'positive';
+  if (status === 'CANCELLED') return 'grey-6';
+  return 'warning';
+};
+
+const statusBadgeTextColor = (status: string) => {
+  if (status === 'APPROVED' || status === 'COMPLETED' || status === 'CANCELLED') return 'white';
+  return 'black';
+};
 </script>
 
 <template>
@@ -137,8 +148,8 @@ const isConstruction = (type?: string) => type === 'CONSTRUCTION_INSPECTION' || 
           </div>
 
           <q-badge
-            color="warning"
-            text-color="black"
+            :color="statusBadgeColor(item.status)"
+            :text-color="statusBadgeTextColor(item.status)"
             style="
               width: 53px;
               height: 15px;
@@ -154,6 +165,8 @@ const isConstruction = (type?: string) => type === 'CONSTRUCTION_INSPECTION' || 
           >
             <div v-if="item.status == 'SCHEDULED'">รอเข้าตรวจ</div>
             <div v-else-if="item.status === 'SUBMITTED'">รอการอนุมัติ</div>
+            <div v-else-if="item.status === 'APPROVED' || item.status === 'COMPLETED'">เสร็จสิ้น</div>
+            <div v-else-if="item.status === 'CANCELLED'">ยกเลิก</div>
           </q-badge>
         </div>
 
