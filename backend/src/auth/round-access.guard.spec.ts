@@ -12,12 +12,14 @@ function createContext(request: Record<string, unknown>): ExecutionContext {
 }
 
 describe('RoundAccessGuard', () => {
-  let authService: { verifyJobAccess: jest.Mock };
+  let authService: { verifyRoundAccess: jest.Mock };
   let roundsRepo: { findOne: jest.Mock };
   let guard: RoundAccessGuard;
 
   beforeEach(() => {
-    authService = { verifyJobAccess: jest.fn().mockResolvedValue({ sub: 1 }) };
+    authService = {
+      verifyRoundAccess: jest.fn().mockResolvedValue({ sub: 1 }),
+    };
     roundsRepo = { findOne: jest.fn() };
     guard = new RoundAccessGuard(
       authService as unknown as AuthService,
@@ -26,10 +28,8 @@ describe('RoundAccessGuard', () => {
   });
 
   it('resolves the round to its job before checking access', async () => {
-    roundsRepo.findOne.mockResolvedValue({
-      roundId: 5,
-      job: { jobId: 12 },
-    });
+    const round = { roundId: 5, job: { jobId: 12 } };
+    roundsRepo.findOne.mockResolvedValue(round);
     const request = {
       params: { roundId: '5' },
       query: { token: 'link-token' },
@@ -42,10 +42,10 @@ describe('RoundAccessGuard', () => {
       where: { roundId: 5 },
       relations: ['job'],
     });
-    expect(authService.verifyJobAccess).toHaveBeenCalledWith(
+    expect(authService.verifyRoundAccess).toHaveBeenCalledWith(
       'Bearer staff-token',
       'link-token',
-      12,
+      round,
     );
     expect(request).toMatchObject({ user: { sub: 1 } });
   });
@@ -69,6 +69,6 @@ describe('RoundAccessGuard', () => {
     await expect(
       guard.canActivate(createContext(request)),
     ).rejects.toBeInstanceOf(NotFoundException);
-    expect(authService.verifyJobAccess).not.toHaveBeenCalled();
+    expect(authService.verifyRoundAccess).not.toHaveBeenCalled();
   });
 });
