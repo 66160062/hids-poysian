@@ -12,6 +12,7 @@ import { Defect } from 'src/defects/entities/defect.entity';
 import { DailyReportsController } from './daily-reports.controller';
 import { DailyReportsService } from './daily-reports.service';
 import { AuthModule } from 'src/auth/auth.module';
+import { NotificationsModule } from 'src/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AuthModule } from 'src/auth/auth.module';
       Defect,
     ]),
     AuthModule,
+    NotificationsModule,
   ],
   controllers: [DailyReportsController],
   providers: [DailyReportsService],
