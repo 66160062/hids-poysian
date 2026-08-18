@@ -7,6 +7,7 @@ import { SummaryTemplatesModule } from 'src/summary-templates/summary-templates.
 import { SummaryTemplateOptionsModule } from 'src/summary-template-options/summary-template-options.module';
 import { InspectionRoundsModule } from 'src/inspection-rounds/inspection-rounds.module';
 import { AuthModule } from 'src/auth/auth.module';
+import { SummaryItemAccessGuard } from './guards/summary-item-access.guard';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { AuthModule } from 'src/auth/auth.module';
     AuthModule,
   ],
   controllers: [InspectionSummaryItemsController],
-  providers: [InspectionSummaryItemsService],
+  providers: [InspectionSummaryItemsService, SummaryItemAccessGuard],
   exports: [InspectionSummaryItemsService, TypeOrmModule],
 })
 export class InspectionSummaryItemsModule {}
