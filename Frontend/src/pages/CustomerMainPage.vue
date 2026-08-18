@@ -579,7 +579,7 @@ const workflowSteps = computed(() => {
   const isRepairDone = totalDefects.value > 0 && passed.value === totalDefects.value;
   const isCompleted = jobData.value?.status === 'Completed';
 
-  return [
+  const steps = [
     {
       icon: 'search',
       label: `ตรวจรอบที่ ${round?.roundNumber ?? 1}`,
@@ -595,17 +595,23 @@ const workflowSteps = computed(() => {
       label: 'ซ่อมแซม',
       status: !isSubmitted ? 'pending' : isRepairDone ? 'done' : 'active',
     },
-    {
+  ];
+
+  if (nextRound || !isCompleted) {
+    steps.push({
       icon: 'search',
       label: `ตรวจรอบที่ ${(round?.roundNumber ?? 1) + 1}`,
       status: nextRound?.inspectedAt ? 'done' : nextRound ? 'active' : 'pending',
-    },
-    {
-      icon: 'check_circle',
-      label: 'เสร็จสิ้น',
-      status: isCompleted ? 'done' : 'pending',
-    },
-  ];
+    });
+  }
+
+  steps.push({
+    icon: 'check_circle',
+    label: 'เสร็จสิ้น',
+    status: isCompleted ? 'done' : 'pending',
+  });
+
+  return steps;
 });
 
 interface ActivityLogResponse {
