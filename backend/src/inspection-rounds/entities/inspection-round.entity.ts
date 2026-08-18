@@ -58,6 +58,10 @@ export class InspectionRound {
   @Column({ type: 'varchar', length: 500, nullable: true })
   lastPdfUrl!: string | null;
 
+  // ตั้งเวลาไว้กันแจ้งเตือนซ้ำ — ยิงแค่ครั้งแรกที่ยอดซ่อมข้าม threshold (ดู REPAIR_ALERT_THRESHOLD ใน defects.service.ts)
+  @Column({ name: 'repair_alert_sent_at', type: 'timestamp', nullable: true })
+  repairAlertSentAt!: Date | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

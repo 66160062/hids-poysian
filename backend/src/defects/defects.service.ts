@@ -1,6 +1,11 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { Defect } from './entities/defect.entity';
 import { CreateDefectDto } from './dto/create-defect.dto';
 import { UpdateDefectDto } from './dto/update-defect.dto';
@@ -18,6 +23,8 @@ import {
   LogEntryInput,
 } from 'src/activity-logs/activity-logs.service';
 import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity';
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { NotificationType } from 'src/notifications/entities/notification.entity';
 
 type LinkTokenPayload = {
   project_id: number;
@@ -27,8 +34,13 @@ type LinkTokenPayload = {
 // รอบตรวจที่ยื่นอนุมัติ (หรืออนุมัติแล้ว) ห้ามแก้ไข/ลบ defect — ต้องตรงกับ LOCKED_STATUSES ฝั่ง frontend (useRoundLock.ts)
 const LOCKED_ROUND_STATUSES = ['SUBMITTED', 'APPROVED'];
 
+// สัดส่วนซ่อมเสร็จที่ยิงแจ้งเตือนแอดมิน (ยิงครั้งเดียวต่อรอบ กันสแปม — ดู repairAlertSentAt บน InspectionRound)
+const REPAIR_ALERT_THRESHOLD = 0.8;
+
 @Injectable()
 export class DefectsService {
+  private readonly logger = new Logger(DefectsService.name);
+
   constructor(
     @InjectRepository(Defect)
     private readonly defectsRepo: Repository<Defect>,
@@ -49,6 +61,7 @@ export class DefectsService {
     private readonly subRoomsRepo: Repository<SubRoom>,
 
     private readonly activityLogsService: ActivityLogsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ประกอบข้อความ "ห้องนั่งเล่น • ห้องนอนชั้น2" จาก room/subRoom ของ defect ที่ผ่านการ save แล้ว
@@ -63,6 +76,35 @@ export class DefectsService {
     const roundId = defect.round?.roundId;
     if (!roundId) return;
     void this.activityLogsService.logForRound(roundId, entry);
+  }
+
+  // เช็คซ้ำแบบเดียวกับฝั่ง frontend (isDuplicateDefect ใน AddDefectPage.vue) แต่ query จาก DB สด
+  // กันเคส 2 inspector คนละ session บันทึกจุดเดียวกันพร้อมกัน ซึ่ง local store ฝั่ง frontend มองไม่เห็นกัน
+  private async hasDuplicateDefect(
+    dto: CreateDefectDto,
+  ): Promise<boolean> {
+    const candidates = await this.defectsRepo.find({
+      where: {
+        round: { roundId: dto.roundId },
+        room: { roomId: dto.roomId },
+        subRoom: dto.subRoomId ? { subRoomId: dto.subRoomId } : IsNull(),
+        floor: { floorId: dto.floorId },
+        severity: dto.severity,
+        description: dto.description ?? '-',
+      },
+      relations: ['subCategories'],
+    });
+
+    const wantedIds = [...dto.subCategoryIds].sort((a, b) => a - b);
+    return candidates.some((candidate) => {
+      const ids = candidate.subCategories
+        .map((s) => s.subCategoryId)
+        .sort((a, b) => a - b);
+      return (
+        ids.length === wantedIds.length &&
+        ids.every((id, i) => id === wantedIds[i])
+      );
+    });
   }
 
   async create(
@@ -94,6 +136,12 @@ export class DefectsService {
     if (LOCKED_ROUND_STATUSES.includes(round.status)) {
       throw new ForbiddenException(
         'Round is submitted or approved and cannot be edited',
+      );
+    }
+
+    if (await this.hasDuplicateDefect(createDefectDto)) {
+      throw new ConflictException(
+        'มีรายการ Defect นี้อยู่แล้วในห้อง/ชั้นเดียวกัน',
       );
     }
 
@@ -240,6 +288,8 @@ export class DefectsService {
       throw new ForbiddenException('Contractor cannot update this defect');
     }
 
+    const wasAlreadyRepaired = defect.status === DefectStatus.REPAIRED;
+
     defect.status = DefectStatus.REPAIRED;
     defect.contractorNote = contractorUpdateDto.note ?? defect.contractorNote;
     defect.updatedBy = {
@@ -266,7 +316,51 @@ export class DefectsService {
       saved.round?.roundId,
     );
 
+    if (!wasAlreadyRepaired && saved.round?.roundId) {
+      void this.maybeNotifyRepairThreshold(
+        saved.round.roundId,
+        job.jobId,
+        job.projectName,
+      );
+    }
+
     return saved;
+  }
+
+  private async maybeNotifyRepairThreshold(
+    roundId: number,
+    jobId: number,
+    projectName?: string,
+  ) {
+    try {
+      const round = await this.roundsRepo.findOneBy({ roundId });
+      if (!round || round.repairAlertSentAt) return;
+
+      const [total, repaired] = await Promise.all([
+        this.defectsRepo.count({ where: { round: { roundId } } }),
+        this.defectsRepo.count({
+          where: { round: { roundId }, status: DefectStatus.REPAIRED },
+        }),
+      ]);
+      if (total === 0 || repaired / total < REPAIR_ALERT_THRESHOLD) return;
+
+      round.repairAlertSentAt = new Date();
+      await this.roundsRepo.save(round);
+
+      const percent = Math.round((repaired / total) * 100);
+      void this.notificationsService.create({
+        type: NotificationType.ALERT,
+        recipientRole: 'admin',
+        message: `${projectName ?? 'โครงการ'}: ผู้รับเหมาซ่อมแล้ว ${repaired}/${total} รายการ (${percent}%)`,
+        jobId,
+        roundId,
+      });
+    } catch (error) {
+      this.logger.error(
+        `เช็คสัดส่วนซ่อมสำหรับ round ${roundId} ไม่สำเร็จ`,
+        error as Error,
+      );
+    }
   }
 
   async remove(id: number) {
