@@ -3,7 +3,7 @@ import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InspectionRound } from './entities/inspection-round.entity';
-import { Repository, DataSource, Not } from 'typeorm';
+import { Repository, DataSource, Not, IsNull } from 'typeorm';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { User } from 'src/users/entities/user.entity';
@@ -14,6 +14,8 @@ import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity'
 import { MailService } from 'src/mail/mail.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { NotificationType } from 'src/notifications/entities/notification.entity';
+import { Assignment } from 'src/assignments/entities/assignment.entity';
+import { AuthService } from 'src/auth/auth.service';
 @Injectable()
 export class InspectionRoundsService {
   constructor(
@@ -27,10 +29,13 @@ export class InspectionRoundsService {
     private readonly usersRepo: Repository<User>,
     @InjectRepository(Defect)
     private readonly defectsRepo: Repository<Defect>,
+    @InjectRepository(Assignment)
+    private readonly assignmentsRepo: Repository<Assignment>,
     private readonly dataSource: DataSource,
     private readonly activityLogsService: ActivityLogsService,
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
+    private readonly authService: AuthService,
   ) {}
 
   private formatThaiDate(date: Date): string {
@@ -164,12 +169,59 @@ export class InspectionRoundsService {
         savedRound.roundId,
       );
 
+      void this.notifyAssignedInspectorsOfNewRound(job, savedRound);
+
       return savedRound;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  private buildInspectorPortalUrl(): string {
+    const baseUrl = (
+      process.env.FRONTEND_URL ?? 'http://localhost:9000'
+    ).replace(/\/$/, '');
+    return `${baseUrl}/#/inspector/Inspectsdashboard`;
+  }
+
+  // แจ้ง inspector ที่ถูกมอบหมาย (ทั้งระดับงานและระดับรอบ) ว่ามีรอบตรวจใหม่เปิดแล้ว
+  private async notifyAssignedInspectorsOfNewRound(
+    job: InspectionJob,
+    round: InspectionRound,
+  ): Promise<void> {
+    const assignments = await this.assignmentsRepo.find({
+      where: [
+        { job: { jobId: job.jobId }, round: { roundId: round.roundId } },
+        { job: { jobId: job.jobId }, round: IsNull() },
+      ],
+      relations: ['inspector'],
+    });
+
+    const inspectors = new Map<number, User>();
+    for (const assignment of assignments) {
+      if (assignment.inspector?.email) {
+        inspectors.set(assignment.inspector.id, assignment.inspector);
+      }
+    }
+    if (inspectors.size === 0) return;
+
+    const portalUrl = this.buildInspectorPortalUrl();
+    const scheduledDate = round.scheduledDate
+      ? this.formatThaiDate(new Date(round.scheduledDate))
+      : null;
+
+    for (const inspector of inspectors.values()) {
+      void this.mailService.sendRoundOpenedEmail({
+        to: inspector.email,
+        inspectorName: inspector.fullName,
+        jobTitle: job.projectName,
+        roundNumber: round.roundNumber,
+        scheduledDate,
+        portalUrl,
+      });
     }
   }
 
@@ -337,9 +389,24 @@ export class InspectionRoundsService {
       .leftJoin('round.teamMembers', 'teamMembers')
       .leftJoin('teamMembers.inspector', 'roundInspector')
       .leftJoin('teamMembers.team', 'roundTeam')
+      .leftJoin(
+        Assignment,
+        'directAssignment',
+        '"directAssignment"."round_id" = "round"."round_id" AND "directAssignment"."inspector_id" = :inspectorId AND "directAssignment"."deleted_at" IS NULL',
+        { inspectorId },
+      )
+      .leftJoin(
+        Assignment,
+        'jobAssignment',
+        '"jobAssignment"."job_id" = "job"."job_id" AND "jobAssignment"."inspector_id" = :inspectorId AND "jobAssignment"."round_id" IS NULL AND "jobAssignment"."deleted_at" IS NULL',
+        { inspectorId },
+      )
       .where('round.scheduledDate BETWEEN :start AND :end', { start, end })
       .andWhere(
-        '(roundInspector.id = :inspectorId OR (roundTeam.team_Id = :teamId AND :teamId IS NOT NULL))',
+        `(roundInspector.id = :inspectorId
+          OR (roundTeam.team_Id = :teamId AND :teamId IS NOT NULL)
+          OR "directAssignment"."id" IS NOT NULL
+          OR "jobAssignment"."id" IS NOT NULL)`,
         { inspectorId, teamId },
       )
       .andWhere('round.deleted_at IS NULL')
@@ -478,6 +545,7 @@ export class InspectionRoundsService {
       relations: [
         'job',
         'job.customer',
+        'job.contractor',
         'teamMembers',
         'teamMembers.inspector',
       ],
@@ -520,13 +588,36 @@ export class InspectionRoundsService {
       }
 
       if (approvedRound.job?.customer?.email) {
+        const { url: portalUrl } = await this.authService.generateLinkToken(
+          approvedRound.job.jobId,
+          'customer',
+        );
         void this.mailService.sendRoundApprovedEmail({
           to: approvedRound.job.customer.email,
           customerName: approvedRound.job.customer.fullName,
           jobTitle: approvedRound.job.projectName,
           roundNumber: approvedRound.roundNumber,
           pdfUrl: approvedRound.lastPdfUrl,
-          portalUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:9000'}/customer/report`,
+          portalUrl,
+        });
+      }
+
+      const roundDefectCount = await this.defectsRepo.count({
+        where: { round: { roundId: approvedRound.roundId } },
+      });
+
+      if (approvedRound.job?.contractor?.email && roundDefectCount > 0) {
+        const { url: contractorPortalUrl } =
+          await this.authService.generateLinkToken(
+            approvedRound.job.jobId,
+            'contractor',
+          );
+        void this.mailService.sendContractorRoundApprovedEmail({
+          to: approvedRound.job.contractor.email,
+          contractorName: approvedRound.job.contractor.fullName,
+          jobTitle: approvedRound.job.projectName,
+          roundNumber: approvedRound.roundNumber,
+          portalUrl: contractorPortalUrl,
         });
       }
 

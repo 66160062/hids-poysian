@@ -8,9 +8,11 @@ import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entit
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Defect } from 'src/defects/entities/defect.entity';
+import { Assignment } from 'src/assignments/entities/assignment.entity';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { MailService } from 'src/mail/mail.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
+import { AuthService } from 'src/auth/auth.service';
 
 function createQueryRunnerMock() {
   return {
@@ -45,9 +47,15 @@ describe('InspectionRoundsService', () => {
     save: jest.Mock;
   };
   let defectsRepo: { count: jest.Mock };
+  let assignmentsRepo: { find: jest.Mock };
   let activityLogsService: { log: jest.Mock; logForRound: jest.Mock };
-  let mailService: { sendRoundApprovedEmail: jest.Mock };
+  let mailService: {
+    sendRoundApprovedEmail: jest.Mock;
+    sendContractorRoundApprovedEmail: jest.Mock;
+    sendRoundOpenedEmail: jest.Mock;
+  };
   let notificationsService: { create: jest.Mock };
+  let authService: { generateLinkToken: jest.Mock };
   let queryRunner: ReturnType<typeof createQueryRunnerMock>;
   let dataSource: { createQueryRunner: jest.Mock };
 
@@ -63,9 +71,17 @@ describe('InspectionRoundsService', () => {
     };
     jobsRepo = { findOneByOrFail: jest.fn(), find: jest.fn(), save: jest.fn() };
     defectsRepo = { count: jest.fn().mockResolvedValue(0) };
+    assignmentsRepo = { find: jest.fn().mockResolvedValue([]) };
     activityLogsService = { log: jest.fn(), logForRound: jest.fn() };
-    mailService = { sendRoundApprovedEmail: jest.fn() };
+    mailService = {
+      sendRoundApprovedEmail: jest.fn(),
+      sendContractorRoundApprovedEmail: jest.fn(),
+      sendRoundOpenedEmail: jest.fn(),
+    };
     notificationsService = { create: jest.fn() };
+    authService = {
+      generateLinkToken: jest.fn().mockResolvedValue({ url: 'http://localhost:9000/#/view/prj-1?token=mock-token' }),
+    };
     queryRunner = createQueryRunnerMock();
     dataSource = { createQueryRunner: jest.fn(() => queryRunner) };
 
@@ -77,10 +93,12 @@ describe('InspectionRoundsService', () => {
         { provide: getRepositoryToken(InspectionTeamMember), useValue: {} },
         { provide: getRepositoryToken(User), useValue: {} },
         { provide: getRepositoryToken(Defect), useValue: defectsRepo },
+        { provide: getRepositoryToken(Assignment), useValue: assignmentsRepo },
         { provide: DataSource, useValue: dataSource },
         { provide: ActivityLogsService, useValue: activityLogsService },
         { provide: MailService, useValue: mailService },
         { provide: NotificationsService, useValue: notificationsService },
+        { provide: AuthService, useValue: authService },
       ],
     }).compile();
 
@@ -315,6 +333,70 @@ describe('InspectionRoundsService', () => {
       await service.approveReport(1);
 
       expect(mailService.sendRoundApprovedEmail).not.toHaveBeenCalled();
+    });
+
+    it('emails the contractor when the job has a contractor email and the round has defects', async () => {
+      roundsRepo.findOneOrFail.mockResolvedValue({
+        roundId: 1,
+        roundNumber: 2,
+        status: 'SUBMITTED',
+        lastPdfUrl: null,
+        job: {
+          jobId: 1,
+          status: 'Pending',
+          projectName: 'บ้านตัวอย่าง',
+          contractor: { email: 'contractor@example.com', fullName: 'ช่างสมชาย' },
+        },
+        teamMembers: [],
+      });
+      defectsRepo.count.mockResolvedValue(3);
+
+      await service.approveReport(1);
+
+      expect(authService.generateLinkToken).toHaveBeenCalledWith(1, 'contractor');
+      expect(mailService.sendContractorRoundApprovedEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'contractor@example.com',
+          contractorName: 'ช่างสมชาย',
+          jobTitle: 'บ้านตัวอย่าง',
+          roundNumber: 2,
+        }),
+      );
+    });
+
+    it('skips emailing when the job has no contractor email on file', async () => {
+      roundsRepo.findOneOrFail.mockResolvedValue({
+        roundId: 1,
+        roundNumber: 1,
+        status: 'SUBMITTED',
+        job: { jobId: 1, status: 'Pending' },
+        teamMembers: [],
+      });
+      defectsRepo.count.mockResolvedValue(3);
+
+      await service.approveReport(1);
+
+      expect(mailService.sendContractorRoundApprovedEmail).not.toHaveBeenCalled();
+    });
+
+    it('skips emailing the contractor when the round has no defects (nothing to repair)', async () => {
+      roundsRepo.findOneOrFail.mockResolvedValue({
+        roundId: 1,
+        roundNumber: 1,
+        status: 'SUBMITTED',
+        job: {
+          jobId: 1,
+          status: 'Pending',
+          projectName: 'บ้านตัวอย่าง',
+          contractor: { email: 'contractor@example.com', fullName: 'ช่างสมชาย' },
+        },
+        teamMembers: [],
+      });
+      defectsRepo.count.mockResolvedValue(0);
+
+      await service.approveReport(1);
+
+      expect(mailService.sendContractorRoundApprovedEmail).not.toHaveBeenCalled();
     });
   });
 

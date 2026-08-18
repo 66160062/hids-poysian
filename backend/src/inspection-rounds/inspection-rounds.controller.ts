@@ -15,6 +15,7 @@ import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { RoundAccessGuard } from 'src/auth/round-access.guard';
+import { InspectorSelfOrAdminGuard } from 'src/auth/inspector-self-or-admin.guard';
 import { ReportsService } from 'src/reports/reports.service';
 
 @Controller('inspection-rounds')
@@ -37,7 +38,7 @@ export class InspectionRoundsController {
   }
 
   @Get('week/:inspectorId')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, InspectorSelfOrAdminGuard)
   findByWeek(
     @Param('inspectorId') inspectorId: string,
     @Query('date') dateString?: string,
@@ -46,7 +47,7 @@ export class InspectionRoundsController {
   }
 
   @Get('month/:inspectorId')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, InspectorSelfOrAdminGuard)
   async getRoundsByMonth(
     @Param('inspectorId') inspectorId: string,
     @Query('date') dateString?: string,
@@ -71,31 +72,31 @@ export class InspectionRoundsController {
   }
 
   @Patch(':id/confirm-inspection')
-  @UseGuards(AuthGuard)
+  @UseGuards(RoundAccessGuard)
   confirmInspection(@Param('id') id: string) {
     return this.inspectionRoundsService.confirmInspection(+id);
   }
 
   @Patch(':id/confirm-summary')
-  @UseGuards(AuthGuard)
+  @UseGuards(RoundAccessGuard)
   confirmSummary(@Param('id') id: string) {
     return this.inspectionRoundsService.confirmSummary(+id);
   }
 
   @Patch(':id/submit')
-  @UseGuards(AuthGuard)
+  @UseGuards(RoundAccessGuard)
   submit(@Param('id') id: string) {
     return this.inspectionRoundsService.submit(+id);
   }
 
   @Patch(':id/approve')
-  @UseGuards(AuthGuard)
+  @UseGuards(RoundAccessGuard)
   approve(@Param('id') id: string) {
     return this.inspectionRoundsService.approveReport(+id);
   }
 
   @Patch(':id')
-  @UseGuards(AuthGuard)
+  @UseGuards(RoundAccessGuard)
   update(
     @Param('id') id: string,
     @Body() updateInspectionRoundDto: UpdateInspectionRoundDto,
@@ -104,20 +105,20 @@ export class InspectionRoundsController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard)
+  @UseGuards(RoundAccessGuard)
   remove(@Param('id') id: string) {
     return this.inspectionRoundsService.remove(+id);
   }
 }
 
 @Controller('projects')
-@UseGuards(AuthGuard)
 export class ProjectApprovalController {
   constructor(
     private readonly inspectionRoundsService: InspectionRoundsService,
   ) {}
 
   @Put(':id/approve')
+  @UseGuards(RoundAccessGuard)
   approve(@Param('id') id: string) {
     return this.inspectionRoundsService.approveReport(+id);
   }
