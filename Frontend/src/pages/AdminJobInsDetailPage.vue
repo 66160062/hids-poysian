@@ -1874,10 +1874,10 @@ const submitCreateRound = async () => {
       }
     }
 
-    await api.post(`/daily-reports/${jobId.value}/rounds`, roundPayload);
+    const { data: createdRound } = await api.post(`/daily-reports/${jobId.value}/rounds`, roundPayload);
 
-    // 2. ดึงรอบที่เพิ่งถูกสร้างขึ้นมา (backend สร้างไปที่ล่าสุดแล้ว)
-    // สำหรับคนที่เหลือ ให้ยิงเข้า /assignments เพื่อผูกกับรอบนั้น (ซึ่ง Backend ผูกกับรอบล่าสุดให้)
+    // 2. สำหรับคนที่เหลือ ให้ยิงเข้า /assignments พร้อม roundId ของรอบที่เพิ่งสร้าง
+    // เพื่อผูกสิทธิ์เฉพาะรอบนี้ ไม่ปลดล็อกทั้ง job
     let extraInspectors = selectedInspectors.value;
     if (
       assignmentMode.value === 'individual' ||
@@ -1891,6 +1891,7 @@ const submitCreateRound = async () => {
       await api.post('/assignments', {
         jobId: jobId.value,
         inspectorId: inspector.value,
+        roundId: createdRound.roundId,
       });
     }
 
@@ -1899,9 +1900,9 @@ const submitCreateRound = async () => {
     applyRounds(rounds);
     await fetchJobDetails();
 
-    const createdRound = inspectionRounds.value[inspectionRounds.value.length - 1];
+    const latestRound = inspectionRounds.value[inspectionRounds.value.length - 1];
     $q.notify({
-      message: `สร้างรอบการตรวจที่ ${createdRound?.roundNumber ?? ''} สำเร็จ`,
+      message: `สร้างรอบการตรวจที่ ${latestRound?.roundNumber ?? ''} สำเร็จ`,
       color: 'positive',
       icon: 'check_circle',
       position: 'top',
