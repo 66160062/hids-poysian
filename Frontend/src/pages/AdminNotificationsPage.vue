@@ -123,11 +123,11 @@
             <div v-else class="notifications-list q-gutter-y-md q-pb-xl">
               <q-card
                 v-for="item in filteredNotifications"
-                :key="item.notification_id"
+                :key="item.notificationId"
                 flat
                 bordered
                 class="notification-card"
-                :class="{ 'unread-card': item.is_read === '0' }"
+                :class="{ 'unread-card': !item.isRead }"
                 clickable
                 @click="openDetail(item)"
               >
@@ -148,10 +148,10 @@
                       {{ item.message }}
                     </div>
                     <q-badge
-                      :class="item.is_read === '0' ? 'bg-blue-1 text-primary' : 'bg-grey-2 text-grey-8'"
+                      :class="!item.isRead ? 'bg-blue-1 text-primary' : 'bg-grey-2 text-grey-8'"
                       class="status-badge"
                     >
-                      {{ item.is_read === '0' ? 'ยังไม่อ่าน' : 'อ่านแล้ว' }}
+                      {{ !item.isRead ? 'ยังไม่อ่าน' : 'อ่านแล้ว' }}
                     </q-badge>
                   </div>
                 </q-card-section>
@@ -161,12 +161,12 @@
                 <q-card-actions class="row justify-between items-center q-px-md q-py-sm">
                   <div class="row items-center text-grey-6" style="font-size: 13px;">
                     <q-icon name="calendar_today" size="16px" class="q-mr-sm" />
-                    {{ formatDate(item.created_at) }}
+                    {{ formatDate(item.createdAt) }}
                   </div>
                   <div class="row q-gutter-x-sm">
                     <q-btn
                       flat round dense
-                      :icon="item.is_read === '0' ? 'done' : 'undo'"
+                      :icon="!item.isRead ? 'done' : 'undo'"
                       color="grey-8"
                       class="bg-grey-2 action-btn"
                       @click.stop="toggleRead(item)"
@@ -175,7 +175,7 @@
                       flat round dense icon="delete"
                       color="grey-8"
                       class="bg-grey-2 action-btn"
-                      @click.stop="deleteNotification(item.notification_id)"
+                      @click.stop="deleteNotification(item.notificationId)"
                     />
                   </div>
                 </q-card-actions>
@@ -209,10 +209,10 @@
               </q-badge>
               <q-space />
               <q-badge
-                :class="selectedNotification.is_read === '0' ? 'bg-blue-1 text-primary' : 'bg-grey-2 text-grey-8'"
+                :class="!selectedNotification.isRead ? 'bg-blue-1 text-primary' : 'bg-grey-2 text-grey-8'"
                 class="status-badge"
               >
-                {{ selectedNotification.is_read === '0' ? 'ยังไม่อ่าน' : 'อ่านแล้ว' }}
+                {{ !selectedNotification.isRead ? 'ยังไม่อ่าน' : 'อ่านแล้ว' }}
               </q-badge>
             </div>
 
@@ -222,7 +222,7 @@
 
             <div class="row items-center text-grey-6 q-mb-lg" style="font-size: 14px;">
               <q-icon name="calendar_today" size="20px" class="q-mr-sm" />
-              {{ formatDate(selectedNotification.created_at) }}
+              {{ formatDate(selectedNotification.createdAt) }}
             </div>
           </div>
 
@@ -233,8 +233,8 @@
               flat
               rounded
               class="col bg-blue-1 text-primary"
-              :icon="selectedNotification.is_read === '0' ? 'done' : 'undo'"
-              :label="selectedNotification.is_read === '0' ? 'ทำเครื่องหมายว่าอ่านแล้ว' : 'ทำเครื่องหมายว่ายังไม่อ่าน'"
+              :icon="!selectedNotification.isRead ? 'done' : 'undo'"
+              :label="!selectedNotification.isRead ? 'ทำเครื่องหมายว่าอ่านแล้ว' : 'ทำเครื่องหมายว่ายังไม่อ่าน'"
               @click="toggleRead(selectedNotification)"
             />
             <q-btn
@@ -253,39 +253,53 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { api } from 'src/boot/axios';
 
 const router = useRouter();
 
 // ==========================================
-// Interface สำหรับข้อมูล
+// Interface สำหรับข้อมูล (ตรงกับ response ของ backend)
 // ==========================================
 interface NotificationItem {
-  notification_id: number;
+  notificationId: number;
   message: string;
   type: string;
-  is_read: string;
-  created_at: string;
+  isRead: boolean;
+  createdAt: string;
+  job: { jobId: number; inspectionType?: string | null } | null;
+  round: { roundId: number } | null;
+}
+
+// เลือกหน้ารายละเอียดงานตามประเภทงาน (ตรวจก่อสร้าง vs ตรวจบ้าน) ให้ตรงกับ inspection-rounds.service.ts ฝั่ง backend
+function resolveJobDetailPath(job: { jobId: number; inspectionType?: string | null }) {
+  const isConstruction =
+    job.inspectionType === 'CONSTRUCTION_INSPECTION' ||
+    job.inspectionType === 'Construction' ||
+    job.inspectionType === 'ตรวจก่อสร้าง';
+  return isConstruction ? `/admin/work/cons/${job.jobId}` : `/admin/work/ins/${job.jobId}`;
 }
 
 // ==========================================
 // State & Reactive Variables
 // ==========================================
-const notifications = ref<NotificationItem[]>([
-  { notification_id: 1, message: 'หมู่บ้านชิดชอบ วิลเลจ: ตรวจงวดที่ 2 รออนุมัติ', type: 'alert', is_read: '0', created_at: new Date().toISOString() },
-  { notification_id: 2, message: 'คุณได้รับมอบหมายงานใหม่ สำหรับการตรวจสถานที่ที่โครงการใหม่ในพื้นที่บางนา กรุงเทพมหานคร กรุณาตรวจสอบรายละเอียดและเตรียมตัวสำหรับการตรวจสอบ', type: 'info', is_read: '0', created_at: new Date(Date.now() - 3600000).toISOString() },
-  { notification_id: 3, message: 'รายงานเดือนพฤษภาคม พร้อมแล้ว สามารถดาวน์โหลดได้จากระบบ', type: 'info', is_read: '1', created_at: '2026-06-05T10:00:00' },
-  { notification_id: 4, message: 'ระบบตรวจบ้านมีปัญหาด้านการเชื่อมต่อฐานข้อมูล กรุณาติดต่อแอดมิน หรือรอการแก้ไขในเร็วๆ นี้', type: 'alert', is_read: '1', created_at: '2026-06-04T14:30:00' },
-  { notification_id: 5, message: 'ทีมตรวจสอบ A ได้เสร็จสิ้นการตรวจงานที่โครงการเชิดชัง วิลเลจ กรุณาตรวจสอบผลการตรวจและอนุมัติเพื่อให้เสร็จสิ้น', type: 'info', is_read: '0', created_at: '2026-06-06T09:15:00' },
-  { notification_id: 6, message: 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ กรุณาลองใหม่อีกครั้ง', type: 'alert', is_read: '0', created_at: '2026-06-06T08:45:00' },
-  { notification_id: 7, message: 'งานตรวจสอบที่โครงการแสงสำลี วิลเลจ ได้รับการมอบหมายให้ทีมตรวจสอบ B ตั้งแต่วันที่ 2026-06-10 เป็นต้นไป', type: 'info', is_read: '1', created_at: '2026-06-03T16:20:00' },
-  { notification_id: 8, message: 'สัญญาของทีมตรวจสอบ C จะหมดอายุ ในวันที่ 2026-06-15 กรุณาทำการต่ออายุสัญญาเพื่อให้ทีมสามารถดำเนินการตรวจสอบต่อได้', type: 'alert', is_read: '1', created_at: '2026-06-02T11:30:00' },
-  { notification_id: 9, message: 'ข้อมูลลูกค้าใหม่ บริษัท XYZ Construction ได้เพิ่มในระบบแล้ว', type: 'info', is_read: '1', created_at: '2026-06-01T13:45:00' },
-  { notification_id: 10, message: 'การตรวจสอบคุณภาพ ณ โครงการหมู่บ้านชิดชอบ วิลเลจ เสร็จสิ้นแล้ว คะแนน: 8.5/10 พบข้อบกพร่องบางประการที่ต้องแก้ไข', type: 'info', is_read: '0', created_at: '2026-05-31T10:00:00' },
-  { notification_id: 11, message: 'แจ้งเตือน: จำนวนผู้ตรวจสอบที่ใช้งานปกติ ลดลงเหลือเพียง 3 คน อาจส่งผลต่อการสำเร็จของโครงการ', type: 'alert', is_read: '1', created_at: '2026-05-30T15:25:00' },
-  { notification_id: 12, message: 'ระบบได้ทำการสำรองข้อมูล (Backup) เสร็จสิ้นแล้ว ทั้งหมด 2.5 GB', type: 'info', is_read: '1', created_at: '2026-05-29T22:00:00' },
-]);
+const notifications = ref<NotificationItem[]>([]);
+const loading = ref(false);
+
+const fetchNotifications = async () => {
+  loading.value = true;
+  try {
+    const { data } = await api.get<NotificationItem[]>('/notifications');
+    notifications.value = data;
+  } catch (error) {
+    console.error('โหลดการแจ้งเตือนไม่สำเร็จ', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(fetchNotifications);
 
 const searchTerm = ref('');
 const activeFilter = ref('all'); // all, unread, read
@@ -327,8 +341,8 @@ const formatDate = (val: string) => {
 const filters = computed(() => {
   const counts = {
     all: notifications.value.length,
-    unread: notifications.value.filter((n) => n.is_read === '0').length,
-    read: notifications.value.filter((n) => n.is_read === '1').length,
+    unread: notifications.value.filter((n) => !n.isRead).length,
+    read: notifications.value.filter((n) => n.isRead).length,
   };
 
   return [
@@ -346,9 +360,9 @@ const filteredNotifications = computed(() => {
 
   // 1. Filter by read status
   if (activeFilter.value === 'unread') {
-    result = result.filter((n) => n.is_read === '0');
+    result = result.filter((n) => !n.isRead);
   } else if (activeFilter.value === 'read') {
-    result = result.filter((n) => n.is_read === '1');
+    result = result.filter((n) => n.isRead);
   }
 
   // 2. Filter by type
@@ -365,8 +379,8 @@ const filteredNotifications = computed(() => {
 
   // 4. Sort by date
   result.sort((a, b) => {
-    const dateA = new Date(a.created_at).getTime();
-    const dateB = new Date(b.created_at).getTime();
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
     return sortOrder.value === 'desc' ? dateB - dateA : dateA - dateB;
   });
 
@@ -377,31 +391,62 @@ const filteredNotifications = computed(() => {
 // Actions
 // ==========================================
 const openDetail = (item: NotificationItem) => {
+  // Mark as read when opened
+  if (!item.isRead) {
+    void toggleRead(item);
+  }
+
+  // แจ้งเตือนที่ผูกกับงาน/รอบตรวจ ให้พาไปหน้างานนั้น round นั้นตรงๆ แทนการเปิด dialog รายละเอียด
+  if (item.job && item.round) {
+    void router.push({
+      path: resolveJobDetailPath(item.job),
+      query: { roundId: String(item.round.roundId) },
+    });
+    return;
+  }
+
   selectedNotification.value = item;
   showDetailDialog.value = true;
-  // Mark as read when opened
-  if (item.is_read === '0') {
-    item.is_read = '1';
-  }
 };
 
 const deleteAndClose = () => {
   if (selectedNotification.value) {
-    deleteNotification(selectedNotification.value.notification_id);
+    void deleteNotification(selectedNotification.value.notificationId);
     showDetailDialog.value = false;
   }
 };
 
-const toggleRead = (item: NotificationItem) => {
-  item.is_read = item.is_read === '0' ? '1' : '0';
+const toggleRead = async (item: NotificationItem) => {
+  const nextIsRead = !item.isRead;
+  item.isRead = nextIsRead;
+  try {
+    await api.patch(`/notifications/${item.notificationId}/read`, { isRead: nextIsRead });
+  } catch (error) {
+    item.isRead = !nextIsRead;
+    console.error('อัปเดตสถานะการอ่านไม่สำเร็จ', error);
+  }
 };
 
-const deleteNotification = (id: number) => {
-  notifications.value = notifications.value.filter((n) => n.notification_id !== id);
+const deleteNotification = async (id: number) => {
+  const previous = notifications.value;
+  notifications.value = notifications.value.filter((n) => n.notificationId !== id);
+  try {
+    await api.delete(`/notifications/${id}`);
+  } catch (error) {
+    notifications.value = previous;
+    console.error('ลบการแจ้งเตือนไม่สำเร็จ', error);
+  }
 };
 
-const markAllAsRead = () => {
-  notifications.value.forEach((n) => (n.is_read = '1'));
+const markAllAsRead = async () => {
+  const previous = notifications.value.map((n) => n.isRead);
+  notifications.value.forEach((n) => (n.isRead = true));
+  try {
+    await api.patch('/notifications/mark-all-read');
+  } catch (error) {
+    notifications.value.forEach((n, i) => (n.isRead = previous[i] ?? n.isRead));
+    console.error('ทำเครื่องหมายอ่านทั้งหมดไม่สำเร็จ', error);
+  }
 };
 </script>
 
