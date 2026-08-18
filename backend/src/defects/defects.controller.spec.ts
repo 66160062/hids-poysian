@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { JwtService } from '@nestjs/jwt';
 import { DefectsController } from './defects.controller';
 import { DefectsService } from './defects.service';
 import { StorageService } from 'src/storage/storage.service';
 import { ReportsService } from 'src/reports/reports.service';
 import { AuthService } from 'src/auth/auth.service';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
+import { Defect } from './entities/defect.entity';
 
 describe('DefectsController', () => {
   let controller: DefectsController;
@@ -28,9 +30,15 @@ describe('DefectsController', () => {
         { provide: ReportsService, useValue: reportsMock },
         {
           provide: AuthService,
-          useValue: { verifyLinkToken: jest.fn(), verifyJobAccess: jest.fn() },
+          useValue: {
+            verifyLinkToken: jest.fn(),
+            verifyJobAccess: jest.fn(),
+            verifyRoundAccess: jest.fn(),
+          },
         },
         { provide: getRepositoryToken(InspectionRound), useValue: {} },
+        { provide: getRepositoryToken(Defect), useValue: {} },
+        { provide: JwtService, useValue: { verify: jest.fn() } },
       ],
     }).compile();
 

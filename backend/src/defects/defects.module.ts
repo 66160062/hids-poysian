@@ -9,6 +9,8 @@ import { InspectionRoundsModule } from 'src/inspection-rounds/inspection-rounds.
 import { UsersModule } from 'src/users/users.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from 'src/auth/auth.module';
+import { DefectAccessGuard } from './guards/defect-access.guard';
+import { NotificationsModule } from 'src/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -17,9 +19,10 @@ import { AuthModule } from 'src/auth/auth.module';
     InspectionRoundsModule,
     UsersModule,
     AuthModule,
+    NotificationsModule,
   ],
   controllers: [DefectsController],
-  providers: [DefectsService],
+  providers: [DefectsService, DefectAccessGuard],
   exports: [DefectsService],
 })
 export class DefectsModule {}

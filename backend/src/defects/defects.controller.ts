@@ -23,6 +23,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { LinkTokenGuard } from 'src/auth/link-token.guard';
 import { RoundAccessGuard } from 'src/auth/round-access.guard';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { DefectAccessGuard } from './guards/defect-access.guard';
 import { StorageService } from 'src/storage/storage.service';
 import { ReportsService } from 'src/reports/reports.service';
 
@@ -41,6 +43,7 @@ export class DefectsController {
   ) {}
 
   @Post()
+  @UseGuards(AuthGuard)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   async create(
@@ -59,6 +62,7 @@ export class DefectsController {
   }
 
   @Get()
+  @UseGuards(AuthGuard)
   findAll() {
     return this.defectsService.findAll();
   }
@@ -70,6 +74,7 @@ export class DefectsController {
   }
 
   @Get(':id')
+  @UseGuards(DefectAccessGuard)
   findOne(@Param('id') id: string) {
     return this.defectsService.findOne(+id);
   }
@@ -99,6 +104,7 @@ export class DefectsController {
   }
 
   @Patch(':id')
+  @UseGuards(DefectAccessGuard)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   async update(
@@ -118,6 +124,7 @@ export class DefectsController {
   }
 
   @Delete(':id')
+  @UseGuards(DefectAccessGuard)
   async remove(@Param('id') id: string) {
     const defect = await this.defectsService.remove(+id);
     this.reportsService.scheduleRegeneration(defect.round.roundId);
