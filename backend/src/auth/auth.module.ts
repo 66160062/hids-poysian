@@ -26,7 +26,7 @@ import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round
         }
         return {
           secret,
-          signOptions: { expiresIn: '1h' },
+          signOptions: { expiresIn: '8h' },
         };
       },
     }),
