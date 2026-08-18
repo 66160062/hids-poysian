@@ -61,6 +61,7 @@ import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { ActivityLog } from './activity-logs/entities/activity-log.entity';
 import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/entities/notification.entity';
+import { Assignment } from './assignments/entities/assignment.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -116,6 +117,7 @@ import { Notification } from './notifications/entities/notification.entity';
         DailyReportImage,
         ActivityLog,
         Notification,
+        Assignment,
       ],
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),

@@ -5,6 +5,9 @@ import { AssignmentsService } from './assignments.service';
 import { Assignment } from './entities/assignment.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { User } from 'src/users/entities/user.entity';
+import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { MailService } from 'src/mail/mail.service';
 
 describe('AssignmentsService', () => {
   let service: AssignmentsService;
@@ -17,6 +20,9 @@ describe('AssignmentsService', () => {
   };
   let jobsRepo: { findOne: jest.Mock };
   let usersRepo: { findOne: jest.Mock };
+  let roundsRepo: { findOne: jest.Mock };
+  let notificationsService: { create: jest.Mock };
+  let mailService: { sendInspectorAssignedEmail: jest.Mock };
 
   beforeEach(async () => {
     assignmentsRepo = {
@@ -28,6 +34,9 @@ describe('AssignmentsService', () => {
     };
     jobsRepo = { findOne: jest.fn() };
     usersRepo = { findOne: jest.fn() };
+    roundsRepo = { findOne: jest.fn() };
+    notificationsService = { create: jest.fn().mockResolvedValue(null) };
+    mailService = { sendInspectorAssignedEmail: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -35,6 +44,9 @@ describe('AssignmentsService', () => {
         { provide: getRepositoryToken(Assignment), useValue: assignmentsRepo },
         { provide: getRepositoryToken(InspectionJob), useValue: jobsRepo },
         { provide: getRepositoryToken(User), useValue: usersRepo },
+        { provide: getRepositoryToken(InspectionRound), useValue: roundsRepo },
+        { provide: NotificationsService, useValue: notificationsService },
+        { provide: MailService, useValue: mailService },
       ],
     }).compile();
 
@@ -74,8 +86,15 @@ describe('AssignmentsService', () => {
     });
 
     it('creates the assignment once job, inspector, and no duplicate are confirmed', async () => {
-      jobsRepo.findOne.mockResolvedValue({ jobId: 1 });
-      usersRepo.findOne.mockResolvedValue({ id: 2 });
+      jobsRepo.findOne.mockResolvedValue({
+        jobId: 1,
+        projectName: 'บ้านทดสอบ',
+      });
+      usersRepo.findOne.mockResolvedValue({
+        id: 2,
+        fullName: 'สมชาย',
+        email: 'inspector@example.com',
+      });
       assignmentsRepo.findOne.mockResolvedValue(null);
       assignmentsRepo.create.mockImplementation((value) => value);
       assignmentsRepo.save.mockImplementation((value) => value);
@@ -86,6 +105,63 @@ describe('AssignmentsService', () => {
       } as never);
 
       expect(result).toMatchObject({ job: { jobId: 1 }, inspector: { id: 2 } });
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ recipientUserId: 2, jobId: 1 }),
+      );
+      expect(mailService.sendInspectorAssignedEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'inspector@example.com',
+          inspectorName: 'สมชาย',
+          jobTitle: 'บ้านทดสอบ',
+        }),
+      );
+    });
+
+    it('throws NotFoundException when roundId is given but the round does not exist', async () => {
+      jobsRepo.findOne.mockResolvedValue({ jobId: 1 });
+      usersRepo.findOne.mockResolvedValue({ id: 2 });
+      roundsRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.assign({ jobId: 1, inspectorId: 2, roundId: 9 } as never),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('throws BadRequestException when the round belongs to a different job', async () => {
+      jobsRepo.findOne.mockResolvedValue({ jobId: 1 });
+      usersRepo.findOne.mockResolvedValue({ id: 2 });
+      roundsRepo.findOne.mockResolvedValue({
+        roundId: 9,
+        job: { jobId: 999 },
+      });
+
+      await expect(
+        service.assign({ jobId: 1, inspectorId: 2, roundId: 9 } as never),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('creates a round-scoped assignment when roundId matches the job', async () => {
+      jobsRepo.findOne.mockResolvedValue({
+        jobId: 1,
+        projectName: 'บ้านทดสอบ',
+      });
+      usersRepo.findOne.mockResolvedValue({ id: 2 });
+      roundsRepo.findOne.mockResolvedValue({ roundId: 9, job: { jobId: 1 } });
+      assignmentsRepo.findOne.mockResolvedValue(null);
+      assignmentsRepo.create.mockImplementation((value) => value);
+      assignmentsRepo.save.mockImplementation((value) => value);
+
+      const result = await service.assign({
+        jobId: 1,
+        inspectorId: 2,
+        roundId: 9,
+      } as never);
+
+      expect(result).toMatchObject({
+        job: { jobId: 1 },
+        inspector: { id: 2 },
+        round: { roundId: 9 },
+      });
     });
   });
 
