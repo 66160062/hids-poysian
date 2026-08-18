@@ -74,8 +74,7 @@ export class ReportsService {
     round.lastPdfUrl = url;
     await this.roundRepo.save(round);
 
-    // ลบไฟล์ PDF เก่าของรอบเดียวกันทิ้ง หลังจาก DB ชี้ไปไฟล์ใหม่แล้วอย่างปลอดภัย —
-    // กันไม่ให้ Storage สะสมไฟล์ค้างจากทุกรอบที่ regenerate (ปกติ round เดียวกันจะ regenerate ซ้ำหลายครั้ง)
+    // ลบไฟล์ PDF เก่า
     if (previousUrl && previousUrl !== url) {
       await this.storageService.deleteFile(previousUrl);
     }
@@ -103,13 +102,10 @@ export class ReportsService {
     return createHash('sha256').update(raw).digest('hex');
   }
 
-  // เปิด headless browser ไปที่ route พิเศษของ frontend ที่ mount DefectReport.vue ตัวจริง
-  // แล้ว print-to-PDF ผ่านกลไกเดียวกับที่ window.print() ใช้ตอนนี้ (ข้อความ select ได้จริง ไม่ใช่รูป)
+
   private async renderReportPdf(roundId: number): Promise<Buffer> {
     const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:9000';
-    // route /print/report/:roundId เรียก endpoint เดิมที่ต้อง login (AuthGuard) — เพราะ Puppeteer
-    // ไม่มี session ของผู้ใช้เลย จึงมิ้นต์ token ภายในให้ตัวเองแทน แล้วฉีดลง localStorage
-    // ก่อนหน้าเพจโหลด ให้ตรงกับ pattern ที่ useAuthStore() อ่านตอนสร้าง store (Frontend/src/stores/useAuth.ts)
+    
     const systemToken = this.jwtService.sign(
       { sub: 0, role: 'system' },
       { expiresIn: '5m' },
