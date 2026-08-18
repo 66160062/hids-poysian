@@ -10,6 +10,7 @@ import { User } from 'src/users/entities/user.entity';
 import { Defect } from 'src/defects/entities/defect.entity';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { MailService } from 'src/mail/mail.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 function createQueryRunnerMock() {
   return {
@@ -46,6 +47,7 @@ describe('InspectionRoundsService', () => {
   let defectsRepo: { count: jest.Mock };
   let activityLogsService: { log: jest.Mock; logForRound: jest.Mock };
   let mailService: { sendRoundApprovedEmail: jest.Mock };
+  let notificationsService: { create: jest.Mock };
   let queryRunner: ReturnType<typeof createQueryRunnerMock>;
   let dataSource: { createQueryRunner: jest.Mock };
 
@@ -63,6 +65,7 @@ describe('InspectionRoundsService', () => {
     defectsRepo = { count: jest.fn().mockResolvedValue(0) };
     activityLogsService = { log: jest.fn(), logForRound: jest.fn() };
     mailService = { sendRoundApprovedEmail: jest.fn() };
+    notificationsService = { create: jest.fn() };
     queryRunner = createQueryRunnerMock();
     dataSource = { createQueryRunner: jest.fn(() => queryRunner) };
 
@@ -77,6 +80,7 @@ describe('InspectionRoundsService', () => {
         { provide: DataSource, useValue: dataSource },
         { provide: ActivityLogsService, useValue: activityLogsService },
         { provide: MailService, useValue: mailService },
+        { provide: NotificationsService, useValue: notificationsService },
       ],
     }).compile();
 

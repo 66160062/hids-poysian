@@ -59,6 +59,8 @@ import { StorageModule } from './storage/storage.module';
 import { ReportsModule } from './reports/reports.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { ActivityLog } from './activity-logs/entities/activity-log.entity';
+import { NotificationsModule } from './notifications/notifications.module';
+import { Notification } from './notifications/entities/notification.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -113,6 +115,7 @@ import { ActivityLog } from './activity-logs/entities/activity-log.entity';
         MachineType,
         DailyReportImage,
         ActivityLog,
+        Notification,
       ],
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),
@@ -143,6 +146,7 @@ import { ActivityLog } from './activity-logs/entities/activity-log.entity';
     DailyReportsModule,
     AdminModule,
     ConstructionDailyReportsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

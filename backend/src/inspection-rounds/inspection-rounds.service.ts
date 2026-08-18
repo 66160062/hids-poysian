@@ -12,6 +12,8 @@ import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/ins
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity';
 import { MailService } from 'src/mail/mail.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { NotificationType } from 'src/notifications/entities/notification.entity';
 @Injectable()
 export class InspectionRoundsService {
   constructor(
@@ -28,6 +30,7 @@ export class InspectionRoundsService {
     private readonly dataSource: DataSource,
     private readonly activityLogsService: ActivityLogsService,
     private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private formatThaiDate(date: Date): string {
@@ -448,6 +451,14 @@ export class InspectionRoundsService {
           },
           savedRound.roundId,
         );
+
+        void this.notificationsService.create({
+          type: NotificationType.ALERT,
+          recipientRole: 'admin',
+          message: `${savedRound.job.projectName}: ตรวจงวดที่ ${savedRound.roundNumber} รออนุมัติ`,
+          jobId: savedRound.job.jobId,
+          roundId: savedRound.roundId,
+        });
       }
 
       return savedRound;
