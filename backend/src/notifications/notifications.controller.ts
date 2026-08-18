@@ -45,8 +45,10 @@ export class NotificationsController {
   @Patch('mark-all-read')
   @ApiOperation({ summary: 'ทำเครื่องหมายอ่านทั้งหมด' })
   markAllRead(@Req() req: AuthedRequest) {
-    const role = req.user.role === 'admin' ? 'admin' : req.user.role;
-    return this.notificationsService.markAllReadForRole(role);
+    if (req.user.role === 'admin') {
+      return this.notificationsService.markAllReadForRole('admin');
+    }
+    return this.notificationsService.markAllReadForUser(req.user.sub);
   }
 
   @Delete(':id')
