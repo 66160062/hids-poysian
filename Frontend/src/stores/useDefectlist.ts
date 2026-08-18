@@ -5,6 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL as string
 
 // ── Types ────────────────────────────────────────────────────────────────────
 export interface DefectItem {
+  defectId:      number
   image:         string
   location:      string
   jobType:       string
@@ -58,14 +59,11 @@ export function useDefectList() {
         params,
       })
 
-      const defectLists = await Promise.all(
-        rounds.map((round) =>
-          api
-            .get<DefectResponse[]>(`/defects/round/${round.roundId}`, { params })
-            .then((res) => res.data),
-        ),
-      )
-      const defects = defectLists.flat()
+      // rounds มาเรียงตาม roundNumber ASC — เอาเฉพาะรอบล่าสุด ไม่รวมรอบก่อนหน้า
+      const latestRound = rounds[rounds.length - 1]
+      const { data: defects } = latestRound
+        ? await api.get<DefectResponse[]>(`/defects/round/${latestRound.roundId}`, { params })
+        : { data: [] as DefectResponse[] }
 
       allDefectItems.value = defects.map((defect) => {
         const categoryNames = Array.from(
@@ -80,6 +78,7 @@ export function useDefectList() {
         const floorLabel = defect.floor?.label ? `ชั้น${defect.floor.label}` : '-'
 
         return {
+          defectId: defect.defectId,
           image: defect.imageUrl
             ? defect.imageUrl.startsWith('http')
               ? defect.imageUrl

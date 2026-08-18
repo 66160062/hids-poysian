@@ -2,7 +2,7 @@
   <q-layout view="lHh Lpr lFf">
   <q-header class="bg-white text-dark"> <!--พื้นขาว ตัวดำ -->
   <q-toolbar>
-    <q-btn flat round icon="arrow_back" color="dark" @click="router.push('/')" />
+    <q-btn flat round icon="arrow_back" color="dark" @click="goBack" />
     <q-toolbar-title class="text-center text-weight-bold">{{ currentTitle }}</q-toolbar-title> <!-- ✅ กลาง + bold -->
     <!--<q-btn flat round icon="logout" color="dark" @click="authStore.logout()" />-->
   </q-toolbar>
@@ -44,6 +44,14 @@ const route = useRoute()
 const router = useRouter()
 //const authStore = useAuthStore()
 const currentTitle = computed(() => route.meta.title as string || 'Customer')
+
+const goBack = () => {
+  if (window.history.length > 1) {
+    router.back()
+  } else {
+    void router.push('/customer')
+  }
+}
 const menuList = [
   {
     name: 'dashboard',

@@ -12,7 +12,7 @@
         style="z-index: 10"
       />
       <q-btn
-        v-if="isEditMode"
+        v-if="isEditMode && !isLocked"
         flat
         round
         dense
@@ -22,12 +22,33 @@
         @click="handleDelete"
         style="z-index: 10"
       />
-      <q-img v-if="imagePreview" :src="imagePreview" class="fit" fit="cover" />
+      <template v-if="imagePreview">
+        <q-img
+          :src="imagePreview"
+          class="fit"
+          fit="cover"
+          style="cursor: pointer"
+          @click="annotationDialog = true"
+        />
+        <q-btn
+          v-if="!isLocked"
+          round
+          dense
+          color="white"
+          text-color="primary"
+          icon="edit"
+          size="sm"
+          class="absolute-bottom-left q-mb-md q-ml-sm shadow-1"
+          style="z-index: 10"
+          @click="annotationDialog = true"
+        />
+      </template>
       <div v-else class="column items-center text-grey-5">
         <q-icon name="image" size="80px" color="grey-4" />
         <div class="text-subtitle1 text-weight-medium q-mt-sm">ไม่มีรูปภาพ</div>
       </div>
       <div
+        v-if="!isLocked"
         class="absolute-bottom-right q-pa-md column q-gutter-y-sm"
         style="margin-bottom: 20px; z-index: 10"
       >
@@ -50,6 +71,13 @@
         @change="onFileSelected"
       />
     </div>
+
+    <ImageAnnotationDialog
+      v-if="imagePreview"
+      v-model="annotationDialog"
+      :image-src="imagePreview"
+      @save="onAnnotationSave"
+    />
 
     <div
       class="bg-white col q-pa-lg flex column shadow-up-2"
@@ -75,6 +103,7 @@
                 emit-value
                 map-options
                 :loading="isLoadingRooms"
+                :disable="isLocked"
                 @update:model-value="onRoomChange"
               />
 
@@ -90,7 +119,7 @@
                 option-label="label"
                 emit-value
                 map-options
-                :disable="!form.roomId"
+                :disable="!form.roomId || isLocked"
                 clearable
               />
             </div>
@@ -110,7 +139,7 @@
                 option-label="label"
                 emit-value
                 map-options
-                :disable="!form.roomId"
+                :disable="!form.roomId || isLocked"
                 :loading="isLoadingFloors"
                 @update:model-value="onFloorChange"
               />
@@ -156,6 +185,7 @@
                 option-label="label"
                 emit-value
                 map-options
+                :disable="isLocked"
                 @update:model-value="onCategoryChange"
               />
             </div>
@@ -177,7 +207,7 @@
                 option-label="label"
                 emit-value
                 map-options
-                :disable="!form.jobType"
+                :disable="!form.jobType || isLocked"
               >
                 <template #selected-item="scope">
                   <q-chip
@@ -208,26 +238,49 @@
                 v-model="form.note"
                 label="หมายเหตุ"
                 rows="3"
+                :disable="isLocked"
               />
             </div>
           </div>
 
-          <div class="row no-wrap items-center">
-            <div class="row no-wrap items-center justify-end" style="width: 100%">
-              <span
-                class="text-weight-bold"
-                :class="form.severity === 'Major' ? 'text-red' : 'text-orange'"
-                style="font-size: 15px"
-              >
-                {{ form.severity === 'Major' ? 'Major Defect' : 'Minor Defect' }}
-              </span>
-              <q-toggle
-                v-model="severityToggle"
-                :color="form.severity === 'Major' ? 'red' : 'orange'"
-                keep-color
-                @update:model-value="onSeverityToggle"
-                size="60px"
+          <div class="row no-wrap items-center q-py-xs">
+            <q-icon name="warning_amber" size="sm" class="q-mr-sm" style="visibility: hidden" />
+            <div class="row no-wrap rounded-borders shadow-2 overflow-hidden severity-switch q-mr-md">
+              <q-btn
+                unelevated
+                no-caps
+                dense
+                label="Minor"
+                :color="!severityToggle ? 'orange' : 'grey-3'"
+                :text-color="!severityToggle ? 'white' : 'grey-7'"
+                class="severity-switch__btn"
+                :disable="isLocked"
+                @click="setSeverity(false)"
               />
+              <q-btn
+                unelevated
+                no-caps
+                dense
+                label="Major"
+                :color="severityToggle ? 'red' : 'grey-3'"
+                :text-color="severityToggle ? 'white' : 'grey-7'"
+                class="severity-switch__btn"
+                :disable="isLocked"
+                @click="setSeverity(true)"
+              />
+            </div>
+            <div class="row items-center q-gutter-x-xs">
+              <q-icon
+                name="warning_amber"
+                size="sm"
+                :color="form.severity === 'Major' ? 'red' : 'orange'"
+              />
+              <span
+                class="text-subtitle2 text-weight-bold"
+                :class="form.severity === 'Major' ? 'text-red' : 'text-orange'"
+              >
+                {{ form.severity === 'Major' ? 'ตำหนิร้ายแรง' : 'ตำหนิเล็กน้อย' }}
+              </span>
             </div>
           </div>
         </div>
@@ -253,7 +306,7 @@
           :label="step === 1 ? 'ถัดไป' : 'บันทึก'"
           :icon-right="step === 1 ? 'chevron_right' : ''"
           :loading="inspectionStore.isLoading"
-          :disable="isSubmitting"
+          :disable="isSubmitting || (isLocked && step === 2)"
           class="text-weight-bold"
           style="border-radius: 8px; padding: 8px 24px"
           @click="handleNext"
@@ -267,8 +320,10 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useInspectionStore } from 'src/stores/useInspection';
+import { useRoundLock } from 'src/composables/useRoundLock';
 import { api } from 'src/boot/axios';
 import { useQuasar } from 'quasar';
+import ImageAnnotationDialog from 'src/components/ImageAnnotationDialog.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -279,6 +334,8 @@ const roundId = route.params.roundId as string;
 const defectIdFromQuery = route.query.defectId as string | undefined;
 const actionFromQuery = route.query.action as string | undefined;
 const isEditMode = computed(() => !!defectIdFromQuery);
+const { isLocked, fetchLockState } = useRoundLock(roundId);
+void fetchLockState();
 
 const step = ref(1);
 
@@ -370,6 +427,7 @@ const imagePreview = ref<string | null>(null);
 const selectedFile = ref<File | null>(null);
 const galleryInput = ref<HTMLInputElement | null>(null);
 const cameraInput = ref<HTMLInputElement | null>(null);
+const annotationDialog = ref(false);
 
 const triggerGallery = () => galleryInput.value?.click();
 const triggerCamera = () => cameraInput.value?.click();
@@ -382,6 +440,15 @@ const onFileSelected = (event: Event) => {
     imagePreview.value = URL.createObjectURL(file);
   }
   target.value = '';
+};
+
+const onAnnotationSave = (file: File, previewUrl: string) => {
+  const oldPreview = imagePreview.value;
+  selectedFile.value = file;
+  imagePreview.value = previewUrl;
+  if (oldPreview?.startsWith('blob:')) {
+    URL.revokeObjectURL(oldPreview);
+  }
 };
 
 // ── Navigation & Submit ───────────────────────────────────────
@@ -594,10 +661,16 @@ const handleDelete = () => {
 
 // ── Lifecycle ─────────────────────────────────────────────────
 
-const severityToggle = ref(true); // true = Major, false = Minor
+const severityToggle = ref(false); // true = Major, false = Minor
 
 const onSeverityToggle = (val: boolean) => {
-  form.value.severity = val ? 'Minor' : 'Major';
+  form.value.severity = val ? 'Major' : 'Minor';
+};
+
+const setSeverity = (val: boolean) => {
+  if (isLocked.value) return;
+  severityToggle.value = val;
+  onSeverityToggle(val);
 };
 
 onMounted(async () => {
@@ -624,7 +697,7 @@ onMounted(async () => {
       form.value.subRoomId = defect.subRoom?.subRoomId ?? null;
       form.value.floorId = defect.floor?.floorId ?? null;
       form.value.severity = defect.severity;
-      severityToggle.value = defect.severity === 'Minor';
+      severityToggle.value = defect.severity === 'Major';
 
       if (defect.subCategories && defect.subCategories.length > 0) {
         form.value.jobType = defect.subCategories[0]?.category?.categoryId ?? null;
@@ -656,5 +729,16 @@ onMounted(async () => {
 }
 :deep(.q-field--dense .q-field__marginal) {
   height: 40px;
+}
+
+.severity-switch {
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+}
+.severity-switch__btn {
+  min-width: 64px;
+  font-weight: 600;
+  font-size: 12px;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 </style>

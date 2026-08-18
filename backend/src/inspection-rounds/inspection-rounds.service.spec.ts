@@ -9,6 +9,8 @@ import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspe
 import { User } from 'src/users/entities/user.entity';
 import { Defect } from 'src/defects/entities/defect.entity';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
+import { MailService } from 'src/mail/mail.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 function createQueryRunnerMock() {
   return {
@@ -44,6 +46,8 @@ describe('InspectionRoundsService', () => {
   };
   let defectsRepo: { count: jest.Mock };
   let activityLogsService: { log: jest.Mock; logForRound: jest.Mock };
+  let mailService: { sendRoundApprovedEmail: jest.Mock };
+  let notificationsService: { create: jest.Mock };
   let queryRunner: ReturnType<typeof createQueryRunnerMock>;
   let dataSource: { createQueryRunner: jest.Mock };
 
@@ -60,6 +64,8 @@ describe('InspectionRoundsService', () => {
     jobsRepo = { findOneByOrFail: jest.fn(), find: jest.fn(), save: jest.fn() };
     defectsRepo = { count: jest.fn().mockResolvedValue(0) };
     activityLogsService = { log: jest.fn(), logForRound: jest.fn() };
+    mailService = { sendRoundApprovedEmail: jest.fn() };
+    notificationsService = { create: jest.fn() };
     queryRunner = createQueryRunnerMock();
     dataSource = { createQueryRunner: jest.fn(() => queryRunner) };
 
@@ -73,6 +79,8 @@ describe('InspectionRoundsService', () => {
         { provide: getRepositoryToken(Defect), useValue: defectsRepo },
         { provide: DataSource, useValue: dataSource },
         { provide: ActivityLogsService, useValue: activityLogsService },
+        { provide: MailService, useValue: mailService },
+        { provide: NotificationsService, useValue: notificationsService },
       ],
     }).compile();
 
@@ -265,6 +273,48 @@ describe('InspectionRoundsService', () => {
       const { data } = await service.approveReport(1);
 
       expect(data.job.status).toBe('Active');
+    });
+
+    it('emails the customer when the job has a customer email on file', async () => {
+      roundsRepo.findOneOrFail.mockResolvedValue({
+        roundId: 1,
+        roundNumber: 2,
+        status: 'SUBMITTED',
+        lastPdfUrl: 'https://example.com/report.pdf',
+        job: {
+          jobId: 1,
+          status: 'Pending',
+          projectName: 'บ้านตัวอย่าง',
+          customer: { email: 'customer@example.com', fullName: 'คุณลูกค้า' },
+        },
+        teamMembers: [],
+      });
+
+      await service.approveReport(1);
+
+      expect(mailService.sendRoundApprovedEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'customer@example.com',
+          customerName: 'คุณลูกค้า',
+          jobTitle: 'บ้านตัวอย่าง',
+          roundNumber: 2,
+          pdfUrl: 'https://example.com/report.pdf',
+        }),
+      );
+    });
+
+    it('skips emailing when the job has no customer email on file', async () => {
+      roundsRepo.findOneOrFail.mockResolvedValue({
+        roundId: 1,
+        roundNumber: 1,
+        status: 'SUBMITTED',
+        job: { jobId: 1, status: 'Pending' },
+        teamMembers: [],
+      });
+
+      await service.approveReport(1);
+
+      expect(mailService.sendRoundApprovedEmail).not.toHaveBeenCalled();
     });
   });
 

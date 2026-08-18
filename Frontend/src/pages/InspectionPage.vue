@@ -65,11 +65,11 @@
           </div>
         </div>
 
-        <ActionFab @add="onAddDefectClick" />
+        <ActionFab v-if="!isLocked" @add="onAddDefectClick" />
       </q-page>
     </q-page-container>
 
-    <q-footer class="bg-transparent q-px-md q-pb-lg">
+    <q-footer v-if="!isLocked" class="bg-transparent q-px-md q-pb-lg">
       <q-btn
         color="primary"
         :label="isAlreadyInspected ? 'ยืนยันการตรวจเสร็จสิ้น' : 'บันทึกการแก้ไขการตรวจ'"
@@ -104,6 +104,7 @@ import InspectionItemCard from '../components/InspectionItemCard.vue';
 import ActionFab from '../components/ActionFab.vue';
 import FilterBottomSheet from '../components/FilterBottomSheet.vue';
 import { useInspectionStore } from 'src/stores/useInspection';
+import { useRoundLock } from 'src/composables/useRoundLock';
 import { api } from 'src/boot/axios'; // ปลดคอมเมนต์
 
 // ── Route & Plugins ───────────────────────────────────────────
@@ -116,6 +117,7 @@ const roundId = route.params.roundId as string;
 // ── Store ─────────────────────────────────────────────────────
 
 const store = useInspectionStore();
+const { isLocked, fetchLockState } = useRoundLock(roundId);
 
 // ── UI state ──────────────────────────────────────────────────
 
@@ -132,6 +134,7 @@ const GROUP_BY_OPTIONS = [
 
 onMounted(() => {
   void store.fetchDefects(roundId);
+  void fetchLockState();
 });
 
 // ── Navigation ────────────────────────────────────────────────

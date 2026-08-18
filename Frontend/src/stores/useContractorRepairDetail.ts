@@ -5,6 +5,8 @@ import { useContractorRepair } from 'src/stores/useContractormain';
 import { useLinkAccess } from 'src/stores/useLinkAccess';
 import { api } from 'src/boot/axios';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL as string;
+
 export interface RepairDetail {
   code: string;
   reportedAt: string;
@@ -15,6 +17,28 @@ export interface RepairDetail {
   status: string;
 }
 
+interface DefectSubCategoryResponse {
+  subCategoryId: number;
+  name: string;
+  category?: { categoryId: number; name: string };
+}
+
+interface DefectDetailResponse {
+  defectId: number;
+  createdAt: string;
+  imageUrl?: string;
+  contractorImageUrl?: string;
+  contractorNote?: string;
+  status: string;
+  room?: { roomId: number; roomName: string };
+  subRoom?: { subRoomId: number; roomName: string } | null;
+  floor?: { floorId: number; label: string };
+  subCategories?: DefectSubCategoryResponse[];
+}
+
+const resolveUrl = (url?: string) =>
+  url ? (url.startsWith('http') ? url : `${API_BASE_URL}${url}`) : '';
+
 export function useRepairDetail(defectId: number) {
   const router = useRouter();
   const store = useContractorRepair();
@@ -24,7 +48,7 @@ export function useRepairDetail(defectId: number) {
   const found = allDefectItems.value.find((d) => d.id === defectId);
 
   const defect = ref<RepairDetail>({
-    code: found ? `DEF-${String(found.id).padStart(4, '0')}` : 'DEF-0000',
+    code: `DEF-${String(defectId).padStart(4, '0')}`,
     reportedAt: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
     beforeImage: found?.image ?? 'https://placehold.co/600x400/e0e0e0/999?text=Before',
     jobType: found?.jobType ?? '-',
@@ -41,6 +65,45 @@ export function useRepairDetail(defectId: number) {
   const submitError = ref<string | null>(null);
   const savedAfterImage = ref(found?.afterImage ?? '');
   const savedNote = ref(found?.repairNote ?? '');
+
+  // เข้าหน้านี้ตรง ๆ (เช่น จากรายการ defect ฝั่งลูกค้า) โดยที่ store ของ contractor ยังไม่มีข้อมูล — ดึงเองจาก API
+  if (!found) {
+    void (async () => {
+      try {
+        const { data } = await api.get<DefectDetailResponse>(`/defects/${defectId}`, {
+          params: linkStore.linkToken.value ? { token: linkStore.linkToken.value } : {},
+        });
+
+        const roomName = data.room?.roomName || '-';
+        const subRoomName = data.subRoom?.roomName || '-';
+        const floorLabel = data.floor?.label ? `ชั้น ${data.floor.label}` : '-';
+        const categoryNames = Array.from(
+          new Set(
+            (data.subCategories ?? [])
+              .map((sub) => sub.category?.name)
+              .filter((name): name is string => !!name),
+          ),
+        );
+
+        defect.value = {
+          code: `DEF-${String(defectId).padStart(4, '0')}`,
+          reportedAt: new Date(data.createdAt).toLocaleTimeString('th-TH', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          beforeImage: resolveUrl(data.imageUrl) || 'https://placehold.co/600x400/e0e0e0/999?text=Before',
+          jobType: categoryNames.join(', ') || '-',
+          location: `${roomName}, ${subRoomName}, ${floorLabel}`,
+          tags: (data.subCategories ?? []).map((sub) => sub.name),
+          status: data.status,
+        };
+        savedAfterImage.value = resolveUrl(data.contractorImageUrl);
+        savedNote.value = data.contractorNote || '';
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }
 
   const submitRepair = async () => {
     if (!afterImageFile.value) return;

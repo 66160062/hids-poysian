@@ -227,6 +227,67 @@ describe('DefectsService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
+  it('should reject creating a defect on a submitted round', async () => {
+    repoMock.findOneByOrFail.mockResolvedValue({
+      roundId: 7,
+      status: 'SUBMITTED',
+    });
+    repoMock.findBy.mockResolvedValue([]);
+    roomsRepo.findOneByOrFail.mockResolvedValue({ roomId: 3 });
+
+    await expect(
+      service.create({
+        roundId: 7,
+        subCategoryIds: [],
+        inspectorId: 1,
+        roomId: 3,
+        floorId: 1,
+      } as never),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(defectsRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('should reject updating a defect on an approved round', async () => {
+    defectsRepo.findOneOrFail.mockResolvedValue({
+      defectId: 11,
+      round: { roundId: 7, status: 'APPROVED' },
+    });
+
+    await expect(
+      service.update(11, { description: 'edited' } as never),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(defectsRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('should reject removing a defect on a submitted round', async () => {
+    defectsRepo.findOneOrFail.mockResolvedValue({
+      defectId: 11,
+      round: { roundId: 7, status: 'SUBMITTED' },
+    });
+
+    await expect(service.remove(11)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it('should allow updating a defect on a round that is not locked', async () => {
+    const defect = {
+      defectId: 11,
+      description: 'old',
+      round: { roundId: 7, status: 'SCHEDULED' },
+    };
+    defectsRepo.findOneOrFail.mockResolvedValue(defect);
+    defectsRepo.save.mockImplementation((value) => value);
+
+    const result = await service.update(11, {
+      description: 'edited',
+    } as never);
+
+    expect(result.description).toBe('edited');
+  });
+
   it('should reject contractor update for locked jobs', async () => {
     defectsRepo.findOneOrFail.mockResolvedValue({
       defectId: 11,

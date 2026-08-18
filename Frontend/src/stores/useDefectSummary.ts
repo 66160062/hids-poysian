@@ -35,14 +35,11 @@ export function useDefectSummary() {
         params,
       })
 
-      const defectLists = await Promise.all(
-        rounds.map((round) =>
-          api
-            .get<DefectResponse[]>(`/defects/round/${round.roundId}`, { params })
-            .then((res) => res.data),
-        ),
-      )
-      const defects = defectLists.flat()
+      // rounds มาเรียงตาม roundNumber ASC — เอาเฉพาะรอบล่าสุด ไม่รวมรอบก่อนหน้า
+      const latestRound = rounds[rounds.length - 1]
+      const { data: defects } = latestRound
+        ? await api.get<DefectResponse[]>(`/defects/round/${latestRound.roundId}`, { params })
+        : { data: [] as DefectResponse[] }
 
       totalDefects.value = defects.length
       passed.value = defects.filter((d) => d.status === 'verified').length

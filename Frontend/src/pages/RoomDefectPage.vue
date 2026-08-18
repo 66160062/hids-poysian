@@ -50,7 +50,7 @@
             />
           </div>
         </div>
-        <ActionFab @add="onAddDefectClick" />
+        <ActionFab v-if="!isLocked" @add="onAddDefectClick" />
       </q-page>
     </q-page-container>
 
@@ -187,6 +187,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import DefectDetailCard from '../components/DefectDetailCard.vue';
 import { useInspectionStore } from 'src/stores/useInspection';
+import { useRoundLock } from 'src/composables/useRoundLock';
 import type { Defect } from 'src/models';
 
 // ── Route ─────────────────────────────────────────────────────
@@ -198,6 +199,8 @@ const groupKey = route.query.groupKey as string;
 // ── Store ─────────────────────────────────────────────────────
 
 const store = useInspectionStore();
+const { isLocked, fetchLockState } = useRoundLock(route.params.roundId as string);
+void fetchLockState();
 
 // ── Room defects ──────────────────────────────────────────────
 

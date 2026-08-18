@@ -158,7 +158,7 @@
               />
             </div>
             <div v-if="customerLinkExpiresAt" class="text-caption text-grey-5 q-mt-xs">
-              ลิงก์หมดอายุใน 15 นาที · ไม่ต้อง login
+              ลิงก์หมดอายุใน 365 วัน · ไม่ต้อง login
             </div>
           </div>
 
@@ -1342,6 +1342,15 @@ async function loadPageData() {
       console.warn('Failed to fetch users for inspector picker:', err);
     });
     await loadShareLinks();
+
+    // เข้ามาจากการแจ้งเตือน (มี roundId ใน query) ให้เปิด dialog รีวิวรอบนั้นให้เลย
+    const targetRoundId = Number(route.query.roundId);
+    if (targetRoundId) {
+      const targetRound = inspectionRounds.value.find((r) => r.id === targetRoundId);
+      if (targetRound) {
+        void openRoundReview(targetRound);
+      }
+    }
   } catch (error) {
     console.error('Failed to load job detail:', error);
     $q.notify({

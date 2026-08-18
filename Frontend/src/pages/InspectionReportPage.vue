@@ -61,6 +61,7 @@
                         :key="opt.optionId"
                         :label="opt.value"
                         :model-value="isSelected(template.templateId, opt.optionId)"
+                        :disable="isLocked"
                         @update:model-value="toggleOption(template.templateId, opt.optionId)"
                       />
                     </div>
@@ -71,6 +72,7 @@
                       :options="options.map((o) => ({ label: o.value, value: o.optionId }))"
                       :model-value="getSelected(template.templateId, groupName)"
                       type="radio"
+                      :disable="isLocked"
                       @update:model-value="selectOption(template.templateId, $event, groupName)"
                     />
                   </div>
@@ -82,6 +84,7 @@
                     dense
                     placeholder="หมายเหตุเพิ่มเติม"
                     class="q-mt-sm"
+                    :disable="isLocked"
                   />
                 </div>
               </q-card-section>
@@ -90,7 +93,7 @@
         </div>
       </div>
 
-      <div class="q-px-lg q-pb-xl">
+      <div v-if="!isLocked" class="q-px-lg q-pb-xl">
         <q-btn
           color="primary"
           label="บันทึกรายงาน"
@@ -108,6 +111,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { api } from 'src/boot/axios';
+import { useRoundLock } from 'src/composables/useRoundLock';
 import type { InspectionSummaryItem, SummaryTemplate, SummaryTemplateOption } from 'src/models';
 
 const route = useRoute();
@@ -116,6 +120,7 @@ const $q = useQuasar();
 const isMobile = computed(() => $q.screen.lt.md);
 const roundId = route.params.roundId as string;
 const loading = ref(true);
+const { isLocked, fetchLockState } = useRoundLock(roundId);
 
 const templates = ref<SummaryTemplate[]>([]);
 const summaryItems = ref<InspectionSummaryItem[]>([]);
@@ -289,7 +294,7 @@ function saveAll() {
 onMounted(async () => {
   loading.value = true;
   try {
-    await Promise.all([fetchTemplates(), fetchSummaryItems()]);
+    await Promise.all([fetchTemplates(), fetchSummaryItems(), fetchLockState()]);
   } finally {
     loading.value = false;
   }

@@ -58,7 +58,7 @@
       </q-card>
 
       <!-- Bottom Actions -->
-      <div class="fixed-bottom q-pa-md bg-white shadow-up-2 row q-gutter-x-sm">
+      <div v-if="!isLocked" class="fixed-bottom q-pa-md bg-white shadow-up-2 row q-gutter-x-sm">
         <q-btn
           unelevated
           outline
@@ -88,6 +88,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useInspectionStore } from 'src/stores/useInspection';
+import { useRoundLock } from 'src/composables/useRoundLock';
 import { api } from 'src/boot/axios';
 import { useQuasar } from 'quasar';
 import type { Defect } from 'src/models';
@@ -99,6 +100,8 @@ const $q = useQuasar();
 
 const roundId = route.params.roundId as string;
 const defectId = Number(route.query.defectId);
+const { isLocked, fetchLockState } = useRoundLock(roundId);
+void fetchLockState();
 
 const defect = ref<Defect | null>(null);
 const isSubmitting = ref(false);

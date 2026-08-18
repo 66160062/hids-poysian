@@ -63,7 +63,14 @@
           <div class="section-title">รายการตรวจ</div>
         </q-card-section>
         <q-list separator>
-          <q-item v-for="(item, i) in defectItems" :key="i" class="q-pa-md defect-item" clickable v-ripple>
+          <q-item
+            v-for="(item, i) in defectItems"
+            :key="i"
+            class="q-pa-md defect-item"
+            clickable
+            v-ripple
+            @click="router.push(`/customer/defect-detail/${item.defectId}`)"
+          >
             <q-item-section avatar class="defect-img-wrap">
               <div class="defect-img-box">
                 <q-img :src="item.image" class="defect-img" fit="cover" :ratio="4/3" />

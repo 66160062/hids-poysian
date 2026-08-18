@@ -12,7 +12,7 @@ import { Repository } from 'typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import * as bcrypt from 'bcrypt';
 
-const CUSTOMER_LINK_EXPIRES_IN_SECONDS = 15 * 60;
+const CUSTOMER_LINK_EXPIRES_IN_SECONDS = 365 * 24 * 60 * 60;
 const CONTRACTOR_LINK_EXPIRES_IN_SECONDS = 365 * 24 * 60 * 60;
 
 @Injectable()

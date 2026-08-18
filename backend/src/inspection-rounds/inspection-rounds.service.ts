@@ -3,7 +3,7 @@ import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InspectionRound } from './entities/inspection-round.entity';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, Not } from 'typeorm';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { User } from 'src/users/entities/user.entity';
@@ -11,6 +11,9 @@ import { Defect, DefectStatus } from 'src/defects/entities/defect.entity';
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity';
+import { MailService } from 'src/mail/mail.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { NotificationType } from 'src/notifications/entities/notification.entity';
 @Injectable()
 export class InspectionRoundsService {
   constructor(
@@ -26,6 +29,8 @@ export class InspectionRoundsService {
     private readonly defectsRepo: Repository<Defect>,
     private readonly dataSource: DataSource,
     private readonly activityLogsService: ActivityLogsService,
+    private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private formatThaiDate(date: Date): string {
@@ -123,7 +128,10 @@ export class InspectionRoundsService {
         }
 
         const latestDefects = await queryRunner.manager.find(Defect, {
-          where: { round: { roundId: latestRound.roundId } },
+          where: {
+            round: { roundId: latestRound.roundId },
+            status: Not(DefectStatus.VERIFIED),
+          },
           relations: ['room', 'subRoom', 'floor', 'subCategories', 'inspector'],
         });
 
@@ -443,6 +451,14 @@ export class InspectionRoundsService {
           },
           savedRound.roundId,
         );
+
+        void this.notificationsService.create({
+          type: NotificationType.ALERT,
+          recipientRole: 'admin',
+          message: `${savedRound.job.projectName}: ตรวจงวดที่ ${savedRound.roundNumber} รออนุมัติ`,
+          jobId: savedRound.job.jobId,
+          roundId: savedRound.roundId,
+        });
       }
 
       return savedRound;
@@ -459,7 +475,12 @@ export class InspectionRoundsService {
   ): Promise<{ data: InspectionRound; notification: any }> {
     const round = await this.inspectionRoundsRepo.findOneOrFail({
       where: { roundId: id },
-      relations: ['job', 'teamMembers', 'teamMembers.inspector'],
+      relations: [
+        'job',
+        'job.customer',
+        'teamMembers',
+        'teamMembers.inspector',
+      ],
     });
 
     if (round.status !== 'SUBMITTED') {
@@ -496,6 +517,17 @@ export class InspectionRoundsService {
           },
           approvedRound.roundId,
         );
+      }
+
+      if (approvedRound.job?.customer?.email) {
+        void this.mailService.sendRoundApprovedEmail({
+          to: approvedRound.job.customer.email,
+          customerName: approvedRound.job.customer.fullName,
+          jobTitle: approvedRound.job.projectName,
+          roundNumber: approvedRound.roundNumber,
+          pdfUrl: approvedRound.lastPdfUrl,
+          portalUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:9000'}/customer/report`,
+        });
       }
 
       const notification = this.buildApprovalNotification(approvedRound);

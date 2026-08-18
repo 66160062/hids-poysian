@@ -47,8 +47,8 @@
               style="font-size: 10px; font-weight: 500; border-radius: 4px;"
             />
             <q-badge
-              color="warning"
-              text-color="black"
+              :color="isApproved ? 'positive' : 'warning'"
+              :text-color="isApproved ? 'white' : 'black'"
               style="
                 border-radius: 99px;
                 font-weight: 500;
@@ -56,7 +56,7 @@
                 padding: 4px 10px;
               "
             >
-              {{ isSubmitted ? 'รอการอนุมัติ' : 'รอเข้าตรวจ' }}
+              {{ isApproved ? 'อนุมัติแล้ว' : isSubmitted ? 'รอการอนุมัติ' : 'รอเข้าตรวจ' }}
             </q-badge>
           </div>
         </div>
@@ -171,7 +171,7 @@
           </div>
 
           <q-btn
-            :disable="isSubmitted || (isInspected && isConstruction(jobData.job?.inspectionType))"
+            :disable="(isSubmitted && !isInspected) || (isInspected && isConstruction(jobData.job?.inspectionType))"
             :outline="!isInspected"
             :color="isInspected ? 'green' : 'blue'"
             class="full-width q-mb-sm action-btn"
@@ -194,7 +194,7 @@
 
           <q-btn
             v-if="!isConstruction(jobData.job?.inspectionType)"
-            :disable="isSubmitted"
+            :disable="isSubmitted && !isSummaryDone"
             :outline="!isSummaryDone"
             :color="isSummaryDone ? 'green' : 'blue'"
             class="full-width q-mb-sm action-btn"
