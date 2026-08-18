@@ -95,8 +95,10 @@
               <q-select
                 outlined
                 dense
+                use-input
+                input-debounce="0"
                 v-model="form.roomId"
-                :options="roomOptions"
+                :options="roomOptionsFiltered"
                 label="ประเภทห้อง"
                 option-value="value"
                 option-label="label"
@@ -104,6 +106,7 @@
                 map-options
                 :loading="isLoadingRooms"
                 :disable="isLocked"
+                @filter="filterRooms"
                 @update:model-value="onRoomChange"
               />
 
@@ -112,8 +115,10 @@
                 @update:model-value="onSubRoomChange"
                 outlined
                 dense
+                use-input
+                input-debounce="0"
                 v-model="form.subRoomId"
-                :options="subRoomOptions"
+                :options="subRoomOptionsFiltered"
                 label="ประเภทห้องย่อย"
                 option-value="value"
                 option-label="label"
@@ -121,6 +126,7 @@
                 map-options
                 :disable="!form.roomId || isLocked"
                 clearable
+                @filter="filterSubRooms"
               />
             </div>
           </div>
@@ -132,8 +138,10 @@
               <q-select
                 outlined
                 dense
+                use-input
+                input-debounce="0"
                 v-model="form.floorId"
-                :options="floorOptions"
+                :options="floorOptionsFiltered"
                 label="ชั้น"
                 option-value="value"
                 option-label="label"
@@ -141,6 +149,7 @@
                 map-options
                 :disable="!form.roomId || isLocked"
                 :loading="isLoadingFloors"
+                @filter="filterFloors"
                 @update:model-value="onFloorChange"
               />
             </div>
@@ -178,14 +187,17 @@
               <q-select
                 outlined
                 dense
+                use-input
+                input-debounce="0"
                 v-model="form.jobType"
-                :options="categoryOptions"
+                :options="categoryOptionsFiltered"
                 label="ประเภทงาน"
                 option-value="value"
                 option-label="label"
                 emit-value
                 map-options
                 :disable="isLocked"
+                @filter="filterCategories"
                 @update:model-value="onCategoryChange"
               />
             </div>
@@ -200,14 +212,17 @@
                 multiple
                 use-chips
                 stack-label
+                use-input
+                input-debounce="0"
                 v-model="form.defectTypes"
-                :options="subCategoryOptions"
+                :options="subCategoryOptionsFiltered"
                 label="เลือกประเภทตำหนิ"
                 option-value="value"
                 option-label="label"
                 emit-value
                 map-options
                 :disable="!form.jobType || isLocked"
+                @filter="filterSubCategories"
               >
                 <template #selected-item="scope">
                   <q-chip
@@ -317,12 +332,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useInspectionStore } from 'src/stores/useInspection';
 import { useRoundLock } from 'src/composables/useRoundLock';
 import { api } from 'src/boot/axios';
+import { isAxiosError } from 'axios';
 import { useQuasar } from 'quasar';
+import imageCompression from 'browser-image-compression';
 import ImageAnnotationDialog from 'src/components/ImageAnnotationDialog.vue';
 
 const route = useRoute();
@@ -374,6 +391,36 @@ const roomOptions = ref<{ value: number; label: string }[]>([]);
 const subRoomOptions = ref<{ value: number; label: string }[]>([]);
 const floorOptions = ref<{ value: number; label: string }[]>([]);
 
+// ── Searchable dropdowns ──────────────────────────────────────
+// q-select ต้องผูกกับ ref แยกที่ filter แล้ว ไม่ใช่ผูกตรงกับ list ต้นทาง
+type SelectOption = { value: number; label: string };
+
+const roomOptionsFiltered = ref<SelectOption[]>([]);
+const subRoomOptionsFiltered = ref<SelectOption[]>([]);
+const floorOptionsFiltered = ref<SelectOption[]>([]);
+
+function createFilterFn(getSource: () => SelectOption[], target: typeof roomOptionsFiltered) {
+  return (val: string, update: (cb: () => void) => void) => {
+    update(() => {
+      const source = getSource();
+      if (val === '') {
+        target.value = source;
+        return;
+      }
+      const needle = val.toLowerCase();
+      target.value = source.filter((o) => o.label.toLowerCase().includes(needle));
+    });
+  };
+}
+
+const filterRooms = createFilterFn(() => roomOptions.value, roomOptionsFiltered);
+const filterSubRooms = createFilterFn(() => subRoomOptions.value, subRoomOptionsFiltered);
+const filterFloors = createFilterFn(() => floorOptions.value, floorOptionsFiltered);
+
+watch(roomOptions, (v) => (roomOptionsFiltered.value = v), { immediate: true });
+watch(subRoomOptions, (v) => (subRoomOptionsFiltered.value = v), { immediate: true });
+watch(floorOptions, (v) => (floorOptionsFiltered.value = v), { immediate: true });
+
 const fetchRooms = async () => {
   const { data } = await api.get<{ roomId: number; roomName: string }[]>('/rooms');
   roomOptions.value = data.map((r) => ({ value: r.roomId, label: r.roomName }));
@@ -421,6 +468,15 @@ const onCategoryChange = (val: number | null) => {
   form.value.defectTypes = [];
 };
 
+const categoryOptionsFiltered = ref<SelectOption[]>([]);
+const subCategoryOptionsFiltered = ref<SelectOption[]>([]);
+
+const filterCategories = createFilterFn(() => categoryOptions.value, categoryOptionsFiltered);
+const filterSubCategories = createFilterFn(() => subCategoryOptions.value, subCategoryOptionsFiltered);
+
+watch(categoryOptions, (v) => (categoryOptionsFiltered.value = v), { immediate: true });
+watch(subCategoryOptions, (v) => (subCategoryOptionsFiltered.value = v), { immediate: true });
+
 // ── Image ─────────────────────────────────────────────────────
 
 const imagePreview = ref<string | null>(null);
@@ -432,12 +488,42 @@ const annotationDialog = ref(false);
 const triggerGallery = () => galleryInput.value?.click();
 const triggerCamera = () => cameraInput.value?.click();
 
+// บีบอัดรูป + แปลงเป็น webp ก่อนส่งขึ้น backend เพื่อลด bandwidth ตอนอัปโหลด
+// และให้ตรงเงื่อนไข passthrough ของ backend (storage.service.ts) จะได้ข้ามการ re-encode ซ้ำด้วย sharp
+// ถ้าบีบอัดพลาด (เช่น browser ไม่รองรับ) ให้ fallback ใช้ไฟล์ต้นฉบับแทน ไม่บล็อกการอัปโหลด
+const compressDefectImage = async (file: File): Promise<File> => {
+  try {
+    return await imageCompression(file, {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+      fileType: 'image/webp',
+    });
+  } catch (error) {
+    console.error('Image compression failed, uploading original file:', error);
+    return file;
+  }
+};
+
+// เริ่มบีบอัดทันทีตอนเลือก/annotate รูปเสร็จ (background) แทนตอนกด save
+// เพื่อให้ compress ทำงานคู่ขนานไปกับตอน user กรอกฟอร์มที่เหลือ กด save แล้วแทบไม่ต้องรอ
+// เช็ค selectedFile.value === file ก่อน apply กันกรณี user เปลี่ยน/ลบรูปใหม่ระหว่าง compress เก่ายังไม่เสร็จ
+let pendingImageCompression: Promise<void> | null = null;
+const startImageCompression = (file: File) => {
+  pendingImageCompression = compressDefectImage(file).then((compressed) => {
+    if (selectedFile.value === file) {
+      selectedFile.value = compressed;
+    }
+  });
+};
+
 const onFileSelected = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
   if (file) {
     selectedFile.value = file;
     imagePreview.value = URL.createObjectURL(file);
+    startImageCompression(file);
   }
   target.value = '';
 };
@@ -449,6 +535,7 @@ const onAnnotationSave = (file: File, previewUrl: string) => {
   if (oldPreview?.startsWith('blob:')) {
     URL.revokeObjectURL(oldPreview);
   }
+  startImageCompression(file);
 };
 
 // ── Navigation & Submit ───────────────────────────────────────
@@ -505,6 +592,17 @@ const isDuplicateDefect = () => {
   return pendingDefects.value.some((p) =>
     matchesCurrentForm(p.roomId, p.subRoomId, p.floorId, p.severity, p.note, [...p.types].sort((a, b) => a - b)),
   );
+};
+
+// 409 จาก backend = เจอ defect ซ้ำที่ check ฝั่งนี้มองไม่เห็น (เช่น inspector อีกคนบันทึกจุดเดียวกันไปก่อนแล้ว)
+const getSubmitErrorMessage = (err: unknown, fallback: string) => {
+  if (isAxiosError(err) && err.response?.status === 409) {
+    return (
+      (err.response.data as { message?: string } | undefined)?.message ??
+      'มีรายการ Defect นี้อยู่แล้วในห้อง/ชั้นเดียวกัน'
+    );
+  }
+  return fallback;
 };
 
 const isSubmitting = ref(false);
@@ -572,7 +670,10 @@ const handleNext = async () => {
   });
 
   if (selectedFile.value) {
-    formData.append('file', selectedFile.value);
+    if (pendingImageCompression) await pendingImageCompression;
+    if (selectedFile.value) {
+      formData.append('file', selectedFile.value);
+    }
   }
 
   if (isEditMode.value) {
@@ -588,8 +689,12 @@ const handleNext = async () => {
         timeout: 1500,
       });
       router.back();
-    } catch {
-      $q.notify({ message: 'เกิดข้อผิดพลาดในการบันทึก', color: 'negative', icon: 'error' });
+    } catch (err) {
+      $q.notify({
+        message: getSubmitErrorMessage(err, 'เกิดข้อผิดพลาดในการบันทึก'),
+        color: 'negative',
+        icon: 'error',
+      });
     } finally {
       isSubmitting.value = false;
     }
@@ -622,8 +727,12 @@ const handleNext = async () => {
         icon: 'check_circle',
         timeout: 1500,
       });
-    } catch {
-      $q.notify({ message: 'เกิดข้อผิดพลาดในการบันทึก', color: 'negative', icon: 'error' });
+    } catch (err) {
+      $q.notify({
+        message: getSubmitErrorMessage(err, 'เกิดข้อผิดพลาดในการบันทึก'),
+        color: 'negative',
+        icon: 'error',
+      });
     } finally {
       const idx = pendingDefects.value.indexOf(pending);
       if (idx !== -1) pendingDefects.value.splice(idx, 1);
