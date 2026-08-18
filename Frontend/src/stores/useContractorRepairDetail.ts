@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
+import imageCompression from 'browser-image-compression';
 import { useContractorRepair } from 'src/stores/useContractormain';
 import { useLinkAccess } from 'src/stores/useLinkAccess';
 import { api } from 'src/boot/axios';
@@ -39,6 +40,23 @@ interface DefectDetailResponse {
 const resolveUrl = (url?: string) =>
   url ? (url.startsWith('http') ? url : `${API_BASE_URL}${url}`) : '';
 
+// บีบอัดรูป + แปลงเป็น webp ก่อนส่งขึ้น backend เพื่อลด bandwidth ตอนอัปโหลด
+// และให้ตรงเงื่อนไข passthrough ของ backend (storage.service.ts) จะได้ข้ามการ re-encode ซ้ำด้วย sharp
+// ถ้าบีบอัดพลาด (เช่น browser ไม่รองรับ) ให้ fallback ใช้ไฟล์ต้นฉบับแทน ไม่บล็อกการอัปโหลด
+const compressRepairImage = async (file: File): Promise<File> => {
+  try {
+    return await imageCompression(file, {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+      fileType: 'image/webp',
+    });
+  } catch (error) {
+    console.error('Image compression failed, uploading original file:', error);
+    return file;
+  }
+};
+
 export function useRepairDetail(defectId: number) {
   const router = useRouter();
   const store = useContractorRepair();
@@ -60,6 +78,19 @@ export function useRepairDetail(defectId: number) {
   const afterImageUrl = ref('');
   const afterImageFile = ref<File | null>(null);
   const note = ref('');
+
+  // เริ่มบีบอัดทันทีตอนเลือกรูปเสร็จ (background) แทนตอนกด save
+  // เพื่อให้ compress ทำงานคู่ขนานไปกับตอน user กรอก note กด save แล้วแทบไม่ต้องรอ
+  // เช็ค afterImageFile.value === file ก่อน apply กันกรณี user เปลี่ยน/ลบรูปใหม่ระหว่าง compress เก่ายังไม่เสร็จ
+  let pendingImageCompression: Promise<void> | null = null;
+  const setAfterImage = (file: File) => {
+    afterImageFile.value = file;
+    pendingImageCompression = compressRepairImage(file).then((compressed) => {
+      if (afterImageFile.value === file) {
+        afterImageFile.value = compressed;
+      }
+    });
+  };
   const showSuccess = ref(false);
   const isSubmitting = ref(false);
   const submitError = ref<string | null>(null);
@@ -115,6 +146,12 @@ export function useRepairDetail(defectId: number) {
     isSubmitting.value = true;
     submitError.value = null;
     try {
+      if (pendingImageCompression) await pendingImageCompression;
+      if (!afterImageFile.value) {
+        submitError.value = 'กรุณาเลือกรูปภาพ';
+        return;
+      }
+
       const formData = new FormData();
       formData.append('defectId', String(defectId));
       formData.append('contractorId', String(contractorId.value));
@@ -153,6 +190,7 @@ export function useRepairDetail(defectId: number) {
     defect,
     afterImageUrl,
     afterImageFile,
+    setAfterImage,
     note,
     submitRepair,
     isSubmitting,
