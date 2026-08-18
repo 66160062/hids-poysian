@@ -1,9 +1,9 @@
 import { ref } from 'vue'
 import { api } from 'src/boot/axios'
 
-const LOCKED_STATUSES = ['SUBMITTED', 'APPROVED']
+const LOCKED_STATUSES = ['APPROVED']
 
-// รอบตรวจที่ยื่นอนุมัติ (หรืออนุมัติแล้ว) ห้ามแก้ไข defect/สรุปรายงาน แต่ยังดูได้
+// รอบตรวจที่อนุมัติแล้ว ห้ามแก้ไข defect/สรุปรายงาน แต่ยังดูได้
 export function useRoundLock(roundId: string | number) {
   const isLocked = ref(false)
 
