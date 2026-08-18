@@ -164,9 +164,11 @@ const statusBadgeTextColor = (status: string) => {
             "
           >
             <div v-if="item.status == 'SCHEDULED'">รอเข้าตรวจ</div>
+            <div v-else-if="item.status === 'INSPECTED'">กำลังดำเนินการ</div>
             <div v-else-if="item.status === 'SUBMITTED'">รอการอนุมัติ</div>
             <div v-else-if="item.status === 'APPROVED' || item.status === 'COMPLETED'">เสร็จสิ้น</div>
             <div v-else-if="item.status === 'CANCELLED'">ยกเลิก</div>
+            <div v-else>ไม่ทราบสถานะ</div>
           </q-badge>
         </div>
 
