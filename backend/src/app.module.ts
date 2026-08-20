@@ -59,6 +59,8 @@ import { MachineType } from './construction-daily-reports/entities/machine-type.
 import { DailyReportImage } from './construction-daily-reports/entities/daily-report-image.entity';
 import { RatingsModule } from './ratings/ratings.module';
 import { Rating } from './ratings/entities/rating.entity';
+import { NotificationsModule } from './notifications/notifications.module';
+import { Notification } from './notifications/entities/notification.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -113,6 +115,7 @@ import { Rating } from './ratings/entities/rating.entity';
         MachineType,
         DailyReportImage,
         Rating,
+        Notification,
       ],
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),
@@ -145,6 +148,7 @@ import { Rating } from './ratings/entities/rating.entity';
     AdminModule,
     ConstructionDailyReportsModule,
     RatingsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

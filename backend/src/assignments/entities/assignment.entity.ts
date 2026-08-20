@@ -22,6 +22,10 @@ export class Assignment {
   @JoinColumn({ name: 'inspector_id' })
   inspector!: User;
 
+  @ManyToOne(() => InspectionRound, { nullable: true })
+  @JoinColumn({ name: 'round_id' })
+  round!: InspectionRound | null;
+
   @CreateDateColumn({ name: 'assigned_at' })
   assignedAt!: Date;
 
