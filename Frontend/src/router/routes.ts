@@ -218,6 +218,16 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/ConstructorDashboardPage.vue'),
         meta: { title: 'ตรวจก่อสร้าง' },
       },
+      {
+        path: 'notifications',
+        component: () => import('pages/InspectorNotificationsPage.vue'),
+        meta: { title: 'การแจ้งเตือน' },
+      },
+      {
+        path: 'profile',
+        component: () => import('pages/InspectorProfilePage.vue'),
+        meta: { title: 'โปรไฟล์' },
+      },
     ],
   },
 
