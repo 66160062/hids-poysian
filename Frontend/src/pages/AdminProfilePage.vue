@@ -393,7 +393,7 @@ const logout = () => {
     void router.push('/login');
     $q.notify({
       message: 'ออกจากระบบเรียบร้อยแล้ว',
-      color: 'info',
+      color: 'positive',
       position: 'top'
     });
   });
