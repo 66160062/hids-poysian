@@ -60,7 +60,7 @@
                 padding: 4px 10px;
               "
             >
-              {{ isSubmitted ? 'รอการอนุมัติ' : 'รอเข้าตรวจ' }}
+              {{ isSubmitted ? 'รอการอนุมัติ' : isInspected ? 'กำลังดำเนินการ' : isScheduled ? 'รอเข้าตรวจ' : 'อนุมัติแล้ว' }}
             </q-badge>
           </div>
         </div>
@@ -328,6 +328,7 @@ const pdfSummaryItems = ref<InspectionSummaryItem[]>([]);
 const isInspected = computed(() => !!jobData.value?.inspectedAt);
 const isSummaryDone = computed(() => !!jobData.value?.summaryCompletedAt);
 const isSubmitted = computed(() => jobData.value?.status === 'SUBMITTED');
+const isScheduled = computed(() => jobData.value?.status === 'SCHEDULED');
 const isApproved = computed(() => jobData.value?.status === 'APPROVED');
 const canSubmitApproval = computed(() => {
   if (isSubmitted.value || isApproved.value) return false;
