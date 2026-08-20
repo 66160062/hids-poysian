@@ -132,7 +132,7 @@ const isConstruction = (type?: string) => type === 'CONSTRUCTION_INSPECTION' || 
           </div>
 
           <q-badge
-            color="warning"
+            :color="item.status == 'SCHEDULED' ? 'warning' : item.status == 'APPROVED' ? 'positive' : item.status == 'INSPECTED' ? 'warning' : 'warning'"
             text-color="black"
             style="
               width: 53px;
@@ -149,6 +149,8 @@ const isConstruction = (type?: string) => type === 'CONSTRUCTION_INSPECTION' || 
           >
             <div v-if="item.status == 'SCHEDULED'">รอเข้าตรวจ</div>
             <div v-else-if="item.status === 'SUBMITTED'">รอการอนุมัติ</div>
+            <div v-else-if="item.status === 'APPROVED'">อนุมัติแล้ว</div>
+            <div v-else-if="item.status === 'INSPECTED'">กำลังดำเนินการ</div>
           </q-badge>
         </div>
 
