@@ -21,7 +21,9 @@
   color="dark"
   aria-label="Notifications"
   @click="$router.push('/admin/notifications')"
-/>
+>
+  <q-badge v-if="unreadCount > 0" color="red" floating rounded>{{ unreadCount }}</q-badge>
+</q-btn>
           <q-avatar
             size="34px"
             class="bg-primary text-white q-ml-sm cursor-pointer"
@@ -62,15 +64,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from 'src/stores/useAuth';
+import { api } from 'src/boot/axios';
 
 const route = useRoute();
 const router = useRouter();
 
 const authStore = useAuthStore();
 const currentUser = computed(() => authStore.currentUser);
+
+const unreadCount = ref(0);
+onMounted(async () => {
+  try {
+    const { data } = await api.get<{ isRead: boolean }[]>('/notifications');
+    unreadCount.value = data.filter((n) => !n.isRead).length;
+  } catch {
+    unreadCount.value = 0;
+  }
+});
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string || 'http://localhost:3000';
 const getImageUrl = (path: string | null | undefined): string | null => {
