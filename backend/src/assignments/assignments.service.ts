@@ -43,10 +43,25 @@ export class AssignmentsService {
       throw new NotFoundException(`ไม่พบผู้ตรวจ ID ${dto.inspectorId}`);
     }
 
+    let round: InspectionRound | null = null;
+    if (dto.roundId) {
+      round = await this.roundsRepo.findOne({
+        where: { roundId: dto.roundId },
+        relations: ['job'],
+      });
+      if (!round) {
+        throw new NotFoundException(`ไม่พบรอบตรวจ ID ${dto.roundId}`);
+      }
+      if (round.job.jobId !== dto.jobId) {
+        throw new BadRequestException('รอบตรวจนี้ไม่ได้อยู่ในงานนี้');
+      }
+    }
+
     const duplicate = await this.assignmentsRepo.findOne({
       where: {
         job: { jobId: dto.jobId },
         inspector: { id: dto.inspectorId },
+        round: { roundId: dto.roundId ?? null },
       },
     });
     if (duplicate) {
@@ -55,15 +70,23 @@ export class AssignmentsService {
       );
     }
 
-    const assignment = this.assignmentsRepo.create({ job, inspector });
-    return this.assignmentsRepo.save(assignment);
+    const assignment = this.assignmentsRepo.create({ job, inspector, round });
+    const saved = await this.assignmentsRepo.save(assignment);
+
+    void this.notificationsService.create({
+      type: NotificationType.INFO,
+      recipientUserId: inspector.id,
+      message: `คุณได้รับมอบหมายงานตรวจ: ${job.projectName}`,
+      jobId: job.jobId,
+    });
+    return saved;
   }
 
   async findByJob(jobId: number): Promise<InspectorChip[]> {
     await this.assertJobExists(jobId);
     const rows = await this.assignmentsRepo.find({
       where: { job: { jobId } },
-      relations: ['inspector'],
+      relations: ['inspector', 'round'],
       order: { assignedAt: 'ASC' },
     });
     return rows.map((row) => this.toInspectorChip(row));
@@ -99,6 +122,13 @@ export class AssignmentsService {
     if (!job) {
       throw new NotFoundException(`ไม่พบงานตรวจ ID ${jobId}`);
     }
+  }
+
+  private buildInspectorPortalUrl(): string {
+    const baseUrl = (
+      process.env.FRONTEND_URL ?? 'http://localhost:9000'
+    ).replace(/\/$/, '');
+    return `${baseUrl}/#/inspector/Inspectsdashboard`;
   }
 
   private toInspectorChip(row: Assignment): InspectorChip {

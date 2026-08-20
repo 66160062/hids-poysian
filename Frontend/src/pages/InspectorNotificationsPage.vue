@@ -28,7 +28,7 @@
     </q-header>
 
     <q-page-container>
-      <q-page class="admin-notifications-page bg-grey-1">
+      <q-page class="inspector-notifications-page bg-grey-1">
         <div class="q-px-md q-pt-lg">
 
           <!-- Search Input -->
@@ -259,9 +259,6 @@ import { api } from 'src/boot/axios';
 
 const router = useRouter();
 
-// ==========================================
-// Interface สำหรับข้อมูล (ตรงกับ response ของ backend)
-// ==========================================
 interface NotificationItem {
   notificationId: number;
   message: string;
@@ -272,18 +269,12 @@ interface NotificationItem {
   round: { roundId: number } | null;
 }
 
-// เลือกหน้ารายละเอียดงานตามประเภทงาน (ตรวจก่อสร้าง vs ตรวจบ้าน) ให้ตรงกับ inspection-rounds.service.ts ฝั่ง backend
-function resolveJobDetailPath(job: { jobId: number; inspectionType?: string | null }) {
-  const isConstruction =
-    job.inspectionType === 'CONSTRUCTION_INSPECTION' ||
-    job.inspectionType === 'Construction' ||
-    job.inspectionType === 'ตรวจก่อสร้าง';
-  return isConstruction ? `/admin/work/cons/${job.jobId}` : `/admin/work/ins/${job.jobId}`;
+// พา inspector ไปหน้ารายละเอียดงาน ซึ่งฝั่ง inspector ใช้ roundId เป็น param (ไม่ใช่ jobId แบบฝั่ง admin)
+// ถ้าแจ้งเตือนยังไม่ผูก round (เช่น เพิ่งถูกมอบหมายงานแต่ยังไม่มีรอบตรวจ) ให้พาไปหน้ารายการงานแทน
+function resolveJobDetailPath(round: { roundId: number } | null) {
+  return round ? `/inspector/job/${round.roundId}` : '/inspector/Inspectsdashboard';
 }
 
-// ==========================================
-// State & Reactive Variables
-// ==========================================
 const notifications = ref<NotificationItem[]>([]);
 const loading = ref(false);
 
@@ -302,24 +293,18 @@ const fetchNotifications = async () => {
 onMounted(fetchNotifications);
 
 const searchTerm = ref('');
-const activeFilter = ref('all'); // all, unread, read
-const selectedType = ref('ทั้งหมด'); // ทั้งหมด, ข้อมูลสำคัญ, ข้อมูลทั่วไป
-const sortOrder = ref('desc'); // desc = ล่าสุด, asc = เก่า
+const activeFilter = ref('all');
+const selectedType = ref('ทั้งหมด');
+const sortOrder = ref('desc');
 const showDetailDialog = ref(false);
 const selectedNotification = ref<NotificationItem | null>(null);
 
-// ==========================================
-// Dropdown Options
-// ==========================================
 const typeOptions = ['ทั้งหมด', 'ข้อมูลสำคัญ', 'ข้อมูลทั่วไป'];
 const sortOptions = [
   { label: 'ล่าสุด - เก่า', value: 'desc' },
   { label: 'เก่า - ล่าสุด', value: 'asc' }
 ];
 
-// ==========================================
-// Format Date Helper
-// ==========================================
 const formatDate = (val: string) => {
   if (!val) return 'ไม่ระบุวันที่';
   try {
@@ -335,9 +320,6 @@ const formatDate = (val: string) => {
   }
 };
 
-// ==========================================
-// Filter Chips Logic
-// ==========================================
 const filters = computed(() => {
   const counts = {
     all: notifications.value.length,
@@ -352,32 +334,25 @@ const filters = computed(() => {
   ];
 });
 
-// ==========================================
-// Computed: Filtered & Sorted Notifications
-// ==========================================
 const filteredNotifications = computed(() => {
   let result = [...notifications.value];
 
-  // 1. Filter by read status
   if (activeFilter.value === 'unread') {
     result = result.filter((n) => !n.isRead);
   } else if (activeFilter.value === 'read') {
     result = result.filter((n) => n.isRead);
   }
 
-  // 2. Filter by type
   if (selectedType.value !== 'ทั้งหมด') {
     const typeValue = selectedType.value === 'ข้อมูลสำคัญ' ? 'alert' : 'info';
     result = result.filter((n) => n.type === typeValue);
   }
 
-  // 3. Filter by search term
   if (searchTerm.value) {
     const term = searchTerm.value.toLowerCase();
     result = result.filter((n) => n.message.toLowerCase().includes(term));
   }
 
-  // 4. Sort by date
   result.sort((a, b) => {
     const dateA = new Date(a.createdAt).getTime();
     const dateB = new Date(b.createdAt).getTime();
@@ -387,21 +362,13 @@ const filteredNotifications = computed(() => {
   return result;
 });
 
-// ==========================================
-// Actions
-// ==========================================
 const openDetail = (item: NotificationItem) => {
-  // Mark as read when opened
   if (!item.isRead) {
     void toggleRead(item);
   }
 
-  // แจ้งเตือนที่ผูกกับงาน/รอบตรวจ ให้พาไปหน้างานนั้น round นั้นตรงๆ แทนการเปิด dialog รายละเอียด
-  if (item.job && item.round) {
-    void router.push({
-      path: resolveJobDetailPath(item.job),
-      query: { roundId: String(item.round.roundId) },
-    });
+  if (item.job) {
+    void router.push(resolveJobDetailPath(item.round));
     return;
   }
 
@@ -451,17 +418,12 @@ const markAllAsRead = async () => {
 </script>
 
 <style scoped>
-.admin-notifications-page {
+.inspector-notifications-page {
   max-width: 600px;
   margin: 0 auto;
   min-height: 100vh;
 }
 
-.admin-notifications-page > div {
-  margin-top: -50px;
-}
-
-/* Search Input */
 .search-input {
   background-color: #ffffff;
   border: 1px solid #e0e0e0;
@@ -469,7 +431,6 @@ const markAllAsRead = async () => {
   height: 48px;
 }
 
-/* Dropdown Filter */
 .filter-select :deep(.q-field__control) {
   height: 42px;
   min-height: 42px;
@@ -481,7 +442,6 @@ const markAllAsRead = async () => {
   border: none !important;
 }
 
-/* Filter Container */
 .filter-container {
   overflow: hidden;
   margin-left: -16px;
@@ -501,7 +461,6 @@ const markAllAsRead = async () => {
   display: none;
 }
 
-/* Filter Chips */
 .filter-chip {
   white-space: nowrap;
   padding: 8px 12px;
@@ -519,7 +478,6 @@ const markAllAsRead = async () => {
   padding: 2px 6px;
 }
 
-/* Notifications Wrapper */
 .notifications-wrapper {
   margin-left: -16px;
   margin-right: -16px;
@@ -530,7 +488,6 @@ const markAllAsRead = async () => {
   padding: 0 16px;
 }
 
-/* Notification Card */
 .notification-card {
   border-radius: 12px !important;
   border-color: #f0f0f0 !important;
@@ -546,7 +503,6 @@ const markAllAsRead = async () => {
   border-color: #e3f2fd !important;
 }
 
-/* Status & Tag Badges */
 .status-badge {
   border-radius: 8px !important;
   font-size: 12px;
@@ -564,7 +520,6 @@ const markAllAsRead = async () => {
   padding: 6px 10px !important;
 }
 
-/* Action Buttons */
 .action-btn {
   border-radius: 8px !important;
   transition: all 0.2s ease;
@@ -572,24 +527,6 @@ const markAllAsRead = async () => {
 
 .action-btn:hover {
   background-color: #e0e0e0 !important;
-}
-
-/* Helper Classes */
-.ellipsis {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.no-wrap {
-  flex-wrap: nowrap;
 }
 
 .hide-scrollbar {
@@ -602,12 +539,11 @@ const markAllAsRead = async () => {
 }
 
 @media (max-width: 599px) {
-  .admin-notifications-page {
+  .inspector-notifications-page {
     max-width: 100%;
   }
 }
 
-/* Detail Dialog */
 .notification-detail-dialog {
   background-color: #f3f6ff;
 }

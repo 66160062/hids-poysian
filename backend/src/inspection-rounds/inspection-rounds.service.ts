@@ -9,6 +9,8 @@ import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entit
 import { User } from 'src/users/entities/user.entity';
 import { Defect, DefectStatus } from 'src/defects/entities/defect.entity';
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { NotificationType } from 'src/notifications/entities/notification.entity';
 @Injectable()
 export class InspectionRoundsService {
   constructor(
@@ -23,6 +25,7 @@ export class InspectionRoundsService {
     @InjectRepository(Defect)
     private readonly defectsRepo: Repository<Defect>,
     private readonly dataSource: DataSource,
+    private readonly notificationsService: NotificationsService,
   ) { }
 
   async create(
@@ -381,6 +384,15 @@ export class InspectionRoundsService {
 
       const savedRound = await queryRunner.manager.save(round);
       await queryRunner.commitTransaction();
+
+      void this.notificationsService.create({
+        type: NotificationType.ALERT,
+        recipientRole: 'admin',
+        message: `${savedRound.job?.projectName ?? ''}: ตรวจงวดที่ ${savedRound.roundNumber} รออนุมัติ`,
+        jobId: savedRound.job?.jobId,
+        roundId: savedRound.roundId,
+      });
+
       return savedRound;
     } catch (error) {
       await queryRunner.rollbackTransaction();
