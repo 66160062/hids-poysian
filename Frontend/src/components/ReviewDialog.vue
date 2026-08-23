@@ -54,12 +54,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 import { useLinkAccess } from 'src/stores/useLinkAccess'
+import StarRating from 'src/components/StarRating.vue'
 
 const dialog = defineModel<boolean>({ default: false })
+const emit = defineEmits<{ (event: 'closed'): void }>()
 const $q = useQuasar()
 const { linkToken } = useLinkAccess()
 const isSubmitting = ref(false)
@@ -69,49 +71,19 @@ const form = reactive({
   comment: '',
 });
 
-watch(dialog, (isOpen) => {
-  if (!isOpen) return;
-  form.rating = 0;
-  form.comment = '';
-});
-
-const submit = async () => {
-  if (form.rating === 0 || isSubmitting.value) return;
-
-  isSubmitting.value = true;
-  try {
-    await api.post('/ratings', {
-      jobId: props.jobId ?? undefined,
-      roundId: props.roundId ?? undefined,
-      defectId: props.defectId ?? undefined,
-      rating: form.rating,
-      comment: form.comment.trim(),
-    });
-
-    $q.notify({ type: 'positive', message: 'ส่งรีวิวเรียบร้อยแล้ว' });
-    dialog.value = false;
-    emit('submitted');
-  } catch (error) {
-    console.error(error);
-    $q.notify({ type: 'negative', message: 'ส่งรีวิวไม่สำเร็จ กรุณาลองใหม่' });
-  } finally {
-    isSubmitting.value = false;
-  }
-  return labels[form.value.rating] ?? 'เลือกคะแนน'
-})
-
 const submitRating = async () => {
   if (!linkToken.value || isSubmitting.value) return
 
   isSubmitting.value = true
   try {
     await api.post('/ratings', {
-      score: form.value.rating,
-      comment: form.value.comment,
+      score: form.rating,
+      comment: form.comment,
       token: linkToken.value,
     })
     $q.notify({ type: 'positive', message: 'ขอบคุณสำหรับคำแนะนำ' })
-    form.value = { rating: 0, comment: '' }
+    form.rating = 0
+    form.comment = ''
     dialog.value = false
   } catch (error) {
     console.error('Unable to submit rating:', error)
