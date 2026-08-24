@@ -24,7 +24,10 @@ export class RatingsService {
     private readonly jobsRepo: Repository<InspectionJob>,
   ) {}
 
-  async create(createRatingDto: CreateRatingDto, linkPayload: LinkTokenPayload) {
+  async create(
+    createRatingDto: CreateRatingDto,
+    linkPayload: LinkTokenPayload,
+  ) {
     if (linkPayload.role !== 'customer') {
       throw new ForbiddenException('Only customer links can submit ratings');
     }
@@ -52,7 +55,10 @@ export class RatingsService {
         }),
       );
     } catch (error) {
-      if (error instanceof QueryFailedError && error.driverError?.code === '23505') {
+      if (
+        error instanceof QueryFailedError &&
+        error.driverError?.code === '23505'
+      ) {
         throw new ConflictException('This link has already submitted a rating');
       }
       throw error;
