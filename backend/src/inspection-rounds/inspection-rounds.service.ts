@@ -26,7 +26,7 @@ export class InspectionRoundsService {
     private readonly defectsRepo: Repository<Defect>,
     private readonly dataSource: DataSource,
     private readonly notificationsService: NotificationsService,
-  ) { }
+  ) {}
 
   async create(
     createInspectionRoundDto: CreateInspectionRoundDto,
@@ -93,10 +93,13 @@ export class InspectionRoundsService {
         savedRound.summaryCompletedAt = latestRound.summaryCompletedAt;
         await queryRunner.manager.save(savedRound);
 
-        const latestItems = await queryRunner.manager.find(InspectionSummaryItem, {
-          where: { round: { roundId: latestRound.roundId } },
-          relations: ['template', 'option', 'refItem'],
-        });
+        const latestItems = await queryRunner.manager.find(
+          InspectionSummaryItem,
+          {
+            where: { round: { roundId: latestRound.roundId } },
+            relations: ['template', 'option', 'refItem'],
+          },
+        );
 
         if (latestItems.length > 0) {
           const clonedItems = latestItems.map((item) =>
@@ -106,7 +109,7 @@ export class InspectionRoundsService {
               option: item.option,
               refItem: item.refItem,
               detailValue: item.detailValue,
-            })
+            }),
           );
           await queryRunner.manager.save(clonedItems);
         }
@@ -124,7 +127,7 @@ export class InspectionRoundsService {
               createdAt: undefined,
               updatedAt: undefined,
               round: savedRound,
-            })
+            }),
           );
           await queryRunner.manager.save(clonedDefects);
         }
@@ -149,29 +152,40 @@ export class InspectionRoundsService {
 
     for (const round of rounds) {
       if (round.roundNumber > 1) {
-        const existingItems = await this.dataSource.manager.find(InspectionSummaryItem, {
-          where: { round: { roundId: round.roundId } }
-        });
+        const existingItems = await this.dataSource.manager.find(
+          InspectionSummaryItem,
+          {
+            where: { round: { roundId: round.roundId } },
+          },
+        );
 
         if (existingItems.length === 0) {
           const previousRound = await this.inspectionRoundsRepo.findOne({
-            where: { job: { jobId: round.job.jobId }, roundNumber: round.roundNumber - 1 }
+            where: {
+              job: { jobId: round.job.jobId },
+              roundNumber: round.roundNumber - 1,
+            },
           });
 
           if (previousRound) {
-            const previousItems = await this.dataSource.manager.find(InspectionSummaryItem, {
-              where: { round: { roundId: previousRound.roundId } },
-              relations: ['template', 'option', 'refItem']
-            });
+            const previousItems = await this.dataSource.manager.find(
+              InspectionSummaryItem,
+              {
+                where: { round: { roundId: previousRound.roundId } },
+                relations: ['template', 'option', 'refItem'],
+              },
+            );
 
             if (previousItems.length > 0) {
-              const clonedItems = previousItems.map(item => this.dataSource.manager.create(InspectionSummaryItem, {
-                round: round,
-                template: item.template,
-                option: item.option,
-                refItem: item.refItem,
-                detailValue: item.detailValue
-              }));
+              const clonedItems = previousItems.map((item) =>
+                this.dataSource.manager.create(InspectionSummaryItem, {
+                  round: round,
+                  template: item.template,
+                  option: item.option,
+                  refItem: item.refItem,
+                  detailValue: item.detailValue,
+                }),
+              );
               await this.dataSource.manager.save(clonedItems);
               backfilledCount++;
             }
