@@ -5,9 +5,12 @@ import { AdminService } from './admin.service';
 import { InspectionJob } from '../inspection-jobs/entities/inspection-job.entity';
 import { InspectionRound } from '../inspection-rounds/entities/inspection-round.entity';
 import { Defect } from '../defects/entities/defect.entity';
+import { Branch } from '../branches/entities/branch.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([InspectionJob, InspectionRound, Defect])],
+  imports: [
+    TypeOrmModule.forFeature([InspectionJob, InspectionRound, Defect, Branch]),
+  ],
   controllers: [AdminController],
   providers: [AdminService],
 })

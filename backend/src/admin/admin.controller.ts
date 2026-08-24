@@ -22,8 +22,17 @@ export class AdminController {
     required: false,
     description: 'วันที่ (ISO format) สำหรับเลือกเดือนปฏิทิน เช่น 2026-06-01',
   })
-  getDashboard(@Query('date') dateString?: string): Promise<DashboardResponse> {
-    return this.adminService.getDashboardData(dateString);
+  @ApiQuery({
+    name: 'branchId',
+    required: false,
+    description: 'Optional branch id for dashboard filtering',
+  })
+  getDashboard(
+    @Query('date') dateString?: string,
+    @Query('branchId') branchId?: string,
+  ): Promise<DashboardResponse> {
+    const parsedBranchId = branchId ? Number(branchId) : undefined;
+    return this.adminService.getDashboardData(dateString, parsedBranchId);
   }
 
   @Post('sync-jobs')

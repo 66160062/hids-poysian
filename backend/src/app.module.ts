@@ -61,6 +61,7 @@ import { RatingsModule } from './ratings/ratings.module';
 import { Rating } from './ratings/entities/rating.entity';
 import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/entities/notification.entity';
+import { Branch } from './branches/entities/branch.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -116,6 +117,7 @@ import { Notification } from './notifications/entities/notification.entity';
         DailyReportImage,
         Rating,
         Notification,
+        Branch,
       ],
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),
