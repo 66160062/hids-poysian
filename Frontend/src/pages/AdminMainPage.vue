@@ -14,6 +14,26 @@
           <q-btn flat label="ลองใหม่" @click="fetchAdminDashboard" />
         </template>
       </q-banner>
+
+      <q-select
+        v-if="branchOptions.length > 1"
+        v-model="selectedBranchId"
+        :options="branchOptions"
+        option-value="value"
+        option-label="label"
+        emit-value
+        map-options
+        dense
+        outlined
+        class="branch-select q-mb-md"
+        label="สาขา"
+        @update:model-value="onBranchChange"
+      >
+        <template v-slot:prepend>
+          <q-icon name="business" color="primary" />
+        </template>
+      </q-select>
+
       <div class="row q-col-gutter-md q-mb-md">
         <div class="col-6">
           <q-card flat bordered class="stat-box relative-position overflow-hidden">
@@ -150,6 +170,9 @@
 
             <div class="col min-w-0">
               <div class="text-weight-bold text-dark ellipsis" style="font-size: 14px;">{{ task.title }}</div>
+              <div v-if="getTaskBranchName(task)" class="text-grey-6 ellipsis" style="font-size: 12px; margin-top: 2px;">
+                {{ getTaskBranchName(task) }}
+              </div>
               <div class="text-grey-6 ellipsis" style="font-size: 12px; margin-top: 2px;">{{ task.inspectionType === 'CONSTRUCTION_INSPECTION' || task.inspectionType === 'ตรวจก่อสร้าง' ? 'งานก่อสร้าง' : 'ตรวจบ้าน' }}</div>
             </div>
 
@@ -192,6 +215,9 @@
           <q-card-section>
             <div class="text-subtitle1 q-mb-xs">{{ selectedTask?.title }}</div>
             <div class="text-caption q-mb-xs">{{ selectedTask?.meta }}</div>
+            <div v-if="selectedTaskBranchName" class="q-mb-sm">
+              สาขา: <strong>{{ selectedTaskBranchName }}</strong>
+            </div>
             <div class="q-mb-sm">
               สถานะ: <strong>{{ selectedTask?.status }}</strong>
             </div>
@@ -229,6 +255,11 @@ interface DashboardStats {
   construction: number;
 }
 
+interface BranchOption {
+  id: number;
+  name: string;
+}
+
 const dashboard = ref<DashboardStats>({
   totalProjects: 0,
   inProgress: 0,
@@ -237,6 +268,16 @@ const dashboard = ref<DashboardStats>({
   condo: 0,
   construction: 0,
 });
+
+const branches = ref<BranchOption[]>([]);
+const selectedBranchId = ref<number | 'all'>(getStoredBranchId());
+const branchOptions = computed(() => [
+  { label: 'ทุกสาขา', value: 'all' as const },
+  ...branches.value.map((branch) => ({
+    label: branch.name,
+    value: branch.id,
+  })),
+]);
 
 // ==========================================
 // 🎯 ระบบปฏิทิน
@@ -333,6 +374,8 @@ interface TaskItem {
   avatarBgClass: string;
   avatarTextColor: string;
   day: number;
+  branchId?: number | null;
+  branchName?: string | null;
   team: string;      // <- เพิ่มชื่อทีม
   customer: string;  // <- เพิ่มชื่อลูกค้า
 }
@@ -360,6 +403,11 @@ function taskCountByDay(day: number): number {
 
 const selectedTask = ref<TaskItem | null>(null);
 const showTaskDialog = ref(false);
+const selectedTaskBranchName = computed(() => getTaskBranchName(selectedTask.value));
+
+function getTaskBranchName(task: TaskItem | null): string {
+  return task?.branchName?.trim() ?? '';
+}
 
 function openTaskDetail(task: TaskItem) {
   const prefix = task.inspectionType === 'CONSTRUCTION_INSPECTION' || task.inspectionType === 'ตรวจก่อสร้าง' ? 'cons' : 'ins';
@@ -368,13 +416,32 @@ function openTaskDetail(task: TaskItem) {
 
 function goToWorkList(): void {
   showTaskDialog.value = false;
-  void router.push('/admin/work');
+  void router.push({
+    path: '/admin/work',
+    query: selectedBranchId.value === 'all' ? {} : { branchId: selectedBranchId.value },
+  });
+}
+
+function getStoredBranchId(): number | 'all' {
+  const branchId = Number(sessionStorage.getItem('adminSelectedBranchId'));
+  return Number.isInteger(branchId) && branchId > 0 ? branchId : 'all';
+}
+
+function onBranchChange(): void {
+  if (selectedBranchId.value === 'all') {
+    sessionStorage.removeItem('adminSelectedBranchId');
+  } else {
+    sessionStorage.setItem('adminSelectedBranchId', String(selectedBranchId.value));
+  }
+
+  void fetchAdminDashboard();
 }
 
 // ==========================================
 // 🎯 API Integration — ดึงข้อมูล Dashboard จาก Backend
 // ==========================================
 interface DashboardApiResponse extends DashboardStats {
+  branches?: BranchOption[];
   calendarEvents: number[];
   tasks: TaskItem[];
 }
@@ -386,8 +453,12 @@ async function fetchAdminDashboard(): Promise<void> {
   try {
     // สร้าง date parameter ตามเดือนที่แสดงบนปฏิทิน
     const dateParam: string = `${displayYear.value}-${String(displayMonth.value + 1).padStart(2, '0')}-01`;
+    const params: { date: string; branchId?: number } = { date: dateParam };
+    if (selectedBranchId.value !== 'all') {
+      params.branchId = selectedBranchId.value;
+    }
     const res: AxiosResponse<DashboardApiResponse> = await api.get<DashboardApiResponse>('/admin/dashboard', {
-      params: { date: dateParam },
+      params,
     });
     const data: DashboardApiResponse = res.data;
 
@@ -399,6 +470,8 @@ async function fetchAdminDashboard(): Promise<void> {
       condo: data.condo,
       construction: data.construction,
     };
+
+    branches.value = Array.isArray(data.branches) ? data.branches : [];
 
     if (data.calendarEvents && Array.isArray(data.calendarEvents)) {
       calendarEvents.value = data.calendarEvents;
@@ -430,6 +503,10 @@ onMounted((): void => {
 .admin-page {
   max-width: 480px;
   margin: 0 auto;
+}
+.branch-select :deep(.q-field__control) {
+  border-radius: 12px;
+  background: #fff;
 }
 .stat-box {
   border-radius: 16px;

@@ -556,6 +556,15 @@ const addressStore = useAddressStore();
 const contractorStore = useContractorStore();
 const houseTypeStore = useHouseTypeStore();
 const thaiAddress = useThaiAddress();
+const selectedBranchId = computed(() => {
+  const routeBranchId = Number(route.query.branchId);
+  if (Number.isInteger(routeBranchId) && routeBranchId > 0) {
+    return routeBranchId;
+  }
+
+  const storedBranchId = Number(sessionStorage.getItem('adminSelectedBranchId'));
+  return Number.isInteger(storedBranchId) && storedBranchId > 0 ? storedBranchId : undefined;
+});
 
 // ─── Edit mode ────────────────────────────────────────────────────────────
 const editId = computed(() => {
@@ -871,6 +880,7 @@ const onSubmit = async () => {
         jobFormData.append('projectName', form.projectName);
         jobFormData.append('locationCoordinate', '');
         jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
+        if (selectedBranchId.value) jobFormData.append('branchId', String(selectedBranchId.value));
         if (finalContractorId) jobFormData.append('contractorId', String(finalContractorId));
         if (form.projectImageFile) jobFormData.append('projectImageUrl', form.projectImageFile);
         else if (form.projectImage === null) jobFormData.append('projectImageUrl', '');
@@ -943,6 +953,7 @@ const onSubmit = async () => {
       jobFormData.append('locationCoordinate', '');
       jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
       jobFormData.append('status', 'Draft');
+      if (selectedBranchId.value) jobFormData.append('branchId', String(selectedBranchId.value));
 
       if (form.projectImageFile) {
         jobFormData.append('projectImageUrl', form.projectImageFile);
@@ -960,7 +971,10 @@ const onSubmit = async () => {
         position: 'top',
         icon: 'check_circle',
       });
-      await router.push('/admin/work');
+      await router.push({
+        path: '/admin/work',
+        query: selectedBranchId.value ? { branchId: selectedBranchId.value } : {},
+      });
     }
   } catch (error) {
     console.error('Submit Failed', error);

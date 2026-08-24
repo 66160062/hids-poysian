@@ -342,12 +342,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useWorkListStore } from '../stores/useWorkList';
 import { useHouseTypeStore } from '../stores/useHouseType';
 
 const router = useRouter();
+const route = useRoute();
 const $q = useQuasar();
 const workStore = useWorkListStore();
 const houseTypeStore = useHouseTypeStore();
@@ -390,6 +391,15 @@ const defectJobCount = computed(() => workStore.absoluteJobCounts.defect);
 const constructJobCount = computed(() => workStore.absoluteJobCounts.construction);
 
 const currentPage = ref(1);
+const selectedBranchId = computed(() => {
+  const routeBranchId = Number(route.query.branchId);
+  if (Number.isInteger(routeBranchId) && routeBranchId > 0) {
+    return routeBranchId;
+  }
+
+  const storedBranchId = Number(sessionStorage.getItem('adminSelectedBranchId'));
+  return Number.isInteger(storedBranchId) && storedBranchId > 0 ? storedBranchId : undefined;
+});
 
 // ==========================================
 // 🎯 Interface สำหรับข้อมูล TaskItem
@@ -521,6 +531,12 @@ watch([activeFilter, selectedType, selectedJobType, sortOrder], () => {
   void fetchWorkList();
 });
 
+watch(selectedBranchId, () => {
+  currentPage.value = 1;
+  void workStore.fetchAbsoluteJobCounts(getBranchParams());
+  void fetchWorkList();
+});
+
 async function viewDetail(task: TaskItem): Promise<void> {
   const isConstruction =
     task.inspectionType === 'CONSTRUCTION_INSPECTION' ||
@@ -541,7 +557,10 @@ function addNewWork(type: 'defect' | 'construction') {
   isFabClicked.value = false;
   void router.push({
     path: '/admin/work/create',
-    query: { type },
+    query: {
+      type,
+      ...getBranchParams(),
+    },
   });
 }
 
@@ -569,6 +588,7 @@ function onDeleteClick(task: TaskItem) {
           search: searchTerm.value,
           type: selectedType.value,
           sort: sortOrder.value,
+          ...getBranchParams(),
           ...(selectedJobType.value !== 'ทั้งหมด' && { inspectionType: selectedJobType.value }),
         });
       } catch {
@@ -594,6 +614,7 @@ async function fetchWorkList(): Promise<void> {
         search: searchTerm.value,
         type: selectedType.value,
         sort: sortOrder.value,
+        ...getBranchParams(),
         ...(selectedJobType.value !== 'ทั้งหมด' && { inspectionType: selectedJobType.value }),
       }),
       houseTypeStore.houseTypes.length === 0 ? houseTypeStore.fetchHouseTypes() : Promise.resolve(),
@@ -607,9 +628,13 @@ async function fetchWorkList(): Promise<void> {
 }
 
 onMounted((): void => {
-  void workStore.fetchAbsoluteJobCounts();
+  void workStore.fetchAbsoluteJobCounts(getBranchParams());
   void fetchWorkList();
 });
+
+function getBranchParams(): { branchId?: number } {
+  return selectedBranchId.value ? { branchId: selectedBranchId.value } : {};
+}
 </script>
 
 <style scoped>
