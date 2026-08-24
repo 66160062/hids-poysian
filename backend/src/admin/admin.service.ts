@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, FindOptionsWhere } from 'typeorm';
 import { InspectionJob } from '../inspection-jobs/entities/inspection-job.entity';
 import { InspectionRound } from '../inspection-rounds/entities/inspection-round.entity';
 import { Defect } from '../defects/entities/defect.entity';
+import { Branch } from '../branches/entities/branch.entity';
 import {
+  DashboardBranchOption,
   DashboardResponse,
   DashboardTaskItem,
 } from './dto/dashboard-response.dto';
@@ -27,17 +29,41 @@ export class AdminService {
     private readonly roundsRepo: Repository<InspectionRound>,
     @InjectRepository(Defect)
     private readonly defectsRepo: Repository<Defect>,
+    @InjectRepository(Branch)
+    private readonly branchRepo: Repository<Branch>,
   ) {}
 
   /**
    * ดึงข้อมูล Dashboard สถิติรวมและรายการงานในเดือนที่ระบุ
    * @param dateString - วันที่ในรูปแบบ ISO string (optional, default = เดือนปัจจุบัน)
    */
-  async getDashboardData(dateString?: string): Promise<DashboardResponse> {
+  async getDashboardData(
+    dateString?: string,
+    branchId?: number,
+  ): Promise<DashboardResponse> {
+    const selectedBranchId =
+      typeof branchId === 'number' && Number.isInteger(branchId) && branchId > 0
+        ? branchId
+        : undefined;
+    const jobWhere: FindOptionsWhere<InspectionJob> | undefined =
+      selectedBranchId ? { branchId: selectedBranchId } : undefined;
+    const branchRows = await this.branchRepo.find({
+      order: { branchName: 'ASC' },
+    });
+    const branches: DashboardBranchOption[] = branchRows.map((branch) => {
+      const fallbackName = `Branch ${branch.branchId}`;
+
+      return {
+        id: branch.branchId,
+        name: branch.branchName ?? fallbackName,
+      };
+    });
+
     // ========================================
     // 1. ดึงสถิติจำนวนงานทั้งหมด (Single Query with relation)
     // ========================================
     const allJobs: InspectionJob[] = await this.jobsRepo.find({
+      where: jobWhere,
       relations: ['houseType'],
     });
 
@@ -91,10 +117,17 @@ export class AdminService {
     const startOfMonth: Date = new Date(year, month, 1, 0, 0, 0, 0);
     const endOfMonth: Date = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
+    const roundWhere: FindOptionsWhere<InspectionRound> = selectedBranchId
+      ? {
+          scheduledDate: Between(startOfMonth, endOfMonth),
+          job: { branchId: selectedBranchId },
+        }
+      : {
+          scheduledDate: Between(startOfMonth, endOfMonth),
+        };
+
     const rounds: InspectionRound[] = await this.roundsRepo.find({
-      where: {
-        scheduledDate: Between(startOfMonth, endOfMonth),
-      },
+      where: roundWhere,
       relations: [
         'job',
         'job.customer',
@@ -129,9 +162,11 @@ export class AdminService {
     // 3. ดึง 15 งานที่ถูกสร้างล่าสุด
     // ========================================
     const recentJobs: InspectionJob[] = await this.jobsRepo.find({
+      where: jobWhere,
       relations: [
         'customer',
         'houseType',
+        'branch',
         'rounds',
         'rounds.teamMembers',
         'rounds.teamMembers.inspector',
@@ -229,6 +264,8 @@ export class AdminService {
           day: dayOfMonth,
           team: teamName,
           customer: customerName,
+          branchId: job.branchId,
+          branchName: job.branch?.branchName ?? null,
         };
       },
     );
@@ -240,6 +277,7 @@ export class AdminService {
       townhouse,
       condo,
       construction,
+      branches,
       calendarEvents,
       tasks,
     };

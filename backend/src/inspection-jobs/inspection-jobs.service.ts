@@ -69,6 +69,12 @@ export class InspectionJobsService {
     const inspectionJob = this.inspectionsRepo.create({
       ...createInspectionJobDto,
       status: createInspectionJobDto.status ?? 'Draft',
+      branchId:
+        typeof createInspectionJobDto.branchId === 'number' &&
+        Number.isInteger(createInspectionJobDto.branchId) &&
+        createInspectionJobDto.branchId > 0
+          ? createInspectionJobDto.branchId
+          : null,
       customer,
       address,
       houseType,
@@ -85,8 +91,13 @@ export class InspectionJobsService {
     type?: string,
     sort?: 'asc' | 'desc',
     inspectionType?: string,
+    branchId?: number,
   ) {
     limit = Math.min(limit, 100);
+    const selectedBranchId =
+      typeof branchId === 'number' && Number.isInteger(branchId) && branchId > 0
+        ? branchId
+        : undefined;
     const query = this.inspectionsRepo
       .createQueryBuilder('job')
       .leftJoinAndSelect('job.customer', 'customer')
@@ -97,6 +108,10 @@ export class InspectionJobsService {
 
     if (status && (status as string) !== 'all') {
       query.andWhere('job.status = :status', { status });
+    }
+
+    if (selectedBranchId) {
+      query.andWhere('job.branchId = :branchId', { branchId: selectedBranchId });
     }
 
     if (type && type !== 'ทั้งหมด') {
@@ -303,6 +318,13 @@ export class InspectionJobsService {
       inspectionJob.projectImageUrl = updateInspectionJobDto.projectImageUrl;
     if (updateInspectionJobDto.status !== undefined)
       inspectionJob.status = updateInspectionJobDto.status;
+    if (updateInspectionJobDto.branchId !== undefined)
+      inspectionJob.branchId =
+        typeof updateInspectionJobDto.branchId === 'number' &&
+        Number.isInteger(updateInspectionJobDto.branchId) &&
+        updateInspectionJobDto.branchId > 0
+          ? updateInspectionJobDto.branchId
+          : null;
 
     return this.inspectionsRepo.save(inspectionJob);
   }
@@ -311,7 +333,12 @@ export class InspectionJobsService {
     search?: string,
     type?: string,
     inspectionType?: string,
+    branchId?: number,
   ) {
+    const selectedBranchId =
+      typeof branchId === 'number' && Number.isInteger(branchId) && branchId > 0
+        ? branchId
+        : undefined;
     const statuses = [
       {
         key: InspectionJobStatus.Draft,
@@ -361,6 +388,10 @@ export class InspectionJobsService {
 
     if (type && type !== 'ทั้งหมด') {
       query.andWhere('houseType.name = :type', { type });
+    }
+
+    if (selectedBranchId) {
+      query.andWhere('job.branchId = :branchId', { branchId: selectedBranchId });
     }
 
     if (inspectionType && inspectionType !== 'ทั้งหมด') {

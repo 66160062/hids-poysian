@@ -2,6 +2,7 @@ import { Address } from 'src/addresses/entities/address.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { HouseType } from 'src/house-types/entities/house-type.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
+import { Branch } from 'src/branches/entities/branch.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -64,6 +65,9 @@ export class InspectionJob {
   @Column({ type: 'text', nullable: true })
   contractorShareToken!: string | null;
 
+  @Column({ name: 'branch_id', type: 'int', nullable: true })
+  branchId!: number | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 
@@ -85,6 +89,10 @@ export class InspectionJob {
   @ManyToOne(() => Contractor, { nullable: true })
   @JoinColumn({ name: 'contractor_id' })
   contractor!: Contractor;
+
+  @ManyToOne(() => Branch, { nullable: true })
+  @JoinColumn({ name: 'branch_id' })
+  branch!: Branch | null;
 
   @OneToMany(() => InspectionRound, (round) => round.job)
   rounds!: InspectionRound[];
