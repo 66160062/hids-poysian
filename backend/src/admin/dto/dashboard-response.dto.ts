@@ -19,6 +19,13 @@ export interface DashboardTaskItem {
   day: number;
   team: string;
   customer: string;
+  branchId?: number | null;
+  branchName?: string | null;
+}
+
+export interface DashboardBranchOption {
+  id: number;
+  name: string;
 }
 
 /** โครงสร้าง Response ของ GET /admin/dashboard */
@@ -29,6 +36,7 @@ export interface DashboardResponse {
   townhouse: number;
   condo: number;
   construction: number;
+  branches: DashboardBranchOption[];
   calendarEvents: number[];
   tasks: DashboardTaskItem[];
 }
