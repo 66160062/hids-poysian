@@ -46,6 +46,16 @@ export class CreateInspectionJobDto {
   @IsNumber()
   houseTypeId!: number;
 
+  @ApiProperty({
+    description: 'รหัสสาขา (Branch ID)',
+    example: 1,
+    required: false,
+  })
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  branchId?: number;
+
   @ApiProperty({ description: 'ชื่อโครงการ', example: 'หมู่บ้านแสนสุข วิลเลจ' })
   @IsString()
   @MaxLength(255)

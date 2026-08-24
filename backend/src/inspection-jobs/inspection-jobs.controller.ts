@@ -83,6 +83,7 @@ export class InspectionJobsController {
     @Query('type') type?: string,
     @Query('sort') sort?: 'asc' | 'desc',
     @Query('inspectionType') inspectionType?: string,
+    @Query('branchId') branchId?: string,
   ) {
     // Treat 'all' as undefined
     const parsedStatus =
@@ -96,6 +97,7 @@ export class InspectionJobsController {
       type,
       sort,
       inspectionType,
+      branchId ? Number(branchId) : undefined,
     );
   }
 
@@ -105,11 +107,13 @@ export class InspectionJobsController {
     @Query('search') search?: string,
     @Query('type') type?: string,
     @Query('inspectionType') inspectionType?: string,
+    @Query('branchId') branchId?: string,
   ) {
     return this.inspectionJobsService.getStatusMetadata(
       search,
       type,
       inspectionType,
+      branchId ? Number(branchId) : undefined,
     );
   }
 
