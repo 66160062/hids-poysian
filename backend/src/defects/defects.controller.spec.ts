@@ -38,13 +38,17 @@ describe('DefectsController', () => {
       size: 1234,
     } as Express.Multer.File;
 
-    void controller.contractorUpdate(file, {
-      defectId: 7,
-      contractorId: 3,
-      note: 'Fixed',
-    }, {
-      user: { project_id: 12, role: 'contractor' },
-    } as never);
+    void controller.contractorUpdate(
+      file,
+      {
+        defectId: 7,
+        contractorId: 3,
+        note: 'Fixed',
+      },
+      {
+        user: { project_id: 12, role: 'contractor' },
+      } as never,
+    );
 
     expect(defectsService.contractorUpdate).toHaveBeenCalledWith({
       defectId: 7,

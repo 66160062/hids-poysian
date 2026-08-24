@@ -28,7 +28,10 @@ describe('InspectionJobsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InspectionJobsService,
-        { provide: getRepositoryToken(InspectionJob), useValue: inspectionsRepo },
+        {
+          provide: getRepositoryToken(InspectionJob),
+          useValue: inspectionsRepo,
+        },
         { provide: getRepositoryToken(Customer), useValue: repoMock },
         { provide: getRepositoryToken(Address), useValue: repoMock },
         { provide: getRepositoryToken(HouseType), useValue: repoMock },
