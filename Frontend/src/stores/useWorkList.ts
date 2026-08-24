@@ -47,6 +47,7 @@ export interface Work {
     status: string;
     scheduledDate: string;
   }[];
+  branchId?: number | null;
 }
 
 export interface StatusMeta {
@@ -75,12 +76,12 @@ export const useWorkListStore = defineStore('workList', () => {
     construction: 0
   });
 
-  const fetchAbsoluteJobCounts = async () => {
+  const fetchAbsoluteJobCounts = async (params: { branchId?: number } = {}) => {
     try {
       const [resAll, resDef, resCon] = await Promise.all([
-        api.get('/inspection-jobs', { params: { limit: 1 } }),
-        api.get('/inspection-jobs', { params: { limit: 1, inspectionType: 'ตรวจบ้าน' } }),
-        api.get('/inspection-jobs', { params: { limit: 1, inspectionType: 'งานก่อสร้าง' } })
+        api.get('/inspection-jobs', { params: { limit: 1, ...params } }),
+        api.get('/inspection-jobs', { params: { limit: 1, inspectionType: 'ตรวจบ้าน', ...params } }),
+        api.get('/inspection-jobs', { params: { limit: 1, inspectionType: 'งานก่อสร้าง', ...params } })
       ]);
       absoluteJobCounts.value.all = resAll.data?.meta?.total || 0;
       absoluteJobCounts.value.defect = resDef.data?.meta?.total || 0;
@@ -90,7 +91,7 @@ export const useWorkListStore = defineStore('workList', () => {
     }
   };
 
-  const fetchStatusMeta = async (params: { search?: string, type?: string, inspectionType?: string } = {}) => {
+  const fetchStatusMeta = async (params: { search?: string, type?: string, inspectionType?: string, branchId?: number } = {}) => {
     try {
       const response = await api.get('/inspection-jobs/statuses/meta', { params });
       statusMeta.value = response.data;
@@ -100,7 +101,7 @@ export const useWorkListStore = defineStore('workList', () => {
     }
   };
 
-  const fetchJobs = async (params: { page?: number, limit?: number, status?: string, search?: string, type?: string, sort?: string, inspectionType?: string } = {}) => {
+  const fetchJobs = async (params: { page?: number, limit?: number, status?: string, search?: string, type?: string, sort?: string, inspectionType?: string, branchId?: number } = {}) => {
     isLoading.value = true;
     try {
       const response = await api.get('/inspection-jobs', { params });
@@ -114,10 +115,11 @@ export const useWorkListStore = defineStore('workList', () => {
           : (response.data.data || []);
       }
 
-      const metaParams: { search?: string, type?: string, inspectionType?: string } = {};
+      const metaParams: { search?: string, type?: string, inspectionType?: string, branchId?: number } = {};
       if (params.search) metaParams.search = params.search;
       if (params.type) metaParams.type = params.type;
       if (params.inspectionType) metaParams.inspectionType = params.inspectionType;
+      if (params.branchId) metaParams.branchId = params.branchId;
 
       await fetchStatusMeta(metaParams);
     } catch (error) {
