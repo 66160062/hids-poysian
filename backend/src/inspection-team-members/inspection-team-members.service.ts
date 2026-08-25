@@ -12,6 +12,7 @@ import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entit
 import { User } from 'src/users/entities/user.entity';
 import { InspectionJobStatus } from 'src/inspection-jobs/enums/inspection-job-status.enum';
 import { Team } from 'src/teams/entities/team.entity';
+import { BranchesService } from 'src/branches/branches.service';
 
 export const JOB_STATUSES_BLOCKING_UNASSIGN: InspectionJobStatus[] = [
   InspectionJobStatus.Locked,
@@ -40,6 +41,7 @@ export class InspectionTeamMembersService {
     private readonly usersRepo: Repository<User>,
     @InjectRepository(Team)
     private readonly teamRepo: Repository<Team>,
+    private readonly branchesService: BranchesService,
   ) {}
 
   // เปลี่ยนชื่อจาก assign -> create (ล้อตามชื่อเดิมของเพื่อนใน controller) แต่ไส้ในเป็นของคุณเป๊ะๆ
@@ -83,6 +85,9 @@ export class InspectionTeamMembersService {
       if (!teamEntity) {
         throw new NotFoundException(`ไม่พบทีม ID ${dto.teamId}`);
       }
+      const branch = await this.branchesService.findOrCreateForTeam(teamEntity.team_Id);
+      job.branchId = branch.branchId;
+      await this.jobsRepo.save(job);
     }
 
     const duplicate = await this.teamsRepo.findOne({

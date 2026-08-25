@@ -16,7 +16,7 @@
       </q-banner>
 
       <q-select
-        v-if="branchOptions.length > 1"
+        v-if="branches.length > 0"
         v-model="selectedBranchId"
         :options="branchOptions"
         option-value="value"
@@ -33,6 +33,18 @@
           <q-icon name="business" color="primary" />
         </template>
       </q-select>
+      <q-banner v-if="branches.length" rounded class="bg-blue-1 text-primary q-mb-md">
+        <template #avatar><q-icon name="groups" /></template>
+        <div class="text-weight-bold">{{ selectedBranchDisplayName }}</div>
+        <div class="text-caption">{{ selectedBranchId === 'all' ? 'กำลังแสดงงานของทุกทีมตรวจ' : 'กำลังแสดงงานของทีมตรวจ / Branch นี้' }}</div>
+      </q-banner>
+      <q-banner v-else rounded class="bg-orange-1 text-orange-9 q-mb-md">
+        <template #avatar><q-icon name="info" /></template>
+        ยังไม่มี Branch — สร้างทีมตรวจ แล้วระบบจะสร้าง Branch ให้เมื่อมีการเปิดเล่มหรือมอบหมายงาน
+      </q-banner>
+      <div class="row justify-end q-mb-sm">
+        <q-btn flat dense color="primary" icon="groups" label="จัดการทีมตรวจ / Branch" to="/admin/teams" />
+      </div>
 
       <div class="row q-col-gutter-md q-mb-md">
         <div class="col-6">
@@ -278,6 +290,10 @@ const branchOptions = computed(() => [
     value: branch.id,
   })),
 ]);
+const selectedBranchDisplayName = computed(() => {
+  if (selectedBranchId.value === 'all') return 'ทุกทีมตรวจ / ทุก Branch';
+  return branches.value.find((branch) => branch.id === selectedBranchId.value)?.name ?? 'ทีมตรวจที่เลือก';
+});
 
 // ==========================================
 // 🎯 ระบบปฏิทิน

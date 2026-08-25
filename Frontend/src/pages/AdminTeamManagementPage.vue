@@ -143,6 +143,29 @@
               <q-input v-model="localForm.contact_info" outlined dense filled hide-bottom-space />
             </div>
 
+            <div v-if="isEditing" class="q-mt-md">
+              <div class="row items-center justify-between q-mb-sm">
+                <div class="text-subtitle2 text-grey-8">รายชื่อสมาชิกในทีม</div>
+                <q-badge color="primary" rounded>{{ editingTeamMembers.length }}</q-badge>
+              </div>
+              <q-list v-if="editingTeamMembers.length" bordered separator class="rounded-borders">
+                <q-item v-for="member in editingTeamMembers" :key="member.id" dense>
+                  <q-item-section avatar>
+                    <q-avatar size="32px" color="primary" text-color="white">
+                      <img v-if="member.imageUrl && !member.imageUrl.includes('unknown.jpg')" :src="getImageUrl(member.imageUrl)" />
+                      <span v-else>{{ member.fullName?.charAt(0).toUpperCase() || 'U' }}</span>
+                    </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ member.fullName }}</q-item-label>
+                    <q-item-label caption>{{ member.phoneNumber || member.email }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side><q-badge outline color="grey-7">{{ member.role }}</q-badge></q-item-section>
+                </q-item>
+              </q-list>
+              <div v-else class="text-caption text-grey-6 q-pa-sm bg-grey-2 rounded-borders">ยังไม่มีสมาชิกในทีมนี้</div>
+            </div>
+
             <div class="row justify-end q-mt-lg q-gutter-sm">
               <q-btn
                 label="ย้อนกลับ"
@@ -188,6 +211,9 @@ const selectedTeamMembers = computed(() => {
   if (!selectedTeam.value) return [];
   return getTeamMembers(selectedTeam.value.team_Id);
 });
+const editingTeamMembers = computed(() =>
+  editTeamId.value ? getTeamMembers(editTeamId.value) : [],
+);
 
 const localForm = ref<{
   team_name: string;
