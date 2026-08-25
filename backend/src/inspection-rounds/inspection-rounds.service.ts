@@ -243,6 +243,7 @@ export class InspectionRoundsService {
         'job.address',
         'job.customer',
         'job.houseType',
+        'job.branch',
         'teamMembers',
         'teamMembers.inspector',
         'teamMembers.inspector.team',
@@ -304,6 +305,7 @@ export class InspectionRoundsService {
       .leftJoinAndSelect('job.customer', 'customer')
       .leftJoinAndSelect('job.address', 'address')
       .leftJoinAndSelect('job.houseType', 'houseType')
+      .leftJoinAndSelect('job.branch', 'branch')
       .leftJoin('round.teamMembers', 'teamMembers')
       .leftJoin('teamMembers.inspector', 'roundInspector')
       .leftJoin('teamMembers.team', 'roundTeam')

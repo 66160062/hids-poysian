@@ -13,6 +13,8 @@ import { Address } from 'src/addresses/entities/address.entity';
 import { HouseType } from 'src/house-types/entities/house-type.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
 import { InspectionJobStatus } from './enums/inspection-job-status.enum';
+import { Branch } from 'src/branches/entities/branch.entity';
+import { BranchesService } from 'src/branches/branches.service';
 
 @Injectable()
 export class InspectionJobsService {
@@ -27,6 +29,9 @@ export class InspectionJobsService {
     private readonly houseTypesRepo: Repository<HouseType>,
     @InjectRepository(Contractor)
     private readonly contractorsRepo: Repository<Contractor>,
+    @InjectRepository(Branch)
+    private readonly branchesRepo: Repository<Branch>,
+    private readonly branchesService: BranchesService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -66,6 +71,14 @@ export class InspectionJobsService {
         );
     }
 
+    let branch: Branch | null = null;
+    if (createInspectionJobDto.teamId) {
+      branch = await this.branchesService.findOrCreateForTeam(createInspectionJobDto.teamId);
+    } else if (createInspectionJobDto.branchId) {
+      branch = await this.branchesRepo.findOneBy({ branchId: createInspectionJobDto.branchId });
+      if (!branch || branch.status !== 'active') throw new NotFoundException(`ไม่พบบริษัท/สาขา ID ${createInspectionJobDto.branchId}`);
+    }
+
     const inspectionJob = this.inspectionsRepo.create({
       ...createInspectionJobDto,
       status: createInspectionJobDto.status ?? 'Draft',
@@ -79,6 +92,7 @@ export class InspectionJobsService {
       address,
       houseType,
       contractor: contractor ?? undefined,
+      branch: branch ?? undefined,
     });
     return this.inspectionsRepo.save(inspectionJob);
   }
@@ -104,6 +118,7 @@ export class InspectionJobsService {
       .leftJoinAndSelect('job.address', 'address')
       .leftJoinAndSelect('job.houseType', 'houseType')
       .leftJoinAndSelect('job.contractor', 'contractor')
+      .leftJoinAndSelect('job.branch', 'branch')
       .leftJoinAndSelect('job.rounds', 'rounds');
 
     if (status && (status as string) !== 'all') {
@@ -212,7 +227,7 @@ export class InspectionJobsService {
   async findOne(id: number) {
     const job = await this.inspectionsRepo.findOne({
       where: { jobId: id },
-      relations: ['customer', 'address', 'houseType', 'contractor', 'rounds'],
+      relations: ['customer', 'address', 'houseType', 'contractor', 'branch', 'rounds'],
     });
     if (!job) throw new NotFoundException(`ไม่พบงานตรวจ ID ${id}`);
 
@@ -318,13 +333,21 @@ export class InspectionJobsService {
       inspectionJob.projectImageUrl = updateInspectionJobDto.projectImageUrl;
     if (updateInspectionJobDto.status !== undefined)
       inspectionJob.status = updateInspectionJobDto.status;
-    if (updateInspectionJobDto.branchId !== undefined)
-      inspectionJob.branchId =
+    if (updateInspectionJobDto.teamId !== undefined || updateInspectionJobDto.branchId !== undefined) {
+      if (updateInspectionJobDto.teamId) {
+        const branch = await this.branchesService.findOrCreateForTeam(updateInspectionJobDto.teamId);
+        inspectionJob.branchId = branch.branchId;
+      } else if (updateInspectionJobDto.branchId) {
+        const branch = await this.branchesRepo.findOneBy({ branchId: updateInspectionJobDto.branchId });
+        if (!branch || branch.status !== 'active') throw new NotFoundException(`ไม่พบบริษัท/สาขา ID ${updateInspectionJobDto.branchId}`);
+      }
+      if (updateInspectionJobDto.teamId === undefined) inspectionJob.branchId =
         typeof updateInspectionJobDto.branchId === 'number' &&
         Number.isInteger(updateInspectionJobDto.branchId) &&
         updateInspectionJobDto.branchId > 0
           ? updateInspectionJobDto.branchId
           : null;
+    }
 
     return this.inspectionsRepo.save(inspectionJob);
   }

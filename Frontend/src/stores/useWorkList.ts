@@ -48,6 +48,7 @@ export interface Work {
     scheduledDate: string;
   }[];
   branchId?: number | null;
+  branch?: { branchId: number; teamId?: number | null; branchName: string; logoUrl?: string | null } | null;
 }
 
 export interface StatusMeta {

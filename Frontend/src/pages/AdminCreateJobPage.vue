@@ -29,7 +29,13 @@
     <!-- ================================ -->
 
     <div v-else-if="!isLoading" class="form-container q-pa-md q-gutter-y-lg pb-100">
+      <q-card flat bordered class="card-rounded q-pa-md">
+        <div class="row items-center q-mb-sm text-primary"><q-icon name="business" size="20px" class="q-mr-sm" /><div class="text-subtitle2 text-weight-bold">บริษัท / สาขาที่เปิดเล่ม</div></div>
+        <q-select v-model="selectedBranchId" :options="branchOptions" emit-value map-options outlined class="custom-select" label="เลือกบริษัทหรือสาขา" />
+        <div v-if="!branchOptions.length" class="text-negative text-caption q-mt-sm">ยังไม่มีบริษัทหรือสาขา กรุณาเพิ่มที่ /admin/branches</div>
+      </q-card>
       <!-- ข้อมูลลูกค้า -->
+      <div class="text-caption text-primary q-mt-sm">ทีมตรวจที่เลือกคือ Branch ของงานนี้</div>
       <div class="section">
         <div class="row items-center q-mb-sm text-primary justify-between">
           <div class="row items-center">
@@ -538,6 +544,7 @@ import { useCustomerStore, type Customer } from '../stores/useCustomer';
 import { useAddressStore } from '../stores/useAddress';
 import { useContractorStore } from '../stores/useContractor';
 import { useHouseTypeStore } from '../stores/useHouseType';
+import { useTeamStore } from '../stores/useTeam';
 import { useThaiAddress, type ThaiAddress } from '../composables/useThaiAddress';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
@@ -555,16 +562,10 @@ const customerStore = useCustomerStore();
 const addressStore = useAddressStore();
 const contractorStore = useContractorStore();
 const houseTypeStore = useHouseTypeStore();
+const teamStore = useTeamStore();
 const thaiAddress = useThaiAddress();
-const selectedBranchId = computed(() => {
-  const routeBranchId = Number(route.query.branchId);
-  if (Number.isInteger(routeBranchId) && routeBranchId > 0) {
-    return routeBranchId;
-  }
-
-  const storedBranchId = Number(sessionStorage.getItem('adminSelectedBranchId'));
-  return Number.isInteger(storedBranchId) && storedBranchId > 0 ? storedBranchId : undefined;
-});
+const selectedBranchId = ref<number | undefined>();
+const branchOptions = computed(() => teamStore.teamOptions);
 
 // ─── Edit mode ────────────────────────────────────────────────────────────
 const editId = computed(() => {
@@ -706,7 +707,7 @@ const currentUploadType = ref<'housePlan' | 'projectPhoto' | null>(null);
 const isLoading = ref(false);
 
 onMounted(async () => {
-  await customerStore.fetchCustomers();
+  await Promise.all([customerStore.fetchCustomers(), teamStore.fetchTeams()]);
   await houseTypeStore.fetchHouseTypes();
 
   // Pre-select job type from route query if available
@@ -722,6 +723,7 @@ onMounted(async () => {
 
     const existing = workStore.works.find((w) => w.jobId === editId.value);
     if (!existing) return;
+    selectedBranchId.value = existing.branch?.teamId ?? undefined;
 
     form.projectName = existing.projectName || '';
     form.inspectionType =
@@ -778,6 +780,10 @@ const handleFileChange = (e: Event) => {
 const isSubmitting = ref(false);
 
 const onSubmit = async () => {
+  if (!selectedBranchId.value) {
+    $q.notify({ message: 'กรุณาเลือกบริษัทหรือสาขาก่อนเปิดเล่ม', color: 'negative', position: 'top' });
+    return;
+  }
   // Validate project name always required
   if (!form.projectName) {
     $q.notify({
@@ -880,7 +886,7 @@ const onSubmit = async () => {
         jobFormData.append('projectName', form.projectName);
         jobFormData.append('locationCoordinate', '');
         jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
-        if (selectedBranchId.value) jobFormData.append('branchId', String(selectedBranchId.value));
+        if (selectedBranchId.value) jobFormData.append('teamId', String(selectedBranchId.value));
         if (finalContractorId) jobFormData.append('contractorId', String(finalContractorId));
         if (form.projectImageFile) jobFormData.append('projectImageUrl', form.projectImageFile);
         else if (form.projectImage === null) jobFormData.append('projectImageUrl', '');
@@ -953,7 +959,7 @@ const onSubmit = async () => {
       jobFormData.append('locationCoordinate', '');
       jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
       jobFormData.append('status', 'Draft');
-      if (selectedBranchId.value) jobFormData.append('branchId', String(selectedBranchId.value));
+      if (selectedBranchId.value) jobFormData.append('teamId', String(selectedBranchId.value));
 
       if (form.projectImageFile) {
         jobFormData.append('projectImageUrl', form.projectImageFile);

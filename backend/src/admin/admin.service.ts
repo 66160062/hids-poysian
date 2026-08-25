@@ -5,6 +5,7 @@ import { InspectionJob } from '../inspection-jobs/entities/inspection-job.entity
 import { InspectionRound } from '../inspection-rounds/entities/inspection-round.entity';
 import { Defect } from '../defects/entities/defect.entity';
 import { Branch } from '../branches/entities/branch.entity';
+import { Team } from '../teams/entities/team.entity';
 import {
   DashboardBranchOption,
   DashboardResponse,
@@ -31,6 +32,8 @@ export class AdminService {
     private readonly defectsRepo: Repository<Defect>,
     @InjectRepository(Branch)
     private readonly branchRepo: Repository<Branch>,
+    @InjectRepository(Team)
+    private readonly teamRepo: Repository<Team>,
   ) {}
 
   /**
@@ -47,7 +50,11 @@ export class AdminService {
         : undefined;
     const jobWhere: FindOptionsWhere<InspectionJob> | undefined =
       selectedBranchId ? { branchId: selectedBranchId } : undefined;
+    // ทีมตรวจและ Branch คือหน่วยงานเดียวกัน: sync ทีมที่มีอยู่ให้มี
+    // Branch เสมอ เพื่อให้ตัวเลือกบน Dashboard แสดงทันทีแม้ยังไม่มีงาน
+    await this.syncBranchesFromTeams();
     const branchRows = await this.branchRepo.find({
+      where: { status: 'active' },
       order: { branchName: 'ASC' },
     });
     const branches: DashboardBranchOption[] = branchRows.map((branch) => {
@@ -281,6 +288,63 @@ export class AdminService {
       calendarEvents,
       tasks,
     };
+  }
+
+  private async syncBranchesFromTeams(): Promise<void> {
+    const teams = await this.teamRepo.find({ where: { status: 'active' } });
+    if (!teams.length) return;
+
+    const existingBranches = await this.branchRepo.find({
+      where: teams.map((team) => ({ teamId: team.team_Id })),
+    });
+    const byTeamId = new Map(existingBranches.map((branch) => [branch.teamId, branch]));
+    const toSave: Branch[] = [];
+
+    for (const team of teams) {
+      const branch = byTeamId.get(team.team_Id);
+      if (branch) {
+        branch.branchName = team.team_name;
+        branch.logoUrl = team.logo_url;
+        branch.status = 'active';
+        toSave.push(branch);
+      } else {
+        toSave.push(this.branchRepo.create({
+          teamId: team.team_Id,
+          team,
+          branchName: team.team_name,
+          logoUrl: team.logo_url,
+          status: 'active',
+        }));
+      }
+    }
+
+    const savedBranches = await this.branchRepo.save(toSave);
+
+    // Backfill legacy jobs that were assigned to a team before Branch existed.
+    // Do not overwrite an existing branch selection; it is the explicit source
+    // of truth for jobs already migrated or manually assigned.
+    for (const branch of savedBranches) {
+      if (!branch.teamId) continue;
+      await this.jobsRepo.query(
+        `UPDATE inspection_job AS job
+         SET branch_id = $1
+         WHERE job.branch_id IS NULL
+           AND EXISTS (
+             SELECT 1
+             FROM inspection_round AS round
+             INNER JOIN inspection_team_member AS member
+               ON member.round_id = round.round_id
+              AND member.deleted_at IS NULL
+             LEFT JOIN "user" AS inspector
+               ON inspector.id = member.inspector_id
+              AND inspector.deleted_at IS NULL
+             WHERE round.job_id = job.job_id
+               AND round.deleted_at IS NULL
+               AND (member.team_id = $2 OR inspector.team_id = $2)
+           )`,
+        [branch.branchId, branch.teamId],
+      );
+    }
   }
 
   /**
