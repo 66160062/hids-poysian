@@ -8,15 +8,18 @@ import { AddressesModule } from 'src/addresses/addresses.module';
 import { HouseTypesModule } from 'src/house-types/house-types.module';
 import { ContractorModule } from 'src/contractor/contractor.module';
 import { AuthModule } from 'src/auth/auth.module';
+import { Branch } from 'src/branches/entities/branch.entity';
+import { BranchesModule } from 'src/branches/branches.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InspectionJob]),
+    TypeOrmModule.forFeature([InspectionJob, Branch]),
     CustomersModule,
     AddressesModule,
     HouseTypesModule,
     ContractorModule,
     AuthModule,
+    BranchesModule,
   ],
   controllers: [InspectionJobsController],
   providers: [InspectionJobsService],

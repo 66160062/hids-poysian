@@ -99,7 +99,16 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'teams',
         component: () => import('pages/AdminTeamManagementPage.vue'),
+      },
+      {
+        path: 'branches',
+        redirect: '/admin/teams',
+        meta: { title: 'บริษัท / สาขา', icon: 'business' },
+      },
+      {
         meta: { title: 'จัดการทีม', icon: 'groups' },
+        path: 'teams-legacy',
+        redirect: '/admin/teams',
       },
       {
         path: 'menu',
