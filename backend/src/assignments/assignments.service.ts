@@ -28,8 +28,12 @@ export class AssignmentsService {
     private readonly jobsRepo: Repository<InspectionJob>,
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
+    @InjectRepository(InspectionRound)
+    private readonly roundsRepo: Repository<InspectionRound>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
+  
   async assign(dto: CreateAssignmentDto) {
     const job = await this.jobsRepo.findOne({ where: { jobId: dto.jobId } });
     if (!job) {
