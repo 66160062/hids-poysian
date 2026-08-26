@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from 'src/stores/useAuth';
 import { api } from 'src/boot/axios';
@@ -76,14 +76,16 @@ const authStore = useAuthStore();
 const currentUser = computed(() => authStore.currentUser);
 
 const unreadCount = ref(0);
-onMounted(async () => {
+const fetchUnreadCount = async () => {
   try {
     const { data } = await api.get<{ isRead: boolean }[]>('/notifications');
     unreadCount.value = data.filter((n) => !n.isRead).length;
   } catch {
     unreadCount.value = 0;
   }
-});
+};
+onMounted(fetchUnreadCount);
+watch(() => route.path, fetchUnreadCount);
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string || 'http://localhost:3000';
 const getImageUrl = (path: string | null | undefined): string | null => {
