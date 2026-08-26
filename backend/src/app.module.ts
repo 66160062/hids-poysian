@@ -45,7 +45,7 @@ import { Floor } from './floor/entities/floor.entity';
 import { SubRoom } from './sub-rooms/entities/sub-room.entity';
 import { RoomsModule } from './rooms/rooms.module';
 import { Room } from './rooms/entities/room.entity';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DailyReportsModule } from './daily-reports/daily-reports.module';
 import { AdminModule } from './admin/admin.module';
 import { ConstructionDailyReportsModule } from './construction-daily-reports/construction-daily-reports.module';
@@ -67,60 +67,55 @@ import { Branch } from './branches/entities/branch.entity';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    TypeOrmModule.forRoot({
-      // type: 'sqlite',
-      // database: 'hids.db',
-
-      // type: 'postgres',
-      // host: 'localhost',
-      // port: 5432,
-      // username: 'postgres',
-      // password: '1234',
-      // database: 'hids_db',
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT || '5432'),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_DATABASE,
-      ssl:
-        process.env.NODE_ENV === 'production'
-          ? { rejectUnauthorized: false }
-          : false,
-      entities: [
-        User,
-        InspectionJob,
-        Customer,
-        Address,
-        HouseType,
-        InspectionTeamMember,
-        Team,
-        InspectionRound,
-        DefectCategory,
-        DefectSubCategory,
-        RepairRecord,
-        Contractor,
-        Defect,
-        SummaryTemplateOption,
-        SummaryTemplate,
-        InspectionSummaryItem,
-        Floor,
-        SubRoom,
-        Room,
-        ConstructionDailyReport,
-        DailyWorkItem,
-        DailyPersonnel,
-        DailyIssue,
-        AccidentReport,
-        DailyMachine,
-        MachineType,
-        DailyReportImage,
-        Rating,
-        Notification,
-        Branch,
-      ],
-      synchronize: true,
-      namingStrategy: new SnakeNamingStrategy(),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('DB_HOST'),
+        port: parseInt(configService.get<string>('DB_PORT') || '5432'),
+        username: configService.get<string>('DB_USERNAME'),
+        password: configService.get<string>('DB_PASSWORD'),
+        database: configService.get<string>('DB_DATABASE'),
+        ssl:
+          configService.get<string>('NODE_ENV') === 'production'
+            ? { rejectUnauthorized: false }
+            : false,
+        entities: [
+          User,
+          InspectionJob,
+          Customer,
+          Address,
+          HouseType,
+          InspectionTeamMember,
+          Team,
+          InspectionRound,
+          DefectCategory,
+          DefectSubCategory,
+          RepairRecord,
+          Contractor,
+          Defect,
+          SummaryTemplateOption,
+          SummaryTemplate,
+          InspectionSummaryItem,
+          Floor,
+          SubRoom,
+          Room,
+          ConstructionDailyReport,
+          DailyWorkItem,
+          DailyPersonnel,
+          DailyIssue,
+          AccidentReport,
+          DailyMachine,
+          MachineType,
+          DailyReportImage,
+          Rating,
+          Notification,
+          Branch,
+        ],
+        synchronize: true,
+        namingStrategy: new SnakeNamingStrategy(),
+      }),
+      inject: [ConfigService],
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
