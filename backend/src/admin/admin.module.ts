@@ -6,10 +6,11 @@ import { InspectionJob } from '../inspection-jobs/entities/inspection-job.entity
 import { InspectionRound } from '../inspection-rounds/entities/inspection-round.entity';
 import { Defect } from '../defects/entities/defect.entity';
 import { Branch } from '../branches/entities/branch.entity';
+import { Team } from '../teams/entities/team.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InspectionJob, InspectionRound, Defect, Branch]),
+    TypeOrmModule.forFeature([InspectionJob, InspectionRound, Defect, Branch, Team]),
   ],
   controllers: [AdminController],
   providers: [AdminService],

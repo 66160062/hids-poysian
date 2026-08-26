@@ -7,10 +7,12 @@ import { InspectionJobsModule } from 'src/inspection-jobs/inspection-jobs.module
 import { UsersModule } from 'src/users/users.module';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { Team } from 'src/teams/entities/team.entity';
+import { BranchesModule } from 'src/branches/branches.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([InspectionTeamMember, InspectionRound, Team]),
+    BranchesModule,
     InspectionJobsModule,
     UsersModule,
   ],
