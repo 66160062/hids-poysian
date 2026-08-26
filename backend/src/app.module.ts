@@ -62,6 +62,7 @@ import { Rating } from './ratings/entities/rating.entity';
 import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/entities/notification.entity';
 import { Branch } from './branches/entities/branch.entity';
+import { BranchesModule } from './branches/branches.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -151,6 +152,7 @@ import { Branch } from './branches/entities/branch.entity';
     ConstructionDailyReportsModule,
     RatingsModule,
     NotificationsModule,
+    BranchesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

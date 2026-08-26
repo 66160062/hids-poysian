@@ -56,6 +56,12 @@ export class CreateInspectionJobDto {
   @IsOptional()
   branchId?: number;
 
+  @ApiProperty({ description: 'รหัสทีมตรวจ (ใช้เป็น Branch ของงาน)', example: 1, required: false })
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  teamId?: number;
+
   @ApiProperty({ description: 'ชื่อโครงการ', example: 'หมู่บ้านแสนสุข วิลเลจ' })
   @IsString()
   @MaxLength(255)
