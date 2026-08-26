@@ -16,7 +16,7 @@
         </div>
 
         <div class="row justify-center q-py-sm">
-          <img loading="eager" :src="PoysianLogo" style="height: 100px; object-fit: contain" />
+          <img loading="eager" :src="reportLogo" style="height: 100px; object-fit: contain" />
         </div>
 
         <div class="row justify-center q-mb-md">
@@ -257,7 +257,7 @@
                         : defect.status
                 }}
               </div>
-              <img loading="eager" :src="PoysianLogo" class="card-logo-watermark-img" />
+              <img loading="eager" :src="reportLogo" class="card-logo-watermark-img" />
             </div>
           </div>
         </div>
@@ -338,7 +338,7 @@
                   <span class="label">สถานะ:</span>
                   {{ defect.status === 'pending_repair' ? 'กำลังรอซ่อม' : defect.status }}
                 </div>
-                <img loading="eager" :src="PoysianLogo" class="card-logo-watermark-img" />
+                <img loading="eager" :src="reportLogo" class="card-logo-watermark-img" />
               </div>
             </div>
           </div>
@@ -606,6 +606,11 @@ const stickerLegend: StickerMeta[] = [
     description: 'รายการอื่นที่ไม่เข้ากลุ่มหลัก',
   },
 ];
+const reportLogo = computed(() => {
+  const logoUrl = props.round.job.branch?.logoUrl;
+  if (!logoUrl) return PoysianLogo;
+  return logoUrl.startsWith('http') ? logoUrl : `${apiUrl}${logoUrl}`;
+});
 
 const pageScale = ref(1);
 onMounted(() => {
