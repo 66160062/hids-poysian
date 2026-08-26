@@ -27,6 +27,15 @@
         <q-icon name="image" size="80px" color="grey-4" />
         <div class="text-subtitle1 text-weight-medium q-mt-sm">ไม่มีรูปภาพ</div>
       </div>
+      <q-btn
+        v-if="imagePreview"
+        round
+        color="secondary"
+        icon="edit"
+        class="absolute-bottom-left q-mb-md q-ml-md"
+        @click="showAnnotator = true"
+        style="z-index: 10"
+      />
       <div
         class="absolute-bottom-right q-pa-md column q-gutter-y-sm"
         style="margin-bottom: 20px; z-index: 10"
@@ -259,12 +268,20 @@
         />
       </div>
     </div>
+    
+    <ImageAnnotatorDialog
+      v-if="imagePreview"
+      v-model="showAnnotator"
+      :image-url="imagePreview"
+      @save="onAnnotatorSave"
+    />
   </q-page>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import ImageAnnotatorDialog from 'src/components/ImageAnnotatorDialog.vue';
 import imageCompression from 'browser-image-compression';
 import { useInspectionStore } from 'src/stores/useInspection';
 import { api } from 'src/boot/axios';
@@ -368,6 +385,12 @@ const onCategoryChange = (val: number | null) => {
 
 const imagePreview = ref<string | null>(null);
 const selectedFile = ref<File | null>(null);
+const showAnnotator = ref(false);
+
+const onAnnotatorSave = (blob: Blob) => {
+  selectedFile.value = new File([blob], 'annotated_defect.jpg', { type: 'image/jpeg' });
+  imagePreview.value = URL.createObjectURL(blob);
+};
 const galleryInput = ref<HTMLInputElement | null>(null);
 const cameraInput = ref<HTMLInputElement | null>(null);
 
