@@ -292,6 +292,19 @@
           Defect List
         </div>
 
+        <div v-if="pageIndex === 0" class="sticker-legend q-mb-sm">
+          <div class="text-caption text-weight-bold">คำอธิบายสีสติกเกอร์</div>
+          <div class="sticker-legend-items">
+            <div v-for="legend in stickerLegend" :key="legend.label" class="sticker-legend-item">
+              <span class="sticker-dot" :style="`background: ${legend.color}`" />
+              <div class="sticker-legend-text">
+                <span class="sticker-legend-label">{{ legend.label }}</span>
+                <span class="sticker-legend-description">{{ legend.description }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div v-for="group in page" :key="group.roomName" class="q-mb-sm">
           <div
             class="text-center text-bold q-py-xs q-mb-sm"
@@ -383,31 +396,124 @@
           สรุปผลการตรวจ
         </div>
 
-        <div v-for="(labelGroup, category) in categoryGroup" :key="category" class="q-mb-sm">
-          <div
-            class="text-center text-bold q-py-xs"
-            style="
-              background: #1976d2;
-              color: white;
-              border-radius: 4px;
-              font-size: 13px;
-              margin-bottom: 8px;
-            "
-          >
-            {{ category }}
+        <div
+          v-for="categorySummary in categoryGroup"
+          :key="categorySummary.category"
+          class="summary-system-card"
+        >
+          <div class="summary-system-header">
+            <div>
+              <div class="summary-system-title">{{ categorySummary.category }}</div>
+              <div class="summary-system-meta">
+                ตรวจแล้ว {{ categorySummary.labels.length }} รายการ,
+                พบ Defect {{ categorySummary.defects.length }} จุด
+              </div>
+            </div>
+            <div class="summary-system-result">
+              <div
+                class="summary-result-pill"
+                :style="`background: ${categorySummary.outcomeColor}`"
+              >
+                {{ categorySummary.outcomeLabel }}
+              </div>
+              <div class="summary-system-count">{{ categorySummary.defects.length }}</div>
+            </div>
           </div>
 
-          <div
-            v-for="(items, label) in labelGroup"
-            :key="label"
-            class="q-mb-xs"
-            style="border-bottom: 1px solid #eee; padding-bottom: 4px"
-          >
-            <div class="text-caption text-weight-bold">{{ label }}</div>
-            <div v-for="item in items" :key="item.itemId">
-              <div class="text-caption text-grey-8">• {{ item.option?.value ?? '-' }}</div>
-              <div v-if="item.detailValue" class="text-caption text-grey-7">
-                <span class="label">รายละเอียด:</span> {{ item.detailValue }}
+          <div class="summary-system-body">
+            <div class="summary-checklist">
+              <div class="summary-overview">
+                <div class="summary-overview-item">
+                  <span class="summary-overview-label">ผลการตรวจ</span>
+                  <span class="summary-overview-value">{{ categorySummary.outcomeLabel }}</span>
+                </div>
+                <div class="summary-overview-item">
+                  <span class="summary-overview-label">รูปประกอบ</span>
+                  <span class="summary-overview-value">{{ categorySummary.photoCount }} รูป</span>
+                </div>
+                <div class="summary-overview-item">
+                  <span class="summary-overview-label">คอมเมนต์</span>
+                  <span class="summary-overview-value">
+                    {{ categorySummary.defectComments.length }} รายการ
+                  </span>
+                </div>
+              </div>
+
+              <div v-if="categorySummary.labels.length === 0" class="summary-empty-check">
+                ไม่มีรายการตรวจในหมวดนี้ แต่พบ Defect ที่ถูกจัดอยู่ในระบบนี้
+              </div>
+
+              <div
+                v-for="labelGroup in categorySummary.labels"
+                :key="labelGroup.label"
+                class="summary-check-row"
+              >
+                <div class="summary-check-title">{{ labelGroup.label }}</div>
+                <div class="summary-option-list">
+                  <span
+                    v-for="item in labelGroup.items"
+                    :key="item.itemId"
+                    class="summary-option-chip"
+                    :style="`border-color: ${getStickerMeta(item).color}; color: ${getStickerMeta(item).color}`"
+                  >
+                    {{ item.option?.value ?? '-' }}
+                  </span>
+                </div>
+                <div
+                  v-for="item in labelGroup.items.filter((summaryItem) => summaryItem.detailValue)"
+                  :key="`detail-${item.itemId}`"
+                  class="summary-comment"
+                >
+                  <span class="label">คอมเมนต์:</span> {{ item.detailValue }}
+                </div>
+              </div>
+
+              <div v-if="categorySummary.defectComments.length" class="summary-comment-box">
+                <div class="summary-comment-title">คอมเมนต์จากรูป Defect</div>
+                <div
+                  v-for="comment in categorySummary.defectComments.slice(0, 3)"
+                  :key="comment"
+                  class="summary-comment-line"
+                >
+                  {{ comment }}
+                </div>
+              </div>
+            </div>
+
+            <div class="summary-photo-grid">
+              <div
+                v-for="defect in categorySummary.defects.slice(0, 4)"
+                :key="defect.defectId"
+                class="summary-photo-card"
+              >
+                <img
+                  loading="eager"
+                  :src="
+                    defect.imageUrl
+                      ? resolveImageUrl(defect.imageUrl)
+                      : 'https://via.placeholder.com/320x220?text=No+Image'
+                  "
+                  class="summary-photo"
+                />
+                <div
+                  class="summary-sticker"
+                  :style="`background: ${getStickerMeta(defect).color}`"
+                >
+                  {{ getStickerMeta(defect).shortLabel }}
+                </div>
+                <div class="summary-photo-caption">
+                  <div class="text-weight-bold">{{ getRoomShortName(defect) }}</div>
+                  <div>{{ defect.subCategories?.map((s) => s.name).join(', ') || '-' }}</div>
+                  <div v-if="defect.description">
+                    <span class="label">คอมเมนต์:</span> {{ defect.description }}
+                  </div>
+                </div>
+              </div>
+              <div v-if="categorySummary.defects.length > 4" class="summary-more-photo">
+                +{{ categorySummary.defects.length - 4 }} รูปในระบบนี้
+              </div>
+              <div v-if="categorySummary.defects.length === 0" class="summary-empty-photo">
+                ไม่มีรูป Defect ในหมวดนี้
               </div>
             </div>
           </div>
@@ -446,6 +552,60 @@ const props = defineProps<{
   summaryItems: InspectionSummaryItem[];
 }>();
 
+interface SummaryLabelGroup {
+  label: string;
+  items: InspectionSummaryItem[];
+}
+
+interface SummaryCategoryGroup {
+  category: string;
+  labels: SummaryLabelGroup[];
+  defects: Defect[];
+  outcomeLabel: string;
+  outcomeColor: string;
+  defectComments: string[];
+  photoCount: number;
+}
+
+interface StickerMeta {
+  label: string;
+  shortLabel: string;
+  color: string;
+  description: string;
+}
+
+const stickerLegend: StickerMeta[] = [
+  {
+    label: 'รอยร้าว',
+    shortLabel: 'ร้าว',
+    color: '#ef4444',
+    description: 'จุดที่พบการแตกร้าวหรือรอยแยก',
+  },
+  {
+    label: 'ผิวไม่เรียบ',
+    shortLabel: 'ผิว',
+    color: '#1976d2',
+    description: 'พื้นผิวไม่เรียบ นูน ยุบ หรือขรุขระ',
+  },
+  {
+    label: 'คราบ/รั่วซึม',
+    shortLabel: 'ซึม',
+    color: '#16a34a',
+    description: 'มีคราบน้ำ ความชื้น หรือร่องรอยรั่วซึม',
+  },
+  {
+    label: 'งานเก็บรายละเอียด',
+    shortLabel: 'เก็บ',
+    color: '#f59e0b',
+    description: 'งานสี รอยต่อ ยาแนว ช่องว่าง หรือรายละเอียดที่ต้องเก็บเพิ่ม',
+  },
+  {
+    label: 'อื่นๆ',
+    shortLabel: 'อื่น',
+    color: '#64748b',
+    description: 'รายการอื่นที่ไม่เข้ากลุ่มหลัก',
+  },
+];
 const reportLogo = computed(() => {
   const logoUrl = props.round.job.branch?.logoUrl;
   if (!logoUrl) return PoysianLogo;
@@ -697,6 +857,24 @@ function exportPdf() {
           .card-logo-watermark-img { position: absolute; bottom: 0px; right: 10px; opacity: 0.3; width: 60px; object-fit: contain; }
           .pdf-footer { border-top: 1px solid #ccc; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #555; margin-top: auto; }
           .footer-contacts { display: flex; align-items: center; gap: 6px; font-size: 10px; }
+          .sticker-legend { border: 1px solid #d8e1ea; border-radius: 6px; background: #f8fafc; padding: 8px 10px; }
+          .sticker-legend-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; margin-top: 5px; }
+          .sticker-legend-item { display: grid; grid-template-columns: 10px minmax(0, 1fr); align-items: start; gap: 5px; min-width: 0; font-size: 9px; color: #334155; line-height: 1.3; }
+          .sticker-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-top: 2px; }
+          .sticker-legend-text { min-width: 0; }
+          .sticker-legend-label { font-weight: 700; color: #1f2937; white-space: nowrap; margin-right: 3px; }
+          .sticker-legend-description { color: #475569; overflow-wrap: anywhere; }
+          .summary-system-result { display: flex; align-items: center; gap: 8px; }
+          .summary-result-pill { color: white; border-radius: 999px; padding: 2px 8px; font-size: 9px; font-weight: 700; white-space: nowrap; }
+          .summary-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-bottom: 7px; }
+          .summary-overview-item { border: 1px solid #e2e8f0; border-radius: 5px; background: #f8fafc; padding: 5px; min-width: 0; }
+          .summary-overview-label { display: block; color: #64748b; font-size: 8px; line-height: 1.2; }
+          .summary-overview-value { display: block; color: #1f2937; font-size: 9px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+          .summary-empty-check { border: 1px dashed #cbd5e1; border-radius: 5px; color: #64748b; background: #f8fafc; padding: 7px; font-size: 9px; line-height: 1.35; }
+          .summary-comment-box { border-left: 3px solid #1976d2; background: #f8fafc; padding: 6px 8px; margin-top: 2px; }
+          .summary-comment-title { color: #0f4c81; font-size: 9px; font-weight: 700; margin-bottom: 3px; }
+          .summary-comment-line { color: #475569; font-size: 8.5px; line-height: 1.35; margin-top: 2px; overflow-wrap: anywhere; }
+          .summary-more-photo { min-height: 108px; border: 1px dashed #cbd5e1; border-radius: 5px; color: #475569; background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; text-align: center; padding: 8px; }
         </style>
       </head>
       <body>
@@ -715,24 +893,95 @@ function exportPdf() {
 
 defineExpose({ exportPdf });
 
-const summaryGroups = computed(() => {
-  const groups: Record<string, Record<string, InspectionSummaryItem[]>> = {};
+function normalizeText(value?: string | null) {
+  return (value ?? '').trim().toLowerCase();
+}
+
+function getDefectCategoryNames(defect: Defect) {
+  const categoryNames = [
+    ...new Set(
+      (defect.subCategories ?? [])
+        .map((subCategory) => subCategory.category?.name)
+        .filter((name): name is string => !!name),
+    ),
+  ];
+  return categoryNames.length ? categoryNames : ['ไม่ระบุระบบ'];
+}
+
+function resolveImageUrl(imageUrl: string) {
+  if (imageUrl.startsWith('http') || imageUrl.startsWith('data:') || imageUrl.startsWith('blob:')) {
+    return imageUrl;
+  }
+  return `${apiUrl}${imageUrl}`;
+}
+
+function getStickerMeta(source: InspectionSummaryItem | Defect): StickerMeta {
+  const text =
+    'option' in source
+      ? `${source.option?.value ?? ''} ${source.detailValue ?? ''}`
+      : `${source.description ?? ''} ${source.subCategories?.map((sub) => sub.name).join(' ') ?? ''}`;
+  const normalized = normalizeText(text);
+
+  if (['ร้าว', 'แตกร้าว', 'crack'].some((keyword) => normalized.includes(keyword))) {
+    return stickerLegend[0]!;
+  }
+  if (['ผิว', 'ไม่เรียบ', 'ขรุขระ', 'ปูด', 'นูน', 'ยุบ'].some((keyword) => normalized.includes(keyword))) {
+    return stickerLegend[1]!;
+  }
+  if (['คราบ', 'เปื้อน', 'ซึม', 'รั่ว', 'ชื้น', 'leak'].some((keyword) => normalized.includes(keyword))) {
+    return stickerLegend[2]!;
+  }
+  if (['เก็บ', 'รอยต่อ', 'ช่อง', 'ยาแนว', 'ห่าง', 'สี'].some((keyword) => normalized.includes(keyword))) {
+    return stickerLegend[3]!;
+  }
+  return stickerLegend[4]!;
+}
+
+const summaryGroups = computed<SummaryCategoryGroup[]>(() => {
+  const groups = new Map<string, Map<string, InspectionSummaryItem[]>>();
+
   props.summaryItems.forEach((item) => {
-    const cat = item.template.category;
+    const category = item.template.category;
     const label = item.template.label;
-    if (!groups[cat]) groups[cat] = {};
-    if (!groups[cat][label]) groups[cat][label] = [];
-    groups[cat][label].push(item);
+    if (!groups.has(category)) groups.set(category, new Map());
+    const labelMap = groups.get(category)!;
+    if (!labelMap.has(label)) labelMap.set(label, []);
+    labelMap.get(label)!.push(item);
   });
-  return groups;
+
+  props.defects.forEach((defect) => {
+    getDefectCategoryNames(defect).forEach((category) => {
+      if (!groups.has(category)) groups.set(category, new Map());
+    });
+  });
+
+  return [...groups.entries()].map(([category, labelMap]) => {
+    const defects = props.defects.filter((defect) =>
+      getDefectCategoryNames(defect).some((defectCategory) => defectCategory === category),
+    );
+    const defectComments = defects
+      .map((defect) => defect.description?.trim())
+      .filter((description): description is string => !!description);
+    const majorCount = defects.filter((defect) => defect.severity === 'Major').length;
+    const outcomeLabel =
+      defects.length === 0 ? 'ผ่าน' : majorCount > 0 ? `พบ Major ${majorCount} จุด` : 'พบ Minor';
+
+    return {
+      category,
+      labels: [...labelMap.entries()].map(([label, items]) => ({ label, items })),
+      defects,
+      outcomeLabel,
+      outcomeColor: defects.length === 0 ? '#16a34a' : majorCount > 0 ? '#ef4444' : '#f59e0b',
+      defectComments,
+      photoCount: defects.filter((defect) => defect.imageUrl).length,
+    };
+  });
 });
 
 const summaryChunks = computed(() => {
-  const chunks: Record<string, Record<string, InspectionSummaryItem[]>>[] = [];
-  const entries = Object.entries(summaryGroups.value);
-  for (let i = 0; i < entries.length; i += 3) {
-    const chunk = Object.fromEntries(entries.slice(i, i + 3));
-    chunks.push(chunk);
+  const chunks: SummaryCategoryGroup[][] = [];
+  for (let i = 0; i < summaryGroups.value.length; i += 2) {
+    chunks.push(summaryGroups.value.slice(i, i + 2));
   }
   return chunks;
 });
@@ -988,6 +1237,292 @@ const summaryChunks = computed(() => {
   align-items: center;
   gap: 6px;
   font-size: 10px;
+}
+
+.sticker-legend {
+  border: 1px solid #d8e1ea;
+  border-radius: 6px;
+  background: #f8fafc;
+  padding: 8px 10px;
+}
+
+.sticker-legend-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  margin-top: 5px;
+}
+
+.sticker-legend-item {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  align-items: start;
+  gap: 5px;
+  min-width: 0;
+  font-size: 9px;
+  color: #334155;
+  line-height: 1.3;
+}
+
+.sticker-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.sticker-legend-text {
+  min-width: 0;
+}
+
+.sticker-legend-label {
+  font-weight: 700;
+  color: #1f2937;
+  white-space: nowrap;
+  margin-right: 3px;
+}
+
+.sticker-legend-description {
+  color: #475569;
+  overflow-wrap: anywhere;
+}
+
+.summary-system-card {
+  border: 1px solid #d7e0ea;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  background: #fff;
+}
+
+.summary-system-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #eef6ff;
+  border-bottom: 1px solid #d7e0ea;
+  padding: 8px 10px;
+}
+
+.summary-system-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-result-pill {
+  color: white;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.summary-system-title {
+  color: #0f4c81;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.summary-system-meta {
+  color: #64748b;
+  font-size: 9.5px;
+  margin-top: 2px;
+}
+
+.summary-system-count {
+  min-width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #1976d2;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.summary-system-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 10px;
+  padding: 10px;
+}
+
+.summary-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.summary-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin-bottom: 7px;
+}
+
+.summary-overview-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  background: #f8fafc;
+  padding: 5px;
+  min-width: 0;
+}
+
+.summary-overview-label {
+  display: block;
+  color: #64748b;
+  font-size: 8px;
+  line-height: 1.2;
+}
+
+.summary-overview-value {
+  display: block;
+  color: #1f2937;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.summary-empty-check {
+  border: 1px dashed #cbd5e1;
+  border-radius: 5px;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 7px;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.summary-check-row {
+  border-bottom: 1px solid #eef2f6;
+  padding-bottom: 6px;
+}
+
+.summary-check-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1.25;
+}
+
+.summary-option-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.summary-option-chip {
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 9px;
+  line-height: 1.4;
+  background: #fff;
+}
+
+.summary-comment {
+  color: #475569;
+  font-size: 9.5px;
+  line-height: 1.35;
+  margin-top: 3px;
+}
+
+.summary-comment-box {
+  border-left: 3px solid #1976d2;
+  background: #f8fafc;
+  padding: 6px 8px;
+  margin-top: 2px;
+}
+
+.summary-comment-title {
+  color: #0f4c81;
+  font-size: 9px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.summary-comment-line {
+  color: #475569;
+  font-size: 8.5px;
+  line-height: 1.35;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+.summary-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 7px;
+}
+
+.summary-photo-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  overflow: hidden;
+  min-height: 108px;
+  position: relative;
+  background: #f8fafc;
+}
+
+.summary-photo {
+  width: 100%;
+  height: 58px;
+  object-fit: cover;
+  display: block;
+}
+
+.summary-sticker {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  color: white;
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 8px;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+}
+
+.summary-photo-caption {
+  padding: 5px 6px;
+  font-size: 8.5px;
+  line-height: 1.25;
+  color: #334155;
+}
+
+.summary-empty-photo {
+  grid-column: 1 / -1;
+  min-height: 96px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 5px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  background: #f8fafc;
+}
+
+.summary-more-photo {
+  min-height: 108px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 5px;
+  color: #475569;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  padding: 8px;
 }
 
 .page-content {
