@@ -103,13 +103,13 @@
                 <div class="col-6">
                   <div class="text-caption text-grey-7">ผู้ประสานงาน</div>
                   <div class="text-caption text-bold">
-                    {{ round.teamMember?.inspector?.team?.teamName || '-' }}
+                    {{ round.createdBy?.fullName || '-' }}
                   </div>
                 </div>
                 <div class="col-6">
                   <div class="text-caption text-grey-7">เบอร์ผู้ประสานงาน</div>
                   <div class="text-caption text-bold">
-                    {{ round.teamMember?.inspector?.team?.contactInfo || '-' }}
+                    {{ round.createdBy?.phoneNumber || '-' }}
                   </div>
                 </div>
               </div>
