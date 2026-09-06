@@ -14,6 +14,11 @@
           </div>
           <div class="text-caption text-grey-7">หน้า | 1 / {{ totalPages }}</div>
         </div>
+        <div v-if="generatedAtLabel" class="row justify-end q-px-md">
+          <div class="text-caption text-grey-6" style="font-size: 9px">
+            ข้อมูล ณ {{ generatedAtLabel }}
+          </div>
+        </div>
 
         <div class="row justify-center q-py-xs">
           <img loading="eager" :src="PoysianLogo" style="height: 70px; object-fit: contain" />
@@ -130,24 +135,18 @@
               >
             </div>
           </div>
-          <div class="mini-chart mini-chart-category">
-            <div v-for="cat in categoryCounts" :key="cat.name" class="mini-bar-col mini-bar-col-category">
-              <div class="mini-bar-track">
-                <div class="mini-bar-count">{{ cat.count }}</div>
-                <div v-if="cat.major > 0 && cat.minor > 0" class="mini-bar-split">
-                  <span style="color: #ef4444">{{ cat.major }}</span>
-                  <span>/</span>
-                  <span style="color: #fb8c00">{{ cat.minor }}</span>
-                </div>
-                <div
-                  class="mini-bar-stack"
-                  :style="`height: ${Math.max((cat.count / maxCategoryCount) * 100, 8)}%`"
-                >
-                  <div :style="`height: ${cat.minorPct}%; background: #fb8c00`" />
-                  <div :style="`height: ${cat.majorPct}%; background: #ef4444`" />
-                </div>
-              </div>
-              <div class="mini-bar-label mini-bar-label-category">{{ cat.name }}</div>
+          <div class="category-table">
+            <div
+              v-for="row in categoryTableRows"
+              :key="row.name"
+              class="category-table-row"
+              :class="{ 'category-table-row-other': row.isOther }"
+            >
+              <span class="category-table-rank">{{ row.rank }}</span>
+              <span class="category-table-name">{{ row.name }}</span>
+              <span class="category-table-count" style="color: #ef4444">{{ row.major }}</span>
+              <span class="category-table-count" style="color: #fb8c00">{{ row.minor }}</span>
+              <span class="category-table-total">{{ row.count }}</span>
             </div>
           </div>
         </div>
@@ -423,6 +422,100 @@
           </div>
         </div>
       </div>
+
+      <!-- หน้า AI Summary ท้ายเล่ม -->
+      <div v-if="hasAiSummary" class="pdf-page">
+        <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
+          <div class="text-caption text-grey-7">
+            {{ round.job.projectName }}, ครั้งที่ {{ round.roundNumber }},
+            {{ formatDate(round.scheduledDate) }}
+          </div>
+          <div class="text-caption text-grey-7">หน้า | {{ totalPages }} / {{ totalPages }}</div>
+        </div>
+        <div v-if="generatedAtLabel" class="row justify-end q-px-md">
+          <div class="text-caption text-grey-6" style="font-size: 9px">
+            ข้อมูล ณ {{ generatedAtLabel }}
+          </div>
+        </div>
+
+        <div class="text-center text-bold q-py-sm" style="font-size: 16px; color: #1976d2">
+          สรุปผลการตรวจโดยรวม
+        </div>
+
+        <div class="row justify-center q-my-md">
+          <div class="completion-gauge">
+            <svg viewBox="0 0 120 120" width="160" height="160">
+              <circle cx="60" cy="60" r="52" fill="none" stroke="#eee" stroke-width="12" />
+              <circle
+                cx="60"
+                cy="60"
+                r="52"
+                fill="none"
+                :stroke="completionColor"
+                stroke-width="12"
+                stroke-linecap="round"
+                :stroke-dasharray="`${completionDash} ${completionGap}`"
+                transform="rotate(-90 60 60)"
+              />
+            </svg>
+            <div class="completion-gauge-label">
+              <div class="text-h4 text-bold" :style="`color: ${completionColor}`">
+                {{ round.completionPercent }}%
+              </div>
+              <div class="text-caption text-grey-7">ความสมบูรณ์</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ที่มาของคะแนน — ให้ลูกค้าเห็นว่า % รวมมาจากสองส่วนไหน ไม่ใช่ตัวเลขลอยๆ -->
+        <div v-if="round.completionDefectScore != null" class="row q-col-gutter-sm q-mx-md q-mb-md">
+          <div class="col-6">
+            <div class="score-part">
+              <div class="text-caption text-grey-7">คะแนนจากจุด Defect</div>
+              <div class="text-h6 text-bold" style="color: #1976d2">
+                {{ round.completionDefectScore }}%
+              </div>
+              <div class="text-caption text-grey-6" style="font-size: 9px">
+                ความรุนแรง หมวดงาน และขนาดบ้าน
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="score-part">
+              <div class="text-caption text-grey-7">คะแนนจากผลตรวจระบบ</div>
+              <div class="text-h6 text-bold" style="color: #1976d2">
+                {{ round.completionSystemScore != null ? round.completionSystemScore + '%' : '-' }}
+              </div>
+              <div class="text-caption text-grey-6" style="font-size: 9px">
+                {{
+                  round.completionSystemScore != null
+                    ? 'งานโครงสร้าง ไฟฟ้า ประปาและสุขาภิบาล ฯลฯ'
+                    : 'รอบนี้ยังไม่ได้กรอกผลตรวจระบบ'
+                }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="round.aiSummaryText" class="q-mx-md q-pa-md ai-summary-box">
+          <div class="text-caption text-weight-bold text-grey-8 q-mb-xs">สรุปโดย AI</div>
+          <div class="text-body2" style="line-height: 1.6">{{ round.aiSummaryText }}</div>
+        </div>
+
+        <div class="pdf-footer">
+          <span>© 2026, POYSIAN</span>
+          <div class="footer-contacts">
+            <img loading="eager" :src="LineLogo" style="height: 16px" />
+            <span>@poysian,</span>
+            <img loading="eager" :src="FacebookLogo" style="height: 16px" />
+            <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
+            <img loading="eager" :src="CallLogo" style="height: 16px" />
+            <span>098-765-4321,</span>
+            <img loading="eager" :src="GmailLogo" style="height: 12px" />
+            <span>poysian@gmail.com</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -519,7 +612,36 @@ const categoryCounts = computed(() => {
     .sort((a, b) => b.count - a.count);
 });
 
-const maxCategoryCount = computed(() => Math.max(1, ...categoryCounts.value.map((c) => c.count)));
+const CATEGORY_TABLE_LIMIT = 24;
+
+const categoryTableRows = computed(() => {
+  const rows = categoryCounts.value.map((cat, index) => ({
+    rank: index + 1,
+    name: cat.name,
+    major: cat.major,
+    minor: cat.minor,
+    count: cat.count,
+    isOther: false,
+  }));
+
+  if (rows.length <= CATEGORY_TABLE_LIMIT) return rows;
+
+  const shown = rows.slice(0, CATEGORY_TABLE_LIMIT);
+  const rest = categoryCounts.value.slice(CATEGORY_TABLE_LIMIT);
+  const otherMajor = rest.reduce((sum, c) => sum + c.major, 0);
+  const otherMinor = rest.reduce((sum, c) => sum + c.minor, 0);
+
+  shown.push({
+    rank: CATEGORY_TABLE_LIMIT + 1,
+    name: `อื่นๆ (${rest.length} ประเภท)`,
+    major: otherMajor,
+    minor: otherMinor,
+    count: otherMajor + otherMinor,
+    isOther: true,
+  });
+
+  return shown;
+});
 
 const CHART_GRADIENT = ['#0b3d68', '#1462a8', '#1976d2', '#5b9de0', '#a9cdec'];
 
@@ -612,10 +734,37 @@ const allDefectChunks = computed(() => {
   return pages;
 });
 
+const hasAiSummary = computed(
+  () => props.round.completionPercent != null || !!props.round.aiSummaryText,
+);
+
 // const totalPages = computed(() => 1 + majorChunks.value.length + allDefectChunks.value.length);
 const totalPages = computed(
-  () => 1 + majorChunks.value.length + allDefectChunks.value.length + summaryChunks.value.length,
+  () =>
+    1 +
+    majorChunks.value.length +
+    allDefectChunks.value.length +
+    summaryChunks.value.length +
+    (hasAiSummary.value ? 1 : 0),
 );
+
+const completionColor = computed(() => {
+  const pct = props.round.completionPercent ?? 0;
+  if (pct >= 80) return '#4CAF50';
+  if (pct >= 50) return '#fb8c00';
+  return '#ef4444';
+});
+
+const completionDash = computed(() => {
+  const circumference = 2 * Math.PI * 52;
+  const pct = props.round.completionPercent ?? 0;
+  return (pct / 100) * circumference;
+});
+
+const completionGap = computed(() => {
+  const circumference = 2 * Math.PI * 52;
+  return circumference - completionDash.value;
+});
 
 function getRoomShortName(defect: Defect) {
   return `${defect.room?.roomName ?? '-'}, ${defect.subRoom?.roomName ?? '-'}, ${defect.floor?.label ?? '-'}`;
@@ -630,12 +779,25 @@ function formatDate(dateStr: string) {
   });
 }
 
+// เวลาที่ PDF ไฟล์นี้ถูก render จริง (backend/src/reports/reports.service.ts) — โชว์ในตัวรายงาน
+// เพื่อให้เช็คได้ว่าไฟล์ที่กำลังดู/ดาวน์โหลดเป็นข้อมูล ณ เวลาไหน เพราะ PDF อาจ regenerate ช้ากว่าการแก้ defect ล่าสุดได้ (debounce 30 วิ + เวลา render)
+const generatedAtLabel = computed(() => {
+  if (!props.round.lastPdfGeneratedAt) return '';
+  return new Date(props.round.lastPdfGeneratedAt).toLocaleString('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+});
+
 // เช็ค cache PDF ที่ backend generate ไว้ล่วงหน้าก่อนเสมอ (backend/src/reports/reports.service.ts) —
 // มีแล้วเปิดโหลดทันที ไม่ต้อง render ฝั่ง client เลย ถ้ายังไม่มี (เช่นรอบแรกที่ debounce ยังไม่ settle)
 // ค่อย fallback ไปสร้างแบบเดิมผ่าน window.print()
 async function exportPdf() {
   try {
-    const { data } = await api.get<{ url: string | null }>(
+    const { data } = await api.get<{ url: string | null; generatedAt: string | null }>(
       `/inspection-rounds/${props.round.roundId}/report`,
     );
     if (data.url) {
@@ -810,11 +972,53 @@ const summaryChunks = computed(() => {
   padding: 8px 6px 6px;
   overflow: hidden;
 }
-.mini-chart-category {
-  height: auto;
-  min-height: 150px;
-  align-items: flex-start;
-  overflow: visible;
+.category-table {
+  column-count: 3;
+  column-gap: 14px;
+  border: 1px solid #e2e6ea;
+  border-radius: 4px;
+  background: #fafbfc;
+  padding: 6px 8px;
+}
+.category-table-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 0;
+  border-bottom: 1px solid #edf0f2;
+  break-inside: avoid;
+  font-size: 8px;
+}
+.category-table-row:last-child {
+  border-bottom: none;
+}
+.category-table-rank {
+  min-width: 12px;
+  color: #9e9e9e;
+  font-variant-numeric: tabular-nums;
+}
+.category-table-name {
+  flex: 1;
+  min-width: 0;
+  color: #212121;
+  word-break: break-word;
+}
+.category-table-count {
+  min-width: 12px;
+  text-align: right;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+}
+.category-table-total {
+  min-width: 14px;
+  text-align: right;
+  font-weight: bold;
+  color: #212121;
+  font-variant-numeric: tabular-nums;
+}
+.category-table-row-other .category-table-name {
+  color: #757575;
+  font-style: italic;
 }
 .mini-bar-col {
   flex: 1;
@@ -825,10 +1029,6 @@ const summaryChunks = computed(() => {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-}
-.mini-bar-col-category {
-  height: auto;
-  justify-content: flex-start;
 }
 .mini-bar-track {
   width: 100%;
@@ -867,19 +1067,6 @@ const summaryChunks = computed(() => {
   color: #45505b;
   word-break: break-word;
   max-height: 24px;
-  overflow: hidden;
-}
-.mini-bar-label-category {
-  font-size: 7px;
-  max-height: none;
-  overflow: visible;
-}
-.mini-bar-stack {
-  width: 100%;
-  max-width: 20px;
-  display: flex;
-  flex-direction: column-reverse;
-  border-radius: 2px 2px 0 0;
   overflow: hidden;
 }
 .mini-legend {
@@ -923,6 +1110,30 @@ const summaryChunks = computed(() => {
   color: #212121;
   font-variant-numeric: tabular-nums;
   margin-left: 2px;
+}
+.completion-gauge {
+  position: relative;
+  width: 160px;
+  height: 160px;
+}
+.completion-gauge-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+.ai-summary-box {
+  background: #f5f7fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+.score-part {
+  background: #f5f7fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-align: center;
 }
 .defects-grid {
   display: grid;
