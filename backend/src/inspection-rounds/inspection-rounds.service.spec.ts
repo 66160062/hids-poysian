@@ -80,7 +80,9 @@ describe('InspectionRoundsService', () => {
     };
     notificationsService = { create: jest.fn() };
     authService = {
-      generateLinkToken: jest.fn().mockResolvedValue({ url: 'http://localhost:9000/#/view/prj-1?token=mock-token' }),
+      generateLinkToken: jest.fn().mockResolvedValue({
+        url: 'http://localhost:9000/#/view/prj-1?token=mock-token',
+      }),
     };
     queryRunner = createQueryRunnerMock();
     dataSource = { createQueryRunner: jest.fn(() => queryRunner) };
@@ -345,7 +347,10 @@ describe('InspectionRoundsService', () => {
           jobId: 1,
           status: 'Pending',
           projectName: 'บ้านตัวอย่าง',
-          contractor: { email: 'contractor@example.com', fullName: 'ช่างสมชาย' },
+          contractor: {
+            email: 'contractor@example.com',
+            fullName: 'ช่างสมชาย',
+          },
         },
         teamMembers: [],
       });
@@ -353,7 +358,10 @@ describe('InspectionRoundsService', () => {
 
       await service.approveReport(1);
 
-      expect(authService.generateLinkToken).toHaveBeenCalledWith(1, 'contractor');
+      expect(authService.generateLinkToken).toHaveBeenCalledWith(
+        1,
+        'contractor',
+      );
       expect(mailService.sendContractorRoundApprovedEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'contractor@example.com',
@@ -376,7 +384,9 @@ describe('InspectionRoundsService', () => {
 
       await service.approveReport(1);
 
-      expect(mailService.sendContractorRoundApprovedEmail).not.toHaveBeenCalled();
+      expect(
+        mailService.sendContractorRoundApprovedEmail,
+      ).not.toHaveBeenCalled();
     });
 
     it('skips emailing the contractor when the round has no defects (nothing to repair)', async () => {
@@ -388,7 +398,10 @@ describe('InspectionRoundsService', () => {
           jobId: 1,
           status: 'Pending',
           projectName: 'บ้านตัวอย่าง',
-          contractor: { email: 'contractor@example.com', fullName: 'ช่างสมชาย' },
+          contractor: {
+            email: 'contractor@example.com',
+            fullName: 'ช่างสมชาย',
+          },
         },
         teamMembers: [],
       });
@@ -396,7 +409,9 @@ describe('InspectionRoundsService', () => {
 
       await service.approveReport(1);
 
-      expect(mailService.sendContractorRoundApprovedEmail).not.toHaveBeenCalled();
+      expect(
+        mailService.sendContractorRoundApprovedEmail,
+      ).not.toHaveBeenCalled();
     });
   });
 
