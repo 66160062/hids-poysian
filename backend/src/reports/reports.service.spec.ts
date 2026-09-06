@@ -8,6 +8,9 @@ import { StorageService } from 'src/storage/storage.service';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { AiSummaryService } from 'src/ai-summary/ai-summary.service';
 import puppeteer from 'puppeteer';
+import { createHash } from 'crypto';
+
+const EMPTY_DEFECTS_HASH = createHash('sha256').update('').digest('hex');
 
 describe('ReportsService', () => {
   let service: ReportsService;
@@ -65,30 +68,65 @@ describe('ReportsService', () => {
   });
 
   describe('getCachedReportUrl', () => {
-    it('returns null url and generatedAt when the round has no cached pdf yet', async () => {
+    it('returns null url/generatedAt and isStale=true when the round has no cached pdf yet', async () => {
       roundRepo.findOneBy.mockResolvedValue({
         lastPdfUrl: null,
         lastPdfGeneratedAt: null,
+        lastPdfHash: null,
       });
+      defectRepo.find.mockResolvedValue([]);
 
       await expect(service.getCachedReportUrl(1)).resolves.toEqual({
         url: null,
         generatedAt: null,
+        isStale: true,
       });
     });
 
-    it('returns the cached pdf url and its generatedAt timestamp without touching Puppeteer', async () => {
+    it('returns the cached pdf url and isStale=false when defect data has not changed, without touching Puppeteer', async () => {
       const generatedAt = new Date('2026-01-01T00:00:00Z');
       roundRepo.findOneBy.mockResolvedValue({
         lastPdfUrl: 'https://example.com/reports/cached.pdf',
         lastPdfGeneratedAt: generatedAt,
+        lastPdfHash: EMPTY_DEFECTS_HASH,
       });
+      defectRepo.find.mockResolvedValue([]);
 
       await expect(service.getCachedReportUrl(1)).resolves.toEqual({
         url: 'https://example.com/reports/cached.pdf',
         generatedAt,
+        isStale: false,
       });
       expect(puppeteer.launch).not.toHaveBeenCalled();
+    });
+
+    it('returns isStale=true when a defect changed after the cached pdf was generated', async () => {
+      const generatedAt = new Date('2026-01-01T00:00:00Z');
+      roundRepo.findOneBy.mockResolvedValue({
+        lastPdfUrl: 'https://example.com/reports/cached.pdf',
+        lastPdfGeneratedAt: generatedAt,
+        lastPdfHash: EMPTY_DEFECTS_HASH,
+      });
+      defectRepo.find.mockResolvedValue([
+        { defectId: 1, updatedAt: new Date('2026-01-02T00:00:00Z') },
+      ]);
+
+      await expect(service.getCachedReportUrl(1)).resolves.toEqual({
+        url: 'https://example.com/reports/cached.pdf',
+        generatedAt,
+        isStale: true,
+      });
+    });
+
+    it('returns isStale=false when the round does not exist', async () => {
+      roundRepo.findOneBy.mockResolvedValue(null);
+
+      await expect(service.getCachedReportUrl(1)).resolves.toEqual({
+        url: null,
+        generatedAt: null,
+        isStale: false,
+      });
+      expect(defectRepo.find).not.toHaveBeenCalled();
     });
   });
 
