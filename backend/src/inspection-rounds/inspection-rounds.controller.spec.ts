@@ -6,6 +6,7 @@ import { InspectionRoundsService } from './inspection-rounds.service';
 import { ReportsService } from 'src/reports/reports.service';
 import { AuthService } from 'src/auth/auth.service';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
+import { AiSummaryService } from 'src/ai-summary/ai-summary.service';
 
 describe('InspectionRoundsController', () => {
   let controller: InspectionRoundsController;
@@ -25,12 +26,14 @@ describe('InspectionRoundsController', () => {
       approveReport: jest.fn(),
     };
     const reportsMock = { getCachedReportUrl: jest.fn() };
+    const aiSummaryMock = { generateWithProvider: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [InspectionRoundsController],
       providers: [
         { provide: InspectionRoundsService, useValue: serviceMock },
         { provide: ReportsService, useValue: reportsMock },
+        { provide: AiSummaryService, useValue: aiSummaryMock },
         { provide: JwtService, useValue: { verify: jest.fn() } },
         { provide: AuthService, useValue: { verifyJobAccess: jest.fn() } },
         { provide: getRepositoryToken(InspectionRound), useValue: {} },
@@ -60,11 +63,16 @@ describe('InspectionRoundsController', () => {
     expect(service.findByMonth).toHaveBeenCalledWith(9, '2026-08-01');
   });
 
-  it('wraps the cached report url in a { url } object', async () => {
-    reports.getCachedReportUrl.mockResolvedValue('https://example.com/r.pdf');
+  it('forwards the cached report url and its generatedAt timestamp from the service', async () => {
+    const generatedAt = new Date('2026-01-01T00:00:00Z');
+    reports.getCachedReportUrl.mockResolvedValue({
+      url: 'https://example.com/r.pdf',
+      generatedAt,
+    });
 
     await expect(controller.getReport('4')).resolves.toEqual({
       url: 'https://example.com/r.pdf',
+      generatedAt,
     });
     expect(reports.getCachedReportUrl).toHaveBeenCalledWith(4);
   });

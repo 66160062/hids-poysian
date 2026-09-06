@@ -62,6 +62,7 @@ import { ActivityLog } from './activity-logs/entities/activity-log.entity';
 import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/entities/notification.entity';
 import { Assignment } from './assignments/entities/assignment.entity';
+import { AiSummaryModule } from './ai-summary/ai-summary.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -123,6 +124,7 @@ import { Assignment } from './assignments/entities/assignment.entity';
       namingStrategy: new SnakeNamingStrategy(),
     }),
     StorageModule,
+    AiSummaryModule,
     ReportsModule,
     ActivityLogsModule,
     AuthModule,

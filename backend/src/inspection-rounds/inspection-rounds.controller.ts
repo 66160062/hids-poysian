@@ -17,12 +17,14 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { RoundAccessGuard } from 'src/auth/round-access.guard';
 import { InspectorSelfOrAdminGuard } from 'src/auth/inspector-self-or-admin.guard';
 import { ReportsService } from 'src/reports/reports.service';
+import { AiSummaryService } from 'src/ai-summary/ai-summary.service';
 
 @Controller('inspection-rounds')
 export class InspectionRoundsController {
   constructor(
     private readonly inspectionRoundsService: InspectionRoundsService,
     private readonly reportsService: ReportsService,
+    private readonly aiSummaryService: AiSummaryService,
   ) {}
 
   @Post()
@@ -64,11 +66,22 @@ export class InspectionRoundsController {
   }
 
   // เช็ค cache PDF เดิม ไม่ trigger การ generate ใดๆ ทั้งสิ้น
+  // ส่ง generatedAt กลับไปด้วยให้ UI โชว์ได้ว่าไฟล์นี้ข้อมูล ณ เวลาไหน (PDF อาจล้าหลังการแก้ defect ล่าสุดได้)
   @Get(':id/report')
   @UseGuards(AuthGuard)
-  async getReport(@Param('id') id: string) {
-    const url = await this.reportsService.getCachedReportUrl(+id);
-    return { url };
+  getReport(@Param('id') id: string) {
+    return this.reportsService.getCachedReportUrl(+id);
+  }
+
+  // สั่งสร้างสรุปท้ายเล่มใหม่แบบ manual เลือก provider เอง (เช่นปุ่ม "สร้างสรุปใหม่" ในหน้า admin)
+  // ไม่ผ่านการเช็ค hash เหมือน flow อัตโนมัติที่ผูกกับการ regenerate PDF
+  @Post(':id/ai-summary/generate')
+  @UseGuards(AuthGuard)
+  generateAiSummary(
+    @Param('id') id: string,
+    @Body('provider') provider: string,
+  ) {
+    return this.aiSummaryService.generateWithProvider(+id, provider);
   }
 
   @Patch(':id/confirm-inspection')

@@ -9,6 +9,7 @@ import { Defect } from 'src/defects/entities/defect.entity';
 import { StorageService } from 'src/storage/storage.service';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity';
+import { AiSummaryService } from 'src/ai-summary/ai-summary.service';
 
 const DEBOUNCE_MS = 30_000;
 const REPORT_READY_SELECTOR = '[data-report-ready="true"]';
@@ -26,6 +27,7 @@ export class ReportsService {
     private readonly storageService: StorageService,
     private readonly jwtService: JwtService,
     private readonly activityLogsService: ActivityLogsService,
+    private readonly aiSummaryService: AiSummaryService,
   ) {}
 
   // เรียกจาก defects controller ทุกครั้งที่ defect ในรอบตรวจเปลี่ยน (สร้าง/แก้ไข/ลบ) — fire-and-forget ไม่บล็อก request
@@ -47,9 +49,15 @@ export class ReportsService {
   }
 
   // อ่าน URL ที่ cache ไว้ตรงๆ ไม่ trigger การ generate ใดๆ ทั้งสิ้น
-  async getCachedReportUrl(roundId: number): Promise<string | null> {
+  // ส่ง generatedAt กลับไปด้วยเพื่อให้ฝั่ง UI โชว์ได้ว่าไฟล์นี้ render จริงเมื่อไหร่ (PDF อาจล้าหลังการแก้ defect ล่าสุดได้เพราะ debounce)
+  async getCachedReportUrl(
+    roundId: number,
+  ): Promise<{ url: string | null; generatedAt: Date | null }> {
     const round = await this.roundRepo.findOneBy({ roundId });
-    return round?.lastPdfUrl ?? null;
+    return {
+      url: round?.lastPdfUrl ?? null,
+      generatedAt: round?.lastPdfGeneratedAt ?? null,
+    };
   }
 
   // จุดหลัก: เช็ค hash ก่อนเสมอ ข้าม Puppeteer ถ้าข้อมูล defect ไม่ได้เปลี่ยนจริงตั้งแต่ครั้งก่อน
@@ -67,12 +75,31 @@ export class ReportsService {
 
     const previousUrl = round.lastPdfUrl;
 
+    // สร้าง % ความสมบูรณ์ + สรุป AI ท้ายเล่มก่อน render เพื่อให้หน้า print มีข้อมูลพร้อมตอน Puppeteer จับภาพ
+    // ใช้ hash เดียวกับ PDF เพื่อข้ามการเรียก LLM ซ้ำเวลาข้อมูล defect ไม่เปลี่ยน
+    try {
+      await this.aiSummaryService.generateIfChanged(roundId, hash);
+    } catch (error) {
+      this.logger.error(
+        `รอบตรวจ ${roundId}: สร้าง AI summary ไม่สำเร็จ (ไม่กระทบการสร้าง PDF)`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
+    // fetch ใหม่หลัง AI summary เพราะ generateIfChanged เซฟลง DB แยกจาก object `round` ที่ถืออยู่ —
+    // ถ้าเซฟทับด้วย `round` (ค่าเก่าตั้งแต่ต้นฟังก์ชัน) ตอนท้าย จะไปเขียนทับค่า AI summary ที่เพิ่งอัปเดตให้กลายเป็นค่าเก่า/null
+    const freshRound = await this.roundRepo.findOneByOrFail({ roundId });
+
+    // บันทึกเวลาก่อน render เพื่อให้หน้า print (ที่ Puppeteer กำลังจะไปโหลด) เห็นค่านี้ และโชว์ในตัว PDF ว่าไฟล์นี้ข้อมูล ณ เวลาไหน
+    freshRound.lastPdfGeneratedAt = new Date();
+    await this.roundRepo.save(freshRound);
+
     const pdfBuffer = await this.renderReportPdf(roundId);
     const url = await this.storageService.uploadPdf(pdfBuffer, 'reports');
 
-    round.lastPdfHash = hash;
-    round.lastPdfUrl = url;
-    await this.roundRepo.save(round);
+    freshRound.lastPdfHash = hash;
+    freshRound.lastPdfUrl = url;
+    await this.roundRepo.save(freshRound);
 
     // ลบไฟล์ PDF เก่า
     if (previousUrl && previousUrl !== url) {
@@ -102,10 +129,9 @@ export class ReportsService {
     return createHash('sha256').update(raw).digest('hex');
   }
 
-
   private async renderReportPdf(roundId: number): Promise<Buffer> {
     const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:9000';
-    
+
     const systemToken = this.jwtService.sign(
       { sub: 0, role: 'system' },
       { expiresIn: '5m' },
