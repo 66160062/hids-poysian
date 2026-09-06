@@ -13,10 +13,16 @@ describe('InspectionRoundsController', () => {
   let service: jest.Mocked<
     Pick<
       InspectionRoundsService,
-      'findByWeek' | 'findByMonth' | 'submit' | 'approveReport'
+      | 'findByWeek'
+      | 'findByMonth'
+      | 'submit'
+      | 'approveReport'
+      | 'confirmInspection'
     >
   >;
-  let reports: jest.Mocked<Pick<ReportsService, 'getCachedReportUrl'>>;
+  let reports: jest.Mocked<
+    Pick<ReportsService, 'getCachedReportUrl' | 'scheduleRegeneration'>
+  >;
 
   beforeEach(async () => {
     const serviceMock = {
@@ -24,8 +30,12 @@ describe('InspectionRoundsController', () => {
       findByMonth: jest.fn(),
       submit: jest.fn(),
       approveReport: jest.fn(),
+      confirmInspection: jest.fn(),
     };
-    const reportsMock = { getCachedReportUrl: jest.fn() };
+    const reportsMock = {
+      getCachedReportUrl: jest.fn(),
+      scheduleRegeneration: jest.fn(),
+    };
     const aiSummaryMock = { generateWithProvider: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -81,5 +91,17 @@ describe('InspectionRoundsController', () => {
     controller.submit('4');
 
     expect(service.submit).toHaveBeenCalledWith(4);
+  });
+
+  it('confirms the inspection and schedules PDF/AI summary regeneration for that round', async () => {
+    const confirmedRound = { roundId: 4, inspectedAt: new Date() };
+    service.confirmInspection.mockResolvedValue(confirmedRound as never);
+
+    await expect(controller.confirmInspection('4')).resolves.toEqual(
+      confirmedRound,
+    );
+
+    expect(service.confirmInspection).toHaveBeenCalledWith(4);
+    expect(reports.scheduleRegeneration).toHaveBeenCalledWith(4);
   });
 });

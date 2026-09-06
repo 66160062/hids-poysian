@@ -84,10 +84,15 @@ export class InspectionRoundsController {
     return this.aiSummaryService.generateWithProvider(+id, provider);
   }
 
+  // จุดที่ inspector บอกว่า "ตรวจ/แก้ไขรอบนี้เสร็จแล้ว" — ก่อนหน้านี้ defect แต่ละตัวที่เพิ่ม/แก้/ลบ
+  // ระหว่างตรวจไม่ trigger regenerate แล้ว (ดู DefectsController.maybeScheduleRegeneration) ต้องมา
+  // trigger รวมทีเดียวตรงนี้แทน ไม่งั้นรอบที่เพิ่งตรวจเสร็จจะไม่มี PDF/AI summary ใหม่ให้เลย
   @Patch(':id/confirm-inspection')
   @UseGuards(RoundAccessGuard)
-  confirmInspection(@Param('id') id: string) {
-    return this.inspectionRoundsService.confirmInspection(+id);
+  async confirmInspection(@Param('id') id: string) {
+    const round = await this.inspectionRoundsService.confirmInspection(+id);
+    this.reportsService.scheduleRegeneration(+id);
+    return round;
   }
 
   @Patch(':id/confirm-summary')

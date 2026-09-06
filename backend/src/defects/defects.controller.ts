@@ -27,6 +27,7 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { DefectAccessGuard } from './guards/defect-access.guard';
 import { StorageService } from 'src/storage/storage.service';
 import { ReportsService } from 'src/reports/reports.service';
+import { Defect } from './entities/defect.entity';
 
 type LinkTokenPayload = {
   project_id: number;
@@ -41,6 +42,17 @@ export class DefectsController {
     private readonly storageService: StorageService,
     private readonly reportsService: ReportsService,
   ) {}
+
+  // ก่อนที่รอบตรวจจะถูกยืนยันครั้งแรก (inspectedAt ยังเป็น null) inspector มักเพิ่ม/แก้/ลบ defect
+  // รัวๆ ทีละสิบๆ ร้อยรายการระหว่างเดินตรวจ — ถ้า schedule regenerate ทุกครั้งจะยิง Puppeteer/LLM
+  // ซ้ำๆ โดยเปล่าประโยชน์ทั้งที่ยังตรวจไม่เสร็จ เลื่อนไป trigger ทีเดียวตอนกดยืนยันแทน
+  // (ดู InspectionRoundsController.confirmInspection) ส่วนหลังยืนยันแล้ว (ซ่อม/ตรวจซ้ำ) ยังคง
+  // trigger ตามปกติเพราะเป็นการแก้ทีละจุดห่างๆ ไม่ใช่ยิงรัว
+  private maybeScheduleRegeneration(defect: Defect): void {
+    if (defect.round?.inspectedAt) {
+      this.reportsService.scheduleRegeneration(defect.round.roundId);
+    }
+  }
 
   @Post()
   @UseGuards(AuthGuard)
@@ -57,7 +69,7 @@ export class DefectsController {
         : undefined,
       imageFileSize: file ? file.size : undefined,
     });
-    this.reportsService.scheduleRegeneration(defect.round.roundId);
+    this.maybeScheduleRegeneration(defect);
     return defect;
   }
 
@@ -99,7 +111,7 @@ export class DefectsController {
         contractorImageFileSize: file.size,
       }),
     });
-    this.reportsService.scheduleRegeneration(defect.round.roundId);
+    this.maybeScheduleRegeneration(defect);
     return defect;
   }
 
@@ -119,7 +131,7 @@ export class DefectsController {
         imageFileSize: file.size,
       }),
     });
-    this.reportsService.scheduleRegeneration(defect.round.roundId);
+    this.maybeScheduleRegeneration(defect);
     return defect;
   }
 
@@ -127,7 +139,7 @@ export class DefectsController {
   @UseGuards(DefectAccessGuard)
   async remove(@Param('id') id: string) {
     const defect = await this.defectsService.remove(+id);
-    this.reportsService.scheduleRegeneration(defect.round.roundId);
+    this.maybeScheduleRegeneration(defect);
     return defect;
   }
 }
