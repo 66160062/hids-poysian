@@ -1,5 +1,11 @@
 <template>
   <div style="overflow: hidden; width: 100%">
+    <div v-if="checkFreshness && isReportStale" class="row items-center q-pa-sm q-mb-sm freshness-banner">
+      <q-icon name="autorenew" color="warning" size="18px" class="q-mr-sm" />
+      <div class="text-caption text-grey-8">
+        ข้อมูลมีการเปลี่ยนแปลงหลังจากสร้างรายงานนี้ — กำลังสร้างรายงานฉบับใหม่ให้อัตโนมัติ (สักครู่)
+      </div>
+    </div>
     <div
       ref="reportRef"
       class="pdf-wrapper"
@@ -521,7 +527,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { api } from 'src/boot/axios';
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
 import PoysianLogo from 'src/assets/Logos/Poysian.png';
@@ -544,17 +550,55 @@ const resolveImageUrl = (url: string | null | undefined, placeholder: string): s
   return url.startsWith('http') ? url : `${apiUrl}${url}`;
 };
 
-const props = defineProps<{
-  round: InspectionRound;
-  defects: Defect[];
-  summaryItems: InspectionSummaryItem[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    round: InspectionRound;
+    defects: Defect[];
+    summaryItems: InspectionSummaryItem[];
+    // เปิดเช็ค+โชว์ banner ว่ารายงานนี้เก่ากว่าข้อมูล defect ปัจจุบันไหม — ใช้เฉพาะหน้าที่คนเปิดดูจริง
+    // (Admin/Customer/Inspector) ห้ามเปิดใน PrintDefectReportPage.vue เพราะ Puppeteer จะ screenshot
+    // banner นี้ติดไปในตัว PDF ด้วย
+    checkFreshness?: boolean;
+  }>(),
+  { checkFreshness: false },
+);
 
 const pageScale = ref(1);
 onMounted(() => {
   const pageWidthPx = 794; // 210mm ≈ 794px
   const screenWidth = window.innerWidth - 32;
   pageScale.value = Math.min(1, screenWidth / pageWidthPx);
+});
+
+const isReportStale = ref(false);
+let freshnessTimer: ReturnType<typeof setInterval> | null = null;
+
+// เทียบ hash ข้อมูล defect สดกับ hash ตอน generate PDF/AI summary ครั้งล่าสุด (backend คำนวณให้
+// ผ่าน isStale — ดู ReportsService.getCachedReportUrl) ระหว่างรอ debounce 30 วิ + เวลา render จริง
+// คนที่กดเข้ามาดูจะเห็นสรุป/PDF เก่าอยู่ เลย poll เตือนไว้กันงงว่าทำไมข้อมูลไม่ตรงกับที่เพิ่งแก้
+async function checkReportFreshness() {
+  try {
+    const { data } = await api.get<{ isStale: boolean }>(
+      `/inspection-rounds/${props.round.roundId}/report`,
+    );
+    isReportStale.value = data.isStale;
+    if (!data.isStale && freshnessTimer) {
+      clearInterval(freshnessTimer);
+      freshnessTimer = null;
+    }
+  } catch {
+    // เช็คไม่สำเร็จ ไม่โชว์ banner ผิดๆ ปล่อยผ่านเงียบๆ
+  }
+}
+
+onMounted(() => {
+  if (!props.checkFreshness) return;
+  void checkReportFreshness();
+  freshnessTimer = setInterval(() => void checkReportFreshness(), 8000);
+});
+
+onUnmounted(() => {
+  if (freshnessTimer) clearInterval(freshnessTimer);
 });
 
 const reportRef = ref<HTMLElement | null>(null);
@@ -1127,6 +1171,11 @@ const summaryChunks = computed(() => {
   background: #f5f7fa;
   border-radius: 8px;
   border: 1px solid #e0e0e0;
+}
+.freshness-banner {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 8px;
 }
 .score-part {
   background: #f5f7fa;

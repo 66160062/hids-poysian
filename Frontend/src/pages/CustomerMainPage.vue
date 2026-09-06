@@ -326,6 +326,7 @@
             :round="pdfRound"
             :defects="filteredPdfDefects"
             :summaryItems="pdfSummaryItems"
+            :check-freshness="true"
           />
         </q-card-section>
       </q-card>
