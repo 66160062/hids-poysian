@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Entity('inspection_round')
 export class InspectionRound {
@@ -116,6 +117,11 @@ export class InspectionRound {
   @ManyToOne(() => InspectionJob)
   @JoinColumn({ name: 'job_id' })
   job!: InspectionJob;
+
+  // แอดมินที่เปิดรอบตรวจนี้ — ใช้แสดงเป็น "ผู้ประสานงาน" ในรายงาน PDF
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'created_by' })
+  createdBy!: User | null;
 
   @OneToMany(() => InspectionTeamMember, (teamMember) => teamMember.round)
   teamMembers!: InspectionTeamMember[];

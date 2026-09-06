@@ -48,6 +48,7 @@ export class InspectionRoundsService {
 
   async create(
     createInspectionRoundDto: CreateInspectionRoundDto,
+    userId?: number,
   ): Promise<InspectionRound> {
     if (createInspectionRoundDto.scheduledDate) {
       const today = new Date();
@@ -88,6 +89,7 @@ export class InspectionRoundsService {
       const round = queryRunner.manager.create(InspectionRound, {
         ...createInspectionRoundDto,
         job,
+        createdBy: userId ? { id: userId } : undefined,
       });
 
       const savedRound = await queryRunner.manager.save(round);
@@ -329,6 +331,7 @@ export class InspectionRoundsService {
         'teamMembers.inspector',
         'teamMembers.inspector.team',
         'teamMembers.team',
+        'createdBy',
       ],
     });
   }

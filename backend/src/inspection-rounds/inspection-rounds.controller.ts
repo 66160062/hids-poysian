@@ -9,7 +9,9 @@ import {
   Delete,
   Query,
   UseGuards,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { InspectionRoundsService } from './inspection-rounds.service';
 import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
@@ -29,8 +31,14 @@ export class InspectionRoundsController {
 
   @Post()
   @UseGuards(AuthGuard)
-  create(@Body() createInspectionRoundDto: CreateInspectionRoundDto) {
-    return this.inspectionRoundsService.create(createInspectionRoundDto);
+  create(
+    @Body() createInspectionRoundDto: CreateInspectionRoundDto,
+    @Req() req: Request & { user?: { sub: number } },
+  ) {
+    return this.inspectionRoundsService.create(
+      createInspectionRoundDto,
+      req.user?.sub,
+    );
   }
 
   @Get()
