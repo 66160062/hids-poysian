@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
@@ -17,6 +17,9 @@ import { CreateDailyReportRoundDto } from './dto/create-daily-report-round.dto';
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
 import { Team } from 'src/teams/entities/team.entity';
 import { Defect, DefectStatus } from 'src/defects/entities/defect.entity';
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { NotificationType } from 'src/notifications/entities/notification.entity';
+import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class DailyReportsService {
@@ -30,7 +33,59 @@ export class DailyReportsService {
     private readonly houseTypesRepo: Repository<HouseType>,
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
+    private readonly notificationsService: NotificationsService,
+    private readonly mailService: MailService,
   ) {}
+
+  private buildInspectorPortalUrl(): string {
+    const baseUrl = (
+      process.env.FRONTEND_URL ?? 'http://localhost:9000'
+    ).replace(/\/$/, '');
+    return `${baseUrl}/#/inspector/Inspectsdashboard`;
+  }
+
+  // แจ้งเตือนผู้ตรวจที่ admin เพิ่งเลือกเข้ารอบนี้โดยตรง (เลือกทีมหรือเลือกรายบุคคลตอนสร้าง/เปิดรอบ)
+  // ไม่แจ้งกรณีที่รอบใหม่แค่สืบทอดผู้ตรวจจากรอบก่อนหน้าอัตโนมัติ (ไม่ใช่การเลือกใหม่ของ admin)
+  private async notifyAssignedInspectors(
+    inspectorIds: number[],
+    jobId: number,
+    round: InspectionRound,
+    projectName: string,
+  ) {
+    if (inspectorIds.length === 0) return;
+
+    for (const inspectorId of inspectorIds) {
+      void this.notificationsService.create({
+        type: NotificationType.INFO,
+        recipientUserId: inspectorId,
+        message: `คุณได้รับมอบหมายรอบตรวจใหม่: ${projectName}`,
+        jobId,
+        roundId: round.roundId,
+      });
+    }
+
+    const inspectors = await this.usersRepo.findBy({ id: In(inspectorIds) });
+    const portalUrl = this.buildInspectorPortalUrl();
+    const scheduledDate = round.scheduledDate
+      ? new Date(round.scheduledDate).toLocaleDateString('th-TH', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        })
+      : null;
+
+    for (const inspector of inspectors) {
+      if (!inspector.email) continue;
+      void this.mailService.sendRoundOpenedEmail({
+        to: inspector.email,
+        inspectorName: inspector.fullName,
+        jobTitle: projectName,
+        roundNumber: round.roundNumber,
+        scheduledDate,
+        portalUrl,
+      });
+    }
+  }
 
   async create(createDailyReportDto: CreateDailyReportDto) {
     if (!createDailyReportDto.inspectorId && !createDailyReportDto.teamId) {
@@ -151,7 +206,9 @@ export class DailyReportsService {
       throw new NotFoundException(`ไม่พบ daily report ID ${jobId}`);
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    let notifyInspectorIds: number[] = [];
+
+    const savedRound = await this.dataSource.transaction(async (manager) => {
       const latestRound = await manager.getRepository(InspectionRound).findOne({
         where: { job: { jobId } },
         order: { roundNumber: 'DESC' },
@@ -177,7 +234,13 @@ export class DailyReportsService {
         .getRepository(InspectionRound)
         .save(round);
 
-      await this.resolveTeamMember(manager, job, savedRound, createRoundDto);
+      const resolved = await this.resolveTeamMember(
+        manager,
+        job,
+        savedRound,
+        createRoundDto,
+      );
+      notifyInspectorIds = resolved.notifyInspectorIds;
 
       // --- CLONE SUMMARY ITEMS & DEFECTS FROM LATEST ROUND ---
       if (latestRound) {
@@ -247,6 +310,15 @@ export class DailyReportsService {
 
       return savedRound;
     });
+
+    void this.notifyAssignedInspectors(
+      notifyInspectorIds,
+      job.jobId,
+      savedRound,
+      job.projectName,
+    );
+
+    return savedRound;
   }
 
   async cloneLatestRound(jobId: number) {
@@ -270,6 +342,7 @@ export class DailyReportsService {
           .save(firstRound);
 
         await this.resolveTeamMember(manager, job, savedFirstRound, {});
+        // {} = ไม่มี inspectorId/teamId ระบุมา จึงเป็นแค่ fallback ไม่ใช่การเลือกใหม่ของ admin — ไม่ต้องแจ้งเตือน
 
         job.status = 'Active';
         await manager.getRepository(InspectionJob).save(job);
@@ -357,10 +430,14 @@ export class DailyReportsService {
       CreateDailyReportRoundDto,
       'teamMemberId' | 'inspectorId' | 'teamId'
     >,
-  ) {
+  ): Promise<{
+    teamMember: InspectionTeamMember;
+    notifyInspectorIds: number[];
+  }> {
     if (createRoundDto.inspectorId || createRoundDto.teamId) {
       let inspector: User | null = null;
       let teamEntity: Team | null = null;
+      let notifyInspectorIds: number[] = [];
 
       if (createRoundDto.inspectorId) {
         inspector = await manager.getRepository(User).findOneBy({
@@ -371,6 +448,7 @@ export class DailyReportsService {
             `ไม่พบผู้ตรวจ ID ${createRoundDto.inspectorId}`,
           );
         }
+        notifyInspectorIds = [inspector.id];
       }
 
       if (createRoundDto.teamId) {
@@ -380,15 +458,23 @@ export class DailyReportsService {
         if (!teamEntity) {
           throw new NotFoundException(`ไม่พบทีม ID ${createRoundDto.teamId}`);
         }
+        // ทีมนี้ไม่ผูก inspector คนเดียวใน InspectionTeamMember (team: entity, inspector: null)
+        // ต้องแยกไปหาสมาชิกทุกคนในทีมเพื่อแจ้งเตือนแต่ละคน
+        const teamInspectors = await manager.getRepository(User).find({
+          where: { teamId: teamEntity.team_Id, role: 'inspector' },
+        });
+        notifyInspectorIds = teamInspectors.map((u) => u.id);
       }
 
-      return manager.getRepository(InspectionTeamMember).save(
+      const teamMember = await manager.getRepository(InspectionTeamMember).save(
         manager.getRepository(InspectionTeamMember).create({
           round,
           inspector,
           team: teamEntity,
         }),
       );
+
+      return { teamMember, notifyInspectorIds };
     }
 
     const latestRoundWithTeam = await manager
@@ -411,12 +497,15 @@ export class DailyReportsService {
 
     const primaryMember = latestRoundWithTeam.teamMembers[0];
 
-    return manager.getRepository(InspectionTeamMember).save(
+    // สืบทอดผู้ตรวจจากรอบก่อนหน้าอัตโนมัติ ไม่ใช่การเลือกใหม่ของ admin เลยไม่ต้องแจ้งเตือน
+    const teamMember = await manager.getRepository(InspectionTeamMember).save(
       manager.getRepository(InspectionTeamMember).create({
         round,
         inspector: primaryMember.inspector,
         team: primaryMember.team,
       }),
     );
+
+    return { teamMember, notifyInspectorIds: [] };
   }
 }

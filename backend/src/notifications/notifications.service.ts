@@ -77,6 +77,13 @@ export class NotificationsService {
     );
   }
 
+  async markAllReadForUser(userId: number) {
+    await this.notificationsRepo.update(
+      { recipientUser: { id: userId }, isRead: false },
+      { isRead: true },
+    );
+  }
+
   async remove(id: number) {
     const notification = await this.notificationsRepo.findOneByOrFail({
       notificationId: id,

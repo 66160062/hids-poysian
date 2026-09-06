@@ -7,14 +7,24 @@ import { ConfigService } from '@nestjs/config';
 import { LinkTokenGuard } from './link-token.guard';
 import { JobAccessGuard } from './job-access.guard';
 import { RoundAccessGuard } from './round-access.guard';
+import { InspectorSelfOrAdminGuard } from './inspector-self-or-admin.guard';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
+import { Assignment } from 'src/assignments/entities/assignment.entity';
+import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Module({
   imports: [
     UsersModule,
-    TypeOrmModule.forFeature([InspectionJob, InspectionRound]),
+    TypeOrmModule.forFeature([
+      InspectionJob,
+      InspectionRound,
+      Assignment,
+      InspectionTeamMember,
+      User,
+    ]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
@@ -26,19 +36,26 @@ import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round
         }
         return {
           secret,
-          signOptions: { expiresIn: '1h' },
+          signOptions: { expiresIn: '8h' },
         };
       },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, LinkTokenGuard, JobAccessGuard, RoundAccessGuard],
+  providers: [
+    AuthService,
+    LinkTokenGuard,
+    JobAccessGuard,
+    RoundAccessGuard,
+    InspectorSelfOrAdminGuard,
+  ],
   exports: [
     JwtModule,
     AuthService,
     LinkTokenGuard,
     JobAccessGuard,
     RoundAccessGuard,
+    InspectorSelfOrAdminGuard,
   ],
 })
 export class AuthModule {}

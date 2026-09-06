@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { JwtService } from '@nestjs/jwt';
 import { DefectsController } from './defects.controller';
 import { DefectsService } from './defects.service';
 import { StorageService } from 'src/storage/storage.service';
 import { ReportsService } from 'src/reports/reports.service';
 import { AuthService } from 'src/auth/auth.service';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
+import { Defect } from './entities/defect.entity';
 
 describe('DefectsController', () => {
   let controller: DefectsController;
@@ -28,9 +30,15 @@ describe('DefectsController', () => {
         { provide: ReportsService, useValue: reportsMock },
         {
           provide: AuthService,
-          useValue: { verifyLinkToken: jest.fn(), verifyJobAccess: jest.fn() },
+          useValue: {
+            verifyLinkToken: jest.fn(),
+            verifyJobAccess: jest.fn(),
+            verifyRoundAccess: jest.fn(),
+          },
         },
         { provide: getRepositoryToken(InspectionRound), useValue: {} },
+        { provide: getRepositoryToken(Defect), useValue: {} },
+        { provide: JwtService, useValue: { verify: jest.fn() } },
       ],
     }).compile();
 
@@ -76,9 +84,9 @@ describe('DefectsController', () => {
     });
   });
 
-  it('schedules PDF regeneration for the round the updated defect belongs to', async () => {
+  it('schedules PDF regeneration for the round the updated defect belongs to, once it has been inspected', async () => {
     defectsService.contractorUpdate.mockResolvedValue({
-      round: { roundId: 9 },
+      round: { roundId: 9, inspectedAt: new Date('2026-01-01T00:00:00Z') },
     } as never);
 
     await controller.contractorUpdate(
@@ -88,6 +96,20 @@ describe('DefectsController', () => {
     );
 
     expect(reportsService.scheduleRegeneration).toHaveBeenCalledWith(9);
+  });
+
+  it('does not schedule PDF regeneration when the round has not been confirmed inspected yet', async () => {
+    defectsService.contractorUpdate.mockResolvedValue({
+      round: { roundId: 9, inspectedAt: null },
+    } as never);
+
+    await controller.contractorUpdate(
+      undefined as unknown as Express.Multer.File,
+      { defectId: 7, contractorId: 3, note: 'Fixed' },
+      { user: { project_id: 12, role: 'contractor' } } as never,
+    );
+
+    expect(reportsService.scheduleRegeneration).not.toHaveBeenCalled();
   });
 
   it('does not attach image fields to the update payload when no file is uploaded', async () => {

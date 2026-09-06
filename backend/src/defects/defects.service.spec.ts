@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ForbiddenException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { DefectsService } from './defects.service';
 import { Defect, DefectStatus } from './entities/defect.entity';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
@@ -10,18 +10,23 @@ import { User } from 'src/users/entities/user.entity';
 import { Room } from 'src/rooms/entities/room.entity';
 import { SubRoom } from 'src/sub-rooms/entities/sub-room.entity';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 describe('DefectsService', () => {
   let service: DefectsService;
   let defectsRepo: {
     findOneOrFail: jest.Mock;
     findOne: jest.Mock;
+    find: jest.Mock;
     create: jest.Mock;
     save: jest.Mock;
+    count: jest.Mock;
   };
   let activityLogsService: { log: jest.Mock; logForRound: jest.Mock };
+  let notificationsService: { create: jest.Mock };
   let repoMock: {
     findOneByOrFail: jest.Mock;
+    findOneBy: jest.Mock;
     findBy: jest.Mock;
     create: jest.Mock;
     save: jest.Mock;
@@ -36,11 +41,14 @@ describe('DefectsService', () => {
     defectsRepo = {
       findOneOrFail: jest.fn(),
       findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
       create: jest.fn(),
       save: jest.fn(),
+      count: jest.fn(),
     };
     repoMock = {
       findOneByOrFail: jest.fn(),
+      findOneBy: jest.fn(),
       findBy: jest.fn(),
       create: jest.fn(),
       save: jest.fn(),
@@ -51,6 +59,7 @@ describe('DefectsService', () => {
     roomsRepo = { findOneByOrFail: jest.fn() };
     subRoomsRepo = { findOneBy: jest.fn() };
     activityLogsService = { log: jest.fn(), logForRound: jest.fn() };
+    notificationsService = { create: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -63,6 +72,7 @@ describe('DefectsService', () => {
         { provide: getRepositoryToken(Room), useValue: roomsRepo },
         { provide: getRepositoryToken(SubRoom), useValue: subRoomsRepo },
         { provide: ActivityLogsService, useValue: activityLogsService },
+        { provide: NotificationsService, useValue: notificationsService },
       ],
     }).compile();
 
@@ -139,6 +149,58 @@ describe('DefectsService', () => {
     );
   });
 
+  it('throws ConflictException when an identical defect already exists in the round/room', async () => {
+    repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7, status: 'DRAFT' });
+    repoMock.findBy.mockResolvedValue([]);
+    roomsRepo.findOneByOrFail.mockResolvedValue({ roomId: 3 });
+    subRoomsRepo.findOneBy.mockResolvedValue({ subRoomId: 5 });
+    defectsRepo.find.mockResolvedValue([
+      { subCategories: [{ subCategoryId: 2 }, { subCategoryId: 1 }] },
+    ]);
+
+    await expect(
+      service.create({
+        roundId: 7,
+        subCategoryIds: [1, 2],
+        inspectorId: 1,
+        roomId: 3,
+        subRoomId: 5,
+        floorId: 1,
+        severity: 'Minor',
+        description: 'ผนังแตกร้าว',
+      } as never),
+    ).rejects.toThrow(ConflictException);
+    expect(defectsRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('does not block create when subCategories differ from the existing defect', async () => {
+    repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7, status: 'DRAFT' });
+    repoMock.findBy.mockResolvedValue([]);
+    roomsRepo.findOneByOrFail.mockResolvedValue({ roomId: 3 });
+    subRoomsRepo.findOneBy.mockResolvedValue({ subRoomId: 5 });
+    defectsRepo.find.mockResolvedValue([
+      { subCategories: [{ subCategoryId: 9 }] },
+    ]);
+    defectsRepo.create.mockImplementation((value) => value);
+    defectsRepo.save.mockImplementation((value) => ({
+      ...value,
+      defectId: 100,
+    }));
+
+    await expect(
+      service.create({
+        roundId: 7,
+        subCategoryIds: [1, 2],
+        inspectorId: 1,
+        roomId: 3,
+        subRoomId: 5,
+        floorId: 1,
+        severity: 'Minor',
+        description: 'ผนังแตกร้าว',
+      } as never),
+    ).resolves.toBeDefined();
+  });
+
   it('should update contractor image, note, status, and updatedBy for assigned contractor', async () => {
     const defect = {
       defectId: 11,
@@ -179,6 +241,142 @@ describe('DefectsService', () => {
       expect.objectContaining({ type: 'defect_repaired' }),
       undefined,
     );
+  });
+
+  it('notifies admin once repaired defects cross the 80% threshold', async () => {
+    const defect = {
+      defectId: 11,
+      status: DefectStatus.PENDING_REPAIR,
+      contractorNote: null,
+      round: {
+        roundId: 7,
+        job: {
+          jobId: 12,
+          projectName: 'บ้านตัวอย่าง',
+          status: 'Active',
+          contractor: { contractorId: 5 },
+        },
+      },
+    };
+    defectsRepo.findOneOrFail.mockResolvedValue(defect);
+    defectsRepo.save.mockImplementation((value) => value);
+    defectsRepo.count
+      .mockResolvedValueOnce(10) // total
+      .mockResolvedValueOnce(8); // repaired
+    repoMock.findOneBy.mockResolvedValue({ roundId: 7, repairAlertSentAt: null });
+    repoMock.save.mockImplementation((value) => value);
+
+    await service.contractorUpdate({
+      defectId: 11,
+      contractorId: 5,
+      linkPayload: { project_id: 12, role: 'contractor' },
+      note: 'Done',
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(repoMock.save).toHaveBeenCalledWith(
+      expect.objectContaining({ repairAlertSentAt: expect.any(Date) }),
+    );
+    expect(notificationsService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientRole: 'admin',
+        jobId: 12,
+        roundId: 7,
+      }),
+    );
+  });
+
+  it('does not notify admin when below the 80% threshold', async () => {
+    const defect = {
+      defectId: 11,
+      status: DefectStatus.PENDING_REPAIR,
+      contractorNote: null,
+      round: {
+        roundId: 7,
+        job: {
+          jobId: 12,
+          projectName: 'บ้านตัวอย่าง',
+          status: 'Active',
+          contractor: { contractorId: 5 },
+        },
+      },
+    };
+    defectsRepo.findOneOrFail.mockResolvedValue(defect);
+    defectsRepo.save.mockImplementation((value) => value);
+    defectsRepo.count.mockResolvedValueOnce(10).mockResolvedValueOnce(5);
+    repoMock.findOneBy.mockResolvedValue({ roundId: 7, repairAlertSentAt: null });
+
+    await service.contractorUpdate({
+      defectId: 11,
+      contractorId: 5,
+      linkPayload: { project_id: 12, role: 'contractor' },
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(notificationsService.create).not.toHaveBeenCalled();
+  });
+
+  it('does not notify admin twice for the same round', async () => {
+    const defect = {
+      defectId: 11,
+      status: DefectStatus.PENDING_REPAIR,
+      contractorNote: null,
+      round: {
+        roundId: 7,
+        job: {
+          jobId: 12,
+          projectName: 'บ้านตัวอย่าง',
+          status: 'Active',
+          contractor: { contractorId: 5 },
+        },
+      },
+    };
+    defectsRepo.findOneOrFail.mockResolvedValue(defect);
+    defectsRepo.save.mockImplementation((value) => value);
+    repoMock.findOneBy.mockResolvedValue({
+      roundId: 7,
+      repairAlertSentAt: new Date(),
+    });
+
+    await service.contractorUpdate({
+      defectId: 11,
+      contractorId: 5,
+      linkPayload: { project_id: 12, role: 'contractor' },
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(defectsRepo.count).not.toHaveBeenCalled();
+    expect(notificationsService.create).not.toHaveBeenCalled();
+  });
+
+  it('does not re-check the threshold when the defect was already repaired', async () => {
+    const defect = {
+      defectId: 11,
+      status: DefectStatus.REPAIRED,
+      contractorNote: null,
+      round: {
+        roundId: 7,
+        job: {
+          jobId: 12,
+          projectName: 'บ้านตัวอย่าง',
+          status: 'Active',
+          contractor: { contractorId: 5 },
+        },
+      },
+    };
+    defectsRepo.findOneOrFail.mockResolvedValue(defect);
+    defectsRepo.save.mockImplementation((value) => value);
+
+    await service.contractorUpdate({
+      defectId: 11,
+      contractorId: 5,
+      linkPayload: { project_id: 12, role: 'contractor' },
+      note: 'Updated note only',
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(repoMock.findOneBy).not.toHaveBeenCalled();
+    expect(notificationsService.create).not.toHaveBeenCalled();
   });
 
   it('should reject contractor update when defect belongs to another contractor', async () => {

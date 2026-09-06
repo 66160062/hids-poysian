@@ -1613,10 +1613,10 @@ const submitCreateRound = async () => {
       }
     }
 
-    await api.post(`/daily-reports/${jobId.value}/rounds`, roundPayload);
+    const { data: createdRoundResp } = await api.post(`/daily-reports/${jobId.value}/rounds`, roundPayload);
 
-    // 2. ดึงรอบที่เพิ่งถูกสร้างขึ้นมา (backend สร้างไปที่ล่าสุดแล้ว)
-    // สำหรับคนที่เหลือ ให้ยิงเข้า /assignments เพื่อผูกกับรอบนั้น (ซึ่ง Backend ผูกกับรอบล่าสุดให้)
+    // 2. สำหรับคนที่เหลือ ให้ยิงเข้า /assignments พร้อม roundId ของรอบที่เพิ่งสร้าง
+    // เพื่อผูกสิทธิ์เฉพาะรอบนี้ ไม่ปลดล็อกทั้ง job
     let extraInspectors = selectedInspectors.value;
     if (assignmentMode.value === 'individual' || (!selectedTeam.value && assignmentMode.value === 'team')) {
       // ตัดคนแรกออก เพราะถูกส่งไปสร้างรอบแล้ว
@@ -1626,7 +1626,8 @@ const submitCreateRound = async () => {
     for (const inspector of extraInspectors) {
       await api.post('/assignments', {
         jobId: jobId.value,
-        inspectorId: inspector.value
+        inspectorId: inspector.value,
+        roundId: createdRoundResp.roundId,
       });
     }
 

@@ -321,11 +321,12 @@
 
         <q-card-section class="col q-pa-none" style="overflow-y: auto; overflow-x: hidden;">
           <DefectReport
-            v-if="pdfDataLoaded && pdfRound"
+            v-if="pdfRound"
             ref="pdfReportRef"
             :round="pdfRound"
             :defects="filteredPdfDefects"
             :summaryItems="pdfSummaryItems"
+            :check-freshness="true"
           />
         </q-card-section>
       </q-card>
@@ -482,7 +483,6 @@ const latestRound = computed(() => rounds.value[rounds.value.length - 1]);
 const pdfRound = ref<InspectionRound | null>(null);
 const pdfDefects = ref<Defect[]>([]);
 const pdfSummaryItems = ref<InspectionSummaryItem[]>([]);
-const pdfDataLoaded = ref(false);
 const isLoadingPdf = ref(false);
 
 const showReportDialog = ref(false);
@@ -514,7 +514,6 @@ const filteredPdfDefects = computed(() => {
 });
 
 async function ensurePdfDataLoaded() {
-  if (pdfDataLoaded.value) return true;
   const roundId = latestRound.value?.roundId;
   if (!roundId) {
     $q.notify({ type: 'warning', message: 'ยังไม่มีข้อมูลรอบตรวจ' });
@@ -531,7 +530,6 @@ async function ensurePdfDataLoaded() {
     pdfRound.value = roundRes.data;
     pdfDefects.value = defectsRes.data;
     pdfSummaryItems.value = summaryRes.data;
-    pdfDataLoaded.value = true;
     return true;
   } catch (e) {
     console.error(e);
@@ -579,7 +577,7 @@ const workflowSteps = computed(() => {
   const isRepairDone = totalDefects.value > 0 && passed.value === totalDefects.value;
   const isCompleted = jobData.value?.status === 'Completed';
 
-  return [
+  const steps = [
     {
       icon: 'search',
       label: `ตรวจรอบที่ ${round?.roundNumber ?? 1}`,
@@ -595,17 +593,23 @@ const workflowSteps = computed(() => {
       label: 'ซ่อมแซม',
       status: !isSubmitted ? 'pending' : isRepairDone ? 'done' : 'active',
     },
-    {
+  ];
+
+  if (nextRound || !isCompleted) {
+    steps.push({
       icon: 'search',
       label: `ตรวจรอบที่ ${(round?.roundNumber ?? 1) + 1}`,
       status: nextRound?.inspectedAt ? 'done' : nextRound ? 'active' : 'pending',
-    },
-    {
-      icon: 'check_circle',
-      label: 'เสร็จสิ้น',
-      status: isCompleted ? 'done' : 'pending',
-    },
-  ];
+    });
+  }
+
+  steps.push({
+    icon: 'check_circle',
+    label: 'เสร็จสิ้น',
+    status: isCompleted ? 'done' : 'pending',
+  });
+
+  return steps;
 });
 
 interface ActivityLogResponse {

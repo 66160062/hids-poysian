@@ -6,16 +6,23 @@ import { InspectionRoundsService } from './inspection-rounds.service';
 import { ReportsService } from 'src/reports/reports.service';
 import { AuthService } from 'src/auth/auth.service';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
+import { AiSummaryService } from 'src/ai-summary/ai-summary.service';
 
 describe('InspectionRoundsController', () => {
   let controller: InspectionRoundsController;
   let service: jest.Mocked<
     Pick<
       InspectionRoundsService,
-      'findByWeek' | 'findByMonth' | 'submit' | 'approveReport'
+      | 'findByWeek'
+      | 'findByMonth'
+      | 'submit'
+      | 'approveReport'
+      | 'confirmInspection'
     >
   >;
-  let reports: jest.Mocked<Pick<ReportsService, 'getCachedReportUrl'>>;
+  let reports: jest.Mocked<
+    Pick<ReportsService, 'getCachedReportUrl' | 'scheduleRegeneration'>
+  >;
 
   beforeEach(async () => {
     const serviceMock = {
@@ -23,14 +30,20 @@ describe('InspectionRoundsController', () => {
       findByMonth: jest.fn(),
       submit: jest.fn(),
       approveReport: jest.fn(),
+      confirmInspection: jest.fn(),
     };
-    const reportsMock = { getCachedReportUrl: jest.fn() };
+    const reportsMock = {
+      getCachedReportUrl: jest.fn(),
+      scheduleRegeneration: jest.fn(),
+    };
+    const aiSummaryMock = { generateWithProvider: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [InspectionRoundsController],
       providers: [
         { provide: InspectionRoundsService, useValue: serviceMock },
         { provide: ReportsService, useValue: reportsMock },
+        { provide: AiSummaryService, useValue: aiSummaryMock },
         { provide: JwtService, useValue: { verify: jest.fn() } },
         { provide: AuthService, useValue: { verifyJobAccess: jest.fn() } },
         { provide: getRepositoryToken(InspectionRound), useValue: {} },
@@ -60,11 +73,16 @@ describe('InspectionRoundsController', () => {
     expect(service.findByMonth).toHaveBeenCalledWith(9, '2026-08-01');
   });
 
-  it('wraps the cached report url in a { url } object', async () => {
-    reports.getCachedReportUrl.mockResolvedValue('https://example.com/r.pdf');
+  it('forwards the cached report url and its generatedAt timestamp from the service', async () => {
+    const generatedAt = new Date('2026-01-01T00:00:00Z');
+    reports.getCachedReportUrl.mockResolvedValue({
+      url: 'https://example.com/r.pdf',
+      generatedAt,
+    });
 
     await expect(controller.getReport('4')).resolves.toEqual({
       url: 'https://example.com/r.pdf',
+      generatedAt,
     });
     expect(reports.getCachedReportUrl).toHaveBeenCalledWith(4);
   });
@@ -73,5 +91,17 @@ describe('InspectionRoundsController', () => {
     controller.submit('4');
 
     expect(service.submit).toHaveBeenCalledWith(4);
+  });
+
+  it('confirms the inspection and schedules PDF/AI summary regeneration for that round', async () => {
+    const confirmedRound = { roundId: 4, inspectedAt: new Date() };
+    service.confirmInspection.mockResolvedValue(confirmedRound as never);
+
+    await expect(controller.confirmInspection('4')).resolves.toEqual(
+      confirmedRound,
+    );
+
+    expect(service.confirmInspection).toHaveBeenCalledWith(4);
+    expect(reports.scheduleRegeneration).toHaveBeenCalledWith(4);
   });
 });
