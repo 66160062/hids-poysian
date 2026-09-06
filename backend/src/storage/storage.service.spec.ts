@@ -11,7 +11,7 @@ describe('StorageService', () => {
   });
 
   describe('uploadImage', () => {
-    it('re-encodes a large or non-jpeg image to jpeg before uploading', async () => {
+    it('re-encodes a large or non-webp image to webp before uploading', async () => {
       (sharp as unknown as jest.Mock).mockReturnValue({
         metadata: jest.fn().mockResolvedValue({
           width: 4000,
@@ -20,7 +20,7 @@ describe('StorageService', () => {
         }),
         rotate: jest.fn().mockReturnThis(),
         resize: jest.fn().mockReturnThis(),
-        jpeg: jest.fn().mockReturnThis(),
+        webp: jest.fn().mockReturnThis(),
         toBuffer: jest.fn().mockResolvedValue(Buffer.from('resized')),
       });
 
@@ -29,19 +29,19 @@ describe('StorageService', () => {
       expect(url).toBe('https://example.com/mock.jpg');
       const client = (createClient as jest.Mock).mock.results[0].value;
       expect(client.storage.from().upload).toHaveBeenCalledWith(
-        expect.stringMatching(/^defects\/test-uuid\.jpg$/),
+        expect.stringMatching(/^defects\/test-uuid\.webp$/),
         Buffer.from('resized'),
-        { contentType: 'image/jpeg', upsert: false },
+        { contentType: 'image/webp', upsert: false },
       );
     });
 
-    it('passes a small, already-jpeg image straight through without re-encoding', async () => {
+    it('passes a small, already-webp image straight through without re-encoding', async () => {
       const original = Buffer.alloc(100, 1);
       (sharp as unknown as jest.Mock).mockReturnValue({
         metadata: jest.fn().mockResolvedValue({
           width: 800,
           height: 600,
-          format: 'jpeg',
+          format: 'webp',
         }),
       });
 

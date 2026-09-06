@@ -6,18 +6,31 @@ import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round
 import { Defect } from 'src/defects/entities/defect.entity';
 import { StorageService } from 'src/storage/storage.service';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
+import { AiSummaryService } from 'src/ai-summary/ai-summary.service';
 import puppeteer from 'puppeteer';
+import { createHash } from 'crypto';
+
+const EMPTY_DEFECTS_HASH = createHash('sha256').update('').digest('hex');
 
 describe('ReportsService', () => {
   let service: ReportsService;
-  let roundRepo: { findOneBy: jest.Mock; save: jest.Mock };
+  let roundRepo: {
+    findOneBy: jest.Mock;
+    findOneByOrFail: jest.Mock;
+    save: jest.Mock;
+  };
   let defectRepo: { find: jest.Mock };
   let storageService: { uploadPdf: jest.Mock; deleteFile: jest.Mock };
   let jwtService: { sign: jest.Mock };
   let activityLogsService: { logForRound: jest.Mock };
+  let aiSummaryService: { generateIfChanged: jest.Mock };
 
   beforeEach(async () => {
-    roundRepo = { findOneBy: jest.fn(), save: jest.fn() };
+    roundRepo = {
+      findOneBy: jest.fn(),
+      findOneByOrFail: jest.fn(),
+      save: jest.fn(),
+    };
     defectRepo = { find: jest.fn() };
     storageService = {
       uploadPdf: jest
@@ -27,6 +40,9 @@ describe('ReportsService', () => {
     };
     jwtService = { sign: jest.fn().mockReturnValue('system-token') };
     activityLogsService = { logForRound: jest.fn() };
+    aiSummaryService = {
+      generateIfChanged: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -36,6 +52,7 @@ describe('ReportsService', () => {
         { provide: StorageService, useValue: storageService },
         { provide: JwtService, useValue: jwtService },
         { provide: ActivityLogsService, useValue: activityLogsService },
+        { provide: AiSummaryService, useValue: aiSummaryService },
       ],
     }).compile();
 
@@ -51,21 +68,65 @@ describe('ReportsService', () => {
   });
 
   describe('getCachedReportUrl', () => {
-    it('returns null when the round has no cached pdf yet', async () => {
-      roundRepo.findOneBy.mockResolvedValue({ lastPdfUrl: null });
+    it('returns null url/generatedAt and isStale=true when the round has no cached pdf yet', async () => {
+      roundRepo.findOneBy.mockResolvedValue({
+        lastPdfUrl: null,
+        lastPdfGeneratedAt: null,
+        lastPdfHash: null,
+      });
+      defectRepo.find.mockResolvedValue([]);
 
-      await expect(service.getCachedReportUrl(1)).resolves.toBeNull();
+      await expect(service.getCachedReportUrl(1)).resolves.toEqual({
+        url: null,
+        generatedAt: null,
+        isStale: true,
+      });
     });
 
-    it('returns the cached pdf url without touching Puppeteer', async () => {
+    it('returns the cached pdf url and isStale=false when defect data has not changed, without touching Puppeteer', async () => {
+      const generatedAt = new Date('2026-01-01T00:00:00Z');
       roundRepo.findOneBy.mockResolvedValue({
         lastPdfUrl: 'https://example.com/reports/cached.pdf',
+        lastPdfGeneratedAt: generatedAt,
+        lastPdfHash: EMPTY_DEFECTS_HASH,
       });
+      defectRepo.find.mockResolvedValue([]);
 
-      await expect(service.getCachedReportUrl(1)).resolves.toBe(
-        'https://example.com/reports/cached.pdf',
-      );
+      await expect(service.getCachedReportUrl(1)).resolves.toEqual({
+        url: 'https://example.com/reports/cached.pdf',
+        generatedAt,
+        isStale: false,
+      });
       expect(puppeteer.launch).not.toHaveBeenCalled();
+    });
+
+    it('returns isStale=true when a defect changed after the cached pdf was generated', async () => {
+      const generatedAt = new Date('2026-01-01T00:00:00Z');
+      roundRepo.findOneBy.mockResolvedValue({
+        lastPdfUrl: 'https://example.com/reports/cached.pdf',
+        lastPdfGeneratedAt: generatedAt,
+        lastPdfHash: EMPTY_DEFECTS_HASH,
+      });
+      defectRepo.find.mockResolvedValue([
+        { defectId: 1, updatedAt: new Date('2026-01-02T00:00:00Z') },
+      ]);
+
+      await expect(service.getCachedReportUrl(1)).resolves.toEqual({
+        url: 'https://example.com/reports/cached.pdf',
+        generatedAt,
+        isStale: true,
+      });
+    });
+
+    it('returns isStale=false when the round does not exist', async () => {
+      roundRepo.findOneBy.mockResolvedValue(null);
+
+      await expect(service.getCachedReportUrl(1)).resolves.toEqual({
+        url: null,
+        generatedAt: null,
+        isStale: false,
+      });
+      expect(defectRepo.find).not.toHaveBeenCalled();
     });
   });
 
@@ -98,8 +159,17 @@ describe('ReportsService', () => {
       ]);
       roundRepo.findOneBy.mockResolvedValue({
         roundId: 1,
+        roundNumber: 1,
         lastPdfHash: 'stale-hash',
         lastPdfUrl: 'https://example.com/reports/old.pdf',
+      });
+      // simule ค่าที่ AiSummaryService เพิ่งอัปเดตไว้แยกต่างหากใน DB ระหว่างทาง
+      roundRepo.findOneByOrFail.mockResolvedValue({
+        roundId: 1,
+        roundNumber: 1,
+        lastPdfHash: 'stale-hash',
+        lastPdfUrl: 'https://example.com/reports/old.pdf',
+        aiSummaryText: 'สรุปล่าสุดจาก AI',
       });
       roundRepo.save.mockImplementation((value) => value);
 
@@ -128,6 +198,15 @@ describe('ReportsService', () => {
         1,
         expect.objectContaining({ type: 'report_pdf_updated' }),
       );
+      // ต้อง save จาก object ที่ fetch ใหม่หลัง AI summary ไม่ใช่ object เก่าตั้งแต่ต้นฟังก์ชัน
+      // ไม่งั้นค่า AI summary ที่เพิ่งอัปเดตจะถูกเขียนทับกลับเป็นค่าเก่า/undefined
+      expect(roundRepo.save).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          aiSummaryText: 'สรุปล่าสุดจาก AI',
+          lastPdfUrl: 'https://example.com/reports/new.pdf',
+          lastPdfGeneratedAt: expect.any(Date),
+        }),
+      );
     });
 
     it('closes the browser even when rendering throws', async () => {
@@ -139,6 +218,12 @@ describe('ReportsService', () => {
         lastPdfHash: 'stale-hash',
         lastPdfUrl: null,
       });
+      roundRepo.findOneByOrFail.mockResolvedValue({
+        roundId: 1,
+        lastPdfHash: 'stale-hash',
+        lastPdfUrl: null,
+      });
+      roundRepo.save.mockImplementation((value) => value);
 
       const mockPage = {
         setDefaultTimeout: jest.fn(),

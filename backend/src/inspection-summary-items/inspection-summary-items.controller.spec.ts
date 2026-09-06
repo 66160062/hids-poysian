@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { JwtService } from '@nestjs/jwt';
 import { InspectionSummaryItemsController } from './inspection-summary-items.controller';
 import { InspectionSummaryItemsService } from './inspection-summary-items.service';
 import { AuthService } from 'src/auth/auth.service';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
+import { InspectionSummaryItem } from './entities/inspection-summary-item.entity';
 
 describe('InspectionSummaryItemsController', () => {
   let controller: InspectionSummaryItemsController;
@@ -26,8 +28,16 @@ describe('InspectionSummaryItemsController', () => {
       controllers: [InspectionSummaryItemsController],
       providers: [
         { provide: InspectionSummaryItemsService, useValue: serviceMock },
-        { provide: AuthService, useValue: { verifyJobAccess: jest.fn() } },
+        {
+          provide: AuthService,
+          useValue: {
+            verifyJobAccess: jest.fn(),
+            verifyRoundAccess: jest.fn(),
+          },
+        },
         { provide: getRepositoryToken(InspectionRound), useValue: {} },
+        { provide: getRepositoryToken(InspectionSummaryItem), useValue: {} },
+        { provide: JwtService, useValue: { verify: jest.fn() } },
       ],
     }).compile();
 

@@ -226,6 +226,28 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
+  {
+    // route แยกต่างหาก ไม่ซ้อนใน InspectorScreen.vue เพราะหน้านี้มี q-layout/q-header เป็นของตัวเองอยู่แล้ว
+    // (ซ้อนกันจะทำให้ header ของ InspectorScreen ทับกับ header ของหน้านี้)
+    path: '/inspector/profile',
+    component: () => import('layouts/FullScreen.vue'),
+    children: [
+      {
+        path: '',
+        component: () => import('pages/InspectorProfilePage.vue'),
+      },
+    ],
+  },
+  {
+    path: '/inspector/notifications',
+    component: () => import('layouts/FullScreen.vue'),
+    children: [
+      {
+        path: '',
+        component: () => import('pages/InspectorNotificationsPage.vue'),
+      },
+    ],
+  },
 
   {
   path: '/contractor',

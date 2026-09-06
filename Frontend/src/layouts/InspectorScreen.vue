@@ -19,6 +19,27 @@
         <q-toolbar-title class="text-center text-weight-bold" style="font-size: 24px">
           {{ headerTitle }}
         </q-toolbar-title>
+
+        <div class="absolute-right q-mr-md flex flex-center" style="z-index: 10">
+          <q-btn
+            flat
+            round
+            icon="notifications_none"
+            color="dark"
+            aria-label="Notifications"
+            @click="$router.push('/inspector/notifications')"
+          >
+            <q-badge v-if="unreadCount > 0" color="red" floating rounded>{{ unreadCount }}</q-badge>
+          </q-btn>
+          <q-avatar
+            size="34px"
+            class="bg-primary text-white q-ml-sm cursor-pointer"
+            @click="$router.push('/inspector/profile')"
+          >
+            <img v-if="currentUser?.imageUrl && !currentUser.imageUrl.includes('unknown.jpg')" :src="getImageUrl(currentUser.imageUrl) ?? ''" />
+            <span v-else>{{ currentUser?.fullName?.charAt(0).toUpperCase() || 'I' }}</span>
+          </q-avatar>
+        </div>
       </q-toolbar>
       <q-separator color="blue" size="2px" class="q-mx-md" />
     </q-header>
@@ -62,11 +83,33 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from 'src/stores/useAuth';
+import { api } from 'src/boot/axios';
 
 const router = useRouter();
 const route = useRoute();
+
+const authStore = useAuthStore();
+const currentUser = computed(() => authStore.currentUser);
+
+const unreadCount = ref(0);
+onMounted(async () => {
+  try {
+    const { data } = await api.get<{ isRead: boolean }[]>('/notifications');
+    unreadCount.value = data.filter((n) => !n.isRead).length;
+  } catch {
+    unreadCount.value = 0;
+  }
+});
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3000';
+const getImageUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${API_BASE_URL}${path}`;
+};
 
 // ใช้ระบุว่า Tab ไหนกำลัง Active อยู่ (กรณีโหลดหน้าใหม่)
 const activeTab = computed(() => {
@@ -116,8 +159,9 @@ const hideHeader = computed(() => route.path.includes('/add-defect'));
 .q-footer {
   border-top: 1px solid #e0e0e0;
 }
-/* ทำให้ปุ่ม Back อยู่กลางแนวตั้ง */
-.absolute-left {
+/* ทำให้ปุ่ม Back และปุ่มแจ้งเตือน/โปรไฟล์อยู่กลางแนวตั้ง */
+.absolute-left,
+.absolute-right {
   top: 50%;
   transform: translateY(-50%);
 }

@@ -8,7 +8,10 @@ import { Address } from 'src/addresses/entities/address.entity';
 import { HouseType } from 'src/house-types/entities/house-type.entity';
 import { User } from 'src/users/entities/user.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
+import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { Team } from 'src/teams/entities/team.entity';
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { MailService } from 'src/mail/mail.service';
 
 function createManagerMock() {
   const repoMocks: Record<string, Record<string, jest.Mock>> = {};
@@ -37,21 +40,25 @@ describe('DailyReportsService', () => {
   let customersRepo: { findOneBy: jest.Mock };
   let addressesRepo: { findOneBy: jest.Mock };
   let houseTypesRepo: { findOneBy: jest.Mock };
-  let usersRepo: { findOneBy: jest.Mock };
+  let usersRepo: { findOneBy: jest.Mock; findBy: jest.Mock };
   let dataSource: {
     transaction: jest.Mock;
     getRepository: jest.Mock;
   };
+  let notificationsService: { create: jest.Mock };
+  let mailService: { sendRoundOpenedEmail: jest.Mock };
 
   beforeEach(async () => {
     customersRepo = { findOneBy: jest.fn() };
     addressesRepo = { findOneBy: jest.fn() };
     houseTypesRepo = { findOneBy: jest.fn() };
-    usersRepo = { findOneBy: jest.fn() };
+    usersRepo = { findOneBy: jest.fn(), findBy: jest.fn().mockResolvedValue([]) };
     dataSource = {
       transaction: jest.fn(),
       getRepository: jest.fn(),
     };
+    notificationsService = { create: jest.fn().mockResolvedValue(null) };
+    mailService = { sendRoundOpenedEmail: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -61,6 +68,8 @@ describe('DailyReportsService', () => {
         { provide: getRepositoryToken(Address), useValue: addressesRepo },
         { provide: getRepositoryToken(HouseType), useValue: houseTypesRepo },
         { provide: getRepositoryToken(User), useValue: usersRepo },
+        { provide: NotificationsService, useValue: notificationsService },
+        { provide: MailService, useValue: mailService },
       ],
     }).compile();
 
@@ -74,7 +83,11 @@ describe('DailyReportsService', () => {
   describe('create', () => {
     it('rejects when neither an inspector nor a team is given', async () => {
       await expect(
-        service.create({ customerId: 1, addressId: 1, houseTypeId: 1 } as never),
+        service.create({
+          customerId: 1,
+          addressId: 1,
+          houseTypeId: 1,
+        } as never),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -121,7 +134,9 @@ describe('DailyReportsService', () => {
 
   describe('createRound', () => {
     it('throws NotFoundException when the job does not exist', async () => {
-      dataSource.getRepository.mockReturnValue({ findOneBy: jest.fn().mockResolvedValue(null) });
+      dataSource.getRepository.mockReturnValue({
+        findOneBy: jest.fn().mockResolvedValue(null),
+      });
 
       await expect(
         service.createRound(99, { scheduledDate: undefined } as never),
@@ -135,15 +150,89 @@ describe('DailyReportsService', () => {
       const manager = createManagerMock();
       manager.repos['InspectionRound'] = {
         ...manager.repos['InspectionRound'],
-        findOne: jest.fn().mockResolvedValue({ status: 'SUBMITTED', roundNumber: 1 }),
+        findOne: jest
+          .fn()
+          .mockResolvedValue({ status: 'SUBMITTED', roundNumber: 1 }),
       };
       dataSource.transaction.mockImplementation((cb: never) =>
         (cb as (m: unknown) => unknown)(manager),
       );
 
-      await expect(
-        service.createRound(1, {} as never),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.createRound(1, {} as never)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('notifies every inspector in the selected team with the new round id', async () => {
+      dataSource.getRepository.mockReturnValue({
+        findOneBy: jest
+          .fn()
+          .mockResolvedValue({ jobId: 1, projectName: 'บ้านทดสอบ' }),
+      });
+
+      const manager = createManagerMock();
+      const roundRepo = manager.getRepository(InspectionRound);
+      roundRepo.findOne = jest.fn().mockResolvedValue(null);
+      roundRepo.save = jest.fn((value: Record<string, unknown>) => ({
+        ...value,
+        roundId: 42,
+      }));
+      manager.getRepository(Team).findOneBy = jest
+        .fn()
+        .mockResolvedValue({ team_Id: 7 });
+      manager.getRepository(User).find = jest
+        .fn()
+        .mockResolvedValue([{ id: 10 }, { id: 11 }]);
+      usersRepo.findBy.mockResolvedValue([
+        { id: 10, email: 'a@example.com', fullName: 'ผู้ตรวจเอ' },
+        { id: 11, email: '', fullName: 'ผู้ตรวจบี' },
+      ]);
+      dataSource.transaction.mockImplementation((cb: never) =>
+        (cb as (m: unknown) => unknown)(manager),
+      );
+
+      await service.createRound(1, { teamId: 7 } as never);
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(notificationsService.create).toHaveBeenCalledTimes(2);
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ recipientUserId: 10, roundId: 42, jobId: 1 }),
+      );
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ recipientUserId: 11, roundId: 42, jobId: 1 }),
+      );
+
+      expect(mailService.sendRoundOpenedEmail).toHaveBeenCalledTimes(1);
+      expect(mailService.sendRoundOpenedEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ to: 'a@example.com', jobTitle: 'บ้านทดสอบ' }),
+      );
+    });
+
+    it('does not notify anyone when the round just inherits its team from the previous round', async () => {
+      dataSource.getRepository.mockReturnValue({
+        findOneBy: jest
+          .fn()
+          .mockResolvedValue({ jobId: 1, projectName: 'บ้านทดสอบ' }),
+      });
+
+      const manager = createManagerMock();
+      const roundRepo = manager.getRepository(InspectionRound);
+      roundRepo.findOne = jest.fn().mockResolvedValue({
+        status: 'APPROVED',
+        roundNumber: 1,
+        teamMembers: [{ inspector: { id: 99 }, team: null }],
+      });
+      roundRepo.save = jest.fn((value: Record<string, unknown>) => ({
+        ...value,
+        roundId: 55,
+      }));
+      dataSource.transaction.mockImplementation((cb: never) =>
+        (cb as (m: unknown) => unknown)(manager),
+      );
+
+      await service.createRound(1, {} as never);
+
+      expect(notificationsService.create).not.toHaveBeenCalled();
     });
   });
 });

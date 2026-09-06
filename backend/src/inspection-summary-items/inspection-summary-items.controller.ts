@@ -13,6 +13,8 @@ import { InspectionSummaryItemsService } from './inspection-summary-items.servic
 import { CreateInspectionSummaryItemDto } from './dto/create-inspection-summary-item.dto';
 import { UpdateInspectionSummaryItemDto } from './dto/update-inspection-summary-item.dto';
 import { RoundAccessGuard } from 'src/auth/round-access.guard';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { SummaryItemAccessGuard } from './guards/summary-item-access.guard';
 
 @Controller('inspection-summary-items')
 export class InspectionSummaryItemsController {
@@ -21,6 +23,7 @@ export class InspectionSummaryItemsController {
   ) {}
 
   @Post()
+  @UseGuards(AuthGuard)
   create(
     @Body() createInspectionSummaryItemDto: CreateInspectionSummaryItemDto,
   ) {
@@ -30,6 +33,7 @@ export class InspectionSummaryItemsController {
   }
 
   @Get()
+  @UseGuards(AuthGuard)
   findAll() {
     return this.inspectionSummaryItemsService.findAll();
   }
@@ -41,11 +45,13 @@ export class InspectionSummaryItemsController {
   }
 
   @Get(':id')
+  @UseGuards(SummaryItemAccessGuard)
   findOne(@Param('id') id: string) {
     return this.inspectionSummaryItemsService.findOne(+id);
   }
 
   @Patch(':id')
+  @UseGuards(SummaryItemAccessGuard)
   update(
     @Param('id') id: string,
     @Body() updateInspectionSummaryItemDto: UpdateInspectionSummaryItemDto,
@@ -57,11 +63,13 @@ export class InspectionSummaryItemsController {
   }
 
   @Delete('round/:roundId')
+  @UseGuards(RoundAccessGuard)
   deleteByRound(@Param('roundId', ParseIntPipe) roundId: number) {
     return this.inspectionSummaryItemsService.deleteByRound(roundId);
   }
 
   @Delete('round/:roundId/template/:templateId')
+  @UseGuards(RoundAccessGuard)
   deleteByRoundAndTemplate(
     @Param('roundId', ParseIntPipe) roundId: number,
     @Param('templateId', ParseIntPipe) templateId: number,
@@ -73,6 +81,7 @@ export class InspectionSummaryItemsController {
   }
 
   @Delete(':id')
+  @UseGuards(SummaryItemAccessGuard)
   remove(@Param('id') id: string) {
     return this.inspectionSummaryItemsService.remove(+id);
   }

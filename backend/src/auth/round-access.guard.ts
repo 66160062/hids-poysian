@@ -32,10 +32,10 @@ export class RoundAccessGuard implements CanActivate {
       throw new NotFoundException('ไม่พบรอบตรวจนี้');
     }
 
-    request.user = await this.authService.verifyJobAccess(
+    request.user = await this.authService.verifyRoundAccess(
       request.headers.authorization,
       request.query?.token,
-      round.job.jobId,
+      round,
     );
     return true;
   }

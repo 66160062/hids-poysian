@@ -53,9 +53,7 @@
   </q-card>
 
 </template>
-      <!-- ══════════════════════════════════════ -->
       <!-- โหมด edit (ยังไม่ได้ส่ง)              -->
-      <!-- ══════════════════════════════════════ -->
       <template v-else>
 
         <div class="step-header row items-center justify-between q-mb-sm">
@@ -153,6 +151,7 @@ const {
   defect,
   afterImageUrl,
   afterImageFile,
+  setAfterImage,
   note,
   submitRepair,
   isSubmitting,
@@ -173,7 +172,7 @@ const isPassed   = computed(() => defect.value.status === 'verified')
 const onFileChange = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
-  afterImageFile.value = file
+  setAfterImage(file)
   const reader = new FileReader()
   reader.onload = () => { afterImageUrl.value = reader.result as string }
   reader.readAsDataURL(file)

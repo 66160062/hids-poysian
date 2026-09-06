@@ -30,7 +30,14 @@ export interface InspectionRound {
   roundNumber: string;
   inspectedAt?: string | null;
   summaryCompletedAt?: string | null;
+  completionPercent?: number | null;
+  completionDefectScore?: number | null;
+  completionSystemScore?: number | null;
+  aiSummaryText?: string | null;
+  aiSummaryProvider?: string | null;
+  lastPdfGeneratedAt?: string | null;
   teamMember?: { inspector?: { team?: { teamName: string; contactInfo: string } } };
+  createdBy?: { fullName: string; phoneNumber: string } | null;
   job: {
     projectName: string;
     projectImageUrl: string;
