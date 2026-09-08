@@ -20,16 +20,28 @@
 
     <!-- Main Content -->
     <div class="q-pa-md q-mt-sm">
+      <q-select
+        v-model="selectedBranchId"
+        :options="branchOptions"
+        emit-value
+        map-options
+        dense
+        outlined
+        bg-color="white"
+        label="สาขา"
+        class="q-mb-md"
+        hide-bottom-space
+      />
       <div v-if="teamStore.isLoading" class="text-center q-py-xl">
         <q-spinner color="primary" size="3em" />
         <div class="text-grey-6 q-mt-md">กำลังโหลดข้อมูล...</div>
       </div>
-      <div v-else-if="teamStore.teams.length === 0" class="text-center q-py-xl text-grey-6">
+      <div v-else-if="filteredTeams.length === 0" class="text-center q-py-xl text-grey-6">
         <q-icon name="groups" size="64px" class="q-mb-md" />
         <div>ไม่พบข้อมูลทีม</div>
       </div>
       <div v-else class="row q-col-gutter-md">
-        <div v-for="team in teamStore.teams" :key="team.team_Id" class="col-12 col-sm-6 col-md-4">
+        <div v-for="team in filteredTeams" :key="team.team_Id" class="col-12 col-sm-6 col-md-4">
           <AdminTeamCard
             :team="team"
             :memberCount="getTeamMembers(team.team_Id).length"
@@ -194,12 +206,14 @@ import { ref, onMounted, computed } from 'vue';
 import { useQuasar } from 'quasar';
 import { useTeamStore } from 'src/stores/useTeam';
 import { useUserStore } from 'src/stores/useUser';
+import { useBranchStore } from 'src/stores/useBranch';
 import AdminTeamCard from 'src/components/AdminTeamCard.vue';
 import type { Team } from 'src/models';
 
 const $q = useQuasar();
 const teamStore = useTeamStore();
 const userStore = useUserStore();
+const branchStore = useBranchStore();
 
 const isFormMode = ref(false);
 const isEditing = ref(false);
@@ -225,6 +239,23 @@ const localForm = ref<{
   contact_info: '',
 });
 const logoFile = ref<File | null>(null);
+const selectedBranchId = ref<number | null>(null);
+const branchOptions = computed(() => [
+  { label: 'รวมทุกสาขา', value: null },
+  ...branchStore.branches.map((branch) => ({
+    label: branch.branchName || `สาขา #${branch.branchId}`,
+    value: branch.branchId,
+  })),
+]);
+const filteredTeams = computed(() =>
+  selectedBranchId.value === null
+    ? teamStore.teams
+    : teamStore.teams.filter((team) =>
+        branchStore.branches.some(
+          (branch) => branch.branchId === selectedBranchId.value && branch.teamId === team.team_Id,
+        ),
+      ),
+);
 
 onMounted(() => {
   void teamStore.fetchTeams().catch(() => {
@@ -232,6 +263,9 @@ onMounted(() => {
   });
   void userStore.fetchUsers().catch(() => {
     // silently fail fetching users if error, main focus is teams
+  });
+  void branchStore.fetchBranches().catch(() => {
+    $q.notify({ type: 'negative', message: 'ดึงข้อมูลสาขาล้มเหลว', position: 'top' });
   });
 });
 
