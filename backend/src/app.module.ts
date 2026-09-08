@@ -63,6 +63,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/entities/notification.entity';
 import { Branch } from './branches/entities/branch.entity';
 import { BranchesModule } from './branches/branches.module';
+import { MailModule } from './mail/mail.module';
+import { PdfModule } from './pdf/pdf.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -148,6 +150,8 @@ import { BranchesModule } from './branches/branches.module';
     RatingsModule,
     NotificationsModule,
     BranchesModule,
+    MailModule,
+    PdfModule,
   ],
   controllers: [AppController],
   providers: [AppService],
