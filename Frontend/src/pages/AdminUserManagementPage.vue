@@ -87,9 +87,12 @@ import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import AdminUserCard from 'src/components/AdminUserCard.vue';
 import AdminUserFormDialog from 'src/components/AdminUserFormDialog.vue';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { useTeamStore } from 'src/stores/useTeam';
 import { useUserStore } from 'src/stores/useUser';
 import type { User } from 'src/models';
+
+const userSpinner = createIconSpinner('group');
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -152,7 +155,12 @@ const defaultForm = (): Partial<User> & { teamId?: number } => ({
    ========================================= */
 
 onMounted(async () => {
-  $q.loading.show();
+  $q.loading.show({
+    spinner: userSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     await Promise.all([
       userStore.fetchUsers().catch((err) => {

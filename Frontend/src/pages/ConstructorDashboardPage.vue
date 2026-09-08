@@ -74,6 +74,9 @@ import { useAuthStore } from 'src/stores/useAuth';
 import type { InspectionRound } from 'src/models';
 import PropertyCard from 'src/components/PropertyCard.vue';
 import InspectorCalendar from 'src/components/InspectorCalendar.vue';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+
+const consDashboardSpinner = createIconSpinner('assignment_turned_in');
 
 // ── Plugins & State ───────────────────────────────────────────
 const $q = useQuasar();
@@ -189,7 +192,12 @@ function getBangkokHour(dateStr: string): number {
 
 // ── Lifecycle ─────────────────────────────────────────────────
 onMounted(async () => {
-  $q.loading.show();
+  $q.loading.show({
+    spinner: consDashboardSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     await fetchRounds();
   } finally {

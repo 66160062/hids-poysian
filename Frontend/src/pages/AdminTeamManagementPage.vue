@@ -287,9 +287,12 @@ import { useQuasar } from 'quasar';
 import { useTeamStore } from 'src/stores/useTeam';
 import { useUserStore } from 'src/stores/useUser';
 import AdminTeamCard from 'src/components/AdminTeamCard.vue';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { Cropper } from 'vue-advanced-cropper';
 import 'vue-advanced-cropper/dist/style.css';
 import type { Team, User } from 'src/models';
+
+const teamSpinner = createIconSpinner('groups');
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -352,7 +355,12 @@ const cropSourceUrl = ref('');
 const cropperRef = ref<InstanceType<typeof Cropper> | null>(null);
 
 onMounted(async () => {
-  $q.loading.show();
+  $q.loading.show({
+    spinner: teamSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     await Promise.all([
       teamStore.fetchTeams().catch(() => {

@@ -538,6 +538,9 @@ import { useI18n } from 'vue-i18n';
 import imageCompression from 'browser-image-compression';
 import { useConstructionDailyReportStore } from 'src/stores/useConstructionDailyReport';
 import type { ConstructionDailyReportPayload, MachinePayload, PersonnelPayload } from 'src/stores/useConstructionDailyReport';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+
+const consInspectSpinner = createIconSpinner('construction');
 
 const $q = useQuasar();
 const router = useRouter();
@@ -564,7 +567,12 @@ const roundId = Number(route.params.roundId);
 
 onMounted(async () => {
   if (!roundId) return;
-  $q.loading.show();
+  $q.loading.show({
+    spinner: consInspectSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     await loadExistingReport();
   } finally {

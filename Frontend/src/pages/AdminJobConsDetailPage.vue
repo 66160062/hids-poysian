@@ -708,6 +708,9 @@ import type { ExtendedConstructionReport } from 'src/stores/useConstructionDaily
 import ConstructionReportPdf from 'src/components/ConstructionReportPdf.vue';
 import type { Defect } from 'src/models';
 import InspectionItemCard from '../components/InspectionItemCard.vue';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+
+const pdfSpinner = createIconSpinner('picture_as_pdf');
 
 const { t, locale } = useI18n();
 const constructionPdfRef = ref<InstanceType<typeof ConstructionReportPdf> | null>(null);
@@ -1269,7 +1272,12 @@ async function handleViewReport(round: RoundView) {
     return;
   }
   isLoadingReport.value = true;
-  $q.loading.show();
+  $q.loading.show({
+    spinner: pdfSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     const reportData = await reportStore.fetchReportByRound(round.id);
     if (reportData) {

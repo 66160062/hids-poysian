@@ -359,6 +359,9 @@ import DefectReport from 'src/components/DefectReport.vue';
 import { useLinkAccess } from 'src/stores/useLinkAccess';
 import { api } from 'src/boot/axios';
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+
+const overviewSpinner = createIconSpinner('home');
 
 const { isCustomerViewOnly, hasLinkAccess, projectId, linkToken } = useLinkAccess();
 const linkParams = computed(() =>
@@ -659,7 +662,12 @@ onMounted(async () => {
   const jobId = getJobId();
   if (!jobId) return;
 
-  $q.loading.show();
+  $q.loading.show({
+    spinner: overviewSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     await loadOverview(jobId);
   } finally {

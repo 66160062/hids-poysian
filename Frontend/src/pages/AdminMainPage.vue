@@ -211,6 +211,9 @@ import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
 import type { AxiosResponse } from 'axios';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+
+const homeSpinner = createIconSpinner('home');
 const router = useRouter();
 const $q = useQuasar();
 const { t } = useI18n();
@@ -379,7 +382,12 @@ interface DashboardApiResponse extends DashboardStats {
 }
 
 async function fetchAdminDashboard(): Promise<void> {
-  $q.loading.show();
+  $q.loading.show({
+    spinner: homeSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   error.value = '';
 
   try {

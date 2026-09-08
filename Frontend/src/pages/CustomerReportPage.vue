@@ -104,8 +104,10 @@ import { useI18n } from 'vue-i18n'
 import { useReport } from 'src/stores/useCustomerReport'
 import { useLinkAccess } from 'src/stores/useLinkAccess'
 import { useQuasar } from 'quasar'
+import { createIconSpinner } from 'src/composables/useIconSpinner'
 
 const $q = useQuasar()
+const reportSpinner = createIconSpinner('bar_chart')
 
 const route = useRoute()
 const { t } = useI18n()
@@ -122,7 +124,12 @@ function getJobId(): number | null {
 onMounted(async () => {
   const jobId = getJobId()
   if (!jobId) return
-  $q.loading.show()
+  $q.loading.show({
+    spinner: reportSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  })
   try {
     await fetchReport(jobId, linkToken.value)
   } finally {

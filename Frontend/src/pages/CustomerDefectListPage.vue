@@ -156,8 +156,10 @@ import { useDefectList } from 'src/stores/useDefectlist'
 import { useLinkAccess } from 'src/stores/useLinkAccess'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
+import { createIconSpinner } from 'src/composables/useIconSpinner'
 
 const $q = useQuasar()
+const defectSpinner = createIconSpinner('assignment')
 
 const { t } = useI18n()
 const showFilter = ref(false)
@@ -193,7 +195,12 @@ function getJobId(): number | null {
 onMounted(async () => {
   const jobId = getJobId()
   if (!jobId) return
-  $q.loading.show()
+  $q.loading.show({
+    spinner: defectSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  })
   try {
     await fetchDefects(jobId, linkToken.value)
   } finally {

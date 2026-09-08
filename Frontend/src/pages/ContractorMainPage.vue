@@ -149,8 +149,10 @@ import { useI18n } from 'vue-i18n'
 import { useContractorRepair } from 'src/stores/useContractormain'
 import { useLinkAccess } from 'src/stores/useLinkAccess'
 import { useQuasar } from 'quasar'
+import { createIconSpinner } from 'src/composables/useIconSpinner'
 
 const $q = useQuasar()
+const repairSpinner = createIconSpinner('construction')
 
 const route = useRoute()
 const { t } = useI18n()
@@ -172,7 +174,12 @@ async function loadData() {
 }
 
 onMounted(async () => {
-  $q.loading.show()
+  $q.loading.show({
+    spinner: repairSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  })
   try {
     await loadData()
   } finally {

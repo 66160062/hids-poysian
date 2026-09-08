@@ -204,8 +204,10 @@ import {
 import { useLinkAccess } from 'src/stores/useLinkAccess';
 import FilterChipGroup from 'src/components/FilterChipGroup.vue';
 import { useQuasar } from 'quasar';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
 
 const $q = useQuasar();
+const repairListSpinner = createIconSpinner('build');
 
 const route = useRoute();
 const router = useRouter();
@@ -249,7 +251,12 @@ async function loadData() {
 // โหลดข้อมูลเองถ้ายังไม่มีใน store (เช่น เปิดลิงก์ตรงมาที่หน้านี้ ไม่ได้ผ่านหน้า repair-overview มาก่อน)
 onMounted(async () => {
   if (allDefectItems.value.length > 0) return;
-  $q.loading.show();
+  $q.loading.show({
+    spinner: repairListSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     await loadData();
   } finally {

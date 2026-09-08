@@ -9,9 +9,8 @@
         boxSizing: 'border-box',
       }"
     >
-      <div v-if="loading" class="flex flex-center col q-pa-xl">
-        <q-spinner color="primary" size="40px" />
-      </div>
+      <!-- Loading State: แสดงผ่าน $q.loading แบบเต็มจอ (ดู onMounted) เว้นพื้นที่ไว้กันเลย์เอาต์กระโดด -->
+      <div v-if="loading" style="min-height: 60vh"></div>
 
       <div v-else-if="jobData" class="q-px-lg q-pb-md col column">
         <q-img loading="eager"
@@ -289,6 +288,10 @@ import { useRoute, useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
 import DefectReport from 'src/components/DefectReport.vue';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+
+const jobDetailSpinner = createIconSpinner('home');
+const pdfSpinner = createIconSpinner('picture_as_pdf');
 
 const apiUrl = import.meta.env.VITE_API_URL;
 const $q = useQuasar();
@@ -412,7 +415,12 @@ async function handleViewReport() {
   }
 
   isGeneratingPdf.value = true;
-  $q.loading.show();
+  $q.loading.show({
+    spinner: pdfSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     const [defectsRes, summaryRes] = await Promise.all([
       api.get(`/defects/round/${roundId}`),
@@ -473,7 +481,15 @@ const onSubmit = () => {
 };
 
 onMounted(() => {
-  void fetchJobDetails();
+  $q.loading.show({
+    spinner: jobDetailSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
+  void fetchJobDetails().finally(() => {
+    $q.loading.hide();
+  });
 });
 </script>
 

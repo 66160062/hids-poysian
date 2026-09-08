@@ -661,6 +661,7 @@ import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
 import { useUserStore } from '../stores/useUser';
 import { useTeamStore } from '../stores/useTeam';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
 import type { Defect, InspectionSummaryItem, InspectionRound } from 'src/models';
 import DefectReport from '../components/DefectReport.vue';
 
@@ -760,6 +761,9 @@ const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
 const userStore = useUserStore();
+// ไอคอนเดียวกับปุ่ม "ตรวจบ้าน" ในหน้ารายการงานของ admin ให้สไตล์ตอนโหลดตรงกัน
+const homeInspectionSpinner = createIconSpinner('home');
+const pdfSpinner = createIconSpinner('picture_as_pdf');
 
 const jobId = computed(() => Number(route.params.id));
 
@@ -1035,7 +1039,12 @@ async function scrollToNotifiedRound() {
 }
 
 onMounted(() => {
-  $q.loading.show();
+  $q.loading.show({
+    spinner: homeInspectionSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   void loadPageData().finally(() => {
     $q.loading.hide();
     void scrollToNotifiedRound();
@@ -1137,7 +1146,12 @@ async function handleViewReport(round: RoundView) {
     return;
   }
   isGeneratingPdf.value = true;
-  $q.loading.show();
+  $q.loading.show({
+    spinner: pdfSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     const [roundRes, defectsRes, summaryRes] = await Promise.all([
       api.get(`/inspection-rounds/${round.id}`),

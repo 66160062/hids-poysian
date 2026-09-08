@@ -130,6 +130,9 @@ import { useInspectionStore } from 'src/stores/useInspection';
 import { useRoundLock } from 'src/composables/useRoundLock';
 import { useInspectionRoutes } from 'src/composables/useInspectionRoutes';
 import { api } from 'src/boot/axios'; // ปลดคอมเมนต์
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+
+const inspectionSpinner = createIconSpinner('checklist');
 
 // ── Route & Plugins ───────────────────────────────────────────
 
@@ -159,7 +162,12 @@ const GROUP_BY_OPTIONS = computed(() => [
 // ── Lifecycle ─────────────────────────────────────────────────
 
 onMounted(async () => {
-  $q.loading.show();
+  $q.loading.show({
+    spinner: inspectionSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     await Promise.all([store.fetchDefects(roundId), fetchLockState()]);
   } finally {

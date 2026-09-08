@@ -236,8 +236,10 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
 import { useQuasar } from 'quasar';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
 
 const $q = useQuasar();
+const adminNotifSpinner = createIconSpinner('notifications');
 
 const { t } = useI18n();
 const router = useRouter();
@@ -283,7 +285,12 @@ const fetchNotifications = async () => {
 };
 
 onMounted(async () => {
-  $q.loading.show();
+  $q.loading.show({
+    spinner: adminNotifSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     await fetchNotifications();
   } finally {

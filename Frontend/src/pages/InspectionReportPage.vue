@@ -106,6 +106,7 @@ import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { api } from 'src/boot/axios';
 import { useRoundLock } from 'src/composables/useRoundLock';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
 import type { InspectionSummaryItem, SummaryTemplate, SummaryTemplateOption } from 'src/models';
 
 const { t } = useI18n();
@@ -114,6 +115,7 @@ const router = useRouter();
 const $q = useQuasar();
 const isMobile = computed(() => $q.screen.lt.md);
 const roundId = route.params.roundId as string;
+const summaryReportSpinner = createIconSpinner('summarize');
 const { isLocked, fetchLockState } = useRoundLock(roundId);
 
 const templates = ref<SummaryTemplate[]>([]);
@@ -282,7 +284,12 @@ function saveAll() {
 }
 
 onMounted(async () => {
-  $q.loading.show();
+  $q.loading.show({
+    spinner: summaryReportSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     await Promise.all([fetchTemplates(), fetchSummaryItems(), fetchLockState()]);
   } finally {

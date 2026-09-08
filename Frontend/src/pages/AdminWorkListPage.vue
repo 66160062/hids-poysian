@@ -2,12 +2,9 @@
   <q-page class="admin-work-page bg-grey-1">
     <div class="q-px-md q-pt-lg relative-position">
       <!-- Loading Indicator -->
-      <q-inner-loading
-        :showing="loading"
-        label="กำลังโหลดข้อมูล..."
-        color="primary"
-        style="z-index: 100"
-      />
+      <q-inner-loading :showing="loading" style="z-index: 100">
+        <IconBounceSpinner icon="business_center" size="64px" color="primary" />
+      </q-inner-loading>
 
       <!-- Error Banner -->
       <q-banner v-if="error" class="text-white bg-negative q-mb-md" rounded dense>
@@ -347,6 +344,12 @@ import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { useWorkListStore } from '../stores/useWorkList';
 import { useHouseTypeStore } from '../stores/useHouseType';
+import IconBounceSpinner from 'src/components/IconBounceSpinner.vue';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+
+const workSpinner = createIconSpinner('business_center');
+const homeInspectionSpinner = createIconSpinner('home');
+const constructionSpinner = createIconSpinner('construction');
 
 const router = useRouter();
 const $q = useQuasar();
@@ -535,9 +538,25 @@ watch(searchTerm, () => {
   }, 500);
 });
 
-watch([activeFilter, selectedType, selectedJobType, sortOrder], () => {
+watch([activeFilter, selectedType, sortOrder], () => {
   currentPage.value = 1;
   void fetchWorkList();
+});
+
+// สลับแท็บ ตรวจบ้าน/ตรวจก่อสร้าง — โชว์ spinner เต็มจอตามไอคอนของแท็บที่กด ไม่มีข้อความ
+watch(selectedJobType, async (jobType) => {
+  currentPage.value = 1;
+  $q.loading.show({
+    spinner: jobType === 'ตรวจบ้าน' ? homeInspectionSpinner : constructionSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
+  try {
+    await loadWorkListData();
+  } finally {
+    $q.loading.hide();
+  }
 });
 
 async function viewDetail(task: TaskItem): Promise<void> {
@@ -635,7 +654,12 @@ async function fetchWorkList(): Promise<void> {
 }
 
 onMounted(async (): Promise<void> => {
-  $q.loading.show();
+  $q.loading.show({
+    spinner: workSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     await Promise.all([workStore.fetchAbsoluteJobCounts(), loadWorkListData()]);
   } finally {

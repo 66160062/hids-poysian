@@ -348,6 +348,9 @@ import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import imageCompression from 'browser-image-compression';
 import ImageAnnotationDialog from 'src/components/ImageAnnotationDialog.vue';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+
+const addDefectSpinner = createIconSpinner('note_add');
 
 const route = useRoute();
 const router = useRouter();
@@ -833,7 +836,12 @@ const setSeverity = (val: boolean) => {
 };
 
 onMounted(async () => {
-  $q.loading.show();
+  $q.loading.show({
+    spinner: addDefectSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     await loadAddDefectData();
   } finally {

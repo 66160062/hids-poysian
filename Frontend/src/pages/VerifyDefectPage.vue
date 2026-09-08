@@ -92,6 +92,9 @@ import { useRoundLock } from 'src/composables/useRoundLock';
 import { api } from 'src/boot/axios';
 import { useQuasar } from 'quasar';
 import type { Defect } from 'src/models';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+
+const verifySpinner = createIconSpinner('verified');
 
 const { t } = useI18n();
 const route = useRoute();
@@ -180,7 +183,12 @@ const handlePass = async () => {
 };
 
 onMounted(async () => {
-  $q.loading.show();
+  $q.loading.show({
+    spinner: verifySpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     await loadDefect();
   } finally {
