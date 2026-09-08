@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,8 +11,14 @@ import { Defect, DefectStatus } from 'src/defects/entities/defect.entity';
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { NotificationType } from 'src/notifications/entities/notification.entity';
+import { MailService } from 'src/mail/mail.service';
+import { PdfService } from 'src/pdf/pdf.service';
+import { AuthService } from 'src/auth/auth.service';
+
 @Injectable()
 export class InspectionRoundsService {
+  private readonly logger = new Logger(InspectionRoundsService.name);
+
   constructor(
     @InjectRepository(InspectionRound)
     private readonly inspectionRoundsRepo: Repository<InspectionRound>,
@@ -26,6 +32,9 @@ export class InspectionRoundsService {
     private readonly defectsRepo: Repository<Defect>,
     private readonly dataSource: DataSource,
     private readonly notificationsService: NotificationsService,
+    private readonly mailService: MailService,
+    private readonly pdfService: PdfService,
+    private readonly authService: AuthService,
   ) {}
 
   async create(
@@ -423,7 +432,7 @@ export class InspectionRoundsService {
   ): Promise<{ data: InspectionRound; notification: any }> {
     const round = await this.inspectionRoundsRepo.findOneOrFail({
       where: { roundId: id },
-      relations: ['job', 'teamMembers', 'teamMembers.inspector'],
+      relations: ['job', 'job.customer', 'teamMembers', 'teamMembers.inspector'],
     });
 
     if (round.status !== 'SUBMITTED') {
@@ -451,6 +460,10 @@ export class InspectionRoundsService {
       await queryRunner.commitTransaction();
 
       const notification = this.buildApprovalNotification(approvedRound);
+
+      // ===== ส่ง Email แจ้งลูกค้าอัตโนมัติ (fire-and-forget) =====
+      void this.sendApprovalEmailToCustomer(approvedRound);
+
       return {
         data: approvedRound,
         notification,
@@ -460,6 +473,52 @@ export class InspectionRoundsService {
       throw error;
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  /**
+   * ส่ง Email แจ้งผลอนุมัติให้ลูกค้า — สร้าง Token Link + PDF แล้วส่ง
+   * เป็น fire-and-forget: ถ้า fail จะแค่ log error ไม่กระทบ flow หลัก
+   */
+  private async sendApprovalEmailToCustomer(
+    round: InspectionRound,
+  ): Promise<void> {
+    try {
+      const customerEmail = round.job?.customer?.email;
+      const customerName = round.job?.customer?.fullName;
+      const projectName = round.job?.projectName;
+      const jobId = round.job?.jobId;
+
+      if (!customerEmail || !jobId) {
+        this.logger.warn(
+          `ข้ามการส่ง email: ไม่พบอีเมลลูกค้าหรือ jobId สำหรับ round ${round.roundId}`,
+        );
+        return;
+      }
+
+      // 1. สร้าง Customer Token Link
+      const tokenResult = await this.authService.generateLinkToken(
+        jobId,
+        'customer',
+      );
+
+      // 2. สร้าง PDF รายงาน
+      const pdfBuffer = await this.pdfService.generateReport(round.roundId);
+
+      // 3. ส่ง Email
+      await this.mailService.sendApprovalEmail({
+        customerName: customerName ?? 'ลูกค้า',
+        customerEmail,
+        projectName: projectName ?? 'โครงการ',
+        roundNumber: round.roundNumber,
+        tokenUrl: tokenResult.url,
+        pdfBuffer,
+      });
+    } catch (error) {
+      this.logger.error(
+        `❌ ส่ง email แจ้งลูกค้าไม่สำเร็จ (round ${round.roundId}): ${(error as Error).message}`,
+        (error as Error).stack,
+      );
     }
   }
 

@@ -4,12 +4,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { Assignment } from './entities/assignment.entity';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { User } from 'src/users/entities/user.entity';
 import { JOB_STATUSES_BLOCKING_UNASSIGN } from './assignments.constants';
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { NotificationType } from 'src/notifications/entities/notification.entity';
+import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 
 export type InspectorChip = {
   assignmentId: number;
@@ -65,7 +68,7 @@ export class AssignmentsService {
       where: {
         job: { jobId: dto.jobId },
         inspector: { id: dto.inspectorId },
-        round: { roundId: dto.roundId ?? null },
+        round: dto.roundId ? { roundId: dto.roundId } : IsNull(),
       },
     });
     if (duplicate) {
