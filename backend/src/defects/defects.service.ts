@@ -80,9 +80,7 @@ export class DefectsService {
 
   // เช็คซ้ำแบบเดียวกับฝั่ง frontend (isDuplicateDefect ใน AddDefectPage.vue) แต่ query จาก DB สด
   // กันเคส 2 inspector คนละ session บันทึกจุดเดียวกันพร้อมกัน ซึ่ง local store ฝั่ง frontend มองไม่เห็นกัน
-  private async hasDuplicateDefect(
-    dto: CreateDefectDto,
-  ): Promise<boolean> {
+  private async hasDuplicateDefect(dto: CreateDefectDto): Promise<boolean> {
     const candidates = await this.defectsRepo.find({
       where: {
         round: { roundId: dto.roundId },
@@ -154,6 +152,10 @@ export class DefectsService {
       subCategories,
       inspector,
       imageFileSize: createDefectDto.imageFileSize,
+      plan: createDefectDto.planId ? { planId: createDefectDto.planId } : null,
+      planX: createDefectDto.planX ?? null,
+      planY: createDefectDto.planY ?? null,
+      locationZone: createDefectDto.locationZone ?? null,
     });
 
     const saved = await this.defectsRepo.save(defect);
@@ -177,6 +179,7 @@ export class DefectsService {
         'floor',
         'subCategories',
         'inspector',
+        'plan',
       ],
     });
   }
@@ -192,6 +195,7 @@ export class DefectsService {
         'subCategories',
         'subCategories.category',
         'inspector',
+        'plan',
       ],
     });
   }
@@ -233,6 +237,21 @@ export class DefectsService {
       defect.subRoom = updateDefectDto.subRoomId
         ? ({ subRoomId: updateDefectDto.subRoomId } as any)
         : null;
+    }
+
+    if (updateDefectDto.planId !== undefined) {
+      defect.plan = updateDefectDto.planId
+        ? ({ planId: updateDefectDto.planId } as any)
+        : null;
+    }
+    if (updateDefectDto.planX !== undefined) {
+      defect.planX = updateDefectDto.planX;
+    }
+    if (updateDefectDto.planY !== undefined) {
+      defect.planY = updateDefectDto.planY;
+    }
+    if (updateDefectDto.locationZone !== undefined) {
+      defect.locationZone = updateDefectDto.locationZone;
     }
 
     if (updateDefectDto.subCategoryIds) {
@@ -389,6 +408,7 @@ export class DefectsService {
         'room',
         'subRoom',
         'floor',
+        'plan',
       ],
     });
   }
