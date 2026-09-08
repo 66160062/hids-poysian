@@ -12,6 +12,8 @@ import { InspectionTeamMembersModule } from 'src/inspection-team-members/inspect
 import { UsersModule } from 'src/users/users.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { NotificationsModule } from 'src/notifications/notifications.module';
+import { MailModule } from 'src/mail/mail.module';
+import { PdfModule } from 'src/pdf/pdf.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { NotificationsModule } from 'src/notifications/notifications.module';
     UsersModule,
     AuthModule,
     NotificationsModule,
+    MailModule,
+    PdfModule,
   ],
   controllers: [InspectionRoundsController, ProjectApprovalController],
   providers: [InspectionRoundsService],

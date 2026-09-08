@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { User } from 'src/users/entities/user.entity';
+import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 
 @Entity('assignment')
 export class Assignment {
