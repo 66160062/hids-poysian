@@ -2,7 +2,13 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { api } from 'src/boot/axios';
 
-export interface Branch { branchId: number; branchName: string; logoUrl: string | null; status: string; }
+export interface Branch {
+  branchId: number;
+  branchName: string | null;
+  logoUrl: string | null;
+  status: string;
+  teamId?: number | null;
+}
 
 export const useBranchStore = defineStore('branch', () => {
   const branches = ref<Branch[]>([]);
