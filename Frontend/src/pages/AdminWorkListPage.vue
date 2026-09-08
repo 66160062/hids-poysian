@@ -141,6 +141,19 @@
             </template>
           </q-select>
 
+          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">สาขา</div>
+          <q-select
+            v-model="selectedBranchId"
+            :options="branchOptions"
+            emit-value
+            map-options
+            dense
+            outlined
+            rounded
+            class="q-mb-md filter-select"
+            behavior="dialog"
+          />
+
           <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">
             ประเภทบ้าน
           </div>
@@ -205,6 +218,17 @@
           class="text-weight-medium"
         >
           {{ selectedType }}
+        </q-chip>
+        <q-chip
+          v-if="selectedBranchId !== null"
+          removable
+          @remove="selectedBranchId = null"
+          color="blue-1"
+          text-color="primary"
+          dense
+          class="text-weight-medium"
+        >
+          {{ branchOptions.find((branch) => branch.value === selectedBranchId)?.label }}
         </q-chip>
       </div>
 
@@ -342,16 +366,17 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useWorkListStore } from '../stores/useWorkList';
 import { useHouseTypeStore } from '../stores/useHouseType';
+import { useBranchStore } from 'src/stores/useBranch';
 
 const router = useRouter();
-const route = useRoute();
 const $q = useQuasar();
 const workStore = useWorkListStore();
 const houseTypeStore = useHouseTypeStore();
+const branchStore = useBranchStore();
 
 const loading = ref<boolean>(false);
 const error = ref<string>('');
@@ -371,6 +396,13 @@ const sortOptions = [
   { label: 'ล่าสุด - เก่า', value: 'desc' },
   { label: 'เก่า - ล่าสุด', value: 'asc' },
 ];
+const branchOptions = computed(() => [
+  { label: 'รวมทุกสาขา', value: null },
+  ...branchStore.branches.map((branch) => ({
+    label: branch.branchName || `สาขา #${branch.branchId}`,
+    value: branch.branchId,
+  })),
+]);
 
 const showFilterDialog = ref(false);
 
@@ -378,6 +410,7 @@ const activeFilterCount = computed(() => {
   let count = 0;
   if (selectedType.value !== 'ทั้งหมด') count++;
   if (activeFilter.value !== 'all') count++;
+  if (selectedBranchId.value !== null) count++;
   return count;
 });
 
@@ -385,21 +418,14 @@ function clearFilters() {
   selectedType.value = 'ทั้งหมด';
   activeFilter.value = 'all';
   sortOrder.value = 'desc';
+  selectedBranchId.value = null;
 }
 
 const defectJobCount = computed(() => workStore.absoluteJobCounts.defect);
 const constructJobCount = computed(() => workStore.absoluteJobCounts.construction);
 
 const currentPage = ref(1);
-const selectedBranchId = computed(() => {
-  const routeBranchId = Number(route.query.branchId);
-  if (Number.isInteger(routeBranchId) && routeBranchId > 0) {
-    return routeBranchId;
-  }
-
-  const storedBranchId = Number(sessionStorage.getItem('adminSelectedBranchId'));
-  return Number.isInteger(storedBranchId) && storedBranchId > 0 ? storedBranchId : undefined;
-});
+const selectedBranchId = ref<number | null>(null);
 
 // ==========================================
 // 🎯 Interface สำหรับข้อมูล TaskItem
@@ -557,10 +583,7 @@ function addNewWork(type: 'defect' | 'construction') {
   isFabClicked.value = false;
   void router.push({
     path: '/admin/work/create',
-    query: {
-      type,
-      ...getBranchParams(),
-    },
+    query: { type },
   });
 }
 
@@ -628,6 +651,9 @@ async function fetchWorkList(): Promise<void> {
 }
 
 onMounted((): void => {
+  void branchStore.fetchBranches().catch(() => {
+    $q.notify({ type: 'negative', message: 'ดึงข้อมูลสาขาล้มเหลว' });
+  });
   void workStore.fetchAbsoluteJobCounts(getBranchParams());
   void fetchWorkList();
 });

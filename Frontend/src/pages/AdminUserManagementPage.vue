@@ -26,6 +26,18 @@
 
     <!-- Filter Group -->
     <div class="q-px-md q-py-sm sticky-filter bg-grey-1">
+      <q-select
+        v-model="selectedBranchId"
+        :options="branchOptions"
+        emit-value
+        map-options
+        dense
+        outlined
+        bg-color="white"
+        label="สาขา"
+        class="q-mb-sm branch-select"
+        hide-bottom-space
+      />
       <div class="row q-gutter-x-sm no-wrap overflow-auto hide-scrollbar q-py-xs">
         <q-btn
           v-for="filter in roleFilters"
@@ -94,11 +106,13 @@ import AdminUserCard from 'src/components/AdminUserCard.vue';
 import AdminUserFormDialog from 'src/components/AdminUserFormDialog.vue';
 import { useTeamStore } from 'src/stores/useTeam';
 import { useUserStore } from 'src/stores/useUser';
+import { useBranchStore } from 'src/stores/useBranch';
 import type { User } from 'src/models';
 
 const $q = useQuasar();
 const teamStore = useTeamStore();
 const userStore = useUserStore();
+const branchStore = useBranchStore();
 
 // Global Options
 const roleFilters = [
@@ -119,13 +133,28 @@ const isLoading = computed(() => userStore.isLoading);
 const usersList = computed(() => userStore.users);
 const searchQuery = ref('');
 const activeRoleFilter = ref('all');
+const selectedBranchId = ref<number | null>(null);
+const branchOptions = computed(() => [
+  { label: 'รวมทุกสาขา', value: null },
+  ...branchStore.branches.map((branch) => ({
+    label: branch.branchName || `สาขา #${branch.branchId}`,
+    value: branch.branchId,
+  })),
+]);
 
 // Computed filters
 const filteredUsers = computed(() => {
   return usersList.value.filter((user) => {
     const matchName = user.fullName.toLowerCase().includes(searchQuery.value.toLowerCase());
     const matchRole = activeRoleFilter.value === 'all' || user.role === activeRoleFilter.value;
-    return matchName && matchRole;
+    const matchBranch =
+      selectedBranchId.value === null ||
+      branchStore.branches.some(
+        (branch) =>
+          branch.branchId === selectedBranchId.value &&
+          branch.teamId === (user.teamId ?? user.team?.team_Id),
+      );
+    return matchName && matchRole && matchBranch;
   });
 });
 
@@ -158,6 +187,9 @@ onMounted(() => {
     $q.notify({ type: 'negative', message: `ดึงข้อมูลล้มเหลว: ${msg}` });
   });
   void teamStore.fetchTeams();
+  void branchStore.fetchBranches().catch(() => {
+    $q.notify({ type: 'negative', message: 'ดึงข้อมูลสาขาล้มเหลว' });
+  });
 });
 
 const openCreateDialog = () => {
@@ -256,5 +288,8 @@ const confirmDeleteUser = (user: User) => {
   min-width: fit-content;
   border-radius: 20px;
   border: 1px solid #e0e0e0;
+}
+.branch-select :deep(.q-field__control) {
+  border-radius: 12px;
 }
 </style>
