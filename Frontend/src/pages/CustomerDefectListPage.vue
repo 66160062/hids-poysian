@@ -90,6 +90,21 @@
               <div class="row q-gutter-xs q-mt-xs">
                 <q-chip v-for="tag in item.tags" :key="tag" dense outline color="blue-grey-4" text-color="blue-grey-8" size="sm">{{ tag }}</q-chip>
               </div>
+              <!-- Plan Position Button -->
+              <div v-if="item.planId" class="q-mt-sm">
+                <q-btn
+                  flat
+                  dense
+                  no-caps
+                  size="sm"
+                  color="primary"
+                  icon="place"
+                  :label="t('components.planPosition.viewButton')"
+                  class="bg-blue-1 text-primary q-px-sm"
+                  style="border-radius: 6px; font-weight: 500;"
+                  @click.stop="openPlanPosition(item)"
+                />
+              </div>
             </q-item-section>
           </q-item>
         </q-list>
@@ -134,6 +149,17 @@
       </q-card>
     </q-dialog>
 
+    <!-- ===== Dialog ดูตำแหน่งในแปลน (Read-only) ===== -->
+    <PlanPositionDialog
+      v-model="showPlanDialog"
+      :job-id="activeDefect?.jobId ?? getJobId()"
+      :initial-plan-id="activeDefect?.planId ?? null"
+      :initial-x="activeDefect?.planX ?? null"
+      :initial-y="activeDefect?.planY ?? null"
+      :initial-zone="activeDefect?.locationZone ?? null"
+      readonly
+    />
+
     <!-- ===== Bottom Tab Bar ===== -->
     <q-footer class="bg-white">
       <q-tabs :model-value="activeTab"
@@ -152,13 +178,21 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import FilterChipGroup from 'src/components/FilterChipGroup.vue'
-import { useDefectList } from 'src/stores/useDefectlist'
+import PlanPositionDialog from 'src/components/PlanPositionDialog.vue'
+import { useDefectList, type DefectItem } from 'src/stores/useDefectlist'
 import { useLinkAccess } from 'src/stores/useLinkAccess'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { createIconSpinner } from 'src/composables/useIconSpinner'
 
 const $q = useQuasar()
+const showPlanDialog = ref(false)
+const activeDefect = ref<DefectItem | null>(null)
+
+function openPlanPosition(defect: DefectItem) {
+  activeDefect.value = defect
+  showPlanDialog.value = true
+}
 const defectSpinner = createIconSpinner('assignment')
 
 const { t } = useI18n()

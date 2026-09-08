@@ -83,6 +83,33 @@
         <q-btn round outline color="primary" icon="location_on" size="md" @click="openGoogleMaps" />
       </div>
 
+      <!-- House Plan -->
+      <div class="row items-center justify-between no-wrap q-mb-sm">
+        <div
+          v-if="job.housePlanImage"
+          class="plan-thumb relative-position cursor-pointer"
+          @click="viewPlan"
+        >
+          <q-img loading="eager" :src="job.housePlanImage" class="plan-img" fit="cover" />
+        </div>
+        <div
+          v-else
+          class="plan-thumb-empty row items-center justify-center bg-grey-2 rounded-borders"
+        >
+          <q-icon name="architecture" size="40px" color="grey-4" />
+        </div>
+
+        <q-btn
+          unelevated
+          color="primary"
+          :label="t('adminJobs.inspection.viewPlan')"
+          icon="grid_view"
+          class="plan-btn"
+          no-caps
+          @click="viewPlan"
+        />
+      </div>
+
       <q-separator color="primary" style="opacity: 0.5; height: 1px" class="q-my-md" />
 
       <!-- Customer Contact -->
@@ -448,6 +475,9 @@
       </q-card>
     </q-dialog>
 
+    <!-- House Plan Viewer (ปุ่ม "ดูแปลน") -->
+    <PlanPositionDialog v-model="showPlanDialog" :job-id="jobId" readonly />
+
     <!-- Create New Round Dialog -->
     <q-dialog v-model="showCreateRoundDialog" transition-show="scale" transition-hide="scale">
       <q-card class="create-round-card q-pa-lg">
@@ -664,6 +694,7 @@ import { useTeamStore } from '../stores/useTeam';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import type { Defect, InspectionSummaryItem, InspectionRound } from 'src/models';
 import DefectReport from '../components/DefectReport.vue';
+import PlanPositionDialog from '../components/PlanPositionDialog.vue';
 
 const { t, locale } = useI18n();
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
@@ -1037,6 +1068,12 @@ async function scrollToNotifiedRound() {
     .getElementById(`round-card-${targetRoundId}`)
     ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
+
+const showPlanDialog = ref(false);
+
+const viewPlan = () => {
+  showPlanDialog.value = true;
+};
 
 onMounted(() => {
   $q.loading.show({

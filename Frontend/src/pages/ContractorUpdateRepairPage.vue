@@ -12,6 +12,21 @@
           <div class="row q-gutter-xs q-mt-xs">
             <q-chip v-for="tag in defect.tags" :key="tag" dense outline color="grey-6" size="sm">{{ tag }}</q-chip>
           </div>
+          <!-- Plan Position Button -->
+          <div v-if="defect.planId" class="q-mt-sm">
+            <q-btn
+              flat
+              dense
+              no-caps
+              size="sm"
+              color="primary"
+              icon="place"
+              :label="t('components.planPosition.viewButton')"
+              class="bg-blue-1 text-primary q-px-sm"
+              style="border-radius: 6px; font-weight: 500;"
+              @click="showPlanDialog = true"
+            />
+          </div>
         </q-card-section>
       </q-card>
 
@@ -133,6 +148,16 @@
     </q-dialog>
 
     <!-- Dialog ดูตำแหน่งในแปลน (Read-only) -->
+    <PlanPositionDialog
+      v-model="showPlanDialog"
+      :job-id="defect.jobId ?? projectId"
+      :initial-plan-id="defect.planId ?? null"
+      :initial-x="defect.planX ?? null"
+      :initial-y="defect.planY ?? null"
+      :initial-zone="defect.locationZone ?? null"
+      readonly
+    />
+
   </q-page>
 </template>
 
@@ -140,12 +165,14 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import PlanPositionDialog from 'src/components/PlanPositionDialog.vue'
 import { useRepairDetail } from 'src/stores/useContractorRepairDetail'
 import { useLinkAccess } from 'src/stores/useLinkAccess'
 
 const route     = useRoute()
 const { t } = useI18n()
-const { isContractorEditable } = useLinkAccess()
+const { isContractorEditable, projectId } = useLinkAccess()
+const showPlanDialog = ref(false)
 const defectId  = Number(route.params.id)
 const fileInput = ref<HTMLInputElement>()
 

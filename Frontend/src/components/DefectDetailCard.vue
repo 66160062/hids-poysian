@@ -73,6 +73,37 @@
           />
           <div class="text-caption text-weight-medium">{{ defect.severity }}</div>
         </div>
+
+        <!-- Badge สถานะตำแหน่ง (Anti-forget) -->
+        <div class="row items-center q-gutter-x-xs q-mt-xs">
+          <q-badge
+            v-if="defect.planId || defect.plan"
+            color="positive"
+            text-color="white"
+            class="q-px-xs text-weight-medium"
+            style="font-size: 10px;"
+          >
+            📍 มีพิกัดแปลน
+          </q-badge>
+          <q-badge
+            v-else-if="defect.locationZone"
+            color="info"
+            text-color="white"
+            class="q-px-xs text-weight-medium"
+            style="font-size: 10px;"
+          >
+            {{ defect.locationZone }}
+          </q-badge>
+          <q-badge
+            v-else
+            color="orange-2"
+            text-color="orange-9"
+            class="q-px-xs text-weight-medium"
+            style="font-size: 10px;"
+          >
+            ⚠️ ยังไม่ระบุพิกัด
+          </q-badge>
+        </div>
       </div>
     </div>
 

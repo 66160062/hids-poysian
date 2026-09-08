@@ -84,6 +84,16 @@ export interface SubCategory {
   name: string;
   categoryId: Category;
 }
+export interface JobPlan {
+  planId: number;
+  name: string;
+  imageUrl: string;
+  orderIndex: number;
+  floor?: { floorId: number; label: string } | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Defect {
   defectId: number;
   description: string;
@@ -102,6 +112,11 @@ export interface Defect {
   room?: { roomName: string; roomId: number };
   subRoom?: { roomName: string; subRoomId: number } | null;
   floor?: { floorId: number; label: string; floorOrder?: number };
+  plan?: JobPlan | null;
+  planId?: number | null;
+  planX?: number | null;
+  planY?: number | null;
+  locationZone?: string | null;
 }
 
 export interface SummaryTemplateOption {

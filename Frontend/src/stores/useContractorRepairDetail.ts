@@ -17,6 +17,11 @@ export interface RepairDetail {
   location: string;
   tags: string[];
   status: string;
+  jobId?: number | null;
+  planId?: number | null;
+  planX?: number | null;
+  planY?: number | null;
+  locationZone?: string | null;
 }
 
 interface DefectSubCategoryResponse {
@@ -36,6 +41,12 @@ interface DefectDetailResponse {
   subRoom?: { subRoomId: number; roomName: string } | null;
   floor?: { floorId: number; label: string };
   subCategories?: DefectSubCategoryResponse[];
+  plan?: { planId: number; name: string; imageUrl: string } | null;
+  planId?: number | null;
+  planX?: number | null;
+  planY?: number | null;
+  locationZone?: string | null;
+  round?: { job?: { jobId: number } };
 }
 
 const resolveUrl = (url?: string) =>
@@ -75,6 +86,10 @@ export function useRepairDetail(defectId: number) {
     location: found?.location ?? '-',
     tags: found?.tags ?? [],
     status: found?.status ?? '-',
+    planId: found?.planId ?? null,
+    planX: found?.planX ?? null,
+    planY: found?.planY ?? null,
+    locationZone: found?.locationZone ?? null,
   });
 
   const afterImageUrl = ref('');
@@ -129,6 +144,11 @@ export function useRepairDetail(defectId: number) {
           location: `${roomName}, ${subRoomName}, ${floorLabel}`,
           tags: (data.subCategories ?? []).map((sub) => sub.name),
           status: data.status,
+          jobId: data.round?.job?.jobId ?? null,
+          planId: data.planId ?? data.plan?.planId ?? null,
+          planX: data.planX != null ? Number(data.planX) : null,
+          planY: data.planY != null ? Number(data.planY) : null,
+          locationZone: data.locationZone ?? null,
         };
         savedAfterImage.value = resolveUrl(data.contractorImageUrl);
         savedNote.value = data.contractorNote || '';

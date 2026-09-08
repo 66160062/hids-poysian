@@ -101,6 +101,32 @@
           <q-btn round outline color="primary" icon="location_on" size="md" @click="openGoogleMaps" />
         </div>
 
+        <div class="row items-center justify-between no-wrap q-mb-sm">
+          <div
+            v-if="jobData.job.housePlanUrl"
+            class="plan-thumb relative-position cursor-pointer"
+            @click="viewHousePlan"
+          >
+            <q-img loading="eager" :src="housePlanImageUrl" class="plan-img" fit="cover" />
+          </div>
+          <div
+            v-else
+            class="plan-thumb-empty row items-center justify-center bg-grey-2 rounded-borders"
+          >
+            <q-icon name="architecture" size="40px" color="grey-4" />
+          </div>
+
+          <q-btn
+            unelevated
+            color="primary"
+            :label="t('inspector.detail.viewHousePlan')"
+            icon="grid_view"
+            class="plan-btn"
+            no-caps
+            @click="viewHousePlan"
+          />
+        </div>
+
         <q-separator color="primary" style="opacity: 0.5; height: 1px" class="q-my-md" />
 
         <div class="row items-center justify-between no-wrap q-mb-sm">
@@ -277,6 +303,12 @@
       </q-card>
     </q-dialog>
 
+    <!-- House Plan Dialog (all plans for this job, read-only) -->
+    <PlanPositionDialog
+      v-model="showHousePlanDialog"
+      :job-id="jobData?.job?.jobId ?? null"
+      readonly
+    />
   </q-page>
 </template>
 
@@ -288,6 +320,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
 import DefectReport from 'src/components/DefectReport.vue';
+import PlanPositionDialog from 'src/components/PlanPositionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 
 const jobDetailSpinner = createIconSpinner('home');
@@ -323,6 +356,14 @@ const jobData = ref<
 
 const roundId = route.params.roundId as string;
 const isSubmitting = ref(false);
+
+// House Plan Dialog State
+const showHousePlanDialog = ref(false);
+const housePlanImageUrl = computed(() => getImageUrl(jobData.value?.job?.housePlanUrl));
+
+function viewHousePlan() {
+  showHousePlanDialog.value = true;
+}
 
 // PDF Export State
 const pdfReportRef = ref<InstanceType<typeof DefectReport> | null>(null);

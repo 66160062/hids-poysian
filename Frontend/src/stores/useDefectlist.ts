@@ -15,6 +15,11 @@ export interface DefectItem {
   roomName:      string
   categoryNames: string[]
   severity:      string
+  jobId?:        number
+  planId?:       number | null
+  planX?:        number | null
+  planY?:        number | null
+  locationZone?: string | null
 }
 
 export interface DefectSummary {
@@ -40,6 +45,11 @@ interface DefectResponse {
   subRoom?: { subRoomId: number; roomName: string } | null
   floor?: { floorId: number; label: string }
   subCategories?: DefectSubCategoryResponse[]
+  planId?: number | null
+  planX?: number | null
+  planY?: number | null
+  locationZone?: string | null
+  plan?: { planId: number; name: string; imageUrl: string } | null
 }
 
 interface RoundResponse {
@@ -92,6 +102,11 @@ export function useDefectList() {
           roomName,
           categoryNames,
           severity: defect.severity,
+          jobId,
+          planId: defect.planId ?? defect.plan?.planId ?? null,
+          planX: defect.planX != null ? Number(defect.planX) : null,
+          planY: defect.planY != null ? Number(defect.planY) : null,
+          locationZone: defect.locationZone ?? null,
         }
       })
     } finally {

@@ -195,6 +195,45 @@
             </div>
           </div>
 
+          <!-- สถานะพิกัดแปลน -->
+          <div>
+            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">สถานะพิกัดแปลน</div>
+            <div class="row q-gutter-sm">
+              <q-btn
+                label="ทั้งหมด"
+                :color="filter.planStatus === 'all' ? 'primary' : 'grey-3'"
+                :text-color="filter.planStatus === 'all' ? 'white' : 'grey-8'"
+                unelevated
+                rounded
+                no-caps
+                dense
+                class="q-px-md"
+                @click="filter.planStatus = 'all'"
+              />
+              <q-btn
+                label="ระบุพิกัดแล้ว"
+                :color="filter.planStatus === 'pinned' ? 'primary' : 'grey-3'"
+                :text-color="filter.planStatus === 'pinned' ? 'white' : 'grey-8'"
+                unelevated
+                rounded
+                no-caps
+                dense
+                class="q-px-md"
+                @click="filter.planStatus = 'pinned'"
+              />
+              <q-btn
+                label="ยังไม่ระบุพิกัด"
+                :color="filter.planStatus === 'unpinned' ? 'warning' : 'grey-3'"
+                :text-color="filter.planStatus === 'unpinned' ? 'white' : 'grey-8'"
+                unelevated
+                rounded
+                no-caps
+                dense
+                class="q-px-md"
+                @click="filter.planStatus = 'unpinned'"
+              />
+            </div>
+          </div>
         </div>
 
         <!-- Apply -->
@@ -269,6 +308,7 @@ const filter = ref({
   statuses: [] as string[], // [] = ทั้งหมด
   severities: [] as string[], // [] = ทั้งหมด
   categories: [] as string[], // [] = ทั้งหมด
+  planStatus: 'all',
 });
 
 const statusOptions = computed(() => [
@@ -296,6 +336,7 @@ const activeFilterCount = computed(() => {
   if (filter.value.statuses.length > 0) n++;
   if (filter.value.severities.length > 0) n++;
   if (filter.value.categories.length > 0) n++;
+  if (filter.value.planStatus !== 'all') n++;
   return n;
 });
 
@@ -323,6 +364,13 @@ const filteredDefects = computed(() => {
     list = list.filter((d) =>
       d.subCategories.some((s) => filter.value.categories.includes(s.category?.name ?? '')),
     );
+  }
+
+  // filter plan status
+  if (filter.value.planStatus === 'pinned') {
+    list = list.filter((d) => Boolean(d.planId || d.plan));
+  } else if (filter.value.planStatus === 'unpinned') {
+    list = list.filter((d) => !d.planId && !d.plan);
   }
 
   // เรียงตามเวลาที่บันทึก defect (createdAt)
@@ -365,7 +413,7 @@ function toggleStatus(val: string) {
 }
 
 function resetFilter() {
-  filter.value = { statuses: [], severities: [], categories: [] };
+  filter.value = { statuses: [], severities: [], categories: [], planStatus: 'all' };
 }
 
 function severityColor(s: string): string {
@@ -388,6 +436,11 @@ function toCardData(d: Defect) {
     tags: d.subCategories.map((s) => s.name),
     status: d.status,
     description: d.description ?? '--',
+    plan: d.plan,
+    planId: d.planId ?? d.plan?.planId,
+    planX: d.planX,
+    planY: d.planY,
+    locationZone: d.locationZone,
   };
 }
 

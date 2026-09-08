@@ -125,6 +125,22 @@
 
               <!-- Location -->
               <div class="text-caption text-grey-5 q-mt-xs">{{ item.location }}</div>
+
+              <!-- Plan Position Button -->
+              <div v-if="item.planId" class="q-mt-sm">
+                <q-btn
+                  flat
+                  dense
+                  no-caps
+                  size="sm"
+                  color="primary"
+                  icon="place"
+                  :label="t('components.planPosition.viewButton')"
+                  class="bg-blue-1 text-primary q-px-sm"
+                  style="border-radius: 6px; font-weight: 500;"
+                  @click.stop="openPlanPosition(item)"
+                />
+              </div>
             </div>
           </div>
         </q-card-section>
@@ -189,6 +205,16 @@
       </q-card>
     </q-dialog>
 
+    <!-- Dialog ดูตำแหน่งในแปลน (Read-only) -->
+    <PlanPositionDialog
+      v-model="showPlanDialog"
+      :job-id="getJobId()"
+      :initial-plan-id="activeDefect?.planId ?? null"
+      :initial-x="activeDefect?.planX ?? null"
+      :initial-y="activeDefect?.planY ?? null"
+      :initial-zone="activeDefect?.locationZone ?? null"
+      readonly
+    />
   </q-page>
 </template>
 
@@ -203,6 +229,7 @@ import {
 } from 'src/stores/useContractormain';
 import { useLinkAccess } from 'src/stores/useLinkAccess';
 import FilterChipGroup from 'src/components/FilterChipGroup.vue';
+import PlanPositionDialog from 'src/components/PlanPositionDialog.vue';
 import { useQuasar } from 'quasar';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 
@@ -287,6 +314,14 @@ const selectedRooms = ref<string[]>([]);
 const selectedJobTypes = ref<string[]>([]);
 const selectedSeverities = ref<string[]>([]);
 const selectedStatuses = ref<string[]>([]);
+
+const showPlanDialog = ref(false);
+const activeDefect = ref<DefectItem | null>(null);
+
+function openPlanPosition(defect: DefectItem) {
+  activeDefect.value = defect;
+  showPlanDialog.value = true;
+}
 
 const roomId = computed(() => {
   const id = Number(route.params.id);

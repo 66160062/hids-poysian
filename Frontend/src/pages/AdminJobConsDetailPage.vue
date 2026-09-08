@@ -98,6 +98,32 @@
 
           <q-separator class="q-my-md" />
 
+          <!-- House Plan -->
+          <div class="row items-center justify-between">
+            <div
+              v-if="job.housePlanImage"
+              class="plan-thumb relative-position cursor-pointer"
+              @click="viewPlan"
+            >
+              <q-img loading="eager" :src="job.housePlanImage" class="plan-img" fit="cover" />
+            </div>
+            <div
+              v-else
+              class="plan-thumb-empty row items-center justify-center bg-grey-2 rounded-borders"
+            >
+              <q-icon name="architecture" size="40px" color="grey-4" />
+            </div>
+
+            <q-btn
+              unelevated
+              color="primary"
+              :label="t('adminJobs.construction.viewPlan')"
+              icon="grid_view"
+              class="plan-btn"
+              no-caps
+              @click="viewPlan"
+            />
+          </div>
         </q-card-section>
       </q-card>
 
@@ -217,6 +243,17 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
+    <!-- Plan Position Dialog (Read-only) -->
+    <PlanPositionDialog
+      v-model="showPlanDialog"
+      :job-id="jobId"
+      :initial-plan-id="selectedDefectPlanId"
+      :initial-x="selectedDefect?.planX ?? null"
+      :initial-y="selectedDefect?.planY ?? null"
+      :initial-zone="selectedDefect?.locationZone ?? null"
+      readonly
+    />
 
     <!-- Create New Round Dialog -->
     <q-dialog v-model="showCreateRoundDialog" transition-show="scale" transition-hide="scale">
@@ -482,6 +519,15 @@
                           <q-chip dense size="sm" color="grey-2" text-color="dark">
                             {{ defectStatusLabel(defect.status) }}
                           </q-chip>
+                          <q-icon
+                            :name="getDefectPlanId(defect) ? 'place' : 'location_off'"
+                            :color="getDefectPlanId(defect) ? 'positive' : 'warning'"
+                            size="20px"
+                          >
+                            <q-tooltip>
+                              {{ getDefectPlanId(defect) ? t('adminJobs.construction.planPinned') : t('adminJobs.construction.planNotPinned') }}
+                            </q-tooltip>
+                          </q-icon>
                         </div>
                       </q-item-section>
                     </q-item>
@@ -522,6 +568,20 @@
                             {{ t('adminJobs.construction.editDefectTitle', { id: selectedDefect.defectId }) }}
                           </div>
                           <div class="text-caption text-grey-6">{{ getDefectRoomLabel(selectedDefect) }}</div>
+                          <div v-if="selectedDefectPlanId" class="q-mt-xs">
+                            <q-btn
+                              flat
+                              dense
+                              no-caps
+                              size="sm"
+                              color="primary"
+                              icon="place"
+                              :label="t('components.planPosition.viewButton')"
+                              class="bg-blue-1 text-primary q-px-sm"
+                              style="border-radius: 6px; font-weight: 500;"
+                              @click="showPlanDialog = true"
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -708,6 +768,7 @@ import type { ExtendedConstructionReport } from 'src/stores/useConstructionDaily
 import ConstructionReportPdf from 'src/components/ConstructionReportPdf.vue';
 import type { Defect } from 'src/models';
 import InspectionItemCard from '../components/InspectionItemCard.vue';
+import PlanPositionDialog from '../components/PlanPositionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 
 const pdfSpinner = createIconSpinner('picture_as_pdf');
@@ -839,6 +900,12 @@ const roundDefects = ref<AdminDefect[]>([]);
 const roundDefectsError = ref('');
 const selectedRound = ref<RoundView | null>(null);
 const selectedDefect = ref<AdminDefect | null>(null);
+const showPlanDialog = ref(false);
+// /defects/round/:id doesn't return a flat planId, only the joined `plan` relation — mirrors useDefectlist.ts's fallback
+function getDefectPlanId(defect: AdminDefect | null): number | null {
+  return defect?.planId ?? defect?.plan?.planId ?? null;
+}
+const selectedDefectPlanId = computed(() => getDefectPlanId(selectedDefect.value));
 const defectSubCategoryOptions = ref<DefectCategoryOption[]>([]);
 const showRoundReviewDialog = ref(false);
 
@@ -1312,6 +1379,20 @@ async function handleViewReport(round: RoundView) {
     isLoadingReport.value = false;
   }
 }
+
+const viewPlan = () => {
+  if (job.value.housePlanImage) {
+    currentImageUrl.value = job.value.housePlanImage;
+    showImageDialog.value = true;
+  } else {
+    $q.notify({
+      message: t('adminJobs.construction.noHousePlanImage'),
+      color: 'warning',
+      icon: 'warning',
+      position: 'top',
+    });
+  }
+};
 
 async function fetchRoundDefects(roundId: number) {
   isLoadingRoundDefects.value = true;

@@ -432,6 +432,135 @@
         </div>
       </div>
 
+      <!-- หน้าแผนผังแสดงตำแหน่งข้อบกพร่อง (ก่อนหน้า AI Summary) -->
+      <div
+        v-for="(planPage, pageIdx) in planPages"
+        :key="planPage.planId"
+        class="pdf-page"
+      >
+        <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
+          <div class="text-caption text-grey-7">
+            {{ round.job.projectName }}, {{ t('reports.defect.roundOf', { n: round.roundNumber }) }},
+            {{ formatDate(round.scheduledDate) }}
+          </div>
+          <div class="text-caption text-grey-7">
+            {{ t('reports.defect.page') }} | {{ 1 + majorChunks.length + allDefectChunks.length + summaryChunks.length + pageIdx + 1 }} / {{ totalPages }}
+          </div>
+        </div>
+        <div v-if="generatedAtLabel" class="row justify-end q-px-md">
+          <div class="text-caption text-grey-6" style="font-size: 9px">
+            {{ t('reports.defect.asOf', { date: generatedAtLabel }) }}
+          </div>
+        </div>
+
+        <div class="page-content q-px-md q-py-sm column">
+          <!-- Title -->
+          <div class="row items-center justify-between q-mb-xs">
+            <div class="text-subtitle1 text-weight-bold text-primary">
+              {{ t('reports.defect.planTitlePrefix') }} — {{ planPage.planName }}
+              <span v-if="planPage.floorLabel" class="text-caption text-grey-7">({{ planPage.floorLabel }})</span>
+            </div>
+            <div class="text-caption text-grey-7">
+              {{ t('reports.defect.foundDefectsCount', { n: planPage.defects.length }) }}
+            </div>
+          </div>
+
+          <!-- Floor Plan Image with Pin Overlays -->
+          <div class="report-plan-container shadow-1 rounded-borders q-mb-sm">
+            <img
+              loading="eager"
+              :src="resolveImageUrl(planPage.imageUrl, 'https://via.placeholder.com/800x600?text=No+Plan+Image')"
+              class="report-plan-image"
+            />
+            <!-- Pins -->
+            <div
+              v-for="item in planPage.defects"
+              :key="item.defect.defectId"
+              class="report-plan-pin flex flex-center"
+              :style="{
+                left: `${item.planX}%`,
+                top: `${item.planY}%`,
+                backgroundColor: item.defect.severity === 'Major' ? '#e53935' : '#fb8c00',
+              }"
+            >
+              {{ item.displayIndex }}
+            </div>
+          </div>
+
+          <!-- Legend Table -->
+          <div class="report-plan-legend">
+            <div class="text-caption text-weight-bold text-grey-8 q-mb-xs">
+              {{ t('reports.defect.legendTitle') }}
+            </div>
+            <table class="report-legend-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px;">{{ t('reports.defect.colRank') }}</th>
+                  <th style="width: 140px;">{{ t('reports.defect.colRoomArea') }}</th>
+                  <th>{{ t('reports.defect.colDefectList') }}</th>
+                  <th style="width: 80px;">{{ t('reports.defect.colSeverity') }}</th>
+                  <th style="width: 70px;">{{ t('reports.defect.colStatus') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in planPage.defects.slice(0, 10)" :key="item.defect.defectId">
+                  <td class="text-center">
+                    <span
+                      class="legend-index-badge"
+                      :style="{
+                        backgroundColor: item.defect.severity === 'Major' ? '#e53935' : '#fb8c00',
+                      }"
+                    >
+                      {{ item.displayIndex }}
+                    </span>
+                  </td>
+                  <td>{{ getRoomShortName(item.defect) }}</td>
+                  <td>
+                    <span v-if="item.defect.subCategories && item.defect.subCategories.length">
+                      {{ item.defect.subCategories.map((s) => s.name).join(', ') }}
+                    </span>
+                    <span v-else>{{ item.defect.description || '-' }}</span>
+                  </td>
+                  <td class="text-center">
+                    <span
+                      class="legend-severity-tag"
+                      :class="item.defect.severity === 'Major' ? 'text-red text-weight-bold' : 'text-orange text-weight-medium'"
+                    >
+                      {{ item.defect.severity }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <span :class="item.defect.status === 'verified' ? 'text-green text-weight-bold' : 'text-red'">
+                      {{ item.defect.status === 'verified' ? t('reports.defect.passed') : t('reports.defect.failed') }}
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="planPage.defects.length > 10">
+                  <td colspan="5" class="text-center text-caption text-grey-6">
+                    {{ t('reports.defect.moreItems', { n: planPage.defects.length - 10 }) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="pdf-footer">
+          <span>© 2026, POYSIAN</span>
+          <div class="footer-contacts">
+            <img loading="eager" :src="LineLogo" style="height: 16px" />
+            <span>@poysian,</span>
+            <img loading="eager" :src="FacebookLogo" style="height: 16px" />
+            <span>{{ t('reports.defect.footerTagline') }},</span>
+            <img loading="eager" :src="CallLogo" style="height: 16px" />
+            <span>098-765-4321,</span>
+            <img loading="eager" :src="GmailLogo" style="height: 12px" />
+            <span>poysian@gmail.com</span>
+          </div>
+        </div>
+      </div>
+
       <!-- หน้า AI Summary ท้ายเล่ม -->
       <div v-if="hasAiSummary" class="pdf-page">
         <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
@@ -788,6 +917,47 @@ const hasAiSummary = computed(
   () => props.round.completionPercent != null || !!props.round.aiSummaryText,
 );
 
+// Compute plan pages for PDF - groups defects by planId, only plans with pinned defects
+const planPages = computed(() => {
+  const planMap = new Map<
+    number,
+    {
+      planId: number;
+      planName: string;
+      imageUrl: string;
+      floorLabel: string | null;
+      defects: { defect: Defect; planX: number; planY: number; displayIndex: number }[];
+    }
+  >();
+
+  let globalIndex = 1;
+  props.defects.forEach((defect) => {
+    const planId = defect.plan?.planId ?? defect.planId;
+    const planX = defect.planX;
+    const planY = defect.planY;
+    if (!planId || planX == null || planY == null) return;
+
+    if (!planMap.has(planId)) {
+      const planData = defect.plan;
+      planMap.set(planId, {
+        planId,
+        planName: planData?.name ?? t('reports.defect.planNameFallback', { id: planId }),
+        imageUrl: planData?.imageUrl ?? '',
+        floorLabel: planData?.floor?.label ?? null,
+        defects: [],
+      });
+    }
+    planMap.get(planId)!.defects.push({
+      defect,
+      planX: Number(planX),
+      planY: Number(planY),
+      displayIndex: globalIndex++,
+    });
+  });
+
+  return Array.from(planMap.values());
+});
+
 // const totalPages = computed(() => 1 + majorChunks.value.length + allDefectChunks.value.length);
 const totalPages = computed(
   () =>
@@ -795,6 +965,7 @@ const totalPages = computed(
     majorChunks.value.length +
     allDefectChunks.value.length +
     summaryChunks.value.length +
+    planPages.value.length +
     (hasAiSummary.value ? 1 : 0),
 );
 
@@ -1306,5 +1477,72 @@ const summaryChunks = computed(() => {
 
 .page-content {
   flex: 1;
+}
+
+.report-plan-container {
+  position: relative;
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+  max-height: 160mm;
+}
+
+.report-plan-image {
+  width: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.report-plan-pin {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.report-plan-legend {
+  width: 100%;
+}
+
+.report-legend-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.report-legend-table th,
+.report-legend-table td {
+  border: 1px solid #e0e0e0;
+  padding: 3px 6px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.report-legend-table th {
+  background: #f5f5f5;
+  font-weight: bold;
+}
+
+.legend-index-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: white;
+  font-size: 9px;
+  font-weight: bold;
 }
 </style>

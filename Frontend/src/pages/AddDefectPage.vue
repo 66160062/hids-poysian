@@ -79,6 +79,17 @@
       @save="onAnnotationSave"
     />
 
+    <PlanPositionDialog
+      v-model="planDialog"
+      :job-id="jobId"
+      :selected-floor-id="form.floorId"
+      :initial-plan-id="form.planId"
+      :initial-x="form.planX"
+      :initial-y="form.planY"
+      :initial-zone="form.locationZone"
+      @save="onPlanPositionSave"
+    />
+
     <div
       class="bg-white col q-pa-lg flex column shadow-up-2"
       style="border-radius: 24px 24px 0 0; margin-top: -24px; z-index: 1; overflow-y: auto"
@@ -258,6 +269,59 @@
             </div>
           </div>
 
+          <!-- ตำแหน่งในแปลนบ้าน -->
+          <div class="row no-wrap items-center">
+            <q-icon name="place" size="sm" color="primary" class="q-mr-sm" />
+            <div class="col">
+              <q-card
+                flat
+                bordered
+                class="q-pa-sm rounded-borders cursor-pointer bg-grey-1 hover-bg-grey-2"
+                :class="{ 'border-positive-subtle': form.planId && form.planX !== null }"
+                @click="planDialog = true"
+              >
+                <div class="row items-center justify-between no-wrap">
+                  <div class="column q-gutter-y-xs">
+                    <div class="text-caption text-weight-bold text-dark row items-center q-gutter-x-xs">
+                      <span>ตำแหน่งในแปลนบ้าน</span>
+                      <q-icon name="open_in_new" size="14px" color="grey-6" />
+                    </div>
+
+                    <!-- Status Display -->
+                    <div class="row items-center q-gutter-x-xs">
+                      <template v-if="form.planId && form.planX !== null">
+                        <q-badge color="positive" class="text-caption q-px-xs">
+                          📍 ระบุในแปลนแล้ว (คลิกเพื่อดู/แก้ไข)
+                        </q-badge>
+                        <span v-if="form.locationZone" class="text-caption text-grey-7">
+                          • {{ form.locationZone }}
+                        </span>
+                      </template>
+                      <template v-else-if="form.locationZone">
+                        <q-badge color="info" class="text-caption q-px-xs">
+                          {{ form.locationZone }}
+                        </q-badge>
+                      </template>
+                      <template v-else>
+                        <span class="text-caption text-grey-6">
+                          ยังไม่ระบุตำแหน่ง (ไม่บังคับ)
+                        </span>
+                      </template>
+                    </div>
+                  </div>
+
+                  <q-btn
+                    round
+                    flat
+                    dense
+                    icon="chevron_right"
+                    color="grey-6"
+                  />
+                </div>
+              </q-card>
+            </div>
+          </div>
+
           <div class="row no-wrap items-center q-py-xs">
             <q-icon name="warning_amber" size="sm" class="q-mr-sm" style="visibility: hidden" />
             <div class="row no-wrap rounded-borders shadow-2 overflow-hidden severity-switch q-mr-md">
@@ -348,6 +412,7 @@ import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import imageCompression from 'browser-image-compression';
 import ImageAnnotationDialog from 'src/components/ImageAnnotationDialog.vue';
+import PlanPositionDialog from 'src/components/PlanPositionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 
 const addDefectSpinner = createIconSpinner('note_add');
@@ -378,6 +443,10 @@ interface DefectForm {
   jobType: number | null;
   defectTypes: number[];
   note: string;
+  planId: number | null;
+  planX: number | null;
+  planY: number | null;
+  locationZone: string | null;
 }
 
 // ── Form state ────────────────────────────────────────────────
@@ -391,9 +460,26 @@ const form = ref<DefectForm>({
   jobType: null,
   defectTypes: [],
   note: '',
+  planId: null,
+  planX: null,
+  planY: null,
+  locationZone: null,
 });
 
 const jobId = ref<number | null>(null);
+const planDialog = ref(false);
+
+const onPlanPositionSave = (data: {
+  planId: number | null;
+  planX: number | null;
+  planY: number | null;
+  locationZone: string | null;
+}) => {
+  form.value.planId = data.planId;
+  form.value.planX = data.planX;
+  form.value.planY = data.planY;
+  form.value.locationZone = data.locationZone;
+};
 
 const fetchJobInfo = async () => {
   if (route.query.jobId) {
@@ -651,6 +737,10 @@ const patchDefectLocally = (defectId: number) => {
     severity: form.value.severity,
     subCategories: buildLocalSubCategories(),
     description: form.value.note || '-',
+    planId: form.value.planId,
+    planX: form.value.planX,
+    planY: form.value.planY,
+    locationZone: form.value.locationZone,
     ...(imagePreview.value ? { imageUrl: imagePreview.value } : {}),
   };
 };
@@ -671,6 +761,10 @@ const buildPreviewDefect = (): Defect => ({
   ...(form.value.floorId
     ? { floor: { floorId: form.value.floorId, label: floorOptions.value.find((f) => f.value === form.value.floorId)?.label ?? '' } }
     : {}),
+  planId: form.value.planId,
+  planX: form.value.planX,
+  planY: form.value.planY,
+  locationZone: form.value.locationZone,
 });
 
 const isSubmitting = ref(false);
@@ -753,6 +847,18 @@ const handleNext = async () => {
     formData.append('subCategoryIds', String(id));
   });
 
+  if (form.value.planId) {
+    formData.append('planId', String(form.value.planId));
+  }
+  if (form.value.planX !== null && form.value.planX !== undefined) {
+    formData.append('planX', String(form.value.planX));
+  }
+  if (form.value.planY !== null && form.value.planY !== undefined) {
+    formData.append('planY', String(form.value.planY));
+  }
+  if (form.value.locationZone) {
+    formData.append('locationZone', form.value.locationZone);
+  }
 
   if (selectedFile.value) {
     if (pendingImageCompression) await pendingImageCompression;
@@ -782,6 +888,10 @@ const handleNext = async () => {
 
   imagePreview.value = null;
   selectedFile.value = null;
+  form.value.planId = null;
+  form.value.planX = null;
+  form.value.planY = null;
+  form.value.locationZone = null;
   step.value = 2;
 
   void inspectionStore.runDefectSync(
@@ -881,6 +991,17 @@ async function loadAddDefectData() {
         form.value.defectTypes = defect.subCategories.map((s: { subCategoryId: number }) => s.subCategoryId);
       }
       form.value.note = defect.description !== '--' ? defect.description : '';
+
+      form.value.planId = defect.plan?.planId ?? defect.planId ?? null;
+      form.value.planX =
+        defect.planX !== null && defect.planX !== undefined
+          ? Number(defect.planX)
+          : null;
+      form.value.planY =
+        defect.planY !== null && defect.planY !== undefined
+          ? Number(defect.planY)
+          : null;
+      form.value.locationZone = defect.locationZone ?? null;
 
       if (defect.imageUrl) {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';

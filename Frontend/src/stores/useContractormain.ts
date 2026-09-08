@@ -26,6 +26,10 @@ export interface DefectItem {
   tags: string[];
   afterImage?: string;
   repairNote?: string;
+  planId?: number | null;
+  planX?: number | null;
+  planY?: number | null;
+  locationZone?: string | null;
 }
 
 export interface RepairStats {
@@ -56,6 +60,11 @@ interface DefectResponse {
   subRoom?: { subRoomId: number; roomName: string } | null;
   floor?: { floorId: number; label: string };
   subCategories?: DefectSubCategoryResponse[];
+  plan?: { planId: number; name: string; imageUrl: string } | null;
+  planId?: number | null;
+  planX?: number | null;
+  planY?: number | null;
+  locationZone?: string | null;
 }
 
 interface RoundResponse {
@@ -188,6 +197,10 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
           jobType: categoryNames.join(', ') || '-',
           status: defect.status,
           tags: (defect.subCategories ?? []).map((sub) => sub.name),
+          planId: defect.plan?.planId ?? defect.planId ?? null,
+          planX: defect.planX != null ? Number(defect.planX) : null,
+          planY: defect.planY != null ? Number(defect.planY) : null,
+          locationZone: defect.locationZone ?? null,
         });
       }
 
