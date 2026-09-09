@@ -518,6 +518,12 @@ export class InspectionRoundsService {
       roundId: id,
     });
 
+    // เรียกซ้ำได้ตอนแก้ไขรอบที่ตรวจไปแล้ว (ดูปุ่ม "บันทึกการแก้ไขการตรวจ" ฝั่ง frontend)
+    // แต่ห้ามหลังอนุมัติ ไม่งั้นจะ regenerate PDF/AI summary ทับรายงานที่ส่งลูกค้าไปแล้ว
+    if (round.status === 'APPROVED') {
+      throw new BadRequestException('ไม่สามารถแก้ไขรอบตรวจที่อนุมัติแล้วได้');
+    }
+
     round.inspectedAt = new Date();
     const saved = await this.inspectionRoundsRepo.save(round);
 
@@ -534,6 +540,10 @@ export class InspectionRoundsService {
     const round = await this.inspectionRoundsRepo.findOneByOrFail({
       roundId: id,
     });
+
+    if (round.status === 'APPROVED') {
+      throw new BadRequestException('ไม่สามารถแก้ไขรอบตรวจที่อนุมัติแล้วได้');
+    }
 
     round.summaryCompletedAt = new Date();
     return this.inspectionRoundsRepo.save(round);
