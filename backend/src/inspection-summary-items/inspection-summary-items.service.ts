@@ -1,12 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { InspectionSummaryItem } from './entities/inspection-summary-item.entity';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { SummaryTemplate } from 'src/summary-templates/entities/summary-template.entity';
 import { SummaryTemplateOption } from 'src/summary-template-options/entities/summary-template-option.entity';
 import { CreateInspectionSummaryItemDto } from './dto/create-inspection-summary-item.dto';
 import { UpdateInspectionSummaryItemDto } from './dto/update-inspection-summary-item.dto';
+import { RoundSummaryItemDto } from './dto/replace-round-summary-items.dto';
 
 @Injectable()
 export class InspectionSummaryItemsService {
@@ -22,6 +23,8 @@ export class InspectionSummaryItemsService {
 
     @InjectRepository(SummaryTemplateOption)
     private readonly optionsRepo: Repository<SummaryTemplateOption>,
+
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(dto: CreateInspectionSummaryItemDto) {
@@ -109,5 +112,41 @@ export class InspectionSummaryItemsService {
 
   async deleteByRound(roundId: number) {
     return this.itemsRepo.delete({ round: { roundId } });
+  }
+
+  async replaceForRound(roundId: number, items: RoundSummaryItemDto[]) {
+    const round = await this.roundsRepo.findOneByOrFail({ roundId });
+
+    const templateIds = [...new Set(items.map((i) => i.templateId))];
+    const optionIds = [...new Set(items.map((i) => i.optionId))];
+
+    const [templates, options] = await Promise.all([
+      templateIds.length
+        ? this.templatesRepo.findBy({ templateId: In(templateIds) })
+        : Promise.resolve<SummaryTemplate[]>([]),
+      optionIds.length
+        ? this.optionsRepo.findBy({ optionId: In(optionIds) })
+        : Promise.resolve<SummaryTemplateOption[]>([]),
+    ]);
+
+    const templateById = new Map(templates.map((t) => [t.templateId, t]));
+    const optionById = new Map(options.map((o) => [o.optionId, o]));
+
+    const rows = items.map((item) => {
+      const template = templateById.get(item.templateId);
+      const option = optionById.get(item.optionId);
+      if (!template || !option) {
+        throw new BadRequestException(
+          `ไม่พบหัวข้อ ${item.templateId} หรือตัวเลือก ${item.optionId}`,
+        );
+      }
+      return { round, template, option, detailValue: item.detailValue ?? '' };
+    });
+
+    return this.dataSource.transaction(async (manager) => {
+      await manager.delete(InspectionSummaryItem, { round: { roundId } });
+      if (!rows.length) return [];
+      return manager.save(manager.create(InspectionSummaryItem, rows));
+    });
   }
 }

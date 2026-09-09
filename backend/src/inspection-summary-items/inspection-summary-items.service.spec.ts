@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { BadRequestException } from '@nestjs/common';
+import { DataSource, EntityManager } from 'typeorm';
 import { InspectionSummaryItemsService } from './inspection-summary-items.service';
 import { InspectionSummaryItem } from './entities/inspection-summary-item.entity';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
@@ -19,8 +21,10 @@ describe('InspectionSummaryItemsService', () => {
     delete: jest.Mock;
   };
   let roundsRepo: { findOneByOrFail: jest.Mock };
-  let templatesRepo: { findOneByOrFail: jest.Mock };
-  let optionsRepo: { findOneByOrFail: jest.Mock };
+  let templatesRepo: { findOneByOrFail: jest.Mock; findBy: jest.Mock };
+  let optionsRepo: { findOneByOrFail: jest.Mock; findBy: jest.Mock };
+  let manager: { delete: jest.Mock; create: jest.Mock; save: jest.Mock };
+  let dataSource: { transaction: jest.Mock };
 
   beforeEach(async () => {
     itemsRepo = {
@@ -34,16 +38,36 @@ describe('InspectionSummaryItemsService', () => {
       delete: jest.fn(),
     };
     roundsRepo = { findOneByOrFail: jest.fn() };
-    templatesRepo = { findOneByOrFail: jest.fn() };
-    optionsRepo = { findOneByOrFail: jest.fn() };
+    templatesRepo = { findOneByOrFail: jest.fn(), findBy: jest.fn() };
+    optionsRepo = { findOneByOrFail: jest.fn(), findBy: jest.fn() };
+    manager = {
+      delete: jest.fn(),
+      create: jest.fn((_entity, value) => value),
+      save: jest.fn((value) => value),
+    };
+    dataSource = {
+      transaction: jest.fn((cb: (m: EntityManager) => unknown) =>
+        cb(manager as unknown as EntityManager),
+      ),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InspectionSummaryItemsService,
-        { provide: getRepositoryToken(InspectionSummaryItem), useValue: itemsRepo },
+        {
+          provide: getRepositoryToken(InspectionSummaryItem),
+          useValue: itemsRepo,
+        },
         { provide: getRepositoryToken(InspectionRound), useValue: roundsRepo },
-        { provide: getRepositoryToken(SummaryTemplate), useValue: templatesRepo },
-        { provide: getRepositoryToken(SummaryTemplateOption), useValue: optionsRepo },
+        {
+          provide: getRepositoryToken(SummaryTemplate),
+          useValue: templatesRepo,
+        },
+        {
+          provide: getRepositoryToken(SummaryTemplateOption),
+          useValue: optionsRepo,
+        },
+        { provide: DataSource, useValue: dataSource },
       ],
     }).compile();
 
@@ -68,7 +92,7 @@ describe('InspectionSummaryItemsService', () => {
       templateId: 2,
       optionId: 3,
       detailValue: 'ผ่าน',
-    } as never);
+    });
 
     expect(result).toMatchObject({
       round: { roundId: 1 },
@@ -85,7 +109,7 @@ describe('InspectionSummaryItemsService', () => {
       roundId: 1,
       templateId: 2,
       optionId: 3,
-    } as never);
+    });
 
     expect(result).toEqual({ itemId: 9 });
     expect(itemsRepo.create).not.toHaveBeenCalled();
@@ -103,7 +127,7 @@ describe('InspectionSummaryItemsService', () => {
       roundId: 1,
       templateId: 2,
       optionId: 3,
-    } as never);
+    });
 
     expect(result).toMatchObject({ round: { roundId: 1 } });
   });
@@ -116,7 +140,7 @@ describe('InspectionSummaryItemsService', () => {
     });
     itemsRepo.save.mockImplementation((value) => value);
 
-    await service.update(4, { detailValue: 'ใหม่' } as never);
+    await service.update(4, { detailValue: 'ใหม่' });
 
     expect(optionsRepo.findOneByOrFail).not.toHaveBeenCalled();
     expect(itemsRepo.save).toHaveBeenCalledWith(
@@ -136,6 +160,74 @@ describe('InspectionSummaryItemsService', () => {
     expect(itemsRepo.delete).toHaveBeenCalledWith({
       round: { roundId: 7 },
       template: { templateId: 2 },
+    });
+  });
+
+  describe('replaceForRound', () => {
+    beforeEach(() => {
+      roundsRepo.findOneByOrFail.mockResolvedValue({ roundId: 7 });
+      templatesRepo.findBy.mockResolvedValue([
+        { templateId: 1 },
+        { templateId: 2 },
+      ]);
+      optionsRepo.findBy.mockResolvedValue([
+        { optionId: 10 },
+        { optionId: 20 },
+        { optionId: 30 },
+      ]);
+    });
+
+    it('loads every template and option in one batched query each', async () => {
+      await service.replaceForRound(7, [
+        { templateId: 1, optionId: 10 },
+        { templateId: 1, optionId: 20 },
+        { templateId: 2, optionId: 30, detailValue: 'หมายเหตุ' },
+      ]);
+
+      expect(templatesRepo.findBy).toHaveBeenCalledTimes(1);
+      expect(optionsRepo.findBy).toHaveBeenCalledTimes(1);
+    });
+
+    it('deletes existing items and saves the new set in one transaction', async () => {
+      const result = await service.replaceForRound(7, [
+        { templateId: 1, optionId: 10 },
+        { templateId: 2, optionId: 30, detailValue: 'หมายเหตุ' },
+      ]);
+
+      expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+      expect(manager.delete).toHaveBeenCalledWith(InspectionSummaryItem, {
+        round: { roundId: 7 },
+      });
+      expect(manager.save).toHaveBeenCalledTimes(1);
+      expect(result).toEqual([
+        expect.objectContaining({
+          round: { roundId: 7 },
+          template: { templateId: 1 },
+          option: { optionId: 10 },
+          detailValue: '',
+        }),
+        expect.objectContaining({
+          template: { templateId: 2 },
+          option: { optionId: 30 },
+          detailValue: 'หมายเหตุ',
+        }),
+      ]);
+    });
+
+    it('clears the round without saving when the item list is empty', async () => {
+      const result = await service.replaceForRound(7, []);
+
+      expect(manager.delete).toHaveBeenCalled();
+      expect(manager.save).not.toHaveBeenCalled();
+      expect(result).toEqual([]);
+    });
+
+    it('rejects the whole batch before touching the transaction when an id is unknown', async () => {
+      await expect(
+        service.replaceForRound(7, [{ templateId: 1, optionId: 999 }]),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(dataSource.transaction).not.toHaveBeenCalled();
     });
   });
 });

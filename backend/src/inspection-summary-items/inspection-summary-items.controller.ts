@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Patch,
+  Put,
   Param,
   Delete,
   ParseIntPipe,
@@ -12,6 +13,7 @@ import {
 import { InspectionSummaryItemsService } from './inspection-summary-items.service';
 import { CreateInspectionSummaryItemDto } from './dto/create-inspection-summary-item.dto';
 import { UpdateInspectionSummaryItemDto } from './dto/update-inspection-summary-item.dto';
+import { ReplaceRoundSummaryItemsDto } from './dto/replace-round-summary-items.dto';
 import { RoundAccessGuard } from 'src/auth/round-access.guard';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { SummaryItemAccessGuard } from './guards/summary-item-access.guard';
@@ -42,6 +44,18 @@ export class InspectionSummaryItemsController {
   @UseGuards(RoundAccessGuard)
   findByRound(@Param('roundId', ParseIntPipe) roundId: number) {
     return this.inspectionSummaryItemsService.findByRound(roundId);
+  }
+
+  @Put('round/:roundId')
+  @UseGuards(RoundAccessGuard)
+  replaceForRound(
+    @Param('roundId', ParseIntPipe) roundId: number,
+    @Body() dto: ReplaceRoundSummaryItemsDto,
+  ) {
+    return this.inspectionSummaryItemsService.replaceForRound(
+      roundId,
+      dto.items,
+    );
   }
 
   @Get(':id')

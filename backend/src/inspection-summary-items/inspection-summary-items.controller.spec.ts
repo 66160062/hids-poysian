@@ -12,7 +12,11 @@ describe('InspectionSummaryItemsController', () => {
   let service: jest.Mocked<
     Pick<
       InspectionSummaryItemsService,
-      'findOne' | 'findByRound' | 'deleteByRound' | 'deleteByRoundAndTemplate'
+      | 'findOne'
+      | 'findByRound'
+      | 'deleteByRound'
+      | 'deleteByRoundAndTemplate'
+      | 'replaceForRound'
     >
   >;
 
@@ -22,6 +26,7 @@ describe('InspectionSummaryItemsController', () => {
       findByRound: jest.fn(),
       deleteByRound: jest.fn(),
       deleteByRoundAndTemplate: jest.fn(),
+      replaceForRound: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -67,5 +72,13 @@ describe('InspectionSummaryItemsController', () => {
     controller.deleteByRoundAndTemplate(7, 2);
 
     expect(service.deleteByRoundAndTemplate).toHaveBeenCalledWith(7, 2);
+  });
+
+  it('unwraps the items array when replacing a round summary', () => {
+    const items = [{ templateId: 1, optionId: 10 }];
+
+    controller.replaceForRound(7, { items });
+
+    expect(service.replaceForRound).toHaveBeenCalledWith(7, items);
   });
 });
