@@ -52,9 +52,11 @@ export class ReportsService {
   // ส่ง generatedAt กลับไปด้วยเพื่อให้ฝั่ง UI โชว์ได้ว่าไฟล์นี้ render จริงเมื่อไหร่ (PDF อาจล้าหลังการแก้ defect ล่าสุดได้เพราะ debounce)
   // isStale เทียบ hash defect สดกับ lastPdfHash ที่เซฟไว้ ให้ UI รู้ได้ว่าของที่โชว์อยู่เก่ากว่าข้อมูลจริงหรือยัง
   // (เทียบจากข้อมูลตรงๆ แทนที่จะเก็บ state "กำลัง generate" ไว้ในหน่วยความจำ กัน state หลุดตอน server restart)
-  async getCachedReportUrl(
-    roundId: number,
-  ): Promise<{ url: string | null; generatedAt: Date | null; isStale: boolean }> {
+  async getCachedReportUrl(roundId: number): Promise<{
+    url: string | null;
+    generatedAt: Date | null;
+    isStale: boolean;
+  }> {
     const round = await this.roundRepo.findOneBy({ roundId });
     if (!round) {
       return { url: null, generatedAt: null, isStale: false };

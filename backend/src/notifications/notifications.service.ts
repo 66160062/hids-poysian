@@ -32,12 +32,10 @@ export class NotificationsService {
         message: input.message,
         recipientRole: input.recipientRole ?? null,
         recipientUser: input.recipientUserId
-          ? ({ id: input.recipientUserId } as User)
+          ? { id: input.recipientUserId }
           : null,
-        job: input.jobId ? ({ jobId: input.jobId } as InspectionJob) : null,
-        round: input.roundId
-          ? ({ roundId: input.roundId } as InspectionRound)
-          : null,
+        job: input.jobId ? { jobId: input.jobId } : null,
+        round: input.roundId ? { roundId: input.roundId } : null,
       });
       return await this.notificationsRepo.save(notification);
     } catch (error) {

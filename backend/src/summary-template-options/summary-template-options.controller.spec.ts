@@ -4,7 +4,9 @@ import { SummaryTemplateOptionsService } from './summary-template-options.servic
 
 describe('SummaryTemplateOptionsController', () => {
   let controller: SummaryTemplateOptionsController;
-  let service: jest.Mocked<Pick<SummaryTemplateOptionsService, 'findOne' | 'remove'>>;
+  let service: jest.Mocked<
+    Pick<SummaryTemplateOptionsService, 'findOne' | 'remove'>
+  >;
 
   beforeEach(async () => {
     const serviceMock = { findOne: jest.fn(), remove: jest.fn() };

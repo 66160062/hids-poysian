@@ -33,7 +33,10 @@ describe('RepairRecordsController', () => {
     storage.uploadImage.mockResolvedValue(
       'https://example.com/repair_records/mock.jpg',
     );
-    const file = { buffer: Buffer.from('img'), size: 999 } as Express.Multer.File;
+    const file = {
+      buffer: Buffer.from('img'),
+      size: 999,
+    } as Express.Multer.File;
 
     await controller.create(file, { note: 'ซ่อมแล้ว' } as never);
 

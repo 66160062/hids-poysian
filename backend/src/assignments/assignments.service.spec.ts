@@ -62,7 +62,7 @@ describe('AssignmentsService', () => {
       jobsRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        service.assign({ jobId: 1, inspectorId: 2 } as never),
+        service.assign({ jobId: 1, inspectorId: 2 }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -71,7 +71,7 @@ describe('AssignmentsService', () => {
       usersRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        service.assign({ jobId: 1, inspectorId: 2 } as never),
+        service.assign({ jobId: 1, inspectorId: 2 }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -81,7 +81,7 @@ describe('AssignmentsService', () => {
       assignmentsRepo.findOne.mockResolvedValue({ id: 5 });
 
       await expect(
-        service.assign({ jobId: 1, inspectorId: 2 } as never),
+        service.assign({ jobId: 1, inspectorId: 2 }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -102,7 +102,7 @@ describe('AssignmentsService', () => {
       const result = await service.assign({
         jobId: 1,
         inspectorId: 2,
-      } as never);
+      });
 
       expect(result).toMatchObject({ job: { jobId: 1 }, inspector: { id: 2 } });
       expect(notificationsService.create).toHaveBeenCalledWith(
@@ -123,7 +123,7 @@ describe('AssignmentsService', () => {
       roundsRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        service.assign({ jobId: 1, inspectorId: 2, roundId: 9 } as never),
+        service.assign({ jobId: 1, inspectorId: 2, roundId: 9 }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -136,7 +136,7 @@ describe('AssignmentsService', () => {
       });
 
       await expect(
-        service.assign({ jobId: 1, inspectorId: 2, roundId: 9 } as never),
+        service.assign({ jobId: 1, inspectorId: 2, roundId: 9 }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -155,7 +155,7 @@ describe('AssignmentsService', () => {
         jobId: 1,
         inspectorId: 2,
         roundId: 9,
-      } as never);
+      });
 
       expect(result).toMatchObject({
         job: { jobId: 1 },
@@ -205,9 +205,7 @@ describe('AssignmentsService', () => {
     it('throws NotFoundException when the assignment does not exist', async () => {
       assignmentsRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.remove(1)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(service.remove(1)).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('rejects removal when the job status blocks unassignment', async () => {

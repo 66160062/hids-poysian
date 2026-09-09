@@ -4,7 +4,9 @@ import { DefectCategoriesService } from './defect-categories.service';
 
 describe('DefectCategoriesController', () => {
   let controller: DefectCategoriesController;
-  let service: jest.Mocked<Pick<DefectCategoriesService, 'findOne' | 'update' | 'remove'>>;
+  let service: jest.Mocked<
+    Pick<DefectCategoriesService, 'findOne' | 'update' | 'remove'>
+  >;
 
   beforeEach(async () => {
     const serviceMock = {
@@ -15,9 +17,7 @@ describe('DefectCategoriesController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DefectCategoriesController],
-      providers: [
-        { provide: DefectCategoriesService, useValue: serviceMock },
-      ],
+      providers: [{ provide: DefectCategoriesService, useValue: serviceMock }],
     }).compile();
 
     controller = module.get<DefectCategoriesController>(

@@ -31,7 +31,10 @@ describe('TeamsController', () => {
 
   it('uploads the logo and forwards its url when a file is attached', async () => {
     storage.uploadImage.mockResolvedValue('https://example.com/teams/logo.jpg');
-    const file = { buffer: Buffer.from('logo'), size: 111 } as Express.Multer.File;
+    const file = {
+      buffer: Buffer.from('logo'),
+      size: 111,
+    } as Express.Multer.File;
 
     await controller.create(file, { teamName: 'ทีม A' } as never);
 

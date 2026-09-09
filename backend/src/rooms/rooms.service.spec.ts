@@ -52,7 +52,7 @@ describe('RoomsService', () => {
     roomsRepo.save.mockImplementation((value) => value);
 
     await expect(
-      service.update(3, { roomName: 'ห้องครัว' } as never),
+      service.update(3, { roomName: 'ห้องครัว' }),
     ).resolves.toMatchObject({ roomId: 3, roomName: 'ห้องครัว' });
   });
 

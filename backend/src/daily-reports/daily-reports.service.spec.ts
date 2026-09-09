@@ -52,7 +52,10 @@ describe('DailyReportsService', () => {
     customersRepo = { findOneBy: jest.fn() };
     addressesRepo = { findOneBy: jest.fn() };
     houseTypesRepo = { findOneBy: jest.fn() };
-    usersRepo = { findOneBy: jest.fn(), findBy: jest.fn().mockResolvedValue([]) };
+    usersRepo = {
+      findOneBy: jest.fn(),
+      findBy: jest.fn().mockResolvedValue([]),
+    };
     dataSource = {
       transaction: jest.fn(),
       getRepository: jest.fn(),

@@ -5,7 +5,10 @@ import { AdminService } from './admin.service';
 describe('AdminController', () => {
   let controller: AdminController;
   let service: jest.Mocked<
-    Pick<AdminService, 'getDashboardData' | 'syncJobStatuses' | 'getAllWorkList'>
+    Pick<
+      AdminService,
+      'getDashboardData' | 'syncJobStatuses' | 'getAllWorkList'
+    >
   >;
 
   beforeEach(async () => {

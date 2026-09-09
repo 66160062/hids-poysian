@@ -106,7 +106,11 @@ describe('ConstructionDailyReportsService', () => {
         { provide: DataSource, useValue: mockDataSource },
         {
           provide: StorageService,
-          useValue: { uploadImage: jest.fn().mockResolvedValue('https://example.com/mock.jpg') },
+          useValue: {
+            uploadImage: jest
+              .fn()
+              .mockResolvedValue('https://example.com/mock.jpg'),
+          },
         },
       ],
     }).compile();

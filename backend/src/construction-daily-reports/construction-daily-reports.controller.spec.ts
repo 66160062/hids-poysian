@@ -5,7 +5,9 @@ import { ConstructionDailyReportsService } from './construction-daily-reports.se
 
 describe('ConstructionDailyReportsController', () => {
   let controller: ConstructionDailyReportsController;
-  let service: jest.Mocked<Pick<ConstructionDailyReportsService, 'create' | 'findByRound'>>;
+  let service: jest.Mocked<
+    Pick<ConstructionDailyReportsService, 'create' | 'findByRound'>
+  >;
 
   beforeEach(async () => {
     const serviceMock = { create: jest.fn(), findByRound: jest.fn() };
@@ -31,12 +33,9 @@ describe('ConstructionDailyReportsController', () => {
   it('forwards the payload string, photo names, files, and requesting user id to the service', () => {
     const files = { panoramaFile: [{ buffer: Buffer.from('p') }] } as never;
 
-    controller.create(
-      '{"roundId":1}',
-      ['หน้าบ้าน'],
-      files,
-      { user: { sub: 42 } } as never,
-    );
+    controller.create('{"roundId":1}', ['หน้าบ้าน'], files, {
+      user: { sub: 42 },
+    } as never);
 
     expect(service.create).toHaveBeenCalledWith(
       '{"roundId":1}',
@@ -49,7 +48,12 @@ describe('ConstructionDailyReportsController', () => {
   it('passes undefined as the user id when the request has no authenticated user', () => {
     controller.create('{"roundId":1}', [], {}, {} as never);
 
-    expect(service.create).toHaveBeenCalledWith('{"roundId":1}', [], {}, undefined);
+    expect(service.create).toHaveBeenCalledWith(
+      '{"roundId":1}',
+      [],
+      {},
+      undefined,
+    );
   });
 
   it('converts the route param to a number when looking up a report by round', () => {
