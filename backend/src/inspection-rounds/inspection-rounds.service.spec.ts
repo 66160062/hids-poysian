@@ -13,6 +13,8 @@ import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { MailService } from 'src/mail/mail.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { AuthService } from 'src/auth/auth.service';
+import { ContractorService } from 'src/contractor/contractor.service';
+import { StorageService } from 'src/storage/storage.service';
 
 function createQueryRunnerMock() {
   return {
@@ -43,6 +45,7 @@ describe('InspectionRoundsService', () => {
   };
   let jobsRepo: {
     findOneByOrFail: jest.Mock;
+    findOneOrFail: jest.Mock;
     find: jest.Mock;
     save: jest.Mock;
   };
@@ -56,6 +59,8 @@ describe('InspectionRoundsService', () => {
   };
   let notificationsService: { create: jest.Mock };
   let authService: { generateLinkToken: jest.Mock };
+  let contractorService: { create: jest.Mock; update: jest.Mock };
+  let storageService: { uploadImage: jest.Mock };
   let queryRunner: ReturnType<typeof createQueryRunnerMock>;
   let dataSource: { createQueryRunner: jest.Mock };
 
@@ -69,7 +74,12 @@ describe('InspectionRoundsService', () => {
       softRemove: jest.fn(),
       createQueryBuilder: jest.fn(),
     };
-    jobsRepo = { findOneByOrFail: jest.fn(), find: jest.fn(), save: jest.fn() };
+    jobsRepo = {
+      findOneByOrFail: jest.fn(),
+      findOneOrFail: jest.fn(),
+      find: jest.fn(),
+      save: jest.fn(),
+    };
     defectsRepo = { count: jest.fn().mockResolvedValue(0) };
     assignmentsRepo = { find: jest.fn().mockResolvedValue([]) };
     activityLogsService = { log: jest.fn(), logForRound: jest.fn() };
@@ -83,6 +93,13 @@ describe('InspectionRoundsService', () => {
       generateLinkToken: jest.fn().mockResolvedValue({
         url: 'http://localhost:9000/#/view/prj-1?token=mock-token',
       }),
+    };
+    contractorService = {
+      create: jest.fn(),
+      update: jest.fn(),
+    };
+    storageService = {
+      uploadImage: jest.fn(),
     };
     queryRunner = createQueryRunnerMock();
     dataSource = { createQueryRunner: jest.fn(() => queryRunner) };
@@ -101,6 +118,8 @@ describe('InspectionRoundsService', () => {
         { provide: MailService, useValue: mailService },
         { provide: NotificationsService, useValue: notificationsService },
         { provide: AuthService, useValue: authService },
+        { provide: ContractorService, useValue: contractorService },
+        { provide: StorageService, useValue: storageService },
       ],
     }).compile();
 
@@ -436,6 +455,111 @@ describe('InspectionRoundsService', () => {
       const result = await service.confirmSummary(1);
 
       expect(result.summaryCompletedAt).toBeInstanceOf(Date);
+    });
+  });
+
+  describe('updateJobInfo', () => {
+    it('creates a contractor and links it to the job when the job has none yet', async () => {
+      roundsRepo.findOneOrFail.mockResolvedValue({
+        roundId: 1,
+        job: { jobId: 4, contractor: null },
+      });
+      contractorService.create.mockResolvedValue({
+        contractorId: 9,
+        fullName: 'สมชาย',
+        phoneNumber: '0812345678',
+      });
+      jobsRepo.findOneOrFail.mockResolvedValue({
+        jobId: 4,
+        contractor: { contractorId: 9 },
+      });
+
+      await service.updateJobInfo(
+        1,
+        {
+          contractorFullName: 'สมชาย',
+          contractorPhoneNumber: '0812345678',
+        },
+        {},
+      );
+
+      expect(contractorService.create).toHaveBeenCalledWith({
+        fullName: 'สมชาย',
+        phoneNumber: '0812345678',
+        email: undefined,
+        companyName: undefined,
+      });
+      expect(contractorService.update).not.toHaveBeenCalled();
+      expect(jobsRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          jobId: 4,
+          contractor: expect.objectContaining({ contractorId: 9 }),
+        }),
+      );
+    });
+
+    it('updates the existing contractor instead of creating a new one', async () => {
+      roundsRepo.findOneOrFail.mockResolvedValue({
+        roundId: 1,
+        job: { jobId: 4, contractor: { contractorId: 9 } },
+      });
+      jobsRepo.findOneOrFail.mockResolvedValue({ jobId: 4 });
+
+      await service.updateJobInfo(
+        1,
+        {
+          contractorFullName: 'สมชาย 2',
+          contractorPhoneNumber: '0898765432',
+        },
+        {},
+      );
+
+      expect(contractorService.update).toHaveBeenCalledWith(9, {
+        fullName: 'สมชาย 2',
+        phoneNumber: '0898765432',
+        email: undefined,
+        companyName: undefined,
+      });
+      expect(contractorService.create).not.toHaveBeenCalled();
+    });
+
+    it('skips the contractor entirely when the name/phone are not both provided', async () => {
+      roundsRepo.findOneOrFail.mockResolvedValue({
+        roundId: 1,
+        job: { jobId: 4, contractor: null },
+      });
+      jobsRepo.findOneOrFail.mockResolvedValue({ jobId: 4 });
+
+      await service.updateJobInfo(1, { contractorFullName: 'สมชาย' }, {});
+
+      expect(contractorService.create).not.toHaveBeenCalled();
+      expect(contractorService.update).not.toHaveBeenCalled();
+    });
+
+    it('uploads the project image and house plan and stores their returned URLs', async () => {
+      roundsRepo.findOneOrFail.mockResolvedValue({
+        roundId: 1,
+        job: { jobId: 4, contractor: null },
+      });
+      storageService.uploadImage
+        .mockResolvedValueOnce('https://cdn.example.com/project.jpg')
+        .mockResolvedValueOnce('https://cdn.example.com/plan.jpg');
+      jobsRepo.findOneOrFail.mockResolvedValue({ jobId: 4 });
+
+      const projectImageFile = { buffer: Buffer.from('a') } as Express.Multer.File;
+      const housePlanFile = { buffer: Buffer.from('b') } as Express.Multer.File;
+
+      await service.updateJobInfo(1, {}, {
+        projectImageUrl: [projectImageFile],
+        housePlanUrl: [housePlanFile],
+      });
+
+      expect(jobsRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectImageUrl: 'https://cdn.example.com/project.jpg',
+          housePlanUrl: 'https://cdn.example.com/plan.jpg',
+        }),
+      );
     });
   });
 });

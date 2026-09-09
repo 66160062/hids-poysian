@@ -14,6 +14,7 @@ import { UsersModule } from 'src/users/users.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { MailModule } from 'src/mail/mail.module';
 import { NotificationsModule } from 'src/notifications/notifications.module';
+import { ContractorModule } from 'src/contractor/contractor.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { NotificationsModule } from 'src/notifications/notifications.module';
     AuthModule,
     MailModule,
     NotificationsModule,
+    ContractorModule,
   ],
   controllers: [InspectionRoundsController, ProjectApprovalController],
   providers: [InspectionRoundsService],

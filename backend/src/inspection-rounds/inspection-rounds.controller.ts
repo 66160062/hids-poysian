@@ -9,12 +9,17 @@ import {
   Delete,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFiles,
   Req,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { InspectionRoundsService } from './inspection-rounds.service';
 import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
+import { UpdateJobInfoDto } from './dto/update-job-info.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { RoundAccessGuard } from 'src/auth/round-access.guard';
 import { InspectorSelfOrAdminGuard } from 'src/auth/inspector-self-or-admin.guard';
@@ -128,6 +133,36 @@ export class InspectionRoundsController {
     @Body() updateInspectionRoundDto: UpdateInspectionRoundDto,
   ) {
     return this.inspectionRoundsService.update(+id, updateInspectionRoundDto);
+  }
+
+  // endpoint แบบจำกัดสิทธิ์: แก้ได้แค่ "ข้อมูลผู้รับเหมา + รูปหน้าโครงการ + แปลนบ้าน" ของ job
+  // ที่รอบนี้สังกัด — ให้ inspector ที่ถูก assign เข้ารอบนี้ (หรือ admin) เติม/แก้ข้อมูลที่ office
+  // อาจกรอกไม่ครบตอนสร้างงานได้ โดยไม่เปิดช่องให้แก้ field อื่นของ job เหมือน admin
+  @Patch(':id/job-info')
+  @UseGuards(RoundAccessGuard)
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'projectImageUrl', maxCount: 1 },
+        { name: 'housePlanUrl', maxCount: 1 },
+      ],
+      { storage: memoryStorage() },
+    ),
+  )
+  updateJobInfo(
+    @Param('id') id: string,
+    @UploadedFiles()
+    files: {
+      projectImageUrl?: Express.Multer.File[];
+      housePlanUrl?: Express.Multer.File[];
+    },
+    @Body() updateJobInfoDto: UpdateJobInfoDto,
+  ) {
+    return this.inspectionRoundsService.updateJobInfo(
+      +id,
+      updateJobInfoDto,
+      files,
+    );
   }
 
   @Delete(':id')

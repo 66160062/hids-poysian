@@ -16,6 +16,9 @@ import { NotificationsService } from 'src/notifications/notifications.service';
 import { NotificationType } from 'src/notifications/entities/notification.entity';
 import { Assignment } from 'src/assignments/entities/assignment.entity';
 import { AuthService } from 'src/auth/auth.service';
+import { ContractorService } from 'src/contractor/contractor.service';
+import { StorageService } from 'src/storage/storage.service';
+import { UpdateJobInfoDto } from './dto/update-job-info.dto';
 @Injectable()
 export class InspectionRoundsService {
   constructor(
@@ -36,6 +39,8 @@ export class InspectionRoundsService {
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
     private readonly authService: AuthService,
+    private readonly contractorService: ContractorService,
+    private readonly storageService: StorageService,
   ) {}
 
   private formatThaiDate(date: Date): string {
@@ -327,12 +332,76 @@ export class InspectionRoundsService {
         'job.address',
         'job.customer',
         'job.houseType',
+        'job.contractor',
+        'job.plans',
+        'job.plans.floor',
         'teamMembers',
         'teamMembers.inspector',
         'teamMembers.inspector.team',
         'teamMembers.team',
         'createdBy',
       ],
+    });
+  }
+
+  // อัปเดต "ข้อมูลผู้รับเหมา + รูปหน้าโครงการ + แปลนบ้าน" ของ job ที่รอบตรวจนี้สังกัดอยู่ —
+  // ขอบเขตจำกัดเฉพาะ 3 อย่างนี้เท่านั้น (ตั้งใจไม่ใช้ endpoint แก้ไข job แบบเต็มของ admin เพื่อไม่ให้
+  // inspector แก้ field อื่น เช่น ชื่อโครงการ/ลูกค้า/สถานะงาน ได้) — คนเรียกถูกเช็คสิทธิ์มาแล้วที่
+  // RoundAccessGuard (admin หรือ inspector ที่ถูก assign เข้ารอบนี้)
+  async updateJobInfo(
+    roundId: number,
+    dto: UpdateJobInfoDto,
+    files: {
+      projectImageUrl?: Express.Multer.File[];
+      housePlanUrl?: Express.Multer.File[];
+    },
+  ): Promise<InspectionJob> {
+    const round = await this.inspectionRoundsRepo.findOneOrFail({
+      where: { roundId },
+      relations: ['job', 'job.contractor'],
+    });
+    const job = round.job;
+
+    // สร้าง/แก้ไขผู้รับเหมา เฉพาะตอนกรอกชื่อ+เบอร์โทรมาครบ (ทั้งคู่บังคับตาม Contractor entity)
+    if (dto.contractorFullName && dto.contractorPhoneNumber) {
+      const contractorPayload = {
+        fullName: dto.contractorFullName,
+        phoneNumber: dto.contractorPhoneNumber,
+        email: dto.contractorEmail,
+        companyName: dto.contractorCompanyName,
+      };
+      if (job.contractor) {
+        await this.contractorService.update(
+          job.contractor.contractorId,
+          contractorPayload,
+        );
+      } else {
+        job.contractor = await this.contractorService.create(
+          contractorPayload,
+        );
+      }
+    }
+
+    const projectImage = files?.projectImageUrl?.[0];
+    const housePlan = files?.housePlanUrl?.[0];
+    if (projectImage) {
+      job.projectImageUrl = await this.storageService.uploadImage(
+        projectImage.buffer,
+        'inspection_jobs',
+      );
+    }
+    if (housePlan) {
+      job.housePlanUrl = await this.storageService.uploadImage(
+        housePlan.buffer,
+        'inspection_jobs',
+      );
+    }
+
+    await this.inspectionJobsRepo.save(job);
+
+    return this.inspectionJobsRepo.findOneOrFail({
+      where: { jobId: job.jobId },
+      relations: ['contractor'],
     });
   }
 
@@ -448,6 +517,7 @@ export class InspectionRoundsService {
     const round = await this.inspectionRoundsRepo.findOneByOrFail({
       roundId: id,
     });
+
     round.inspectedAt = new Date();
     const saved = await this.inspectionRoundsRepo.save(round);
 
@@ -464,6 +534,7 @@ export class InspectionRoundsService {
     const round = await this.inspectionRoundsRepo.findOneByOrFail({
       roundId: id,
     });
+
     round.summaryCompletedAt = new Date();
     return this.inspectionRoundsRepo.save(round);
   }
