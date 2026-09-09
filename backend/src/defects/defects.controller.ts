@@ -35,6 +35,10 @@ type LinkTokenPayload = {
   generation?: number;
 };
 
+// guard ทุกตัวบน controller นี้ (AuthGuard/DefectAccessGuard) เซ็ต request.user เสมอ
+// role ที่ได้ใช้ตัดสินว่าแก้รอบที่ SUBMITTED ได้ไหม (แอดมินได้ คนอื่นไม่ได้ — ดู DefectsService)
+type RequestWithUser = Request & { user?: { role?: string } };
+
 @Controller('defects')
 export class DefectsController {
   constructor(
@@ -61,14 +65,18 @@ export class DefectsController {
   async create(
     @UploadedFile() file: Express.Multer.File,
     @Body() createDefectDto: CreateDefectDto,
+    @Req() request: RequestWithUser,
   ) {
-    const defect = await this.defectsService.create({
-      ...createDefectDto,
-      imageUrl: file
-        ? await this.storageService.uploadImage(file.buffer, 'defects')
-        : undefined,
-      imageFileSize: file ? file.size : undefined,
-    });
+    const defect = await this.defectsService.create(
+      {
+        ...createDefectDto,
+        imageUrl: file
+          ? await this.storageService.uploadImage(file.buffer, 'defects')
+          : undefined,
+        imageFileSize: file ? file.size : undefined,
+      },
+      request.user?.role,
+    );
     this.maybeScheduleRegeneration(defect);
     return defect;
   }
@@ -123,22 +131,30 @@ export class DefectsController {
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File,
     @Body() updateDefectDto: UpdateDefectDto,
+    @Req() request: RequestWithUser,
   ) {
-    const defect = await this.defectsService.update(id, {
-      ...updateDefectDto,
-      ...(file && {
-        imageUrl: await this.storageService.uploadImage(file.buffer, 'defects'),
-        imageFileSize: file.size,
-      }),
-    });
+    const defect = await this.defectsService.update(
+      id,
+      {
+        ...updateDefectDto,
+        ...(file && {
+          imageUrl: await this.storageService.uploadImage(
+            file.buffer,
+            'defects',
+          ),
+          imageFileSize: file.size,
+        }),
+      },
+      request.user?.role,
+    );
     this.maybeScheduleRegeneration(defect);
     return defect;
   }
 
   @Delete(':id')
   @UseGuards(DefectAccessGuard)
-  async remove(@Param('id') id: string) {
-    const defect = await this.defectsService.remove(+id);
+  async remove(@Param('id') id: string, @Req() request: RequestWithUser) {
+    const defect = await this.defectsService.remove(+id, request.user?.role);
     this.maybeScheduleRegeneration(defect);
     return defect;
   }
