@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { TeamsService } from './teams.service';
 import { Team } from './entities/team.entity';
+import { User } from 'src/users/entities/user.entity';
 
 describe('TeamsService', () => {
   let service: TeamsService;
@@ -12,6 +13,9 @@ describe('TeamsService', () => {
     findOneByOrFail: jest.Mock;
     softDelete: jest.Mock;
   };
+  let usersRepo: {
+    update: jest.Mock;
+  };
 
   beforeEach(async () => {
     teamsRepo = {
@@ -21,11 +25,15 @@ describe('TeamsService', () => {
       findOneByOrFail: jest.fn(),
       softDelete: jest.fn(),
     };
+    usersRepo = {
+      update: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TeamsService,
         { provide: getRepositoryToken(Team), useValue: teamsRepo },
+        { provide: getRepositoryToken(User), useValue: usersRepo },
       ],
     }).compile();
 
@@ -36,10 +44,11 @@ describe('TeamsService', () => {
     expect(service).toBeDefined();
   });
 
-  it('orders teams by team_Id descending', async () => {
+  it('orders teams by team_Id descending and only returns active ones', async () => {
     await service.findAll();
 
     expect(teamsRepo.find).toHaveBeenCalledWith({
+      where: { status: 'active' },
       order: { team_Id: 'DESC' },
     });
   });
@@ -61,5 +70,24 @@ describe('TeamsService', () => {
     await expect(
       service.update(8, { teamName: 'ใหม่' } as never),
     ).resolves.toMatchObject({ team_Id: 8, teamName: 'ใหม่' });
+  });
+
+  it('deactivates a team instead of deleting the row, and unassigns its members', async () => {
+    teamsRepo.findOneByOrFail.mockResolvedValue({
+      team_Id: 8,
+      status: 'active',
+    });
+    teamsRepo.save.mockImplementation((value) => value);
+
+    await expect(service.remove(8)).resolves.toMatchObject({
+      team_Id: 8,
+      status: 'inactive',
+    });
+
+    expect(teamsRepo.softDelete).not.toHaveBeenCalled();
+    expect(usersRepo.update).toHaveBeenCalledWith(
+      { teamId: 8 },
+      { teamId: null },
+    );
   });
 });

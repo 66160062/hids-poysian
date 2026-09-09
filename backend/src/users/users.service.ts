@@ -63,6 +63,12 @@ export class UsersService {
 
     Object.assign(user, updateUserDto);
 
+    // teamId: 0 is a sentinel from the frontend meaning "remove from team"
+    // (multipart/form-data can't carry a real null; 0 is never a valid team id)
+    if ((updateUserDto.teamId as unknown as number) === 0) {
+      user.teamId = null as any;
+    }
+
     // If role is admin, they shouldn't belong to a team
     if (user.role === 'admin') {
       user.teamId = null as any;
