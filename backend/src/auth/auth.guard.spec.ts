@@ -47,8 +47,9 @@ describe('AuthGuard', () => {
 
     expect(guard.canActivate(context)).toBe(true);
     expect(jwtService.verify).toHaveBeenCalledWith('good-token');
-    expect(
-      (context.switchToHttp().getRequest() as { user: unknown }).user,
-    ).toEqual({ sub: 1, role: 'admin' });
+    expect(context.switchToHttp().getRequest().user).toEqual({
+      sub: 1,
+      role: 'admin',
+    });
   });
 });

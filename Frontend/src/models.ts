@@ -39,11 +39,20 @@ export interface InspectionRound {
   teamMember?: { inspector?: { team?: { teamName: string; contactInfo: string } } };
   createdBy?: { fullName: string; phoneNumber: string } | null;
   job: {
+    jobId: number;
     projectName: string;
     projectImageUrl: string;
+    housePlanUrl?: string;
     inspectionType: string;
     houseType: { name: string };
     customer: { fullName: string; phoneNumber: string; email: string };
+    contractor?: {
+      contractorId: number;
+      fullName: string;
+      phoneNumber: string;
+      email?: string;
+      companyName?: string;
+    } | null;
     usableArea: string;
     address: {
       houseNumber: string;
@@ -75,11 +84,23 @@ export interface SubCategory {
   name: string;
   categoryId: Category;
 }
+export interface JobPlan {
+  planId: number;
+  name: string;
+  imageUrl: string;
+  orderIndex: number;
+  floor?: { floorId: number; label: string } | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Defect {
   defectId: number;
   description: string;
   severity: string;
   status: string;
+  createdAt?: string;
+  updatedAt?: string;
   imageUrl?: string;
   contractorImageUrl?: string;
   contractorNote?: string;
@@ -91,6 +112,11 @@ export interface Defect {
   room?: { roomName: string; roomId: number };
   subRoom?: { roomName: string; subRoomId: number } | null;
   floor?: { floorId: number; label: string; floorOrder?: number };
+  plan?: JobPlan | null;
+  planId?: number | null;
+  planX?: number | null;
+  planY?: number | null;
+  locationZone?: string | null;
 }
 
 export interface SummaryTemplateOption {

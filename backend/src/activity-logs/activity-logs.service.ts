@@ -41,7 +41,11 @@ const COUNTABLE_UNIT: Partial<Record<ActivityLogType, string>> = {
   [ActivityLogType.DEFECT_REPAIRED]: 'จุด',
 };
 
-function appendCount(type: ActivityLogType, title: string, count: number): string {
+function appendCount(
+  type: ActivityLogType,
+  title: string,
+  count: number,
+): string {
   const unit = COUNTABLE_UNIT[type];
   if (!unit || count <= 1) return title;
   return `${title} ${count} ${unit}`;

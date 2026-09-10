@@ -2,6 +2,7 @@ import { Address } from 'src/addresses/entities/address.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { HouseType } from 'src/house-types/entities/house-type.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
+import { JobPlan } from 'src/job-plans/entities/job-plan.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -88,4 +89,7 @@ export class InspectionJob {
 
   @OneToMany(() => InspectionRound, (round) => round.job)
   rounds!: InspectionRound[];
+
+  @OneToMany(() => JobPlan, (plan) => plan.job)
+  plans!: JobPlan[];
 }

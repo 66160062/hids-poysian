@@ -18,6 +18,7 @@ describe('InspectionRoundsController', () => {
       | 'submit'
       | 'approveReport'
       | 'confirmInspection'
+      | 'updateJobInfo'
     >
   >;
   let reports: jest.Mocked<
@@ -31,6 +32,7 @@ describe('InspectionRoundsController', () => {
       submit: jest.fn(),
       approveReport: jest.fn(),
       confirmInspection: jest.fn(),
+      updateJobInfo: jest.fn(),
     };
     const reportsMock = {
       getCachedReportUrl: jest.fn(),
@@ -85,6 +87,16 @@ describe('InspectionRoundsController', () => {
       generatedAt,
     });
     expect(reports.getCachedReportUrl).toHaveBeenCalledWith(4);
+  });
+
+  it('converts the route param to a number and forwards the dto and files when updating job info', async () => {
+    const dto = { contractorFullName: 'สมชาย' };
+    const files = { projectImageUrl: [{ buffer: Buffer.from('a') }] };
+    service.updateJobInfo.mockResolvedValue({ jobId: 4 } as never);
+
+    await controller.updateJobInfo('1', files as never, dto as never);
+
+    expect(service.updateJobInfo).toHaveBeenCalledWith(1, dto, files);
   });
 
   it('converts the route param to a number when submitting a round', () => {

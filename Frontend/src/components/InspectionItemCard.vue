@@ -12,7 +12,7 @@
           <div class="text-subtitle1 text-weight-bold text-primary">
             {{ groupedData.roomName }}
           </div>
-          <div class="text-body2 text-primary">({{ groupedData.totalItems }} รายการ)</div>
+          <div class="text-body2 text-primary">{{ t('components.inspectionItemCard.itemsCount', { n: groupedData.totalItems }) }}</div>
         </div>
 
         <q-badge outline color="grey-5" class="text-grey-8 q-py-xs q-px-sm rounded-borders">
@@ -30,11 +30,11 @@
         <div class="row items-center q-gutter-x-sm">
           <div class="row items-center text-green">
             <q-icon name="check_circle" size="14px" class="q-mr-xs" />
-            <span>ผ่าน</span>
+            <span>{{ t('components.inspectionItemCard.passed') }}</span>
           </div>
           <div class="row items-center text-red">
             <q-icon name="cancel" size="14px" class="q-mr-xs" />
-            <span>ไม่ผ่าน</span>
+            <span>{{ t('components.inspectionItemCard.failed') }}</span>
           </div>
         </div>
       </div>
@@ -64,6 +64,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const props = defineProps({
   groupedData: {

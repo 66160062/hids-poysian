@@ -58,7 +58,7 @@ describe('SummaryTemplateOptionsService', () => {
     const result = await service.create({
       templateId: 2,
       value: 'ดี',
-    } as never);
+    });
 
     expect(templatesRepo.findOneByOrFail).toHaveBeenCalledWith({
       templateId: 2,
@@ -73,9 +73,10 @@ describe('SummaryTemplateOptionsService', () => {
     });
     optionsRepo.save.mockImplementation((value) => value);
 
-    await expect(
-      service.update(9, { value: 'แย่' } as never),
-    ).resolves.toMatchObject({ optionId: 9, value: 'แย่' });
+    await expect(service.update(9, { value: 'แย่' })).resolves.toMatchObject({
+      optionId: 9,
+      value: 'แย่',
+    });
   });
 
   it('hard-removes an option once loaded', async () => {

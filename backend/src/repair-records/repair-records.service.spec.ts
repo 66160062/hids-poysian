@@ -59,9 +59,7 @@ describe('RepairRecordsService', () => {
   it('throws a Thai-language NotFoundException with the record id when missing', async () => {
     repairRepo.findOne.mockResolvedValue(null);
 
-    await expect(service.findOne(42)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(service.findOne(42)).rejects.toBeInstanceOf(NotFoundException);
     await expect(service.findOne(42)).rejects.toThrow(
       'ไม่พบบันทึกการซ่อมรหัส #42',
     );

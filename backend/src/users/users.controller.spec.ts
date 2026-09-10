@@ -36,8 +36,13 @@ describe('UsersController', () => {
   });
 
   it('uploads the avatar and forwards its url when a file is attached', async () => {
-    storage.uploadImage.mockResolvedValue('https://example.com/users/avatar.jpg');
-    const file = { buffer: Buffer.from('img'), size: 50 } as Express.Multer.File;
+    storage.uploadImage.mockResolvedValue(
+      'https://example.com/users/avatar.jpg',
+    );
+    const file = {
+      buffer: Buffer.from('img'),
+      size: 50,
+    } as Express.Multer.File;
 
     await controller.create(file, { email: 'a@b.com' } as never);
 
@@ -62,11 +67,9 @@ describe('UsersController', () => {
   });
 
   it('only overwrites imageUrl on update when a new file is attached', async () => {
-    await controller.update(
-      1,
-      undefined as unknown as Express.Multer.File,
-      { fullName: 'ใหม่' } as never,
-    );
+    await controller.update(1, undefined as unknown as Express.Multer.File, {
+      fullName: 'ใหม่',
+    });
 
     expect(storage.uploadImage).not.toHaveBeenCalled();
     expect(service.update).toHaveBeenCalledWith(1, { fullName: 'ใหม่' });

@@ -4,11 +4,15 @@
     <div class="text-h6 text-weight-medium">
       {{ message }}
     </div>
-    <div class="text-body2 q-mt-sm">กดปุ่ม + มุมขวาล่างเพื่อเริ่มตรวจบ้าน</div>
+    <div class="text-body2 q-mt-sm">{{ t('components.emptyState.hint') }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+
 defineProps({
   message: {
     type: String,

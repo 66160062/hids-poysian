@@ -34,6 +34,10 @@ type LinkTokenPayload = {
 // รอบตรวจที่ยื่นอนุมัติ (หรืออนุมัติแล้ว) ห้ามแก้ไข/ลบ defect — ต้องตรงกับ LOCKED_STATUSES ฝั่ง frontend (useRoundLock.ts)
 const LOCKED_ROUND_STATUSES = ['SUBMITTED', 'APPROVED'];
 
+// แอดมินคือคนตรวจทานรอบที่ inspector ยื่นมาก่อนกดอนุมัติ จึงยังแก้ตอน SUBMITTED ได้
+// แต่พออนุมัติแล้วล็อกเหมือนกันทุก role เพราะรายงานส่งถึงลูกค้าไปแล้ว
+const ADMIN_LOCKED_ROUND_STATUSES = ['APPROVED'];
+
 // สัดส่วนซ่อมเสร็จที่ยิงแจ้งเตือนแอดมิน (ยิงครั้งเดียวต่อรอบ กันสแปม — ดู repairAlertSentAt บน InspectionRound)
 const REPAIR_ALERT_THRESHOLD = 0.8;
 
@@ -80,9 +84,7 @@ export class DefectsService {
 
   // เช็คซ้ำแบบเดียวกับฝั่ง frontend (isDuplicateDefect ใน AddDefectPage.vue) แต่ query จาก DB สด
   // กันเคส 2 inspector คนละ session บันทึกจุดเดียวกันพร้อมกัน ซึ่ง local store ฝั่ง frontend มองไม่เห็นกัน
-  private async hasDuplicateDefect(
-    dto: CreateDefectDto,
-  ): Promise<boolean> {
+  private async hasDuplicateDefect(dto: CreateDefectDto): Promise<boolean> {
     const candidates = await this.defectsRepo.find({
       where: {
         round: { roundId: dto.roundId },
@@ -107,11 +109,27 @@ export class DefectsService {
     });
   }
 
+  private assertRoundEditable(roundStatus: string, role?: string): void {
+    const isAdmin = role === 'admin';
+    const lockedStatuses = isAdmin
+      ? ADMIN_LOCKED_ROUND_STATUSES
+      : LOCKED_ROUND_STATUSES;
+
+    if (lockedStatuses.includes(roundStatus)) {
+      throw new ForbiddenException(
+        isAdmin
+          ? 'Round is approved and cannot be edited'
+          : 'Round is submitted or approved and cannot be edited',
+      );
+    }
+  }
+
   async create(
     createDefectDto: CreateDefectDto & {
       imageUrl?: string;
       imageFileSize?: number;
     },
+    role?: string,
   ) {
     const [round, subCategories, inspector, room, subRoom] = await Promise.all([
       this.roundsRepo.findOneByOrFail({
@@ -133,11 +151,7 @@ export class DefectsService {
         : Promise.resolve(null),
     ]);
 
-    if (LOCKED_ROUND_STATUSES.includes(round.status)) {
-      throw new ForbiddenException(
-        'Round is submitted or approved and cannot be edited',
-      );
-    }
+    this.assertRoundEditable(round.status, role);
 
     if (await this.hasDuplicateDefect(createDefectDto)) {
       throw new ConflictException(
@@ -154,6 +168,10 @@ export class DefectsService {
       subCategories,
       inspector,
       imageFileSize: createDefectDto.imageFileSize,
+      plan: createDefectDto.planId ? { planId: createDefectDto.planId } : null,
+      planX: createDefectDto.planX ?? null,
+      planY: createDefectDto.planY ?? null,
+      locationZone: createDefectDto.locationZone ?? null,
     });
 
     const saved = await this.defectsRepo.save(defect);
@@ -177,6 +195,7 @@ export class DefectsService {
         'floor',
         'subCategories',
         'inspector',
+        'plan',
       ],
     });
   }
@@ -192,6 +211,7 @@ export class DefectsService {
         'subCategories',
         'subCategories.category',
         'inspector',
+        'plan',
       ],
     });
   }
@@ -202,16 +222,15 @@ export class DefectsService {
       imageUrl?: string;
       imageFileSize?: number;
     },
+    role?: string,
   ) {
     const defect = await this.defectsRepo.findOneOrFail({
       where: { defectId: id },
       relations: ['round'],
     });
 
-    if (defect.round && LOCKED_ROUND_STATUSES.includes(defect.round.status)) {
-      throw new ForbiddenException(
-        'Round is submitted or approved and cannot be edited',
-      );
+    if (defect.round) {
+      this.assertRoundEditable(defect.round.status, role);
     }
 
     // Assign primitive properties
@@ -233,6 +252,21 @@ export class DefectsService {
       defect.subRoom = updateDefectDto.subRoomId
         ? ({ subRoomId: updateDefectDto.subRoomId } as any)
         : null;
+    }
+
+    if (updateDefectDto.planId !== undefined) {
+      defect.plan = updateDefectDto.planId
+        ? ({ planId: updateDefectDto.planId } as any)
+        : null;
+    }
+    if (updateDefectDto.planX !== undefined) {
+      defect.planX = updateDefectDto.planX;
+    }
+    if (updateDefectDto.planY !== undefined) {
+      defect.planY = updateDefectDto.planY;
+    }
+    if (updateDefectDto.locationZone !== undefined) {
+      defect.locationZone = updateDefectDto.locationZone;
     }
 
     if (updateDefectDto.subCategoryIds) {
@@ -363,16 +397,14 @@ export class DefectsService {
     }
   }
 
-  async remove(id: number) {
+  async remove(id: number, role?: string) {
     const defect = await this.defectsRepo.findOneOrFail({
       where: { defectId: id },
       relations: ['round'],
     });
 
-    if (defect.round && LOCKED_ROUND_STATUSES.includes(defect.round.status)) {
-      throw new ForbiddenException(
-        'Round is submitted or approved and cannot be edited',
-      );
+    if (defect.round) {
+      this.assertRoundEditable(defect.round.status, role);
     }
 
     return this.defectsRepo.remove(defect);
@@ -389,6 +421,7 @@ export class DefectsService {
         'room',
         'subRoom',
         'floor',
+        'plan',
       ],
     });
   }

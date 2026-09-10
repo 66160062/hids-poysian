@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { api } from 'src/boot/axios'
+import { t } from 'src/boot/i18n'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string
 
@@ -14,6 +15,11 @@ export interface DefectItem {
   roomName:      string
   categoryNames: string[]
   severity:      string
+  jobId?:        number
+  planId?:       number | null
+  planX?:        number | null
+  planY?:        number | null
+  locationZone?: string | null
 }
 
 export interface DefectSummary {
@@ -39,6 +45,11 @@ interface DefectResponse {
   subRoom?: { subRoomId: number; roomName: string } | null
   floor?: { floorId: number; label: string }
   subCategories?: DefectSubCategoryResponse[]
+  planId?: number | null
+  planX?: number | null
+  planY?: number | null
+  locationZone?: string | null
+  plan?: { planId: number; name: string; imageUrl: string } | null
 }
 
 interface RoundResponse {
@@ -75,7 +86,7 @@ export function useDefectList() {
         )
         const roomName = defect.room?.roomName || '-'
         const subRoomName = defect.subRoom?.roomName || '-'
-        const floorLabel = defect.floor?.label ? `ชั้น${defect.floor.label}` : '-'
+        const floorLabel = defect.floor?.label ? t('stores.defectList.floorPrefix', { label: defect.floor.label }) : '-'
 
         return {
           defectId: defect.defectId,
@@ -91,6 +102,11 @@ export function useDefectList() {
           roomName,
           categoryNames,
           severity: defect.severity,
+          jobId,
+          planId: defect.planId ?? defect.plan?.planId ?? null,
+          planX: defect.planX != null ? Number(defect.planX) : null,
+          planY: defect.planY != null ? Number(defect.planY) : null,
+          locationZone: defect.locationZone ?? null,
         }
       })
     } finally {

@@ -57,7 +57,9 @@ export class MailService {
         text: this.buildRoundApprovedText(params),
         html: this.buildRoundApprovedHtml(params),
       });
-      this.logger.log(`ส่งอีเมลแจ้งอนุมัติให้ ${params.to} สำเร็จ (${info.messageId})`);
+      this.logger.log(
+        `ส่งอีเมลแจ้งอนุมัติให้ ${params.to} สำเร็จ (${info.messageId})`,
+      );
     } catch (error) {
       this.logger.error(
         `ส่งอีเมลแจ้งอนุมัติรอบตรวจให้ ${params.to} ไม่สำเร็จ`,
@@ -83,7 +85,9 @@ export class MailService {
         text: this.buildContractorRoundApprovedText(params),
         html: this.buildContractorRoundApprovedHtml(params),
       });
-      this.logger.log(`ส่งอีเมลแจ้งผู้รับเหมาให้ ${params.to} สำเร็จ (${info.messageId})`);
+      this.logger.log(
+        `ส่งอีเมลแจ้งผู้รับเหมาให้ ${params.to} สำเร็จ (${info.messageId})`,
+      );
     } catch (error) {
       this.logger.error(
         `ส่งอีเมลแจ้งผู้รับเหมาให้ ${params.to} ไม่สำเร็จ`,
@@ -108,7 +112,9 @@ export class MailService {
         text: this.buildInspectorAssignedText(params),
         html: this.buildInspectorAssignedHtml(params),
       });
-      this.logger.log(`ส่งอีเมลแจ้งมอบหมายงานให้ ${params.to} สำเร็จ (${info.messageId})`);
+      this.logger.log(
+        `ส่งอีเมลแจ้งมอบหมายงานให้ ${params.to} สำเร็จ (${info.messageId})`,
+      );
     } catch (error) {
       this.logger.error(
         `ส่งอีเมลแจ้งมอบหมายงานให้ ${params.to} ไม่สำเร็จ`,
@@ -131,7 +137,9 @@ export class MailService {
         text: this.buildRoundOpenedText(params),
         html: this.buildRoundOpenedHtml(params),
       });
-      this.logger.log(`ส่งอีเมลแจ้งเปิดรอบตรวจให้ ${params.to} สำเร็จ (${info.messageId})`);
+      this.logger.log(
+        `ส่งอีเมลแจ้งเปิดรอบตรวจให้ ${params.to} สำเร็จ (${info.messageId})`,
+      );
     } catch (error) {
       this.logger.error(
         `ส่งอีเมลแจ้งเปิดรอบตรวจให้ ${params.to} ไม่สำเร็จ`,
@@ -339,7 +347,12 @@ export class MailService {
     if (params.scheduledDate) {
       lines.push(`วันที่นัดหมาย: ${params.scheduledDate}`);
     }
-    lines.push('', `คลิกเพื่อดูรายละเอียด: ${params.portalUrl}`, '', '— ทีมงาน HIDS');
+    lines.push(
+      '',
+      `คลิกเพื่อดูรายละเอียด: ${params.portalUrl}`,
+      '',
+      '— ทีมงาน HIDS',
+    );
     return lines.join('\n');
   }
 

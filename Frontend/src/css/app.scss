@@ -1,1 +1,17 @@
 // app global css in SCSS form
+
+// Disable Quasar's default click-ripple effect everywhere except the bottom footer nav
+.q-ripple {
+  display: none !important;
+}
+
+.q-footer .q-ripple {
+  display: block !important;
+}
+
+// Disable Quasar's default hover effect (grey overlay + opacity shift) on all buttons
+.q-btn.q-hoverable:hover > .q-focus-helper {
+  opacity: 0 !important;
+  background: none !important;
+}
+

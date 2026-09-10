@@ -21,6 +21,7 @@ describe('DefectsService', () => {
     create: jest.Mock;
     save: jest.Mock;
     count: jest.Mock;
+    remove: jest.Mock;
   };
   let activityLogsService: { log: jest.Mock; logForRound: jest.Mock };
   let notificationsService: { create: jest.Mock };
@@ -45,6 +46,7 @@ describe('DefectsService', () => {
       create: jest.fn(),
       save: jest.fn(),
       count: jest.fn(),
+      remove: jest.fn(),
     };
     repoMock = {
       findOneByOrFail: jest.fn(),
@@ -168,7 +170,7 @@ describe('DefectsService', () => {
         floorId: 1,
         severity: 'Minor',
         description: 'ผนังแตกร้าว',
-      } as never),
+      }),
     ).rejects.toThrow(ConflictException);
     expect(defectsRepo.save).not.toHaveBeenCalled();
   });
@@ -197,7 +199,7 @@ describe('DefectsService', () => {
         floorId: 1,
         severity: 'Minor',
         description: 'ผนังแตกร้าว',
-      } as never),
+      }),
     ).resolves.toBeDefined();
   });
 
@@ -263,7 +265,10 @@ describe('DefectsService', () => {
     defectsRepo.count
       .mockResolvedValueOnce(10) // total
       .mockResolvedValueOnce(8); // repaired
-    repoMock.findOneBy.mockResolvedValue({ roundId: 7, repairAlertSentAt: null });
+    repoMock.findOneBy.mockResolvedValue({
+      roundId: 7,
+      repairAlertSentAt: null,
+    });
     repoMock.save.mockImplementation((value) => value);
 
     await service.contractorUpdate({
@@ -304,7 +309,10 @@ describe('DefectsService', () => {
     defectsRepo.findOneOrFail.mockResolvedValue(defect);
     defectsRepo.save.mockImplementation((value) => value);
     defectsRepo.count.mockResolvedValueOnce(10).mockResolvedValueOnce(5);
-    repoMock.findOneBy.mockResolvedValue({ roundId: 7, repairAlertSentAt: null });
+    repoMock.findOneBy.mockResolvedValue({
+      roundId: 7,
+      repairAlertSentAt: null,
+    });
 
     await service.contractorUpdate({
       defectId: 11,
@@ -453,7 +461,7 @@ describe('DefectsService', () => {
     });
 
     await expect(
-      service.update(11, { description: 'edited' } as never),
+      service.update(11, { description: 'edited' }),
     ).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(defectsRepo.save).not.toHaveBeenCalled();
@@ -465,9 +473,62 @@ describe('DefectsService', () => {
       round: { roundId: 7, status: 'SUBMITTED' },
     });
 
-    await expect(service.remove(11)).rejects.toBeInstanceOf(
-      ForbiddenException,
+    await expect(service.remove(11)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('should allow admin to update a defect on a submitted round', async () => {
+    const defect = {
+      defectId: 11,
+      description: 'old',
+      round: { roundId: 7, status: 'SUBMITTED' },
+    };
+    defectsRepo.findOneOrFail.mockResolvedValue(defect);
+    defectsRepo.save.mockImplementation((value) => value);
+
+    const result = await service.update(
+      11,
+      { description: 'edited by admin' },
+      'admin',
     );
+
+    expect(result.description).toBe('edited by admin');
+  });
+
+  it('should allow admin to remove a defect on a submitted round', async () => {
+    const defect = {
+      defectId: 11,
+      round: { roundId: 7, status: 'SUBMITTED' },
+    };
+    defectsRepo.findOneOrFail.mockResolvedValue(defect);
+    defectsRepo.remove.mockResolvedValue(defect);
+
+    await expect(service.remove(11, 'admin')).resolves.toBe(defect);
+  });
+
+  it('should still reject admin edits once the round is approved', async () => {
+    defectsRepo.findOneOrFail.mockResolvedValue({
+      defectId: 11,
+      round: { roundId: 7, status: 'APPROVED' },
+    });
+
+    await expect(
+      service.update(11, { description: 'edited' }, 'admin'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(defectsRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('should still reject inspector edits on a submitted round', async () => {
+    defectsRepo.findOneOrFail.mockResolvedValue({
+      defectId: 11,
+      round: { roundId: 7, status: 'SUBMITTED' },
+    });
+
+    await expect(
+      service.update(11, { description: 'edited' }, 'inspector'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(defectsRepo.save).not.toHaveBeenCalled();
   });
 
   it('should allow updating a defect on a round that is not locked', async () => {
@@ -481,7 +542,7 @@ describe('DefectsService', () => {
 
     const result = await service.update(11, {
       description: 'edited',
-    } as never);
+    });
 
     expect(result.description).toBe('edited');
   });

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 
 interface PropertyItem {
   roundId: number;
@@ -35,6 +36,7 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
+const { t } = useI18n();
 
 const goToInspectionInfo = (roundId: number) => {
   void router.push(`/inspector/job/${roundId}`);
@@ -50,11 +52,19 @@ const openGoogleMaps = () => {
   // รวมข้อมูลที่อยู่ทั้งหมดเพื่อใช้ค้นหา
   const searchQueryParts = [
     job.projectName,
-    address?.houseNumber ? `เลขที่ ${address.houseNumber}` : '',
-    address?.soi ? `ถ.${address.soi}` : '',
-    address?.subDistrict ? `ต.${address.subDistrict}` : '',
-    address?.district ? `อ.${address.district}` : '',
-    address?.province ? `จ.${address.province}` : '',
+    address?.houseNumber
+      ? `${t('components.propertyCard.houseNoPrefix')} ${address.houseNumber}`
+      : '',
+    address?.soi ? `${t('components.propertyCard.soiPrefix')}${address.soi}` : '',
+    address?.subDistrict
+      ? `${t('components.propertyCard.subDistrictPrefix')}${address.subDistrict}`
+      : '',
+    address?.district
+      ? `${t('components.propertyCard.districtPrefix')}${address.district}`
+      : '',
+    address?.province
+      ? `${t('components.propertyCard.provincePrefix')}${address.province}`
+      : '',
     address?.postalCode || '',
   ];
 
@@ -71,7 +81,7 @@ const openGoogleMaps = () => {
     // เปิดแท็บใหม่ (หรือเปิดแอป Maps บนมือถือ)
     window.open(mapsUrl, '_blank');
   } else {
-    alert('ไม่พบข้อมูลที่อยู่สำหรับนำทาง');
+    alert(t('components.propertyCard.noAddressForNavigation'));
   }
 };
 
@@ -132,7 +142,7 @@ const statusBadgeTextColor = (status: string) => {
                 v-if="isDefect(item.job?.inspectionType)"
                 color="primary"
                 outline
-                label="การตรวจบ้าน"
+                :label="t('components.propertyCard.inspectionTypeDefect')"
                 class="q-px-sm"
                 style="font-size: 10px; font-weight: 500; border-radius: 4px;"
               />
@@ -140,7 +150,7 @@ const statusBadgeTextColor = (status: string) => {
                 v-else-if="isConstruction(item.job?.inspectionType)"
                 color="warning"
                 outline
-                label="การตรวจก่อสร้าง"
+                :label="t('components.propertyCard.inspectionTypeConstruction')"
                 class="q-px-sm"
                 style="font-size: 10px; font-weight: 500; border-radius: 4px;"
               />
@@ -163,12 +173,12 @@ const statusBadgeTextColor = (status: string) => {
               font-size: 8px;
             "
           >
-            <div v-if="item.status == 'SCHEDULED'">รอเข้าตรวจ</div>
-            <div v-else-if="item.status === 'INSPECTED'">กำลังดำเนินการ</div>
-            <div v-else-if="item.status === 'SUBMITTED'">รอการอนุมัติ</div>
-            <div v-else-if="item.status === 'APPROVED' || item.status === 'COMPLETED'">เสร็จสิ้น</div>
-            <div v-else-if="item.status === 'CANCELLED'">ยกเลิก</div>
-            <div v-else>ไม่ทราบสถานะ</div>
+            <div v-if="item.status == 'SCHEDULED'">{{ t('components.propertyCard.statusScheduled') }}</div>
+            <div v-else-if="item.status === 'INSPECTED'">{{ t('components.propertyCard.statusInspected') }}</div>
+            <div v-else-if="item.status === 'SUBMITTED'">{{ t('components.propertyCard.statusSubmitted') }}</div>
+            <div v-else-if="item.status === 'APPROVED' || item.status === 'COMPLETED'">{{ t('components.propertyCard.statusCompleted') }}</div>
+            <div v-else-if="item.status === 'CANCELLED'">{{ t('components.propertyCard.statusCancelled') }}</div>
+            <div v-else>{{ t('components.propertyCard.statusUnknown') }}</div>
           </q-badge>
         </div>
 
@@ -184,23 +194,23 @@ const statusBadgeTextColor = (status: string) => {
             overflow: hidden;
           "
         >
-          เลขที่ {{ item.job.address?.houseNumber || '-' }} ถ.{{
+          {{ t('components.propertyCard.houseNoPrefix') }} {{ item.job.address?.houseNumber || '-' }} {{ t('components.propertyCard.soiPrefix') }}{{
             item.job.address?.soi || '-'
           }}
-          ต.{{ item.job.address?.subDistrict || '-' }} อ.{{
+          {{ t('components.propertyCard.subDistrictPrefix') }}{{ item.job.address?.subDistrict || '-' }} {{ t('components.propertyCard.districtPrefix') }}{{
             item.job.address?.district || '-'
           }}
-          จ.{{ item.job.address?.province || '-' }} {{ item.job.address?.postalCode || '-' }}
+          {{ t('components.propertyCard.provincePrefix') }}{{ item.job.address?.province || '-' }} {{ item.job.address?.postalCode || '-' }}
         </div>
 
         <div
           class="q-mt-xs text-dark"
           style="font-weight: 500; font-size: 10px"
         >
-          <span class="text-primary">ประเภทที่อยู่:</span>
+          <span class="text-primary">{{ t('components.propertyCard.houseTypeLabel') }}</span>
           <span>
             {{ item.job.houseType?.name }}
-            {{ item.job.address?.floor ? item.job.address.floor + ' ชั้น' : '' }}</span
+            {{ item.job.address?.floor ? item.job.address.floor + ' ' + t('components.propertyCard.floorSuffix') : '' }}</span
           >
         </div>
 
@@ -211,7 +221,7 @@ const statusBadgeTextColor = (status: string) => {
               class="text-primary"
               style="font-weight: 500; font-size: 12px"
             >
-              {{ item.job.customer?.fullName || 'ไม่ระบุชื่อ' }}
+              {{ item.job.customer?.fullName || t('components.propertyCard.unnamedCustomer') }}
             </span>
           </div>
           <div class="row items-center q-gutter-x-xs q-mt-xs">
@@ -220,7 +230,7 @@ const statusBadgeTextColor = (status: string) => {
               class="text-dark"
               style="font-weight: 500; font-size: 12px"
             >
-              {{ item.job.customer?.phoneNumber || 'ไม่ระบุเบอร์โทร' }}
+              {{ item.job.customer?.phoneNumber || t('components.propertyCard.noPhoneNumber') }}
             </span>
           </div>
         </div>
@@ -230,7 +240,7 @@ const statusBadgeTextColor = (status: string) => {
             unelevated
             color="primary"
             icon="map"
-            label="นำทาง"
+            :label="t('components.propertyCard.navigateButton')"
             size="sm"
             class="nav-button"
             style="font-size: 12px; font-weight: 500"
@@ -255,9 +265,8 @@ const statusBadgeTextColor = (status: string) => {
   width: 100%;
   min-height: 150px;
   height: auto;
-  border-radius: 15px;
-  border: 1px solid #1975d2;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  border: 1px solid #f0f0f0;
   margin: 0 auto;
 }
 

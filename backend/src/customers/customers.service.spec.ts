@@ -48,7 +48,7 @@ describe('CustomersService', () => {
   });
 
   it('updates a customer by id', async () => {
-    await service.update(4, { fullName: 'Somchai' } as never);
+    await service.update(4, { fullName: 'Somchai' });
 
     expect(customersRepo.update).toHaveBeenCalledWith(
       { customerId: 4 },

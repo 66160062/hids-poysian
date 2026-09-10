@@ -4,7 +4,9 @@ import { CustomersService } from './customers.service';
 
 describe('CustomersController', () => {
   let controller: CustomersController;
-  let service: jest.Mocked<Pick<CustomersService, 'findOne' | 'update' | 'remove'>>;
+  let service: jest.Mocked<
+    Pick<CustomersService, 'findOne' | 'update' | 'remove'>
+  >;
 
   beforeEach(async () => {
     const serviceMock = {

@@ -1,7 +1,7 @@
 <template>
   <div class="row items-center q-gutter-x-sm">
     <q-input outlined dense class="col" bg-color="white" :model-value="modelValue"
-      @update:model-value="$emit('update:modelValue', $event)" placeholder="ค้นหาประเภทห้อง, ประเภทห้องย่อย">
+      @update:model-value="$emit('update:modelValue', $event)" :placeholder="t('components.searchBar.placeholder')">
       <template v-slot:prepend>
         <q-icon name="search" color="grey-6" />
       </template>
@@ -12,6 +12,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+
 defineProps({
   modelValue: {
     type: String,

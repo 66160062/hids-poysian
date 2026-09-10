@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
 import { ContractorController } from './contractor.controller';
 import { ContractorService } from './contractor.service';
 
@@ -14,7 +15,10 @@ describe('ContractorController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ContractorController],
-      providers: [{ provide: ContractorService, useValue: serviceMock }],
+      providers: [
+        { provide: ContractorService, useValue: serviceMock },
+        { provide: JwtService, useValue: { verify: jest.fn() } },
+      ],
     }).compile();
 
     controller = module.get<ContractorController>(ContractorController);

@@ -4,7 +4,9 @@ import { RoomsService } from './rooms.service';
 
 describe('RoomsController', () => {
   let controller: RoomsController;
-  let service: jest.Mocked<Pick<RoomsService, 'findOne' | 'remove' | 'create' | 'findAll' | 'update'>>;
+  let service: jest.Mocked<
+    Pick<RoomsService, 'findOne' | 'remove' | 'create' | 'findAll' | 'update'>
+  >;
 
   beforeEach(async () => {
     const serviceMock = {
@@ -44,7 +46,7 @@ describe('RoomsController', () => {
 
   it('findAll(): should call service.findAll() without arguments', () => {
     controller.findAll();
-    
+
     expect(service.findAll).toHaveBeenCalled();
   });
 

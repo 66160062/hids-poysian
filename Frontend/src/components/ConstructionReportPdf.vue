@@ -2,8 +2,8 @@
   <div class="pdf-container modern-font" :class="{ 'redacted-mode': isRedacted }">
     <!-- Controls (Not printed) -->
     <div class="no-print controls bg-white shadow-2 q-pa-sm row items-center justify-between" style="position: sticky; top: 0; z-index: 100; border-radius: 8px; margin-bottom: 20px;">
-      <q-toggle v-model="isRedacted" label="ซ่อนข้อมูลส่วนบุคคล (Redact)" color="negative" />
-      <q-btn color="primary" icon="print" label="พิมพ์เอกสาร (A4)" @click="printPdf" />
+      <q-toggle v-model="isRedacted" :label="t('reports.constructionPdf.hidePersonalInfo')" color="negative" />
+      <q-btn color="primary" icon="print" :label="t('reports.constructionPdf.printDocument')" @click="printPdf" />
     </div>
 
     <div class="pdf-wrapper">
@@ -12,10 +12,10 @@
       <table class="report-table no-border-bottom">
         <tbody>
           <tr>
-            <td style="width: 60%; text-align: center; font-size: 18px; font-weight: bold; background-color: #f0f0f0;">รายงานการก่อสร้างประจำวัน</td>
+            <td style="width: 60%; text-align: center; font-size: 18px; font-weight: bold; background-color: #f0f0f0;">{{ t('reports.constructionPdf.title') }}</td>
             <td style="width: 40%; font-size: 12px; padding: 4px;">
-              <div><strong>ชื่อโครงการ:</strong> <span class="sensitive-data">{{ report?.round?.job?.projectName || '-' }}</span></div>
-              <div><strong>เลขที่เอกสาร:</strong> <span class="sensitive-data">{{ report?.dailyReportId ? `DOC-${report.dailyReportId}` : '-' }}</span></div>
+              <div><strong>{{ t('reports.constructionPdf.projectName') }}</strong> <span class="sensitive-data">{{ report?.round?.job?.projectName || '-' }}</span></div>
+              <div><strong>{{ t('reports.constructionPdf.docNumber') }}</strong> <span class="sensitive-data">{{ report?.dailyReportId ? `DOC-${report.dailyReportId}` : '-' }}</span></div>
             </td>
           </tr>
         </tbody>
@@ -28,10 +28,10 @@
             <td style="width: 50%; padding: 4px; border-right: 1px solid #000;">
               <table class="inner-table">
                 <tbody>
-                  <tr><td style="width: 30%"><strong>โครงการ:</strong></td><td><span class="sensitive-data">{{ report?.round?.job?.projectName || '-' }}</span></td></tr>
-                  <tr><td><strong>ผู้รับเหมา:</strong></td><td><span class="sensitive-data">{{ report?.contractorName || '-' }}</span></td></tr>
-                  <tr><td><strong>ผู้รายงาน:</strong></td><td><span class="sensitive-data">{{ report?.reporterName || '-' }}</span></td></tr>
-                  <tr><td><strong>ตำแหน่ง:</strong></td><td>{{ report?.position || 'วิศวกรควบคุมงาน' }}</td></tr>
+                  <tr><td style="width: 30%"><strong>{{ t('reports.constructionPdf.project') }}</strong></td><td><span class="sensitive-data">{{ report?.round?.job?.projectName || '-' }}</span></td></tr>
+                  <tr><td><strong>{{ t('reports.constructionPdf.contractor') }}</strong></td><td><span class="sensitive-data">{{ report?.contractorName || '-' }}</span></td></tr>
+                  <tr><td><strong>{{ t('reports.constructionPdf.reporter') }}</strong></td><td><span class="sensitive-data">{{ report?.reporterName || '-' }}</span></td></tr>
+                  <tr><td><strong>{{ t('reports.constructionPdf.position') }}</strong></td><td>{{ report?.position || t('reports.constructionPdf.positionDefault') }}</td></tr>
                 </tbody>
               </table>
             </td>
@@ -39,11 +39,11 @@
               <table class="inner-table">
                 <tbody>
                   <tr>
-                    <td style="width: 50%"><strong>วันที่:</strong> {{ formatDate(report?.reportDate || '') }}</td>
-                    <td style="width: 50%"><strong>สภาพอากาศ:</strong> {{ report?.weather || '-' }}</td>
+                    <td style="width: 50%"><strong>{{ t('reports.constructionPdf.date') }}</strong> {{ formatDate(report?.reportDate || '') }}</td>
+                    <td style="width: 50%"><strong>{{ t('reports.constructionPdf.weather') }}</strong> {{ report?.weather || '-' }}</td>
                   </tr>
                   <tr>
-                    <td colspan="2"><strong>เวลาปฏิบัติงาน:</strong> {{ report?.workingPeriod || '-' }}</td>
+                    <td colspan="2"><strong>{{ t('reports.constructionPdf.workingPeriod') }}</strong> {{ report?.workingPeriod || '-' }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -56,17 +56,17 @@
       <table class="report-table mt-4">
         <thead>
           <tr style="background-color: #f0f0f0; text-align: center;">
-            <th colspan="8" style="font-size: 14px;">รายละเอียดงานปฏิบัติ</th>
+            <th colspan="8" style="font-size: 14px;">{{ t('reports.constructionPdf.taskDetailsTitle') }}</th>
           </tr>
           <tr style="background-color: #f0f0f0; text-align: center; font-size: 11px;">
-            <th style="width: 5%">ลำดับ</th>
-            <th style="width: 25%">รายละเอียดงาน</th>
-            <th style="width: 15%">พิกัด</th>
-            <th style="width: 10%">ปริมาณ</th>
-            <th style="width: 10%">ทำได้จริง</th>
-            <th style="width: 10%">คงเหลือ</th>
-            <th style="width: 10%">หน่วย</th>
-            <th style="width: 15%">หมายเหตุ</th>
+            <th style="width: 5%">{{ t('reports.constructionPdf.colOrder') }}</th>
+            <th style="width: 25%">{{ t('reports.constructionPdf.colTaskDetail') }}</th>
+            <th style="width: 15%">{{ t('reports.constructionPdf.colLocation') }}</th>
+            <th style="width: 10%">{{ t('reports.constructionPdf.colPlan') }}</th>
+            <th style="width: 10%">{{ t('reports.constructionPdf.colActual') }}</th>
+            <th style="width: 10%">{{ t('reports.constructionPdf.colRemain') }}</th>
+            <th style="width: 10%">{{ t('reports.constructionPdf.colUnit') }}</th>
+            <th style="width: 15%">{{ t('reports.constructionPdf.colRemark') }}</th>
           </tr>
         </thead>
         <tbody style="font-size: 11px;">
@@ -87,14 +87,14 @@
       <table class="report-table mt-4">
         <thead>
           <tr style="background-color: #f0f0f0; text-align: center;">
-            <th colspan="4" style="width: 32%">บุคลากร</th>
-            <th colspan="4" style="width: 32%">คนงาน</th>
-            <th colspan="5" style="width: 36%">เครื่องจักร</th>
+            <th colspan="4" style="width: 32%">{{ t('reports.constructionPdf.personnelHeader') }}</th>
+            <th colspan="4" style="width: 32%">{{ t('reports.constructionPdf.workerHeader') }}</th>
+            <th colspan="5" style="width: 36%">{{ t('reports.constructionPdf.machineryHeader') }}</th>
           </tr>
           <tr style="background-color: #f0f0f0; text-align: center; font-size: 10px;">
-            <th style="width: 4%">ลำดับ</th><th style="width: 16%">ประเภท</th><th style="width: 6%">จำนวน</th><th style="width: 6%">ชม.</th>
-            <th style="width: 4%">ลำดับ</th><th style="width: 16%">ประเภท</th><th style="width: 6%">จำนวน</th><th style="width: 6%">ชม.</th>
-            <th style="width: 4%">ลำดับ</th><th style="width: 12%">ประเภท</th><th style="width: 8%">ขนาด</th><th style="width: 6%">จำนวน</th><th style="width: 6%">ชม.</th>
+            <th style="width: 4%">{{ t('reports.constructionPdf.colOrder') }}</th><th style="width: 16%">{{ t('reports.constructionPdf.colType') }}</th><th style="width: 6%">{{ t('reports.constructionPdf.colCount') }}</th><th style="width: 6%">{{ t('reports.constructionPdf.colHours') }}</th>
+            <th style="width: 4%">{{ t('reports.constructionPdf.colOrder') }}</th><th style="width: 16%">{{ t('reports.constructionPdf.colType') }}</th><th style="width: 6%">{{ t('reports.constructionPdf.colCount') }}</th><th style="width: 6%">{{ t('reports.constructionPdf.colHours') }}</th>
+            <th style="width: 4%">{{ t('reports.constructionPdf.colOrder') }}</th><th style="width: 12%">{{ t('reports.constructionPdf.colType') }}</th><th style="width: 8%">{{ t('reports.constructionPdf.colSize') }}</th><th style="width: 6%">{{ t('reports.constructionPdf.colCount') }}</th><th style="width: 6%">{{ t('reports.constructionPdf.colHours') }}</th>
           </tr>
         </thead>
         <tbody style="font-size: 10px;">
@@ -129,7 +129,7 @@
             <td class="text-center">{{ paddedWorkers[9]?.count }}</td>
             <td class="text-center">{{ paddedWorkers[9]?.hours }}</td>
             
-            <td colspan="3" class="text-right text-bold" style="background-color: #f9f9f9;">รวม</td>
+            <td colspan="3" class="text-right text-bold" style="background-color: #f9f9f9;">{{ t('reports.constructionPdf.total') }}</td>
             <td class="text-center text-bold" style="background-color: #f9f9f9;">{{ totalMachinery.count }}</td>
             <td class="text-center text-bold" style="background-color: #f9f9f9;">{{ totalMachinery.hours }}</td>
           </tr>
@@ -148,21 +148,21 @@
             
             <!-- Accident Report Cell (Spans 4 rows down to cover Row 14 as well) -->
             <td colspan="5" rowspan="4" v-if="idx === 11" style="vertical-align: top; padding: 6px; text-align: left; font-size: 11px;">
-              <div class="text-bold q-mb-xs">รายงานอุบัติเหตุ:</div>
+              <div class="text-bold q-mb-xs">{{ t('reports.constructionPdf.accidentReport') }}</div>
               <div class="q-ml-sm">
-                <div><span class="checkbox">{{ hasAccident ? ' ' : '✓' }}</span> ไม่มีอุบัติเหตุ</div>
-                <div class="q-mt-sm"><span class="checkbox">{{ hasAccident ? '✓' : ' ' }}</span> มีอุบัติเหตุ <span class="dotted-line">{{ accidentCount > 0 ? accidentCount : '' }}</span> ราย</div>
+                <div><span class="checkbox">{{ hasAccident ? ' ' : '✓' }}</span> {{ t('reports.constructionPdf.noAccident') }}</div>
+                <div class="q-mt-sm"><span class="checkbox">{{ hasAccident ? '✓' : ' ' }}</span> {{ t('reports.constructionPdf.hasAccidentLabel') }} <span class="dotted-line">{{ accidentCount > 0 ? accidentCount : '' }}</span> {{ t('reports.constructionPdf.personsUnit') }}</div>
               </div>
             </td>
           </tr>
           
           <!-- Row 14: Personnel & Workers Total -->
           <tr style="height: 18px; background-color: #f9f9f9;">
-            <td colspan="2" class="text-right text-bold">รวม</td>
+            <td colspan="2" class="text-right text-bold">{{ t('reports.constructionPdf.total') }}</td>
             <td class="text-center text-bold">{{ totalPersonnel.count }}</td>
             <td class="text-center text-bold">{{ totalPersonnel.hours }}</td>
             
-            <td colspan="2" class="text-right text-bold">รวม</td>
+            <td colspan="2" class="text-right text-bold">{{ t('reports.constructionPdf.total') }}</td>
             <td class="text-center text-bold">{{ totalWorkers.count }}</td>
             <td class="text-center text-bold">{{ totalWorkers.hours }}</td>
           </tr>
@@ -173,9 +173,9 @@
       <table class="report-table mt-4">
         <thead>
           <tr style="background-color: #f0f0f0;">
-            <th style="width: 5%; text-align: center;">ลำดับ</th>
-            <th style="width: 65%; text-align: center;">ปัญหาและอุปสรรค</th>
-            <th style="width: 30%; text-align: center;">หมายเหตุ</th>
+            <th style="width: 5%; text-align: center;">{{ t('reports.constructionPdf.colOrder') }}</th>
+            <th style="width: 65%; text-align: center;">{{ t('reports.constructionPdf.issuesTitle') }}</th>
+            <th style="width: 30%; text-align: center;">{{ t('reports.constructionPdf.colRemark') }}</th>
           </tr>
         </thead>
         <tbody style="font-size: 11px;">
@@ -190,14 +190,14 @@
       <!-- SIGNATURES -->
       <div style="display: flex; justify-content: space-between; margin-top: 15px; text-align: center; font-size: 12px; padding: 0 40px;">
         <div>
-          <div style="margin-bottom: 30px;">ลงชื่อ.........................................................ผู้รับเหมา</div>
+          <div style="margin-bottom: 30px;">{{ t('reports.constructionPdf.signContractor') }}</div>
           <div>(.........................................................)</div>
-          <div class="q-mt-xs">วันที่......./......./.......</div>
+          <div class="q-mt-xs">{{ t('reports.constructionPdf.dateLine') }}</div>
         </div>
         <div>
-          <div style="margin-bottom: 30px;">ลงชื่อ.........................................................ผู้ควบคุมงาน</div>
+          <div style="margin-bottom: 30px;">{{ t('reports.constructionPdf.signSupervisor') }}</div>
           <div class="sensitive-data">( {{ report?.reporterName || '.........................................................' }} )</div>
-          <div class="q-mt-xs">วันที่......./......./.......</div>
+          <div class="q-mt-xs">{{ t('reports.constructionPdf.dateLine') }}</div>
         </div>
       </div>
       </div>
@@ -207,7 +207,10 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { ExtendedConstructionReport } from 'src/stores/useConstructionDailyReport';
+
+const { t, locale } = useI18n();
 
 const props = defineProps<{
   report: ExtendedConstructionReport | null;
@@ -227,7 +230,7 @@ const formatDate = (dateStr: string) => {
   if (!dateStr) return '-';
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString('th-TH', {
+  return date.toLocaleDateString(locale.value, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

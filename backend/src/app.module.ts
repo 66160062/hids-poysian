@@ -63,6 +63,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/entities/notification.entity';
 import { Assignment } from './assignments/entities/assignment.entity';
 import { AiSummaryModule } from './ai-summary/ai-summary.module';
+import { JobPlan } from './job-plans/entities/job-plan.entity';
+import { JobPlansModule } from './job-plans/job-plans.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -119,6 +121,7 @@ import { AiSummaryModule } from './ai-summary/ai-summary.module';
         ActivityLog,
         Notification,
         Assignment,
+        JobPlan,
       ],
       synchronize: true,
       namingStrategy: new SnakeNamingStrategy(),
@@ -130,6 +133,7 @@ import { AiSummaryModule } from './ai-summary/ai-summary.module';
     AuthModule,
     UsersModule,
     InspectionJobsModule,
+    JobPlansModule,
     CustomersModule,
     AddressesModule,
     HouseTypesModule,

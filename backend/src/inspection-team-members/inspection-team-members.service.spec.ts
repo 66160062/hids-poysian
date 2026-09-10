@@ -38,7 +38,10 @@ describe('InspectionTeamMembersService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InspectionTeamMembersService,
-        { provide: getRepositoryToken(InspectionTeamMember), useValue: teamsRepo },
+        {
+          provide: getRepositoryToken(InspectionTeamMember),
+          useValue: teamsRepo,
+        },
         { provide: getRepositoryToken(InspectionJob), useValue: jobsRepo },
         { provide: getRepositoryToken(InspectionRound), useValue: roundsRepo },
         { provide: getRepositoryToken(User), useValue: usersRepo },
@@ -60,7 +63,7 @@ describe('InspectionTeamMembersService', () => {
       jobsRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        service.create({ jobId: 1, inspectorId: 2 } as never),
+        service.create({ jobId: 1, inspectorId: 2 }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -69,7 +72,7 @@ describe('InspectionTeamMembersService', () => {
       roundsRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        service.create({ jobId: 1, inspectorId: 2 } as never),
+        service.create({ jobId: 1, inspectorId: 2 }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -77,7 +80,7 @@ describe('InspectionTeamMembersService', () => {
       jobsRepo.findOne.mockResolvedValue({ jobId: 1 });
       roundsRepo.findOne.mockResolvedValue({ roundId: 10 });
 
-      await expect(service.create({ jobId: 1 } as never)).rejects.toBeInstanceOf(
+      await expect(service.create({ jobId: 1 })).rejects.toBeInstanceOf(
         BadRequestException,
       );
     });
@@ -88,7 +91,7 @@ describe('InspectionTeamMembersService', () => {
       usersRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        service.create({ jobId: 1, inspectorId: 99 } as never),
+        service.create({ jobId: 1, inspectorId: 99 }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -99,7 +102,7 @@ describe('InspectionTeamMembersService', () => {
       teamsRepo.findOne.mockResolvedValue({ id: 5 });
 
       await expect(
-        service.create({ jobId: 1, inspectorId: 2 } as never),
+        service.create({ jobId: 1, inspectorId: 2 }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -114,7 +117,7 @@ describe('InspectionTeamMembersService', () => {
       const result = await service.create({
         jobId: 1,
         inspectorId: 2,
-      } as never);
+      });
 
       expect(result).toMatchObject({
         round: { roundId: 10 },
@@ -191,9 +194,7 @@ describe('InspectionTeamMembersService', () => {
     it('throws NotFoundException when the assignment does not exist', async () => {
       teamsRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.remove(1)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(service.remove(1)).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('rejects removal when the round status blocks unassignment', async () => {

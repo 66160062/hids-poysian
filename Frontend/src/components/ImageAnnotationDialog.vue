@@ -4,7 +4,7 @@
       <q-bar class="bg-white text-grey-9 q-py-md">
         <q-btn flat round dense icon="close" @click="dialog = false" />
         <q-space />
-        <div class="text-subtitle1 text-weight-bold">แก้ไขรูปภาพ</div>
+        <div class="text-subtitle1 text-weight-bold">{{ t('components.imageAnnotationDialog.title') }}</div>
         <q-space />
         <q-btn flat round dense icon="check" color="primary" :disable="!ready" @click="confirm" />
       </q-bar>
@@ -13,7 +13,7 @@
         <q-spinner v-if="!ready && !loadError" color="white" size="48px" />
         <div v-else-if="loadError" class="text-white text-center q-pa-md">
           <q-icon name="error_outline" size="48px" />
-          <div class="q-mt-sm">ไม่สามารถโหลดรูปภาพเพื่อแก้ไขได้</div>
+          <div class="q-mt-sm">{{ t('components.imageAnnotationDialog.loadError') }}</div>
         </div>
         <canvas
           v-show="ready"
@@ -73,6 +73,9 @@
 
 <script setup lang="ts">
 import { ref, watch, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   imageSrc: string;

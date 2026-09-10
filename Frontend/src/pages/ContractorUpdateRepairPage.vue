@@ -5,12 +5,27 @@
       <div class="text-caption text-grey-5 q-mb-xs">#{{ defect.code }}</div>
       <q-card flat bordered class="info-card q-mb-md">
         <q-card-section class="q-pa-sm">
-          <div class="text-caption text-grey-6">ประเภทงาน</div>
+          <div class="text-caption text-grey-6">{{ t('contractor.updateRepair.jobType') }}</div>
           <div class="text-body2 text-weight-bold">{{ defect.jobType }}</div>
-          <div class="text-caption text-grey-6 q-mt-xs">สถานที่</div>
+          <div class="text-caption text-grey-6 q-mt-xs">{{ t('contractor.updateRepair.location') }}</div>
           <div class="text-body2">{{ defect.location }}</div>
           <div class="row q-gutter-xs q-mt-xs">
             <q-chip v-for="tag in defect.tags" :key="tag" dense outline color="grey-6" size="sm">{{ tag }}</q-chip>
+          </div>
+          <!-- Plan Position Button -->
+          <div v-if="defect.planId" class="q-mt-sm">
+            <q-btn
+              flat
+              dense
+              no-caps
+              size="sm"
+              color="primary"
+              icon="place"
+              :label="t('components.planPosition.viewButton')"
+              class="bg-blue-1 text-primary q-px-sm"
+              style="border-radius: 6px; font-weight: 500;"
+              @click="showPlanDialog = true"
+            />
           </div>
         </q-card-section>
       </q-card>
@@ -19,7 +34,7 @@
 <template v-if="isPassed || isReadOnly">
 
   <div class="step-header row items-center justify-between q-mb-sm">
-    <div class="text-subtitle2 text-weight-bold text-primary">ขั้นตอนที่ 1: รูปอ้างอิงก่อนซ่อม</div>
+    <div class="text-subtitle2 text-weight-bold text-primary">{{ t('contractor.updateRepair.step1Title') }}</div>
     <div class="text-caption text-grey-5">{{ defect.reportedAt }}</div>
   </div>
   <div class="q-mb-lg" style="position: relative;">
@@ -33,7 +48,7 @@
   </div>
 
   <div class="step-header q-mb-sm">
-    <div class="text-subtitle2 text-weight-bold text-primary">ขั้นตอนที่ 2: รูปหลังแก้ไข</div>
+    <div class="text-subtitle2 text-weight-bold text-primary">{{ t('contractor.updateRepair.step2TitleReadonly') }}</div>
   </div>
   <div class="q-mb-lg" style="position: relative;">
     <img
@@ -45,7 +60,7 @@
     </div>
   </div>
 
-  <div class="text-subtitle2 text-weight-bold q-mb-sm">บันทึกเพิ่มเติมจากผู้รับเหมา</div>
+  <div class="text-subtitle2 text-weight-bold q-mb-sm">{{ t('contractor.updateRepair.notesTitle') }}</div>
   <q-card flat bordered class="info-card">
     <q-card-section>
       <div class="text-body2 text-grey-8">{{ savedNote || '-' }}</div>
@@ -57,7 +72,7 @@
       <template v-else>
 
         <div class="step-header row items-center justify-between q-mb-sm">
-          <div class="text-subtitle2 text-weight-bold text-primary">ขั้นตอนที่ 1: รูปอ้างอิงก่อนซ่อม</div>
+          <div class="text-subtitle2 text-weight-bold text-primary">{{ t('contractor.updateRepair.step1Title') }}</div>
           <div class="text-caption text-grey-5">{{ defect.reportedAt }}</div>
         </div>
         <!-- Before Image โหมด edit -->
@@ -72,15 +87,15 @@
 </div>
 
         <div class="step-header q-mb-xs">
-          <div class="text-subtitle2 text-weight-bold text-primary">ขั้นตอนที่ 2: ถ่ายรูปหลังแก้ไข</div>
-          <div class="text-caption text-grey-6 q-mt-xs">ตรวจสอบให้แน่ใจว่าพื้นที่ซ่อมแซมแห้งและมองเห็นชัดเจน</div>
+          <div class="text-subtitle2 text-weight-bold text-primary">{{ t('contractor.updateRepair.step2TitleEdit') }}</div>
+          <div class="text-caption text-grey-6 q-mt-xs">{{ t('contractor.updateRepair.step2Hint') }}</div>
         </div>
 
         <div class="column items-center q-mb-md">
           <q-btn round color="primary" size="xl" style="width:80px; height:80px;" @click="triggerCamera">
             <q-icon name="photo_camera" size="36px" />
           </q-btn>
-          <div class="camera-label q-mt-xs">แตะเพื่อถ่ายรูป</div>
+          <div class="camera-label q-mt-xs">{{ t('contractor.updateRepair.tapToCapture') }}</div>
         </div>
 
         <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onFileChange" />
@@ -97,12 +112,12 @@
           </template>
           <div v-else class="after-placeholder column items-center justify-center" @click="triggerCamera">
             <q-icon name="image" size="36px" color="grey-4" />
-            <div class="text-caption text-grey-5 q-mt-xs">รอการแสดงผลรูปภาพ</div>
+            <div class="text-caption text-grey-5 q-mt-xs">{{ t('contractor.updateRepair.noImagePlaceholder') }}</div>
           </div>
         </div>
 
-        <div class="text-subtitle2 text-weight-bold q-mb-sm">บันทึกเพิ่มเติมจากผู้รับเหมา</div>
-        <q-input v-model="note" type="textarea" outlined rows="4" placeholder="e.g., Replaced main valve and sealed joint..." bg-color="grey-1" style="border-radius:12px;" />
+        <div class="text-subtitle2 text-weight-bold q-mb-sm">{{ t('contractor.updateRepair.notesTitle') }}</div>
+        <q-input v-model="note" type="textarea" outlined rows="4" :placeholder="t('contractor.updateRepair.notePlaceholder')" bg-color="grey-1" style="border-radius:12px;" />
 
       </template>
 
@@ -113,7 +128,7 @@
       <div v-if="submitError" class="text-negative text-caption q-mb-xs text-center">{{ submitError }}</div>
       <q-btn
         unelevated color="primary" icon="assignment_turned_in"
-        label="ส่งให้วิศวกรตรวจสอบ" class="full-width submit-btn"
+        :label="t('contractor.updateRepair.submit')" class="full-width submit-btn"
         size="md" :loading="isSubmitting" :disable="!afterImageUrl || isSubmitting" @click="submitRepair"
       />
     </div>
@@ -123,14 +138,25 @@
       <q-card style="min-width:280px; border-radius:16px;">
         <q-card-section class="column items-center q-pa-lg">
           <q-icon name="check_circle" color="green" size="56px" class="q-mb-sm" />
-          <div class="text-h6 text-weight-bold q-mb-xs">ส่งงานสำเร็จ</div>
-          <div class="text-body2 text-grey-6">รอวิศวกรตรวจสอบ</div>
+          <div class="text-h6 text-weight-bold q-mb-xs">{{ t('contractor.updateRepair.successTitle') }}</div>
+          <div class="text-body2 text-grey-6">{{ t('contractor.updateRepair.successSubtitle') }}</div>
         </q-card-section>
         <q-card-actions align="center" class="q-pb-md">
-          <q-btn unelevated color="primary" label="ตกลง" style="min-width:120px; border-radius:10px;" @click="confirmSuccess" />
+          <q-btn unelevated color="primary" :label="t('contractor.updateRepair.ok')" style="min-width:120px; border-radius:10px;" @click="confirmSuccess" />
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Dialog ดูตำแหน่งในแปลน (Read-only) -->
+    <PlanPositionDialog
+      v-model="showPlanDialog"
+      :job-id="defect.jobId ?? projectId"
+      :initial-plan-id="defect.planId ?? null"
+      :initial-x="defect.planX ?? null"
+      :initial-y="defect.planY ?? null"
+      :initial-zone="defect.locationZone ?? null"
+      readonly
+    />
 
   </q-page>
 </template>
@@ -138,11 +164,15 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import PlanPositionDialog from 'src/components/PlanPositionDialog.vue'
 import { useRepairDetail } from 'src/stores/useContractorRepairDetail'
 import { useLinkAccess } from 'src/stores/useLinkAccess'
 
 const route     = useRoute()
-const { isCustomerViewOnly } = useLinkAccess()
+const { t } = useI18n()
+const { isContractorEditable, projectId } = useLinkAccess()
+const showPlanDialog = ref(false)
 const defectId  = Number(route.params.id)
 const fileInput = ref<HTMLInputElement>()
 
@@ -164,8 +194,10 @@ const {
 
 //  computed หลัง destructure
 // FIXED = ซ่อมแล้ว (รอวิศวกรตรวจ), PASS = ผ่านการตรวจซ้ำแล้ว — ทั้งสองกรณีแก้ไขซ้ำไม่ได้แล้ว
+// ปิดกั้นเป็นค่าเริ่มต้น (deny-by-default): แก้ไขได้เฉพาะผู้ที่เข้าผ่านลิงก์ผู้รับเหมาเท่านั้น
+// ป้องกันไม่ให้ customer ที่ล็อกอินตรง (ไม่ผ่านลิงก์) หรือผู้ใช้ role อื่นเข้ามาถ่ายรูปอัพเดตงานได้
 const isReadOnly = computed(
-  () => isCustomerViewOnly.value || defect.value.status === 'repaired' || defect.value.status === 'verified',
+  () => !isContractorEditable.value || defect.value.status === 'repaired' || defect.value.status === 'verified',
 )
 const isPassed   = computed(() => defect.value.status === 'verified')
 

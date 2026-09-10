@@ -8,8 +8,8 @@
 
       <!-- Header -->
       <div class="row items-center justify-between q-px-md q-py-sm">
-        <span class="text-weight-bold text-body1">กรองและจัดกลุ่ม</span>
-        <q-btn flat dense label="รีเซ็ต" color="primary" @click="onReset" />
+        <span class="text-weight-bold text-body1">{{ t('components.filterBottomSheet.title') }}</span>
+        <q-btn flat dense :label="t('components.filterBottomSheet.reset')" color="primary" @click="onReset" />
       </div>
 
       <q-separator />
@@ -19,7 +19,7 @@
         <div class="q-pa-md column q-gutter-y-lg">
           <!-- จัดกลุ่มตาม -->
           <div>
-            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">จัดกลุ่มตาม</div>
+            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">{{ t('components.filterBottomSheet.groupBy') }}</div>
             <div class="row q-gutter-sm">
               <q-btn
                 v-for="opt in GROUP_BY_OPTIONS"
@@ -39,11 +39,11 @@
 
           <!-- ชั้น -->
           <div v-if="availableFloors.length > 0">
-            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">ชั้น</div>
+            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">{{ t('components.filterBottomSheet.floor') }}</div>
             <div class="row q-gutter-sm">
               <!-- ทั้งหมด -->
               <q-btn
-                label="ทั้งหมด"
+                :label="t('components.filterBottomSheet.all')"
                 :color="local.floors.length === 0 ? 'primary' : 'grey-3'"
                 :text-color="local.floors.length === 0 ? 'white' : 'grey-8'"
                 unelevated
@@ -71,11 +71,11 @@
 
           <!-- ประเภทห้อง -->
           <div v-if="availableRoomTypes.length > 0">
-            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">ประเภทห้อง</div>
+            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">{{ t('components.filterBottomSheet.roomType') }}</div>
             <div class="row q-gutter-sm">
               <!-- ทั้งหมด -->
               <q-btn
-                label="ทั้งหมด"
+                :label="t('components.filterBottomSheet.all')"
                 :color="local.roomTypes.length === 0 ? 'primary' : 'grey-3'"
                 :text-color="local.roomTypes.length === 0 ? 'white' : 'grey-8'"
                 unelevated
@@ -103,11 +103,11 @@
 
           <!-- ความรุนแรง -->
           <div v-if="availableSeverityLevels.length > 0">
-            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">ความรุนแรง</div>
+            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">{{ t('components.filterBottomSheet.severity') }}</div>
             <div class="row q-gutter-sm">
               <!-- ทั้งหมด -->
               <q-btn
-                label="ทั้งหมด"
+                :label="t('components.filterBottomSheet.all')"
                 :color="local.severityLevels.length === 0 ? 'primary' : 'grey-3'"
                 :text-color="local.severityLevels.length === 0 ? 'white' : 'grey-8'"
                 unelevated
@@ -141,7 +141,7 @@
       <div class="q-pa-md">
         <q-btn
           color="primary"
-          label="นำไปใช้"
+          :label="t('components.filterBottomSheet.apply')"
           class="full-width text-weight-bold"
           style="border-radius: 8px; height: 48px"
           @click="onApply"
@@ -153,7 +153,10 @@
 
 <script setup lang="ts">
 import type { FilterState, GroupByMode } from 'src/stores/useInspection';
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   modelValue: boolean;
@@ -169,11 +172,11 @@ const emit = defineEmits<{
   (e: 'reset'): void;
 }>();
 
-const GROUP_BY_OPTIONS: { value: GroupByMode; label: string }[] = [
-  { value: 'room_type', label: 'ประเภทห้อง' },
-  { value: 'floor', label: 'ชั้น' },
-  { value: 'severity', label: 'ความรุนแรง' },
-];
+const GROUP_BY_OPTIONS = computed<{ value: GroupByMode; label: string }[]>(() => [
+  { value: 'room_type', label: t('components.filterBottomSheet.roomType') },
+  { value: 'floor', label: t('components.filterBottomSheet.floor') },
+  { value: 'severity', label: t('components.filterBottomSheet.severity') },
+]);
 
 const SEVERITY_COLOR: Record<string, string> = {
   low: 'teal',

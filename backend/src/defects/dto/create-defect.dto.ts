@@ -74,4 +74,39 @@ export class CreateDefectDto {
   })
   @IsOptional()
   file?: Express.Multer.File;
+
+  @ApiProperty({ description: 'รหัสแปลนบ้าน', example: 1, required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  planId?: number;
+
+  @ApiProperty({
+    description: 'พิกัดเปอร์เซ็นต์แกน X (0 - 100)',
+    example: 45.5,
+    required: false,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  planX?: number;
+
+  @ApiProperty({
+    description: 'พิกัดเปอร์เซ็นต์แกน Y (0 - 100)',
+    example: 60.25,
+    required: false,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  planY?: number;
+
+  @ApiProperty({
+    description: 'โซนห้อง/ตำแหน่งระบุ (เช่น ผนังฝั่งระเบียง)',
+    example: 'ผนังฝั่งระเบียง',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  locationZone?: string;
 }

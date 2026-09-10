@@ -60,9 +60,7 @@ describe('UsersService', () => {
   it('throws NotFoundException when the user does not exist', async () => {
     usersRepo.findOne.mockResolvedValue(null);
 
-    await expect(service.findOne(99)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(service.findOne(99)).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('hashes a new password on update but leaves it out when not provided', async () => {
@@ -71,17 +69,21 @@ describe('UsersService', () => {
 
     const result = await service.update(1, {
       password: 'new-pass',
-    } as never);
+    });
 
     expect(bcrypt.hash).toHaveBeenCalledWith('new-pass', 10);
     expect(result).toMatchObject({ password: 'hashed-password' });
   });
 
   it('clears teamId when a user is promoted to admin', async () => {
-    usersRepo.findOne.mockResolvedValue({ id: 1, role: 'inspector', teamId: 5 });
+    usersRepo.findOne.mockResolvedValue({
+      id: 1,
+      role: 'inspector',
+      teamId: 5,
+    });
     usersRepo.save.mockImplementation((value) => value);
 
-    const result = await service.update(1, { role: 'admin' } as never);
+    const result = await service.update(1, { role: 'admin' });
 
     expect(result).toMatchObject({ role: 'admin', teamId: null });
   });

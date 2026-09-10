@@ -79,9 +79,7 @@ describe('DefectCategoriesService', () => {
   it('throws NotFoundException when removing a category that does not exist', async () => {
     categoriesRepo.softDelete.mockResolvedValue({ affected: 0 });
 
-    await expect(service.remove(99)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(service.remove(99)).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('returns a Thai success message when removal affects a row', async () => {

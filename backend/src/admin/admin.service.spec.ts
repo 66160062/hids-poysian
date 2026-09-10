@@ -34,17 +34,35 @@ describe('AdminService', () => {
 
   describe('getDashboardData', () => {
     it('counts jobs by house type and in-progress status, and classifies construction jobs', async () => {
-      jobsRepo.find.mockImplementation(({ relations }: { relations: string[] }) => {
-        if (relations?.includes('houseType')) {
-          return Promise.resolve([
-            { status: 'Active', inspectionType: '', houseType: { name: 'บ้านเดี่ยว' } },
-            { status: 'Draft', inspectionType: '', houseType: { name: 'ทาวน์โฮม' } },
-            { status: 'Completed', inspectionType: '', houseType: { name: 'คอนโด' } },
-            { status: 'Active', inspectionType: 'CONSTRUCTION_INSPECTION', houseType: null },
-          ]);
-        }
-        return Promise.resolve([]);
-      });
+      jobsRepo.find.mockImplementation(
+        ({ relations }: { relations: string[] }) => {
+          if (relations?.includes('houseType')) {
+            return Promise.resolve([
+              {
+                status: 'Active',
+                inspectionType: '',
+                houseType: { name: 'บ้านเดี่ยว' },
+              },
+              {
+                status: 'Draft',
+                inspectionType: '',
+                houseType: { name: 'ทาวน์โฮม' },
+              },
+              {
+                status: 'Completed',
+                inspectionType: '',
+                houseType: { name: 'คอนโด' },
+              },
+              {
+                status: 'Active',
+                inspectionType: 'CONSTRUCTION_INSPECTION',
+                houseType: null,
+              },
+            ]);
+          }
+          return Promise.resolve([]);
+        },
+      );
       roundsRepo.find.mockResolvedValue([]);
 
       const result = await service.getDashboardData('2026-08-01');
@@ -72,23 +90,25 @@ describe('AdminService', () => {
     });
 
     it('falls back to placeholder text for a recent job with no rounds yet', async () => {
-      jobsRepo.find.mockImplementation(({ relations }: { relations: string[] }) => {
-        if (relations?.includes('rounds')) {
-          return Promise.resolve([
-            {
-              jobId: 1,
-              projectName: 'บ้านทดสอบ',
-              status: 'Draft',
-              inspectionType: '',
-              createdAt: new Date('2026-08-01T00:00:00+07:00'),
-              houseType: null,
-              customer: null,
-              rounds: [],
-            },
-          ]);
-        }
-        return Promise.resolve([]);
-      });
+      jobsRepo.find.mockImplementation(
+        ({ relations }: { relations: string[] }) => {
+          if (relations?.includes('rounds')) {
+            return Promise.resolve([
+              {
+                jobId: 1,
+                projectName: 'บ้านทดสอบ',
+                status: 'Draft',
+                inspectionType: '',
+                createdAt: new Date('2026-08-01T00:00:00+07:00'),
+                houseType: null,
+                customer: null,
+                rounds: [],
+              },
+            ]);
+          }
+          return Promise.resolve([]);
+        },
+      );
       roundsRepo.find.mockResolvedValue([]);
 
       const result = await service.getDashboardData('2026-08-01');
@@ -147,13 +167,18 @@ describe('AdminService', () => {
 
       const result = await service.getAllWorkList();
 
-      expect(result[0]).toMatchObject({ status: 'ยกเลิก', statusKey: 'others' });
+      expect(result[0]).toMatchObject({
+        status: 'ยกเลิก',
+        statusKey: 'others',
+      });
     });
   });
 
   describe('syncJobStatuses', () => {
     it('skips jobs that have no rounds at all', async () => {
-      jobsRepo.find.mockResolvedValue([{ jobId: 1, status: 'Draft', rounds: [] }]);
+      jobsRepo.find.mockResolvedValue([
+        { jobId: 1, status: 'Draft', rounds: [] },
+      ]);
 
       await expect(service.syncJobStatuses()).resolves.toEqual({ synced: 0 });
       expect(jobsRepo.save).not.toHaveBeenCalled();
