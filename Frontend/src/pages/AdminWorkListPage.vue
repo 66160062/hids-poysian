@@ -16,7 +16,7 @@
         </template>
         {{ error }}
         <template v-slot:action>
-          <q-btn flat label="ลองใหม่" @click="fetchWorkList" />
+          <q-btn flat :label="t('adminWork.workList.retry')" @click="fetchWorkList" />
         </template>
       </q-banner>
 
@@ -26,7 +26,7 @@
           dense
           borderless
           rounded
-          placeholder="ค้นหาโครงการ, ผู้ตรวจสอบ..."
+          :placeholder="t('adminWork.workList.searchPlaceholder')"
           class="col search-input"
         >
           <template v-slot:prepend>
@@ -69,7 +69,7 @@
         >
           <div class="row items-center q-gutter-x-sm no-wrap">
             <q-icon name="home" size="18px" />
-            <span>ตรวจบ้าน</span>
+            <span>{{ t('adminWork.workList.homeInspectionTab') }}</span>
             <q-badge v-if="selectedJobType !== 'ตรวจบ้าน'" color="grey-3" text-color="grey-8" rounded>{{ defectJobCount }}</q-badge>
           </div>
         </q-btn>
@@ -85,7 +85,7 @@
         >
           <div class="row items-center q-gutter-x-sm no-wrap">
             <q-icon name="construction" size="18px" />
-            <span>ก่อสร้าง</span>
+            <span>{{ t('adminWork.workList.constructionTab') }}</span>
             <q-badge v-if="selectedJobType !== 'งานก่อสร้าง'" color="grey-3" text-color="grey-8" rounded>{{ constructJobCount }}</q-badge>
           </div>
         </q-btn>
@@ -98,14 +98,14 @@
           class="q-pa-lg shadow-up-4"
         >
           <div class="row items-center justify-between q-mb-lg">
-            <div class="text-h6 text-weight-bold text-dark">ตัวกรอง</div>
+            <div class="text-h6 text-weight-bold text-dark">{{ t('adminWork.workList.filterTitle') }}</div>
             <div class="row items-center">
               <q-btn
                 v-if="activeFilterCount > 0"
                 flat
                 dense
                 color="negative"
-                label="ล้าง"
+                :label="t('adminWork.workList.clear')"
                 class="q-mr-sm"
                 @click="clearFilters"
               />
@@ -113,7 +113,7 @@
             </div>
           </div>
 
-          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">สถานะงาน</div>
+          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">{{ t('adminWork.workList.statusLabel') }}</div>
           <q-select
             v-model="activeFilter"
             :options="filters"
@@ -142,7 +142,7 @@
           </q-select>
 
           <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">
-            ประเภทบ้าน
+            {{ t('adminWork.workList.houseTypeLabel') }}
           </div>
           <q-select
             v-model="selectedType"
@@ -155,7 +155,7 @@
           />
 
           <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">
-            เรียงลำดับ
+            {{ t('adminWork.workList.sortLabel') }}
           </div>
           <q-select
             v-model="sortOrder"
@@ -173,7 +173,7 @@
             unelevated
             rounded
             color="primary"
-            label="เสร็จสิ้น"
+            :label="t('adminWork.workList.done')"
             class="full-width text-weight-bold"
             style="height: 48px; font-size: 16px"
             v-close-popup
@@ -183,7 +183,7 @@
 
       <!-- Active Filters Chips -->
       <div v-if="activeFilterCount > 0" class="row items-center q-gutter-x-sm q-mt-sm q-mb-none">
-        <span class="text-caption text-grey-7 q-mr-xs q-pl-xs">กำลังกรอง:</span>
+        <span class="text-caption text-grey-7 q-mr-xs q-pl-xs">{{ t('adminWork.workList.filteringLabel') }}</span>
         <q-chip
           v-if="activeFilter !== 'all'"
           removable
@@ -210,7 +210,7 @@
 
       <div class="work-list-wrapper q-pt-md">
         <div v-if="tasks.length === 0" class="text-center text-grey-6 q-pa-xl">
-          ไม่พบข้อมูลที่ค้นหา
+          {{ t('adminWork.workList.noResults') }}
         </div>
 
         <div v-else class="work-list q-gutter-y-md">
@@ -254,7 +254,7 @@
                           <q-item-section avatar style="min-width: 0; padding-right: 8px">
                             <q-icon name="edit" color="primary" size="20px" />
                           </q-item-section>
-                          <q-item-section class="text-weight-medium">แก้ไขงาน</q-item-section>
+                          <q-item-section class="text-weight-medium">{{ t('adminWork.workList.editJob') }}</q-item-section>
                         </q-item>
                         <q-separator />
                         <q-item clickable @click="onDeleteClick(task)">
@@ -262,7 +262,7 @@
                             <q-icon name="delete" color="negative" size="20px" />
                           </q-item-section>
                           <q-item-section class="text-weight-medium text-negative"
-                            >ลบงาน</q-item-section
+                            >{{ t('adminWork.workList.deleteJob') }}</q-item-section
                           >
                         </q-item>
                       </q-list>
@@ -282,11 +282,11 @@
             <q-card-actions class="row items-center q-px-md q-py-sm">
               <div class="row q-gutter-x-sm">
                 <q-badge color="grey-2" text-color="grey-8" class="tag-badge">
-                  <q-icon name="apartment" size="14px" class="q-mr-xs" /> {{ task.type || 'คอนโด' }}
+                  <q-icon name="apartment" size="14px" class="q-mr-xs" /> {{ task.type || t('adminWork.workList.condo') }}
                 </q-badge>
                 <q-badge color="grey-2" text-color="grey-8" class="tag-badge">
                   <q-icon name="square_foot" size="14px" class="q-mr-xs" />
-                  {{ task.area || '0' }} ตร.ม.
+                  {{ task.area || '0' }} {{ t('adminWork.workList.sqm') }}
                 </q-badge>
               </div>
             </q-card-actions>
@@ -323,7 +323,7 @@
           color="orange-8"
           text-color="white"
           icon="construction"
-          label="งานก่อสร้าง"
+          :label="t('adminWork.workList.constructionFab')"
           class="text-weight-bold custom-fab-action"
           @click="addNewWork('construction')"
         />
@@ -331,7 +331,7 @@
           color="blue-8"
           text-color="white"
           icon="home"
-          label="ตรวจบ้าน"
+          :label="t('adminWork.workList.homeInspectionFab')"
           class="text-weight-bold custom-fab-action"
           @click="addNewWork('defect')"
         />
@@ -344,11 +344,13 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 import { useWorkListStore } from '../stores/useWorkList';
 import { useHouseTypeStore } from '../stores/useHouseType';
 
 const router = useRouter();
 const $q = useQuasar();
+const { t } = useI18n();
 const workStore = useWorkListStore();
 const houseTypeStore = useHouseTypeStore();
 
@@ -366,10 +368,10 @@ const sortOrder = ref('desc'); // desc = ล่าสุด -> เก่า, asc
 const typeOptions = computed(() => {
   return ['ทั้งหมด', ...houseTypeStore.houseTypes.map((ht) => ht.name)];
 });
-const sortOptions = [
-  { label: 'ล่าสุด - เก่า', value: 'desc' },
-  { label: 'เก่า - ล่าสุด', value: 'asc' },
-];
+const sortOptions = computed(() => [
+  { label: t('adminWork.workList.sortDescLabel'), value: 'desc' },
+  { label: t('adminWork.workList.sortAscLabel'), value: 'asc' },
+]);
 
 const showFilterDialog = ref(false);
 
@@ -379,6 +381,23 @@ const activeFilterCount = computed(() => {
   if (activeFilter.value !== 'all') count++;
   return count;
 });
+
+// backend statusMeta.label is fixed Thai text (see inspection-jobs.service.ts
+// getStatusMetadata) — map the known status keys to translated labels instead
+// of displaying it directly; unknown/future keys fall back to the backend label.
+const statusLabelKeys: Record<string, string> = {
+  Draft: 'adminWork.workList.statusDraft',
+  Active: 'adminWork.workList.statusActive',
+  Pending: 'adminWork.workList.statusPending',
+  Completed: 'adminWork.workList.statusCompleted',
+  Locked: 'adminWork.workList.statusLocked',
+  Cancelled: 'adminWork.workList.statusCancelled',
+};
+
+function translatedStatusLabel(key: string, fallback: string): string {
+  const i18nKey = statusLabelKeys[key];
+  return i18nKey ? t(i18nKey) : fallback;
+}
 
 function clearFilters() {
   selectedType.value = 'ทั้งหมด';
@@ -430,13 +449,13 @@ const tasks = computed<TaskItem[]>(() => {
   return works.map((work) => {
     // Find matching status config from backend meta
     const meta = workStore.statusMeta.find((m) => m.key === work.status) || {
-      label: work.status || 'รออนุมัติ',
+      label: work.status || t('adminWork.workList.pendingApproval'),
       bgClass: 'bg-grey-1',
       textColor: 'grey-8',
       key: 'others',
     };
 
-    let finalStatusLabel = meta.label;
+    let finalStatusLabel = translatedStatusLabel(meta.key, meta.label);
     let finalBgClass = meta.bgClass;
     let finalTextColor = meta.textColor;
 
@@ -458,35 +477,35 @@ const tasks = computed<TaskItem[]>(() => {
 
       // ถ้าผู้รับเหมาซ่อมเกิน 80% แล้ว และยังไม่มีการสร้างรอบ 2
       if (work.isReadyForRound2 && !hasRound2OrMore) {
-        finalStatusLabel = 'รอตรวจรอบ 2';
+        finalStatusLabel = t('adminWork.workList.waitingRound2');
         finalBgClass = 'bg-orange-1';
         finalTextColor = 'orange-8';
-      } 
+      }
       // ถ้างานเสร็จสิ้นแล้ว (มีการอนุมัติรอบใดๆ เป็นรอบสุดท้าย หรืออนุมัติรอบ 2 ไปแล้ว)
       else if (work.status === 'Completed') {
         const completedRound = sortedRounds.find(
           (r) => r.status === 'APPROVED' || r.status === 'COMPLETED',
         );
         if (completedRound) {
-          finalStatusLabel = `เสร็จสิ้น ${completedRound.roundNumber ?? ''}`.trim();
+          finalStatusLabel = `${t('adminWork.workList.completed')} ${completedRound.roundNumber ?? ''}`.trim();
         } else {
-          finalStatusLabel = `เสร็จสิ้น ${sortedRounds[0]?.roundNumber ?? ''}`.trim();
+          finalStatusLabel = `${t('adminWork.workList.completed')} ${sortedRounds[0]?.roundNumber ?? ''}`.trim();
         }
       }
     }
 
     return {
       id: work.jobId,
-      title: work.projectName || 'ไม่ระบุชื่อโครงการ',
+      title: work.projectName || t('adminWork.workList.untitledProject'),
       status: finalStatusLabel,
       statusBgClass: finalBgClass,
       statusTextColor: finalTextColor,
       statusKey: meta.key,
       inspectionType: work.inspectionType || '',
-      type: work.houseType?.name || 'ไม่ระบุ',
+      type: work.houseType?.name || t('adminWork.workList.unspecifiedType'),
       area: work.usableArea || 0,
-      team: 'ไม่ระบุทีม', // Currently backend Work interface doesn't have team
-      customer: work.customer?.fullName || 'ไม่ระบุลูกค้า',
+      team: t('adminWork.workList.unspecifiedTeam'), // Currently backend Work interface doesn't have team
+      customer: work.customer?.fullName || t('adminWork.workList.unspecifiedCustomer'),
       date: latestActiveRoundDate || new Date().toISOString(),
     };
   });
@@ -499,12 +518,12 @@ const filters = computed(() => {
   const allCount = workStore.statusMeta.reduce((sum, meta) => sum + meta.count, 0);
 
   const dynamicFilters = workStore.statusMeta.map((meta) => ({
-    label: meta.label,
+    label: translatedStatusLabel(meta.key, meta.label),
     value: meta.key,
     count: meta.count > 0 ? meta.count : undefined,
   }));
 
-  return [{ label: 'ทั้งหมด', value: 'all', count: allCount }, ...dynamicFilters];
+  return [{ label: t('adminWork.workList.allFilter'), value: 'all', count: allCount }, ...dynamicFilters];
 });
 
 let searchTimeout: ReturnType<typeof setTimeout>;
@@ -551,16 +570,16 @@ function editWork(task: TaskItem) {
 
 function onDeleteClick(task: TaskItem) {
   $q.dialog({
-    title: 'ยืนยันการลบข้อมูล',
-    message: 'คุณแน่ใจหรือไม่ที่จะลบงานนี้? การกระทำนี้ไม่สามารถกู้คืนได้',
+    title: t('adminWork.workList.deleteConfirmTitle'),
+    message: t('adminWork.workList.deleteConfirmMessage'),
     persistent: true,
-    ok: { label: 'ลบข้อมูล', color: 'negative', flat: true },
-    cancel: { label: 'ยกเลิก', color: 'grey-8', flat: true },
+    ok: { label: t('adminWork.workList.deleteConfirmOk'), color: 'negative', flat: true },
+    cancel: { label: t('adminWork.workList.deleteConfirmCancel'), color: 'grey-8', flat: true },
   }).onOk(() => {
     void (async () => {
       try {
         await workStore.removeJob(task.id);
-        $q.notify({ type: 'positive', message: 'ลบงานเรียบร้อยแล้ว' });
+        $q.notify({ type: 'positive', message: t('adminWork.workList.deleteSuccess') });
         // Trigger refetch
         await workStore.fetchJobs({
           page: currentPage.value,
@@ -572,7 +591,7 @@ function onDeleteClick(task: TaskItem) {
           ...(selectedJobType.value !== 'ทั้งหมด' && { inspectionType: selectedJobType.value }),
         });
       } catch {
-        $q.notify({ type: 'negative', message: 'เกิดข้อผิดพลาดในการลบงาน' });
+        $q.notify({ type: 'negative', message: t('adminWork.workList.deleteError') });
       }
     })();
   });
@@ -581,8 +600,9 @@ function onDeleteClick(task: TaskItem) {
 // ==========================================
 // 🎯 API Integration — ดึงข้อมูลจาก Backend
 // ==========================================
-async function fetchWorkList(): Promise<void> {
-  loading.value = true;
+// โหลดข้อมูลจริง แยกออกจาก loading.value เพื่อไม่ให้ตอน mount ครั้งแรก
+// ขึ้นซ้อนกับ $q.loading แบบเต็มจอ (ดู onMounted ด้านล่าง)
+async function loadWorkListData(): Promise<void> {
   error.value = '';
 
   try {
@@ -599,16 +619,28 @@ async function fetchWorkList(): Promise<void> {
       houseTypeStore.houseTypes.length === 0 ? houseTypeStore.fetchHouseTypes() : Promise.resolve(),
     ]);
   } catch (err: unknown) {
-    error.value = 'เกิดข้อผิดพลาดในการโหลดข้อมูล โปรดลองใหม่อีกครั้ง';
+    error.value = t('adminWork.workList.loadError');
     console.error('fetchWorkList error:', err);
+  }
+}
+
+// ใช้ตอน filter/search/pagination เปลี่ยน — โชว์ spinner แบบย่อในกรอบตัวเอง
+async function fetchWorkList(): Promise<void> {
+  loading.value = true;
+  try {
+    await loadWorkListData();
   } finally {
     loading.value = false;
   }
 }
 
-onMounted((): void => {
-  void workStore.fetchAbsoluteJobCounts();
-  void fetchWorkList();
+onMounted(async (): Promise<void> => {
+  $q.loading.show();
+  try {
+    await Promise.all([workStore.fetchAbsoluteJobCounts(), loadWorkListData()]);
+  } finally {
+    $q.loading.hide();
+  }
 });
 </script>
 
@@ -675,7 +707,6 @@ onMounted((): void => {
 .work-card {
   border-radius: 16px;
   border-color: #f0f0f0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .status-badge {

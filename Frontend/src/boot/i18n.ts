@@ -1,9 +1,23 @@
 import { defineBoot } from '#q-app/wrappers';
 import { createI18n } from 'vue-i18n';
+import { LocalStorage } from 'quasar';
 
 import messages from 'src/i18n';
 
 export type MessageLanguages = keyof typeof messages;
+
+export const LOCALE_STORAGE_KEY = 'locale';
+
+const DEFAULT_LOCALE: MessageLanguages = 'th-TH';
+
+export function isSupportedLocale(value: unknown): value is MessageLanguages {
+  return typeof value === 'string' && value in messages;
+}
+
+function loadSavedLocale(): MessageLanguages {
+  const saved = LocalStorage.getItem(LOCALE_STORAGE_KEY);
+  return isSupportedLocale(saved) ? saved : DEFAULT_LOCALE;
+}
 // Type-define 'en-US' as the master schema for the resource
 export type MessageSchema = (typeof messages)['en-US'];
 
@@ -21,13 +35,17 @@ declare module 'vue-i18n' {
 }
 /* eslint-enable @typescript-eslint/no-empty-object-type */
 
-export default defineBoot(({ app }) => {
-  const i18n = createI18n<{ message: MessageSchema }, MessageLanguages>({
-    locale: 'en-US',
-    legacy: false,
-    messages,
-  });
+export const i18n = createI18n<{ message: MessageSchema }, MessageLanguages>({
+  locale: loadSavedLocale(),
+  fallbackLocale: 'en-US',
+  legacy: false,
+  messages,
+});
 
-  // Set i18n instance on app
+// For code that runs outside a component setup(), where useI18n() is unavailable —
+// Pinia stores, router guards, plain helpers. Components must keep using useI18n().
+export const { t } = i18n.global;
+
+export default defineBoot(({ app }) => {
   app.use(i18n);
 });

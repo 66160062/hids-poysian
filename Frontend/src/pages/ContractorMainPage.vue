@@ -7,7 +7,7 @@
       <q-banner v-if="error" class="text-white bg-negative q-mb-md" rounded dense>
         {{ error }}
         <template #action>
-          <q-btn flat label="ลองใหม่" @click="loadData" />
+          <q-btn flat :label="t('contractor.main.retry')" @click="loadData" />
         </template>
       </q-banner>
 
@@ -16,7 +16,7 @@
         v-model="search"
         outlined
         dense
-        placeholder="ค้นหาประเภทห้อง, ประเภทห้องซ่อม"
+        :placeholder="t('contractor.main.searchPlaceholder')"
         bg-color="white"
         class="q-mb-md search-input"
       >
@@ -32,17 +32,17 @@
           <div class="row q-col-gutter-xs">
             <div class="col-4 text-center stat-box">
               <q-icon name="meeting_room" color="grey-6" size="18px" />
-              <div class="stat-label">ประเภทห้องทั้งหมด</div>
+              <div class="stat-label">{{ t('contractor.main.totalRoomTypes') }}</div>
               <div class="stat-num">{{ stats.totalRoomTypes }}</div>
             </div>
             <div class="col-4 text-center stat-box border-lr">
               <q-icon name="build" color="grey-6" size="18px" />
-              <div class="stat-label">ประเภทงานทั้งหมด</div>
+              <div class="stat-label">{{ t('contractor.main.totalJobTypes') }}</div>
               <div class="stat-num">{{ stats.totalJobTypes }}</div>
             </div>
             <div class="col-4 text-center stat-box">
               <q-icon name="list_alt" color="grey-6" size="18px" />
-              <div class="stat-label">จำนวนรายการทั้งหมด</div>
+              <div class="stat-label">{{ t('contractor.main.totalItems') }}</div>
               <div class="stat-num">{{ stats.totalItems }}</div>
             </div>
           </div>
@@ -53,14 +53,14 @@
             <div class="col-6 text-center">
               <div class="row items-center justify-center q-gutter-xs">
                 <q-icon name="check_circle" color="green" size="20px" />
-                <span class="text-caption text-grey-7">ซ่อมแล้ว</span>
+                <span class="text-caption text-grey-7">{{ t('contractor.main.repaired') }}</span>
               </div>
               <div class="text-h6 text-green text-weight-bold">{{ stats.passed }}</div>
             </div>
             <div class="col-6 text-center">
               <div class="row items-center justify-center q-gutter-xs">
                 <q-icon name="cancel" color="red" size="20px" />
-                <span class="text-caption text-grey-7">ยังไม่ซ่อม</span>
+                <span class="text-caption text-grey-7">{{ t('contractor.main.notRepaired') }}</span>
               </div>
               <div class="text-h6 text-red text-weight-bold">{{ stats.failed }}</div>
             </div>
@@ -90,7 +90,9 @@
                     outline
                     class="text-caption"
                   />
-                  <span class="text-caption text-grey-6">({{ room.count }} รายการ)</span>
+                  <span class="text-caption text-grey-6">{{
+                    t('contractor.main.itemsCount', { count: room.count })
+                  }}</span>
                 </div>
               </div>
               <q-badge color="primary" outline :label="room.floor" class="floor-badge" />
@@ -129,7 +131,7 @@
         unelevated
         color="primary"
         icon="warning_amber"
-        label="View Defects"
+        :label="t('contractor.main.viewDefects')"
         class="full-width view-btn"
         size="md"
         @click="goToAllDefects"
@@ -143,10 +145,15 @@
 
 import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useContractorRepair } from 'src/stores/useContractormain'
 import { useLinkAccess } from 'src/stores/useLinkAccess'
+import { useQuasar } from 'quasar'
+
+const $q = useQuasar()
 
 const route = useRoute()
+const { t } = useI18n()
 const { hasLinkAccess, projectId, linkToken } = useLinkAccess()
 const { search, stats, error, filteredRooms, tagColor, fetchRepairData, goToDefectList, goToAllDefects } = useContractorRepair()
 
@@ -164,7 +171,14 @@ async function loadData() {
   await fetchRepairData(jobId, linkToken.value)
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  $q.loading.show()
+  try {
+    await loadData()
+  } finally {
+    $q.loading.hide()
+  }
+})
 
 </script>
 

@@ -4,7 +4,7 @@
 
       <!-- Header -->
       <q-card-section class="row items-center q-pb-none">
-        <div class="text-h6 text-weight-bold">รีวิวและให้คะแนน</div>
+        <div class="text-h6 text-weight-bold">{{ t('components.reviewDialog.title') }}</div>
         <q-space />
         <q-btn icon="close" flat round dense v-close-popup />
       </q-card-section>
@@ -12,7 +12,7 @@
       <q-card-section>
 
         <!-- Rating Stars -->
-        <div class="text-subtitle2 q-mb-sm">ความพึงพอใจ</div>
+        <div class="text-subtitle2 q-mb-sm">{{ t('components.reviewDialog.satisfaction') }}</div>
         <div class="row justify-center q-mb-md">
           <q-rating
             v-model="form.rating"
@@ -25,14 +25,14 @@
         <div class="text-center text-caption text-grey-6 q-mb-md">{{ ratingLabel }}</div>
 
         <!-- Comment -->
-        <div class="text-subtitle2 q-mb-sm">ความคิดเห็นเพิ่มเติม</div>
+        <div class="text-subtitle2 q-mb-sm">{{ t('components.reviewDialog.additionalComment') }}</div>
         <q-input
           v-model="form.comment"
           type="textarea"
           outlined
           dense
           rows="4"
-          placeholder="บอกเล่าประสบการณ์ที่ได้รับ..."
+          :placeholder="t('components.reviewDialog.commentPlaceholder')"
           bg-color="grey-1"
         />
 
@@ -42,14 +42,14 @@
       <q-card-actions class="q-px-md q-pb-md">
         <q-btn
           flat
-          label="ยกเลิก"
+          :label="t('components.reviewDialog.cancel')"
           color="grey-7"
           class="col"
           v-close-popup
         />
         <q-btn
           unelevated
-          label="ส่งรีวิว"
+          :label="t('components.reviewDialog.submit')"
           color="primary"
           class="col"
           :disable="form.rating === 0"
@@ -63,7 +63,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const dialog = defineModel<boolean>({ default: false })
 
 const form = ref({
@@ -73,13 +75,13 @@ const form = ref({
 
 const ratingLabel = computed(() => {
   const labels: Record<number, string> = {
-    1: 'แย่มาก',
-    2: 'แย่',
-    3: 'พอใช้',
-    4: 'ดี',
-    5: 'ดีมาก',
+    1: t('components.reviewDialog.rating1'),
+    2: t('components.reviewDialog.rating2'),
+    3: t('components.reviewDialog.rating3'),
+    4: t('components.reviewDialog.rating4'),
+    5: t('components.reviewDialog.rating5'),
   }
-  return labels[form.value.rating] ?? 'เลือกคะแนน'
+  return labels[form.value.rating] ?? t('components.reviewDialog.selectRating')
 })
 
 const submit = () => {

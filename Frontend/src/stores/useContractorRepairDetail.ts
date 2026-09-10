@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import imageCompression from 'browser-image-compression';
 import { useContractorRepair } from 'src/stores/useContractormain';
@@ -58,6 +59,7 @@ const compressRepairImage = async (file: File): Promise<File> => {
 };
 
 export function useRepairDetail(defectId: number) {
+  const { t, locale } = useI18n();
   const router = useRouter();
   const store = useContractorRepair();
   const linkStore = useLinkAccess();
@@ -67,7 +69,7 @@ export function useRepairDetail(defectId: number) {
 
   const defect = ref<RepairDetail>({
     code: `DEF-${String(defectId).padStart(4, '0')}`,
-    reportedAt: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+    reportedAt: new Date().toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' }),
     beforeImage: found?.image ?? 'https://placehold.co/600x400/e0e0e0/999?text=Before',
     jobType: found?.jobType ?? '-',
     location: found?.location ?? '-',
@@ -107,7 +109,7 @@ export function useRepairDetail(defectId: number) {
 
         const roomName = data.room?.roomName || '-';
         const subRoomName = data.subRoom?.roomName || '-';
-        const floorLabel = data.floor?.label ? `ชั้น ${data.floor.label}` : '-';
+        const floorLabel = data.floor?.label ? t('stores.contractorRepairDetail.floorPrefix', { label: data.floor.label }) : '-';
         const categoryNames = Array.from(
           new Set(
             (data.subCategories ?? [])
@@ -118,7 +120,7 @@ export function useRepairDetail(defectId: number) {
 
         defect.value = {
           code: `DEF-${String(defectId).padStart(4, '0')}`,
-          reportedAt: new Date(data.createdAt).toLocaleTimeString('th-TH', {
+          reportedAt: new Date(data.createdAt).toLocaleTimeString(locale.value, {
             hour: '2-digit',
             minute: '2-digit',
           }),
@@ -139,7 +141,7 @@ export function useRepairDetail(defectId: number) {
   const submitRepair = async () => {
     if (!afterImageFile.value) return;
     if (!contractorId.value) {
-      submitError.value = 'ไม่พบข้อมูลผู้รับเหมาสำหรับงานนี้';
+      submitError.value = t('stores.contractorRepairDetail.contractorNotFound');
       return;
     }
 
@@ -148,7 +150,7 @@ export function useRepairDetail(defectId: number) {
     try {
       if (pendingImageCompression) await pendingImageCompression;
       if (!afterImageFile.value) {
-        submitError.value = 'กรุณาเลือกรูปภาพ';
+        submitError.value = t('stores.contractorRepairDetail.selectImage');
         return;
       }
 
@@ -174,7 +176,7 @@ export function useRepairDetail(defectId: number) {
       defect.value.status = 'repaired';
       showSuccess.value = true;
     } catch (e) {
-      submitError.value = 'บันทึกไม่สำเร็จ กรุณาลองใหม่';
+      submitError.value = t('stores.contractorRepairDetail.saveFailed');
       console.error(e);
     } finally {
       isSubmitting.value = false;

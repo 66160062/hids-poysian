@@ -1,13 +1,12 @@
 <template>
-  <q-page class="bg-grey-3 row justify-center">
+  <q-page class="bg-grey-1 row justify-center">
     <div
-      class="bg-white relative-position column modern-font"
+      class="bg-white relative-position column modern-font detail-card"
       :style="{
         width: '100%',
         maxWidth: isMobile ? '430px' : '800px',
         minHeight: '100vh',
         boxSizing: 'border-box',
-        boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
       }"
     >
       <div v-if="loading" class="flex flex-center col q-pa-xl">
@@ -34,7 +33,7 @@
               v-if="isDefect(jobData.job?.inspectionType)"
               color="primary"
               outline
-              label="การตรวจบ้าน"
+              :label="t('inspector.detail.badgeInspection')"
               class="q-px-sm q-py-xs"
               style="font-size: 10px; font-weight: 500; border-radius: 4px;"
             />
@@ -42,7 +41,7 @@
               v-else-if="isConstruction(jobData.job?.inspectionType)"
               color="warning"
               outline
-              label="การตรวจก่อสร้าง"
+              :label="t('inspector.detail.badgeConstruction')"
               class="q-px-sm q-py-xs"
               style="font-size: 10px; font-weight: 500; border-radius: 4px;"
             />
@@ -56,7 +55,7 @@
                 padding: 4px 10px;
               "
             >
-              {{ isApproved ? 'อนุมัติแล้ว' : isSubmitted ? 'รอการอนุมัติ' : 'รอเข้าตรวจ' }}
+              {{ isApproved ? t('inspector.detail.statusApproved') : isSubmitted ? t('inspector.detail.statusSubmitted') : t('inspector.detail.statusWaiting') }}
             </q-badge>
           </div>
         </div>
@@ -69,13 +68,13 @@
             line-height: 1.4;
           "
         >
-          เลขที่ {{ jobData.job.address?.houseNumber || '-' }} ถ.{{
+          {{ t('inspector.detail.addressHouseNo') }} {{ jobData.job.address?.houseNumber || '-' }} {{ t('inspector.detail.addressRoad') }} {{
             jobData.job.address?.soi || '-'
           }}
-          ต.{{ jobData.job.address?.subDistrict || '-' }} อ.{{
+          {{ t('inspector.detail.addressSubDistrict') }} {{ jobData.job.address?.subDistrict || '-' }} {{ t('inspector.detail.addressDistrict') }} {{
             jobData.job.address?.district || '-'
           }}
-          จ.{{ jobData.job.address?.province || '-' }} {{ jobData.job.address?.postalCode || '-' }}
+          {{ t('inspector.detail.addressProvince') }} {{ jobData.job.address?.province || '-' }} {{ jobData.job.address?.postalCode || '-' }}
         </div>
 
         <div class="row items-center justify-between no-wrap q-mb-sm">
@@ -87,7 +86,7 @@
                 style="font-size: 12px; font-weight: 500"
               >
                 : {{ jobData.job.houseType?.name || '-' }}
-                {{ jobData.job.address?.floor ? jobData.job.address.floor + ' ชั้น' : '' }}
+                {{ jobData.job.address?.floor ? jobData.job.address.floor + ' ' + t('inspector.detail.floorUnit') : '' }}
               </span>
             </div>
             <div class="row items-center q-gutter-x-sm">
@@ -96,11 +95,11 @@
                 class="text-dark"
                 style="font-size: 12px; font-weight: 500"
               >
-                : {{ jobData.job.usableArea || '-' }} ตร.ม.
+                : {{ jobData.job.usableArea || '-' }} {{ t('inspector.detail.areaUnit') }}
               </span>
             </div>
           </div>
-          <q-btn round outline color="primary" icon="map" size="md" @click="openGoogleMaps" />
+          <q-btn round outline color="primary" icon="location_on" size="md" @click="openGoogleMaps" />
         </div>
 
         <q-separator color="primary" style="opacity: 0.5; height: 1px" class="q-my-md" />
@@ -111,7 +110,7 @@
               class="text-primary text-weight-bold"
               style="font-size: 14px"
             >
-              {{ jobData.job.customer?.fullName || 'ไม่ระบุชื่อลูกค้า' }}
+              {{ jobData.job.customer?.fullName || t('inspector.detail.customerNameUnknown') }}
             </div>
             <div class="row items-center q-gutter-x-sm">
               <q-icon name="phone_in_talk" color="primary" size="18px" />
@@ -155,8 +154,8 @@
                 color: #333;
               "
             >
-              รายงานการตรวจ
-              <span class="text-primary">ครั้งที่ {{ jobData.roundNumber || 1 }}</span>
+              {{ t('inspector.detail.reportTitle') }}
+              <span class="text-primary">{{ t('inspector.detail.roundLabel', { round: jobData.roundNumber || 1 }) }}</span>
             </div>
             <div class="text-primary" style="font-size: 11px">
               {{ formatDate(jobData.scheduledDate) }}
@@ -167,7 +166,7 @@
             class="text-grey-6 q-mb-md"
             style="font-size: 10px"
           >
-            ผู้ตรวจ: {{ jobData.teamMember?.inspector?.team?.teamName || 'ทีมวิศวกร' }}
+            {{ t('inspector.detail.inspectorLabel', { name: jobData.teamMember?.inspector?.team?.teamName || t('inspector.detail.defaultTeamName') }) }}
           </div>
 
           <q-btn
@@ -181,8 +180,8 @@
           >
             <span class="text-weight-bold q-ml-sm">{{
               isInspected
-                ? (isConstruction(jobData.job?.inspectionType) ? 'ตรวจเสร็จสิ้น' : 'ดูข้อมูลการตรวจ Defect')
-                : (isConstruction(jobData.job?.inspectionType) ? 'เริ่มตรวจก่อสร้าง' : 'เริ่มตรวจบ้าน')
+                ? (isConstruction(jobData.job?.inspectionType) ? t('inspector.detail.inspectionDoneConstruction') : t('inspector.detail.viewDefectInspection'))
+                : (isConstruction(jobData.job?.inspectionType) ? t('inspector.detail.startConstructionInspection') : t('inspector.detail.startHomeInspection'))
             }}</span>
             <q-icon
               :name="isInspected ? 'check_circle' : 'chevron_right'"
@@ -203,7 +202,7 @@
             @click="router.push(`/inspector/job/${roundId}/report`)"
           >
             <span class="text-weight-bold q-ml-sm">{{
-              isSummaryDone ? 'สรุปรายงานเรียบร้อย' : 'สรุปรายงาน'
+              isSummaryDone ? t('inspector.detail.summaryDone') : t('inspector.detail.summarizeReport')
             }}</span>
             <q-icon
               :name="isSummaryDone ? 'check_circle' : 'chevron_right'"
@@ -223,7 +222,7 @@
             align="between"
             @click="handleViewReport"
           >
-            <span class="text-weight-bold q-ml-sm">ดูรายงาน</span>
+            <span class="text-weight-bold q-ml-sm">{{ t('inspector.detail.viewReport') }}</span>
             <q-icon
               :name="isSummaryDone ? 'visibility' : 'lock'"
               :class="isSummaryDone ? 'text-white' : 'text-grey-5'"
@@ -237,7 +236,7 @@
           :disable="!canSubmitApproval"
           :class="['full-width', !canSubmitApproval ? 'disabled-btn' : 'shadow-2']"
           :color="isApproved ? 'grey-4' : isSubmitted ? 'grey-5' : canSubmitApproval ? 'primary' : 'grey-4'"
-          :label="isApproved ? 'อนุมัติการตรวจแล้ว' : isSubmitted ? 'ส่งอนุมัติการตรวจเรียบร้อยแล้ว' : 'ส่งอนุมัติการตรวจ'"
+          :label="isApproved ? t('inspector.detail.approvalApproved') : isSubmitted ? t('inspector.detail.approvalSubmitted') : t('inspector.detail.submitApproval')"
           no-caps
           @click="onSubmit()"
           style="
@@ -250,7 +249,7 @@
         />
       </div>
       <div v-else class="text-center q-pa-xl col column justify-center text-grey-7">
-        ไม่พบข้อมูลงานตรวจนี้
+        {{ t('inspector.detail.notFound') }}
       </div>
     </div>
 
@@ -261,7 +260,7 @@
         <q-toolbar class="bg-white text-dark shadow-2 z-top">
           <q-btn flat round dense icon="close" v-close-popup />
           <q-toolbar-title class="text-weight-bold" style="font-size: 16px;">
-            ตัวอย่างรายงาน
+            {{ t('inspector.detail.reportPreviewTitle') }}
           </q-toolbar-title>
         </q-toolbar>
 
@@ -278,12 +277,14 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
   </q-page>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
@@ -291,6 +292,7 @@ import DefectReport from 'src/components/DefectReport.vue';
 
 const apiUrl = import.meta.env.VITE_API_URL;
 const $q = useQuasar();
+const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
@@ -350,11 +352,11 @@ const openGoogleMaps = () => {
 
   const searchQueryParts = [
     job.projectName,
-    address?.houseNumber ? `เลขที่ ${address.houseNumber}` : '',
-    address?.soi ? `ถ.${address.soi}` : '',
-    address?.subDistrict ? `ต.${address.subDistrict}` : '',
-    address?.district ? `อ.${address.district}` : '',
-    address?.province ? `จ.${address.province}` : '',
+    address?.houseNumber ? `${t('inspector.detail.addressHouseNo')} ${address.houseNumber}` : '',
+    address?.soi ? `${t('inspector.detail.addressRoad')}${address.soi}` : '',
+    address?.subDistrict ? `${t('inspector.detail.addressSubDistrict')}${address.subDistrict}` : '',
+    address?.district ? `${t('inspector.detail.addressDistrict')}${address.district}` : '',
+    address?.province ? `${t('inspector.detail.addressProvince')}${address.province}` : '',
     address?.postalCode || '',
   ];
 
@@ -366,14 +368,14 @@ const openGoogleMaps = () => {
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
     window.open(mapsUrl, '_blank');
   } else {
-    alert('ไม่พบข้อมูลที่อยู่สำหรับนำทาง');
+    alert(t('inspector.detail.noAddressForNavigation'));
   }
 };
 
 function formatDate(dateStr: string) {
   if (!dateStr) return '';
   const date = new Date(dateStr);
-  return date.toLocaleDateString('th-TH', {
+  return date.toLocaleDateString(locale.value, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -405,12 +407,12 @@ const showReportDialog = ref(false);
 
 async function handleViewReport() {
   if (!isSummaryDone.value) {
-    $q.notify({ type: 'warning', message: 'กรุณาสรุปรายงานก่อนดูรายงาน' });
+    $q.notify({ type: 'warning', message: t('inspector.detail.notifyNeedSummary') });
     return;
   }
 
   isGeneratingPdf.value = true;
-  $q.loading.show({ message: 'กำลังเตรียมข้อมูลรายงาน...' });
+  $q.loading.show();
   try {
     const [defectsRes, summaryRes] = await Promise.all([
       api.get(`/defects/round/${roundId}`),
@@ -423,7 +425,7 @@ async function handleViewReport() {
 
   } catch (error) {
     console.error('Error generating report:', error);
-    $q.notify({ color: 'negative', message: 'เกิดข้อผิดพลาดในการดึงข้อมูลรายงาน' });
+    $q.notify({ color: 'negative', message: t('inspector.detail.errorFetchReport') });
   } finally {
     $q.loading.hide();
     isGeneratingPdf.value = false;
@@ -438,12 +440,12 @@ async function executeSubmit() {
   try {
     await api.patch(`/inspection-rounds/${roundId}/submit`);
     await fetchJobDetails(); // รีเฟรชข้อมูล ดึงสถานะใหม่มาแสดง
-    $q.notify({ color: 'positive', message: 'ส่งอนุมัติเรียบร้อยแล้ว', position: 'top' });
+    $q.notify({ color: 'positive', message: t('inspector.detail.notifySubmitSuccess'), position: 'top' });
   } catch (error) {
     console.error('Submit Error:', error);
     $q.notify({
       color: 'negative',
-      message: 'เกิดข้อผิดพลาดในการส่งข้อมูล',
+      message: t('inspector.detail.errorSubmit'),
     });
   } finally {
     isSubmitting.value = false;
@@ -453,14 +455,14 @@ async function executeSubmit() {
 
 const onSubmit = () => {
   $q.dialog({
-    title: 'ยืนยันการส่งอนุมัติ',
-    message: 'ข้อมูลครบถ้วนพร้อมยืมยันการส่งอนุมัติ ?',
+    title: t('inspector.detail.confirmSubmitTitle'),
+    message: t('inspector.detail.confirmSubmitMessage'),
     ok: {
-      label: 'ยืนยัน',
+      label: t('inspector.detail.confirm'),
       color: 'primary',
     },
     cancel: {
-      label: 'ยกเลิก',
+      label: t('inspector.detail.cancel'),
       color: 'grey-7',
       flat: true, // ทำให้ปุ่มยกเลิกไม่มีพื้นหลัง ดูเป็นปุ่มรอง
     },
@@ -507,5 +509,31 @@ onMounted(() => {
 .disabled-btn {
   background-color: #dcdcdc !important;
   color: #757575 !important;
+}
+
+.plan-thumb {
+  width: 100px;
+  height: 80px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+}
+
+.plan-img {
+  width: 100%;
+  height: 100%;
+}
+
+.plan-thumb-empty {
+  width: 100px;
+  height: 80px;
+  border-radius: 12px;
+  border: 1.5px dashed #e0e0e0;
+}
+
+.plan-btn {
+  border-radius: 50px;
+  padding: 0 20px;
+  height: 40px;
 }
 </style>

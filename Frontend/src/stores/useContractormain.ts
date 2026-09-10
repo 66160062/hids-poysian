@@ -2,6 +2,7 @@ import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
+import { t } from 'src/boot/i18n';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 
@@ -69,14 +70,14 @@ interface JobResponse {
 export function defectStatusLabel(status: string): string {
   switch (status) {
     case 'verified':
-      return 'ผ่าน';
+      return t('stores.contractorMain.statusVerified');
     case 'repaired':
-      return 'ซ่อมแล้ว';
+      return t('stores.contractorMain.statusRepaired');
     case 'rejected':
-      return 'ไม่ผ่าน';
+      return t('stores.contractorMain.statusRejected');
     case 'pending_repair':
     default:
-      return 'รอดำเนินการ';
+      return t('stores.contractorMain.statusPending');
   }
 }
 
@@ -143,7 +144,9 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
       for (const defect of defects) {
         const roomName = defect.room?.roomName || '-';
         const subRoomName = defect.subRoom?.roomName || '-';
-        const floorLabel = defect.floor?.label ? `ชั้น ${defect.floor.label}` : '-';
+        const floorLabel = defect.floor?.label
+          ? t('stores.contractorMain.floorPrefix', { label: defect.floor.label })
+          : '-';
         const key = `${defect.room?.roomId ?? 0}-${defect.subRoom?.subRoomId ?? 0}-${defect.floor?.floorId ?? 0}`;
 
         let room = roomMap.get(key);
@@ -191,7 +194,7 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
       baseRooms.value = Array.from(roomMap.values());
       allDefectItems.value = items;
     } catch (e) {
-      error.value = 'โหลดข้อมูลไม่สำเร็จ';
+      error.value = t('stores.contractorMain.loadFailed');
       console.error(e);
     } finally {
       loading.value = false;

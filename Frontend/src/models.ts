@@ -39,11 +39,20 @@ export interface InspectionRound {
   teamMember?: { inspector?: { team?: { teamName: string; contactInfo: string } } };
   createdBy?: { fullName: string; phoneNumber: string } | null;
   job: {
+    jobId: number;
     projectName: string;
     projectImageUrl: string;
+    housePlanUrl?: string;
     inspectionType: string;
     houseType: { name: string };
     customer: { fullName: string; phoneNumber: string; email: string };
+    contractor?: {
+      contractorId: number;
+      fullName: string;
+      phoneNumber: string;
+      email?: string;
+      companyName?: string;
+    } | null;
     usableArea: string;
     address: {
       houseNumber: string;
@@ -80,6 +89,8 @@ export interface Defect {
   description: string;
   severity: string;
   status: string;
+  createdAt?: string;
+  updatedAt?: string;
   imageUrl?: string;
   contractorImageUrl?: string;
   contractorNote?: string;

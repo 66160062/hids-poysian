@@ -1,20 +1,7 @@
 <template>
-  <q-page class="report-page bg-white">
+  <q-page class="report-page bg-grey-1">
 
     <div class="q-px-md q-pb-xl">
-
-      <!-- Filter Button -->
-      <div class="row justify-end q-mb-md">
-        <q-btn
-          outline
-          color="primary"
-          icon="filter_list"
-          label="ตัวกรอง"
-          size="sm"
-          rounded
-          class="filter-btn"
-        />
-      </div>
 
       <!-- Sections -->
       <div v-for="section in reportSections" :key="section.title" class="q-mb-lg">
@@ -93,7 +80,7 @@
                 readonly
                 rows="3"
                 bg-color="grey-1"
-                placeholder="หมายเหตุ..."
+                :placeholder="t('customer.report.notePlaceholder')"
                 class="note-input"
               />
 
@@ -113,10 +100,15 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useReport } from 'src/stores/useCustomerReport'
 import { useLinkAccess } from 'src/stores/useLinkAccess'
+import { useQuasar } from 'quasar'
+
+const $q = useQuasar()
 
 const route = useRoute()
+const { t } = useI18n()
 const { hasLinkAccess, projectId, linkToken } = useLinkAccess()
 const { reportSections, fetchReport } = useReport()
 
@@ -130,7 +122,12 @@ function getJobId(): number | null {
 onMounted(async () => {
   const jobId = getJobId()
   if (!jobId) return
-  await fetchReport(jobId, linkToken.value)
+  $q.loading.show()
+  try {
+    await fetchReport(jobId, linkToken.value)
+  } finally {
+    $q.loading.hide()
+  }
 })
 </script>
 
@@ -148,10 +145,6 @@ onMounted(async () => {
   padding:16px;
   background:white;
   border-bottom:1px solid #eee;
-}
-
-.filter-btn{
-  border-radius:12px;
 }
 
 .info-card{

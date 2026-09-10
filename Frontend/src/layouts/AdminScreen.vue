@@ -14,6 +14,7 @@
         </div>
         <q-space />
         <div class="row items-center">
+          <LanguageToggle />
           <q-btn
   flat
   round
@@ -44,31 +45,35 @@
       </router-view>
     </q-page-container>
 
-    <q-footer class="bg-white shadow-up-3">
-      <div class="admin-footer-tabs">
-        <div class="admin-tabs-inner">
-          <template v-for="item in menuList" :key="item.name">
-            <div
-              class="admin-menu-tab"
-              :class="{ 'is-active': isActive(item.link) }"
-              @click="handleTabClick(item.link)"
-            >
-              <q-icon :name="item.icon" size="22px" />
-              <div class="tab-label">{{ item.label }}</div>
-            </div>
-          </template>
+    <q-footer class="bg-white">
+      <div ref="tabsRow" class="row no-wrap justify-around q-py-sm relative-position admin-tabs-row">
+        <div
+          v-for="item in menuList"
+          :key="item.name"
+          :ref="(el) => setTabRef(item.name, el)"
+          class="column items-center cursor-pointer admin-menu-tab"
+          :class="isActive(item.link) ? 'text-blue' : 'text-grey-5'"
+          @click="handleTabClick(item)"
+        >
+          <q-icon :name="item.icon" size="32px" />
+          <div class="text-caption text-weight-bold tab-label">{{ item.label }}</div>
         </div>
+
+        <div class="bg-blue footer-tab-indicator" :style="indicatorStyle"></div>
       </div>
     </q-footer>
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from 'src/stores/useAuth';
 import { api } from 'src/boot/axios';
+import LanguageToggle from 'src/components/LanguageToggle.vue';
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
@@ -91,102 +96,108 @@ const getImageUrl = (path: string | null | undefined): string | null => {
   if (path.startsWith('http')) return path;
   return `${API_BASE_URL}${path}`;
 };
-const currentTitle = computed(() => (route.meta.title as string) || 'Admin');
-const menuList = [
-  { name: 'dashboard', label: 'หน้าหลัก', icon: 'home', link: '/admin' },
-  { name: 'work', label: 'งาน', icon: 'business_center', link: '/admin/work' },
-  { name: 'users', label: 'จัดการผู้ใช้', icon: 'group', link: '/admin/users' },
-  { name: 'teams', label: 'จัดการทีม', icon: 'groups', link: '/admin/teams' },
-  { name: 'report', label: 'รายงาน', icon: 'bar_chart', link: '/admin/report' },
-  { name: 'settings', label: 'ตั้งค่า', icon: 'settings', link: '/admin/settings' },
-];
+const currentTitle = computed(() => {
+  const key = route.meta.title as string | undefined;
+  return key ? t(key) : t('nav.admin.fallback');
+});
+const menuList = computed(() => [
+  { name: 'dashboard', label: t('nav.admin.menuDashboard'), icon: 'home', link: '/admin' },
+  { name: 'work', label: t('nav.admin.menuWork'), icon: 'business_center', link: '/admin/work' },
+  { name: 'users', label: t('nav.admin.menuUsers'), icon: 'group', link: '/admin/users' },
+  { name: 'teams', label: t('nav.admin.menuTeams'), icon: 'groups', link: '/admin/teams' },
+  { name: 'report', label: t('nav.admin.menuReport'), icon: 'bar_chart', link: '/admin/report' },
+  { name: 'settings', label: t('nav.admin.menuSettings'), icon: 'settings', link: '/admin/settings' },
+]);
 
 function isActive(link: string) {
   if (link === '/admin') return route.path === '/admin';
   return route.path.startsWith(link);
 }
 
-async function handleTabClick(link: string) {
-  await router.push(link);
+const tabRefs = ref<Record<string, HTMLElement | null>>({});
+function setTabRef(name: string, el: unknown) {
+  tabRefs.value[name] = (el as HTMLElement) ?? null;
 }
+
+const tabsRow = ref<HTMLElement | null>(null);
+let tabsRowObserver: ResizeObserver | null = null;
+
+const indicatorStyle = ref({ left: '0px', width: '0px' });
+function moveIndicatorTo(el: HTMLElement) {
+  indicatorStyle.value = { left: `${el.offsetLeft}px`, width: `${el.offsetWidth}px` };
+}
+
+function updateIndicator() {
+  const activeItem = menuList.value.find((item) => isActive(item.link));
+  const el = activeItem ? tabRefs.value[activeItem.name] : null;
+  if (!el) return;
+  moveIndicatorTo(el);
+}
+
+async function handleTabClick(item: { name: string; link: string }) {
+  const el = tabRefs.value[item.name];
+  if (el) moveIndicatorTo(el);
+  await router.push(item.link);
+}
+
+onMounted(() => {
+  void nextTick(() => {
+    updateIndicator();
+    if (tabsRow.value) {
+      tabsRowObserver = new ResizeObserver(() => updateIndicator());
+      tabsRowObserver.observe(tabsRow.value);
+    }
+  });
+  window.addEventListener('resize', updateIndicator);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateIndicator);
+  tabsRowObserver?.disconnect();
+  tabsRowObserver = null;
+});
+
+watch(() => route.path, () => {
+  void nextTick(() => requestAnimationFrame(updateIndicator));
+});
 </script>
 
 <style scoped>
-.admin-footer-tabs {
+.admin-tabs-row {
   overflow-x: auto;
-  overflow-y: hidden;
   scrollbar-width: none;
-  user-select: none;
   -webkit-overflow-scrolling: touch;
-  display: flex;
 }
 
-.admin-footer-tabs::-webkit-scrollbar {
+.admin-tabs-row::-webkit-scrollbar {
   display: none;
 }
 
-.admin-tabs-inner {
-  display: flex;
-  flex-direction: row;
-  gap: 4px;
-  padding: 8px 12px;
-  min-width: max-content;
-  flex: 1;
-}
-
 .admin-menu-tab {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 80px;
-  padding: 6px 8px;
-  border-radius: 12px;
+  padding: 0 4px;
   cursor: pointer;
-  color: #9e9e9e;
-  transition: all 0.2s ease;
-  min-height: 54px;
-  gap: 2px;
+  transition: color 0.2s ease;
 }
 
-@media (min-width: 600px) {
-  .admin-footer-tabs {
-    justify-content: center;
-  }
-  .admin-tabs-inner {
-    min-width: auto;
-    width: 100%;
-    max-width: 1024px;
-    justify-content: space-around;
-  }
-  .admin-menu-tab {
-    flex: 1;
-    max-width: 160px;
-  }
-}
-
-.admin-menu-tab:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-
-.admin-menu-tab.is-active {
-  background: rgba(25, 118, 210, 0.1);
-  color: var(--q-primary);
+.footer-tab-indicator {
+  position: absolute;
+  bottom: 6px;
+  height: 2px;
+  border-radius: 1px;
+  transition: left 0.25s ease, width 0.25s ease;
 }
 
 .tab-label {
-  font-size: 0.72rem;
-  line-height: 1.2;
   text-align: center;
   white-space: nowrap;
 }
 
 /* Page Transition Animations */
 .jump-enter-active {
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease-out;
 }
 .jump-leave-active {
-  transition: all 0.15s ease-in;
+  transition: transform 0.15s ease-in, opacity 0.15s ease-in;
 }
 .jump-enter-from {
   transform: translateY(20px);

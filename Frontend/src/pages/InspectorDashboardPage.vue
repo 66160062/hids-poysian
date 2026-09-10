@@ -1,16 +1,7 @@
 <template>
-  <q-page class="bg-grey-3 row justify-center">
-    <div
-      class="bg-white relative-position"
-      :style="{
-        width: '100%',
-        maxWidth: isMobile ? '430px' : '800px',
-        minHeight: '100vh',
-        paddingBottom: '90px',
-        boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
-      }"
-    >
-      <div class="q-pa-lg" style="max-width: 600px; margin: 20px auto 0">
+  <q-page class="inspector-dashboard-page bg-grey-1">
+    <div class="q-pa-md">
+      <div class="bg-white q-pa-md calendar-card">
         <InspectorCalendar
           :rounds="rounds"
           :selectedDate="selectedDate"
@@ -20,60 +11,56 @@
           @monthChanged="onMonthChanged"
         />
       </div>
+    </div>
 
-      <q-separator color="primary" class="q-mx-lg q-mb-lg" style="height: 2px" />
+    <div class="q-px-md q-mb-md">
+      <div class="row justify-between items-end">
+        <div class="text-weight-bold" style="font-size: 16px">{{ t('inspector.dashboard.title') }}</div>
+        <div class="text-weight-bold" style="font-size: 15px">{{ t('inspector.dashboard.dateLabel', { date: selectedDateLabel }) }}</div>
+      </div>
+      <div class="text-grey-6 q-mt-xs" style="font-size: 12px">
+        {{ t('inspector.dashboard.summary', { count: filteredDayRounds.length }) }}
+      </div>
+    </div>
 
-      <div class="q-px-lg q-mb-md">
-        <div class="row justify-between items-end">
-          <div class="text-weight-bold" style="font-size: 16px">รายการงานตรวจ</div>
-          <div class="text-weight-bold" style="font-size: 15px">วันที่ {{ selectedDateLabel }}</div>
-        </div>
-        <div class="text-grey-6 q-mt-xs" style="font-size: 12px">
-          สรุป: ตรวจบ้าน {{ filteredDayRounds.length }} งาน
+    <!-- Loading State: แสดงผ่าน $q.loading แบบเต็มจอ (ดู onMounted) เว้นพื้นที่ไว้กันเลย์เอาต์กระโดด -->
+    <div v-if="loading" style="min-height: 60vh"></div>
+
+    <div v-else class="q-px-md q-mb-xl">
+      <div v-if="filteredDayRounds.length === 0" class="text-center text-grey q-pa-xl">
+        <div class="text-h6 text-weight-medium">{{ t('inspector.dashboard.noJobsToday') }}</div>
+        <div v-if="selectedDayRounds.length > 0" class="text-body2 q-mt-sm text-warning" style="font-family: 'Inter', 'Noto Sans Thai', sans-serif;">
+          {{ t('inspector.dashboard.constructionHintPrefix') }} <span class="text-weight-bold">{{ t('inspector.dashboard.constructionHintBold') }}</span>
+          <br />
+          {{ t('inspector.dashboard.constructionHintSuffix') }}
         </div>
       </div>
 
-      <div v-if="loading" class="flex flex-center q-pa-xl">
-        <q-spinner color="blue" size="40px" />
-      </div>
-
-      <div v-else class="q-px-lg q-mb-xl">
-        <div v-if="filteredDayRounds.length === 0" class="text-center text-grey q-pa-xl">
-          <div class="text-h6 text-weight-medium">ไม่มีงานตรวจบ้านในวันนี้</div>
-          <div v-if="selectedDayRounds.length > 0" class="text-body2 q-mt-sm text-warning" style="font-family: 'Inter', 'Noto Sans Thai', sans-serif;">
-            วันนี้มี <span class="text-weight-bold">งานตรวจก่อสร้าง</span>
-            <br />
-            กดที่เมนูด้านล่างเพื่อสลับโหมด
+      <template v-else>
+        <div v-if="morningRounds.length > 0">
+          <div class="text-primary text-weight-bold q-mb-sm" style="font-size: 12px">
+            {{ t('inspector.dashboard.morningSlot') }}
           </div>
+          <PropertyCard
+            v-for="round in morningRounds"
+            :key="'m' + round.roundId"
+            :item="round"
+            :isMobile="isMobile"
+          />
         </div>
 
-        <template v-else>
-          <div v-if="morningRounds.length > 0">
-            <div class="text-primary text-weight-bold q-mb-sm" style="font-size: 12px">
-              รอบเช้า 9:00-12:00
-            </div>
-            <PropertyCard
-              v-for="round in morningRounds"
-              :key="'m' + round.roundId"
-              :item="round"
-              :isMobile="isMobile"
-            />
+        <div v-if="afternoonRounds.length > 0" class="q-mt-lg">
+          <div class="text-primary text-weight-bold q-mb-sm" style="font-size: 12px">
+            {{ t('inspector.dashboard.afternoonSlot') }}
           </div>
-
-          <div v-if="afternoonRounds.length > 0" class="q-mt-lg">
-            <div class="text-primary text-weight-bold q-mb-sm" style="font-size: 12px">
-              รอบบ่าย 13:00-16:00
-            </div>
-            <PropertyCard
-              v-for="round in afternoonRounds"
-              :key="'a' + round.roundId"
-              :item="round"
-              :isMobile="isMobile"
-            />
-          </div>
-        </template>
-      </div>
-
+          <PropertyCard
+            v-for="round in afternoonRounds"
+            :key="'a' + round.roundId"
+            :item="round"
+            :isMobile="isMobile"
+          />
+        </div>
+      </template>
     </div>
   </q-page>
 </template>
@@ -81,6 +68,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onActivated } from 'vue';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
 import { useAuthStore } from 'src/stores/useAuth';
 import type { InspectionRound } from 'src/models';
@@ -89,6 +77,7 @@ import InspectorCalendar from '../components/InspectorCalendar.vue';
 
 // ── Plugins & State ───────────────────────────────────────────
 const $q = useQuasar();
+const { t, locale } = useI18n();
 const authStore = useAuthStore();
 const isMobile = computed(() => $q.screen.lt.md);
 
@@ -120,7 +109,7 @@ const afternoonRounds = computed(() => {
 });
 
 const selectedDateLabel = computed(() => {
-  return selectedDate.value.toLocaleDateString('th-TH', {
+  return selectedDate.value.toLocaleDateString(locale.value, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -199,11 +188,36 @@ function getBangkokHour(dateStr: string): number {
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────
-onMounted(() => {
-  void fetchRounds();
+onMounted(async () => {
+  $q.loading.show();
+  try {
+    await fetchRounds();
+  } finally {
+    $q.loading.hide();
+  }
 });
 
 onActivated(() => {
   void fetchRounds();
 });
 </script>
+
+<style scoped>
+.inspector-dashboard-page {
+  max-width: 600px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding-bottom: 90px;
+}
+
+.calendar-card {
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+}
+
+@media (min-width: 600px) {
+  .inspector-dashboard-page {
+    max-width: 800px;
+  }
+}
+</style>

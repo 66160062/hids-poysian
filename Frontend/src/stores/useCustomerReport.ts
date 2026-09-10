@@ -1,4 +1,5 @@
 import { reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { api } from 'src/boot/axios'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ interface RoundResponse {
 
 // ── Composable ────────────────────────────────────────────────────────────────
 export function useReport() {
+  const { t } = useI18n()
 
   const reportSections = reactive<ReportSection[]>([])
   const isLoading = ref(false)
@@ -113,7 +115,7 @@ export function useReport() {
 
         const note = templateItems.find((i) => i.detailValue)?.detailValue
         if (note) {
-          fields.push({ label: 'หมายเหตุ', type: 'textarea', value: note })
+          fields.push({ label: t('stores.customerReport.note'), type: 'textarea', value: note })
         }
 
         if (!sectionsMap.has(template.category)) sectionsMap.set(template.category, [])

@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { api } from 'src/boot/axios'
+import { t } from 'src/boot/i18n'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string
 
@@ -75,7 +76,7 @@ export function useDefectList() {
         )
         const roomName = defect.room?.roomName || '-'
         const subRoomName = defect.subRoom?.roomName || '-'
-        const floorLabel = defect.floor?.label ? `ชั้น${defect.floor.label}` : '-'
+        const floorLabel = defect.floor?.label ? t('stores.defectList.floorPrefix', { label: defect.floor.label }) : '-'
 
         return {
           defectId: defect.defectId,

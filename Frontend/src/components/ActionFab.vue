@@ -5,7 +5,7 @@
         color="white"
         text-color="primary"
         icon="add"
-        label="เพิ่มรายการตรวจ"
+        :label="t('components.actionFab.addInspectionItem')"
         label-class="text-weight-bold"
         style="transform: translateX(-45px)"
         @click="onClickAdd"
@@ -16,6 +16,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 const isExpanded = ref(false);
 const emit = defineEmits(['add']);
 

@@ -2,25 +2,22 @@
   <q-layout view="lHh Lpr lFf" class="bg-grey-1">
     <q-header class="bg-white text-dark">
       <q-toolbar class="q-px-sm">
-        <q-btn
-          flat
-          dense
-          no-caps
-          icon="chevron_left"
-          label="กลับ"
+        <q-icon
+          name="arrow_back_ios_new"
           color="primary"
-          class="text-weight-medium"
+          size="24px"
+          class="cursor-pointer"
           @click="router.back"
         />
         <q-space />
-        <q-toolbar-title class="text-center text-weight-bold text-body1 absolute-center">
-          การแจ้งเตือนทั้งหมด
+        <q-toolbar-title class="text-center text-weight-bold absolute-center notification-title">
+          {{ t('inspector.notifications.title') }}
         </q-toolbar-title>
         <q-space />
         <q-btn
           flat
           color="primary"
-          label="อ่านทั้งหมด"
+          :label="t('inspector.notifications.markAllRead')"
           class="text-weight-bold"
           @click="markAllAsRead"
         />
@@ -38,7 +35,7 @@
               dense
               borderless
               rounded
-              placeholder="ค้นหาการแจ้งเตือน..."
+              :placeholder="t('inspector.notifications.searchPlaceholder')"
               class="col search-input"
             >
               <template v-slot:prepend>
@@ -47,48 +44,9 @@
             </q-input>
           </div>
 
-          <!-- Filters: Type & Sort -->
-          <div class="row q-col-gutter-sm q-mb-md">
-            <div class="col-6">
-              <q-select
-                v-model="selectedType"
-                :options="typeOptions"
-                dense
-                outlined
-                rounded
-                bg-color="white"
-                class="filter-select"
-                behavior="menu"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="notifications_active" size="18px" color="grey-6" />
-                </template>
-              </q-select>
-            </div>
-
-            <div class="col-6">
-              <q-select
-                v-model="sortOrder"
-                :options="sortOptions"
-                emit-value
-                map-options
-                dense
-                outlined
-                rounded
-                bg-color="white"
-                class="filter-select"
-                behavior="menu"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="sort" size="18px" color="grey-6" />
-                </template>
-              </q-select>
-            </div>
-          </div>
-
-          <!-- Filter Chips: Read Status -->
-          <div class="filter-container q-mb-md">
-            <div class="filter-scroll-wrapper no-wrap scroll-x hide-scrollbar row q-gutter-x-sm q-px-none">
+          <!-- Filter Chips: Read Status + Sort -->
+          <div class="row items-center no-wrap q-gutter-x-sm q-mb-md">
+            <div class="filter-scroll-wrapper no-wrap scroll-x hide-scrollbar row q-gutter-x-sm q-px-none col">
               <q-btn
                 v-for="filter in filters"
                 :key="filter.label"
@@ -112,12 +70,32 @@
                 </div>
               </q-btn>
             </div>
+
+            <q-btn
+              flat
+              round
+              dense
+              color="grey-7"
+              icon="filter_list"
+              class="sort-toggle-btn"
+            >
+              <q-menu anchor="bottom right" self="top right">
+                <q-list style="min-width: 160px">
+                  <q-item clickable v-close-popup :active="sortOrder === 'desc'" active-class="text-primary" @click="sortOrder = 'desc'">
+                    <q-item-section>{{ t('inspector.notifications.sortNewestFirst') }}</q-item-section>
+                  </q-item>
+                  <q-item clickable v-close-popup :active="sortOrder === 'asc'" active-class="text-primary" @click="sortOrder = 'asc'">
+                    <q-item-section>{{ t('inspector.notifications.sortOldestFirst') }}</q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-btn>
           </div>
 
           <!-- Notifications List -->
           <div class="notifications-wrapper">
             <div v-if="filteredNotifications.length === 0" class="text-center text-grey-6 q-pa-xl">
-              ไม่พบการแจ้งเตือน
+              {{ t('inspector.notifications.noResults') }}
             </div>
 
             <div v-else class="notifications-list q-gutter-y-md q-pb-xl">
@@ -139,7 +117,7 @@
                       class="tag-badge tag-badge-large"
                     >
                       <q-icon :name="item.type === 'alert' ? 'warning' : 'info'" size="16px" class="q-mr-xs" />
-                      {{ item.type === 'alert' ? 'ข้อมูลสำคัญ' : 'ข้อมูลทั่วไป' }}
+                      {{ item.type === 'alert' ? t('inspector.notifications.typeAlert') : t('inspector.notifications.typeInfo') }}
                     </q-badge>
                   </div>
 
@@ -151,7 +129,7 @@
                       :class="!item.isRead ? 'bg-blue-1 text-primary' : 'bg-grey-2 text-grey-8'"
                       class="status-badge"
                     >
-                      {{ !item.isRead ? 'ยังไม่อ่าน' : 'อ่านแล้ว' }}
+                      {{ !item.isRead ? t('inspector.notifications.unread') : t('inspector.notifications.read') }}
                     </q-badge>
                   </div>
                 </q-card-section>
@@ -205,14 +183,14 @@
                 class="tag-badge"
               >
                 <q-icon :name="selectedNotification.type === 'alert' ? 'warning' : 'info'" size="16px" class="q-mr-xs" />
-                {{ selectedNotification.type === 'alert' ? 'ข้อมูลสำคัญ' : 'ข้อมูลทั่วไป' }}
+                {{ selectedNotification.type === 'alert' ? t('inspector.notifications.typeAlert') : t('inspector.notifications.typeInfo') }}
               </q-badge>
               <q-space />
               <q-badge
                 :class="!selectedNotification.isRead ? 'bg-blue-1 text-primary' : 'bg-grey-2 text-grey-8'"
                 class="status-badge"
               >
-                {{ !selectedNotification.isRead ? 'ยังไม่อ่าน' : 'อ่านแล้ว' }}
+                {{ !selectedNotification.isRead ? t('inspector.notifications.unread') : t('inspector.notifications.read') }}
               </q-badge>
             </div>
 
@@ -234,7 +212,7 @@
               rounded
               class="col bg-blue-1 text-primary"
               :icon="!selectedNotification.isRead ? 'done' : 'undo'"
-              :label="!selectedNotification.isRead ? 'ทำเครื่องหมายว่าอ่านแล้ว' : 'ทำเครื่องหมายว่ายังไม่อ่าน'"
+              :label="!selectedNotification.isRead ? t('inspector.notifications.markRead') : t('inspector.notifications.markUnread')"
               @click="toggleRead(selectedNotification)"
             />
             <q-btn
@@ -242,7 +220,7 @@
               rounded
               class="col bg-red-1 text-negative"
               icon="delete"
-              label="ลบ"
+              :label="t('inspector.notifications.delete')"
               @click="deleteAndClose"
             />
           </div>
@@ -255,9 +233,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
+import { useQuasar } from 'quasar';
+
+const $q = useQuasar();
 
 const router = useRouter();
+const { t } = useI18n();
 
 interface NotificationItem {
   notificationId: number;
@@ -290,23 +273,23 @@ const fetchNotifications = async () => {
   }
 };
 
-onMounted(fetchNotifications);
+onMounted(async () => {
+  $q.loading.show();
+  try {
+    await fetchNotifications();
+  } finally {
+    $q.loading.hide();
+  }
+});
 
 const searchTerm = ref('');
 const activeFilter = ref('all');
-const selectedType = ref('ทั้งหมด');
 const sortOrder = ref('desc');
 const showDetailDialog = ref(false);
 const selectedNotification = ref<NotificationItem | null>(null);
 
-const typeOptions = ['ทั้งหมด', 'ข้อมูลสำคัญ', 'ข้อมูลทั่วไป'];
-const sortOptions = [
-  { label: 'ล่าสุด - เก่า', value: 'desc' },
-  { label: 'เก่า - ล่าสุด', value: 'asc' }
-];
-
 const formatDate = (val: string) => {
-  if (!val) return 'ไม่ระบุวันที่';
+  if (!val) return t('inspector.notifications.dateNotSpecified');
   try {
     const date = new Date(val);
     const day = String(date.getDate()).padStart(2, '0');
@@ -328,9 +311,9 @@ const filters = computed(() => {
   };
 
   return [
-    { label: 'ทั้งหมด', value: 'all', count: counts.all },
-    { label: 'ยังไม่อ่าน', value: 'unread', count: counts.unread > 0 ? counts.unread : undefined },
-    { label: 'อ่านแล้ว', value: 'read', count: counts.read > 0 ? counts.read : undefined },
+    { label: t('inspector.notifications.filterAll'), value: 'all', count: counts.all },
+    { label: t('inspector.notifications.filterUnread'), value: 'unread', count: counts.unread > 0 ? counts.unread : undefined },
+    { label: t('inspector.notifications.filterRead'), value: 'read', count: counts.read > 0 ? counts.read : undefined },
   ];
 });
 
@@ -341,11 +324,6 @@ const filteredNotifications = computed(() => {
     result = result.filter((n) => !n.isRead);
   } else if (activeFilter.value === 'read') {
     result = result.filter((n) => n.isRead);
-  }
-
-  if (selectedType.value !== 'ทั้งหมด') {
-    const typeValue = selectedType.value === 'ข้อมูลสำคัญ' ? 'alert' : 'info';
-    result = result.filter((n) => n.type === typeValue);
   }
 
   if (searchTerm.value) {
@@ -424,6 +402,11 @@ const markAllAsRead = async () => {
   min-height: 100vh;
 }
 
+.notification-title {
+  font-size: 21px;
+  letter-spacing: 0.01em;
+}
+
 .search-input {
   background-color: #ffffff;
   border: 1px solid #e0e0e0;
@@ -431,26 +414,7 @@ const markAllAsRead = async () => {
   height: 48px;
 }
 
-.filter-select :deep(.q-field__control) {
-  height: 42px;
-  min-height: 42px;
-  border: 1px solid #e0e0e0;
-}
-
-.filter-select :deep(.q-field__control:before),
-.filter-select :deep(.q-field__control:after) {
-  border: none !important;
-}
-
-.filter-container {
-  overflow: hidden;
-  margin-left: -16px;
-  margin-right: -16px;
-  width: calc(100% + 32px);
-}
-
 .filter-scroll-wrapper {
-  padding: 4px 16px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
@@ -461,15 +425,19 @@ const markAllAsRead = async () => {
   display: none;
 }
 
+/* Sort Toggle Button */
+.sort-toggle-btn {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  flex-shrink: 0;
+}
+
 .filter-chip {
   white-space: nowrap;
   padding: 8px 12px;
   border-radius: 20px !important;
   transition: all 0.2s ease;
-}
-
-.filter-chip:hover {
-  background: #f5f5f5 !important;
 }
 
 .count-badge {
@@ -523,10 +491,6 @@ const markAllAsRead = async () => {
 .action-btn {
   border-radius: 8px !important;
   transition: all 0.2s ease;
-}
-
-.action-btn:hover {
-  background-color: #e0e0e0 !important;
 }
 
 .hide-scrollbar {

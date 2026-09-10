@@ -45,7 +45,7 @@
       </template>
       <div v-else class="column items-center text-grey-5">
         <q-icon name="image" size="80px" color="grey-4" />
-        <div class="text-subtitle1 text-weight-medium q-mt-sm">ไม่มีรูปภาพ</div>
+        <div class="text-subtitle1 text-weight-medium q-mt-sm">{{ t('inspection.addDefect.noImage') }}</div>
       </div>
       <div
         v-if="!isLocked"
@@ -85,8 +85,8 @@
     >
       <!-- Step 1: รายละเอียดห้อง -->
       <div v-if="step === 1" class="col column">
-        <div class="text-h6 text-weight-bold text-primary">รายละเอียดห้อง</div>
-        <div class="text-caption text-grey-7 q-mb-lg">กรุณากรอกรายละเอียดห้อง</div>
+        <div class="text-h6 text-weight-bold text-primary">{{ t('inspection.addDefect.roomDetailsTitle') }}</div>
+        <div class="text-caption text-grey-7 q-mb-lg">{{ t('inspection.addDefect.roomDetailsSubtitle') }}</div>
         <div class="column q-gutter-y-md">
           <div class="row no-wrap items-start">
             <q-icon name="meeting_room" size="sm" color="primary" class="q-pt-sm q-mr-sm" />
@@ -99,7 +99,7 @@
                 input-debounce="0"
                 v-model="form.roomId"
                 :options="roomOptionsFiltered"
-                label="ประเภทห้อง"
+                :label="t('inspection.addDefect.roomType')"
                 option-value="value"
                 option-label="label"
                 emit-value
@@ -119,7 +119,7 @@
                 input-debounce="0"
                 v-model="form.subRoomId"
                 :options="subRoomOptionsFiltered"
-                label="ประเภทห้องย่อย"
+                :label="t('inspection.addDefect.subRoomType')"
                 option-value="value"
                 option-label="label"
                 emit-value
@@ -142,7 +142,7 @@
                 input-debounce="0"
                 v-model="form.floorId"
                 :options="floorOptionsFiltered"
-                label="ชั้น"
+                :label="t('inspection.addDefect.floor')"
                 option-value="value"
                 option-label="label"
                 emit-value
@@ -159,8 +159,8 @@
 
       <!-- Step 2: รายละเอียดงาน -->
       <div v-if="step === 2" class="col column">
-        <div class="text-h6 text-weight-bold text-primary">รายละเอียดงาน</div>
-        <div class="text-caption text-grey-7 q-mb-lg">กรุณากรอกรายละเอียดงาน</div>
+        <div class="text-h6 text-weight-bold text-primary">{{ t('inspection.addDefect.jobDetailsTitle') }}</div>
+        <div class="text-caption text-grey-7 q-mb-lg">{{ t('inspection.addDefect.jobDetailsSubtitle') }}</div>
         <div class="column q-gutter-y-md">
           <!-- ความรุนแรง -->
           <!-- <div class="row no-wrap items-center">
@@ -191,7 +191,7 @@
                 input-debounce="0"
                 v-model="form.jobType"
                 :options="categoryOptionsFiltered"
-                label="ประเภทงาน"
+                :label="t('inspection.addDefect.jobType')"
                 option-value="value"
                 option-label="label"
                 emit-value
@@ -216,7 +216,7 @@
                 input-debounce="0"
                 v-model="form.defectTypes"
                 :options="subCategoryOptionsFiltered"
-                label="เลือกประเภทตำหนิ"
+                :label="t('inspection.addDefect.selectDefectTypes')"
                 option-value="value"
                 option-label="label"
                 emit-value
@@ -251,7 +251,7 @@
                 dense
                 type="textarea"
                 v-model="form.note"
-                label="หมายเหตุ"
+                :label="t('inspection.addDefect.note')"
                 rows="3"
                 :disable="isLocked"
               />
@@ -294,7 +294,11 @@
                 class="text-subtitle2 text-weight-bold"
                 :class="form.severity === 'Major' ? 'text-red' : 'text-orange'"
               >
-                {{ form.severity === 'Major' ? 'ตำหนิร้ายแรง' : 'ตำหนิเล็กน้อย' }}
+                {{
+                  form.severity === 'Major'
+                    ? t('inspection.addDefect.severityMajor')
+                    : t('inspection.addDefect.severityMinor')
+                }}
               </span>
             </div>
           </div>
@@ -304,7 +308,9 @@
       <!-- Footer -->
       <div class="row justify-between items-end q-mt-auto q-pt-md">
         <div class="column">
-          <div class="text-caption text-primary text-weight-bold q-mb-xs">หน้าที่ {{ step }}/2</div>
+          <div class="text-caption text-primary text-weight-bold q-mb-xs">
+            {{ t('inspection.addDefect.pageOf', { step }) }}
+          </div>
           <div class="row q-gutter-x-xs">
             <div
               :class="step === 1 ? 'bg-primary' : 'bg-grey-4'"
@@ -318,7 +324,7 @@
         </div>
         <q-btn
           color="primary"
-          :label="step === 1 ? 'ถัดไป' : 'บันทึก'"
+          :label="step === 1 ? t('inspection.addDefect.next') : t('inspection.addDefect.save')"
           :icon-right="step === 1 ? 'chevron_right' : ''"
           :loading="inspectionStore.isLoading"
           :disable="isSubmitting || (isLocked && step === 2)"
@@ -337,8 +343,9 @@ import { useRouter, useRoute } from 'vue-router';
 import { useInspectionStore } from 'src/stores/useInspection';
 import { useRoundLock } from 'src/composables/useRoundLock';
 import { api } from 'src/boot/axios';
-import { isAxiosError } from 'axios';
+import type { Defect } from 'src/models';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 import imageCompression from 'browser-image-compression';
 import ImageAnnotationDialog from 'src/components/ImageAnnotationDialog.vue';
 
@@ -346,6 +353,7 @@ const route = useRoute();
 const router = useRouter();
 const inspectionStore = useInspectionStore();
 const $q = useQuasar();
+const { t } = useI18n();
 
 const roundId = route.params.roundId as string;
 const defectIdFromQuery = route.query.defectId as string | undefined;
@@ -381,6 +389,23 @@ const form = ref<DefectForm>({
   defectTypes: [],
   note: '',
 });
+
+const jobId = ref<number | null>(null);
+
+const fetchJobInfo = async () => {
+  if (route.query.jobId) {
+    jobId.value = Number(route.query.jobId);
+    return;
+  }
+  try {
+    const { data } = await api.get<{ job?: { jobId?: number } }>(`/inspection-rounds/${roundId}`);
+    if (data?.job?.jobId) {
+      jobId.value = data.job.jobId;
+    }
+  } catch (err) {
+    console.error('Failed to fetch job info for round', err);
+  }
+};
 
 // ── Master data ───────────────────────────────────────────────
 
@@ -545,18 +570,7 @@ const handleBack = () => {
   else router.back();
 };
 
-// defect ที่กด "บันทึก" ไปแล้วแต่ยังบันทึกลงหลังบ้านไม่เสร็จ (fire-and-forget)
-// เก็บไว้เช็คซ้ำกันเอง เพราะ inspectionStore.defects ยังไม่ได้อัปเดตจนกว่า fetchDefects จะเสร็จ
-interface PendingDefect {
-  roomId: number | null;
-  subRoomId: number | null;
-  floorId: number | null;
-  severity: string;
-  note: string;
-  types: number[];
-}
-const pendingDefects = ref<PendingDefect[]>([]);
-
+// defect ซ้ำ: เช็คทั้ง defect ที่บันทึกแล้ว และ defect ที่กำลังบันทึกอยู่เบื้องหลัง (defectSyncState, isCreate)
 const isDuplicateDefect = () => {
   const selectedTypes = [...form.value.defectTypes].sort((a, b) => a - b);
 
@@ -589,32 +603,91 @@ const isDuplicateDefect = () => {
   );
   if (duplicateInStore) return true;
 
-  return pendingDefects.value.some((p) =>
-    matchesCurrentForm(p.roomId, p.subRoomId, p.floorId, p.severity, p.note, [...p.types].sort((a, b) => a - b)),
+  return Object.values(inspectionStore.defectSyncState).some(
+    (entry) =>
+      entry.isCreate &&
+      entry.previewDefect &&
+      matchesCurrentForm(
+        entry.previewDefect.room?.roomId ?? null,
+        entry.previewDefect.subRoom?.subRoomId ?? null,
+        entry.previewDefect.floor?.floorId ?? null,
+        entry.previewDefect.severity,
+        entry.previewDefect.description,
+        entry.previewDefect.subCategories.map((s) => s.subCategoryId).sort((a, b) => a - b),
+      ),
   );
 };
 
-// 409 จาก backend = เจอ defect ซ้ำที่ check ฝั่งนี้มองไม่เห็น (เช่น inspector อีกคนบันทึกจุดเดียวกันไปก่อนแล้ว)
-const getSubmitErrorMessage = (err: unknown, fallback: string) => {
-  if (isAxiosError(err) && err.response?.status === 409) {
-    return (
-      (err.response.data as { message?: string } | undefined)?.message ??
-      'มีรายการ Defect นี้อยู่แล้วในห้อง/ชั้นเดียวกัน'
-    );
-  }
-  return fallback;
+// patch defect ใน store ทันทีตามฟอร์มปัจจุบัน (optimistic) เพื่อให้หน้ารายการอัปเดตก่อนที่ backend จะตอบกลับ
+const buildLocalSubCategories = () =>
+  inspectionStore.subCategories
+    .filter((s) => form.value.defectTypes.includes(s.subCategoryId))
+    .map((s) => ({
+      subCategoryId: s.subCategoryId,
+      name: s.name,
+      ...(s.categoryId ? { category: { name: s.categoryId.name, categoryId: s.categoryId.categoryId } } : {}),
+    }));
+
+const patchDefectLocally = (defectId: number) => {
+  const idx = inspectionStore.defects.findIndex((d) => d.defectId === defectId);
+  if (idx === -1) return;
+  const existing = inspectionStore.defects[idx]!;
+  const roomLabel = roomOptions.value.find((r) => r.value === form.value.roomId)?.label;
+  const subRoomLabel = subRoomOptions.value.find((r) => r.value === form.value.subRoomId)?.label;
+  const floorLabel = floorOptions.value.find((f) => f.value === form.value.floorId)?.label;
+
+  inspectionStore.defects[idx] = {
+    ...existing,
+    ...(form.value.roomId
+      ? { room: { roomId: form.value.roomId, roomName: roomLabel ?? existing.room?.roomName ?? '' } }
+      : {}),
+    subRoom: form.value.subRoomId ? { subRoomId: form.value.subRoomId, roomName: subRoomLabel ?? '' } : null,
+    ...(form.value.floorId
+      ? { floor: { floorId: form.value.floorId, label: floorLabel ?? existing.floor?.label ?? '' } }
+      : {}),
+    severity: form.value.severity,
+    subCategories: buildLocalSubCategories(),
+    description: form.value.note || '-',
+    ...(imagePreview.value ? { imageUrl: imagePreview.value } : {}),
+  };
 };
+
+const buildPreviewDefect = (): Defect => ({
+  defectId: -Date.now(),
+  description: form.value.note || '-',
+  severity: form.value.severity,
+  status: 'pending_repair',
+  ...(imagePreview.value ? { imageUrl: imagePreview.value } : {}),
+  subCategories: buildLocalSubCategories(),
+  ...(form.value.roomId
+    ? { room: { roomId: form.value.roomId, roomName: roomOptions.value.find((r) => r.value === form.value.roomId)?.label ?? '' } }
+    : {}),
+  subRoom: form.value.subRoomId
+    ? { subRoomId: form.value.subRoomId, roomName: subRoomOptions.value.find((r) => r.value === form.value.subRoomId)?.label ?? '' }
+    : null,
+  ...(form.value.floorId
+    ? { floor: { floorId: form.value.floorId, label: floorOptions.value.find((f) => f.value === form.value.floorId)?.label ?? '' } }
+    : {}),
+});
 
 const isSubmitting = ref(false);
 
 const handleNext = async () => {
   if (step.value === 1) {
     if (!form.value.roomId) {
-      $q.notify({ message: 'กรุณาเลือกประเภทห้อง', color: 'negative', icon: 'warning' });
+      $q.notify({
+        message: t('inspection.addDefect.selectRoomTypeRequired'),
+        color: 'negative',
+        icon: 'warning',
+      });
       return;
     }
     if (!form.value.floorId) {
-      $q.notify({ message: 'กรุณาเลือกชั้น', color: 'negative', icon: 'warning' });
+      $q.notify({
+        message: t('inspection.addDefect.selectFloorRequired'),
+        color: 'negative',
+        icon: 'warning',
+      });
       return;
     }
     step.value = 2;
@@ -622,16 +695,24 @@ const handleNext = async () => {
   }
 
   if (!form.value.severity) {
-    $q.notify({ message: 'กรุณาเลือกความรุนแรง', color: 'negative', icon: 'warning' });
+    $q.notify({
+      message: t('inspection.addDefect.selectSeverityRequired'),
+      color: 'negative',
+      icon: 'warning',
+    });
     return;
   }
   if (!form.value.jobType) {
-    $q.notify({ message: 'กรุณาเลือกประเภทงาน', color: 'negative', icon: 'warning' });
+    $q.notify({
+      message: t('inspection.addDefect.selectJobTypeRequired'),
+      color: 'negative',
+      icon: 'warning',
+    });
     return;
   }
   if (form.value.defectTypes.length === 0) {
     $q.notify({
-      message: 'กรุณาเลือกประเภทตำหนิอย่างน้อย 1 รายการ',
+      message: t('inspection.addDefect.selectDefectTypeRequired'),
       color: 'negative',
       icon: 'warning',
     });
@@ -640,7 +721,7 @@ const handleNext = async () => {
 
   if (!isEditMode.value && isDuplicateDefect()) {
     $q.notify({
-      message: 'มีรายการ Defect นี้อยู่แล้วในห้อง/ชั้นเดียวกัน',
+      message: t('inspection.addDefect.duplicateDefect'),
       color: 'negative',
       icon: 'warning',
     });
@@ -669,6 +750,7 @@ const handleNext = async () => {
     formData.append('subCategoryIds', String(id));
   });
 
+
   if (selectedFile.value) {
     if (pendingImageCompression) await pendingImageCompression;
     if (selectedFile.value) {
@@ -679,71 +761,39 @@ const handleNext = async () => {
   if (isEditMode.value) {
     if (isSubmitting.value) return;
     isSubmitting.value = true;
-    try {
-      await inspectionStore.updateDefect(Number(defectIdFromQuery), formData);
-      await inspectionStore.fetchDefects(roundId);
-      $q.notify({
-        message: 'อัปเดตข้อมูลสำเร็จ!',
-        color: 'positive',
-        icon: 'check_circle',
-        timeout: 1500,
-      });
-      router.back();
-    } catch (err) {
-      $q.notify({
-        message: getSubmitErrorMessage(err, 'เกิดข้อผิดพลาดในการบันทึก'),
-        color: 'negative',
-        icon: 'error',
-      });
-    } finally {
-      isSubmitting.value = false;
-    }
+    const defectId = Number(defectIdFromQuery);
+    // optimistic: patch หน้ารายการทันที แล้วออกจากหน้านี้เลย ไม่รอ backend ตอบกลับ
+    patchDefectLocally(defectId);
+    router.back();
+    void inspectionStore.runDefectSync(defectId, false, roundId, () =>
+      inspectionStore.updateDefect(defectId, formData),
+    );
+    isSubmitting.value = false;
     return;
   }
 
-  // สร้างใหม่: เช็คเงื่อนไขผ่านแล้วเคลียร์ฟอร์มให้กรอกตัวถัดไปได้ทันที
-  // ส่วนการบันทึกลงหลังบ้านให้ทำงานต่อเบื้องหลังโดยไม่บล็อก UI
-  const pending: PendingDefect = {
-    roomId: form.value.roomId,
-    subRoomId: form.value.subRoomId,
-    floorId: form.value.floorId,
-    severity: form.value.severity,
-    note: form.value.note || '-',
-    types: [...form.value.defectTypes],
-  };
-  pendingDefects.value.push(pending);
+  // สร้างใหม่: เช็คเงื่อนไขผ่านแล้วแสดง placeholder + เคลียร์ฟอร์มให้กรอกตัวถัดไปได้ทันที
+  // ส่วนการบันทึกลงหลังบ้านให้ทำงานต่อเบื้องหลังโดยไม่บล็อก UI (optimistic, retry ได้จากการ์ดถ้าพัง)
+  const tempId = -Date.now();
+  const previewDefect = buildPreviewDefect();
 
   imagePreview.value = null;
   selectedFile.value = null;
   step.value = 2;
 
-  void (async () => {
-    try {
-      await inspectionStore.saveDefect(formData);
-      await inspectionStore.fetchDefects(roundId);
-      $q.notify({
-        message: 'บันทึกข้อมูลสำเร็จ!',
-        color: 'positive',
-        icon: 'check_circle',
-        timeout: 1500,
-      });
-    } catch (err) {
-      $q.notify({
-        message: getSubmitErrorMessage(err, 'เกิดข้อผิดพลาดในการบันทึก'),
-        color: 'negative',
-        icon: 'error',
-      });
-    } finally {
-      const idx = pendingDefects.value.indexOf(pending);
-      if (idx !== -1) pendingDefects.value.splice(idx, 1);
-    }
-  })();
+  void inspectionStore.runDefectSync(
+    tempId,
+    true,
+    roundId,
+    () => inspectionStore.saveDefect(formData),
+    previewDefect,
+  );
 };
 
 const handleDelete = () => {
   $q.dialog({
-    title: 'ยืนยันการลบ',
-    message: 'คุณต้องการลบรายการ Defect นี้ใช่หรือไม่?',
+    title: t('inspection.addDefect.confirmDeleteTitle'),
+    message: t('inspection.addDefect.confirmDeleteMessage'),
     cancel: true,
     persistent: true,
   }).onOk(() => {
@@ -752,14 +802,14 @@ const handleDelete = () => {
         await inspectionStore.deleteDefect(Number(defectIdFromQuery));
         await inspectionStore.fetchDefects(roundId);
         $q.notify({
-          message: 'ลบข้อมูลสำเร็จ',
+          message: t('inspection.addDefect.deleteSuccess'),
           color: 'positive',
           icon: 'check_circle',
         });
         router.back();
       } catch {
         $q.notify({
-          message: 'เกิดข้อผิดพลาดในการลบ',
+          message: t('inspection.addDefect.deleteError'),
           color: 'negative',
           icon: 'error',
         });
@@ -783,7 +833,17 @@ const setSeverity = (val: boolean) => {
 };
 
 onMounted(async () => {
+  $q.loading.show();
+  try {
+    await loadAddDefectData();
+  } finally {
+    $q.loading.hide();
+  }
+});
+
+async function loadAddDefectData() {
   void inspectionStore.fetchInspectionMasterData(roundId);
+  void fetchJobInfo();
 
   await fetchRooms();
   await fetchSubRooms();
@@ -829,7 +889,7 @@ onMounted(async () => {
       step.value = 2;
     }
   }
-});
+}
 </script>
 
 <style scoped>
@@ -849,5 +909,10 @@ onMounted(async () => {
   font-weight: 600;
   font-size: 12px;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.border-positive-subtle {
+  border: 1px solid var(--q-positive) !important;
+  background-color: #f0fdf4 !important;
 }
 </style>

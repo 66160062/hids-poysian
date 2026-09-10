@@ -27,13 +27,13 @@
                   <q-item-section avatar class="q-pr-none" style="min-width: 36px">
                     <q-icon name="edit" color="primary" size="sm" />
                   </q-item-section>
-                  <q-item-section>แก้ไขข้อมูล</q-item-section>
+                  <q-item-section>{{ t('components.adminUserCard.edit') }}</q-item-section>
                 </q-item>
                 <q-item clickable @click="$emit('delete', user)">
                   <q-item-section avatar class="q-pr-none" style="min-width: 36px">
                     <q-icon name="delete" color="negative" size="sm" />
                   </q-item-section>
-                  <q-item-section class="text-negative">ลบผู้ใช้</q-item-section>
+                  <q-item-section class="text-negative">{{ t('components.adminUserCard.deleteUser') }}</q-item-section>
                 </q-item>
               </q-list>
             </q-menu>
@@ -46,7 +46,7 @@
           <span class="text-caption text-primary text-weight-medium">{{ user.team.team_name }}</span>
         </div>
         <div v-else class="row items-center q-mb-xs">
-          <span class="text-caption text-grey-5 text-italic">ไม่มีสังกัดทีม</span>
+          <span class="text-caption text-grey-5 text-italic">{{ t('components.adminUserCard.noTeam') }}</span>
         </div>
 
         <div class="text-caption text-grey-8 row items-center">
@@ -75,7 +75,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import type { User } from 'src/models';
+
+const { t } = useI18n();
 
 const getImageUrl = (url?: string | null) => {
   if (!url) return '';

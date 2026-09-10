@@ -1,5 +1,5 @@
 <template>
-  <q-page class="bg-grey-1 q-pb-xl">
+  <q-page class="admin-user-page bg-grey-1 q-pb-xl">
     <!-- Header Area -->
     <div
       class="q-pa-md text-dark"
@@ -11,7 +11,7 @@
         dense
         outlined
         bg-color="white"
-        placeholder="ค้นหาชื่อผู้ใช้งาน..."
+        :placeholder="t('adminManage.userManagement.searchPlaceholder')"
         class="search-input"
         hide-bottom-space
       >
@@ -45,16 +45,10 @@
 
     <!-- User List -->
     <div class="q-pa-md">
-      <!-- Loading State -->
-      <div v-if="isLoading" class="text-center q-py-xl">
-        <q-spinner color="primary" size="3em" />
-        <div class="text-grey-6 q-mt-md">กำลังโหลดข้อมูล...</div>
-      </div>
-
       <!-- Empty State -->
-      <div v-else-if="filteredUsers.length === 0" class="text-center q-py-xl text-grey-6">
+      <div v-if="!isLoading && filteredUsers.length === 0" class="text-center q-py-xl text-grey-6">
         <q-icon name="person_off" size="64px" class="q-mb-md" />
-        <div>ไม่พบรายชื่อผู้ใช้งาน</div>
+        <div>{{ t('adminManage.userManagement.noUsersFound') }}</div>
       </div>
 
       <!-- Users -->
@@ -89,6 +83,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import AdminUserCard from 'src/components/AdminUserCard.vue';
 import AdminUserFormDialog from 'src/components/AdminUserFormDialog.vue';
@@ -96,21 +91,22 @@ import { useTeamStore } from 'src/stores/useTeam';
 import { useUserStore } from 'src/stores/useUser';
 import type { User } from 'src/models';
 
+const { t } = useI18n();
 const $q = useQuasar();
 const teamStore = useTeamStore();
 const userStore = useUserStore();
 
 // Global Options
-const roleFilters = [
-  { label: 'ทั้งหมด', value: 'all' },
-  { label: 'ผู้ดูแลระบบ (Admin)', value: 'admin' },
-  { label: 'ผู้ตรวจ (Inspector)', value: 'inspector' },
-];
+const roleFilters = computed(() => [
+  { label: t('adminManage.userManagement.filterAll'), value: 'all' },
+  { label: t('adminManage.userManagement.filterAdmin'), value: 'admin' },
+  { label: t('adminManage.userManagement.filterInspector'), value: 'inspector' },
+]);
 
-const roleOptions = [
-  { label: 'ผู้ดูแลระบบ (Admin)', value: 'admin' },
-  { label: 'ผู้ตรวจงาน (Inspector)', value: 'inspector' },
-];
+const roleOptions = computed(() => [
+  { label: t('adminManage.userManagement.roleAdmin'), value: 'admin' },
+  { label: t('adminManage.userManagement.roleInspector'), value: 'inspector' },
+]);
 
 const teamOptions = computed(() => teamStore.teamOptions);
 
@@ -122,10 +118,15 @@ const activeRoleFilter = ref('all');
 
 // Computed filters
 const filteredUsers = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase();
   return usersList.value.filter((user) => {
-    const matchName = user.fullName.toLowerCase().includes(searchQuery.value.toLowerCase());
+    const matchSearch =
+      !query ||
+      [user.fullName, user.phoneNumber, user.email, user.lineId, user.team?.team_name].some((field) =>
+        (field || '').toLowerCase().includes(query),
+      );
     const matchRole = activeRoleFilter.value === 'all' || user.role === activeRoleFilter.value;
-    return matchName && matchRole;
+    return matchSearch && matchRole;
   });
 });
 
@@ -150,14 +151,21 @@ const defaultForm = (): Partial<User> & { teamId?: number } => ({
    UI HANDLERS
    ========================================= */
 
-onMounted(() => {
-  userStore.fetchUsers().catch((err) => {
-    const error = err as Error & { response?: { data?: { message?: string } } };
-    console.error('Fetch users error:', error);
-    const msg = error?.response?.data?.message || error?.message || 'ไม่ทราบสาเหตุ';
-    $q.notify({ type: 'negative', message: `ดึงข้อมูลล้มเหลว: ${msg}` });
-  });
-  void teamStore.fetchTeams();
+onMounted(async () => {
+  $q.loading.show();
+  try {
+    await Promise.all([
+      userStore.fetchUsers().catch((err) => {
+        const error = err as Error & { response?: { data?: { message?: string } } };
+        console.error('Fetch users error:', error);
+        const msg = error?.response?.data?.message || error?.message || t('adminManage.userManagement.unknownError');
+        $q.notify({ type: 'negative', message: t('adminManage.userManagement.fetchFailed', { msg }) });
+      }),
+      teamStore.fetchTeams(),
+    ]);
+  } finally {
+    $q.loading.hide();
+  }
 });
 
 const openCreateDialog = () => {
@@ -184,7 +192,7 @@ const onSaveUser = async (payload: { form: Partial<User>; file: File | null }) =
     (f.role !== 'admin' && !f.teamId)
   ) {
     $q.notify({
-      message: 'กรุณากรอกข้อมูลที่บังคับให้ครบถ้วน',
+      message: t('adminManage.userManagement.fillRequiredFields'),
       color: 'warning',
       icon: 'warning',
       position: 'top',
@@ -193,20 +201,20 @@ const onSaveUser = async (payload: { form: Partial<User>; file: File | null }) =
   }
 
   try {
-    $q.loading.show({ message: 'กำลังบันทึกข้อมูล...' });
+    $q.loading.show({ message: t('adminManage.userManagement.saving') });
     if (isEditing.value && editingId.value) {
       await userStore.updateUser(editingId.value, payload);
-      $q.notify({ type: 'positive', message: 'แก้ไขข้อมูลสำเร็จ', icon: 'check_circle' });
+      $q.notify({ type: 'positive', message: t('adminManage.userManagement.editSuccess'), icon: 'check_circle' });
     } else {
       await userStore.createUser(payload);
-      $q.notify({ type: 'positive', message: 'เพิ่มผู้ใช้สำเร็จ', icon: 'check_circle' });
+      $q.notify({ type: 'positive', message: t('adminManage.userManagement.addSuccess'), icon: 'check_circle' });
     }
     showFormDialog.value = false;
   } catch (err) {
     const error = err as Error & { response?: { data?: { message?: string } } };
     console.error('Save user failed', error);
-    const msg = error?.response?.data?.message || error?.message || 'ไม่ทราบสาเหตุ';
-    $q.notify({ type: 'negative', message: `บันทึกข้อมูลไม่สำเร็จ: ${msg}` });
+    const msg = error?.response?.data?.message || error?.message || t('adminManage.userManagement.unknownError');
+    $q.notify({ type: 'negative', message: t('adminManage.userManagement.saveFailed', { msg }) });
   } finally {
     $q.loading.hide();
   }
@@ -214,21 +222,21 @@ const onSaveUser = async (payload: { form: Partial<User>; file: File | null }) =
 
 const confirmDeleteUser = (user: User) => {
   $q.dialog({
-    title: 'ยืนยันการลบ',
-    message: `คุณต้องการลบผู้ใช้ "${user.fullName}" ใช่หรือไม่?`,
+    title: t('adminManage.userManagement.deleteConfirmTitle'),
+    message: t('adminManage.userManagement.deleteConfirmMessage', { name: user.fullName }),
     cancel: true,
     persistent: true,
   }).onOk(() => {
-    $q.loading.show({ message: 'กำลังลบข้อมูล...' });
+    $q.loading.show({ message: t('adminManage.userManagement.deleting') });
     userStore.deleteUser(user.id)
       .then(() => {
-        $q.notify({ type: 'positive', message: 'ลบผู้ใช้สำเร็จ', icon: 'check_circle' });
+        $q.notify({ type: 'positive', message: t('adminManage.userManagement.deleteSuccess'), icon: 'check_circle' });
       })
       .catch((err) => {
         const error = err as Error & { response?: { data?: { message?: string } } };
         console.error('Delete user failed', error);
-        const msg = error?.response?.data?.message || error?.message || 'ไม่ทราบสาเหตุ';
-        $q.notify({ type: 'negative', message: `ลบข้อมูลล้มเหลว: ${msg}` });
+        const msg = error?.response?.data?.message || error?.message || t('adminManage.userManagement.unknownError');
+        $q.notify({ type: 'negative', message: t('adminManage.userManagement.deleteFailed', { msg }) });
       })
       .finally(() => {
         $q.loading.hide();
@@ -238,6 +246,18 @@ const confirmDeleteUser = (user: User) => {
 </script>
 
 <style scoped>
+.admin-user-page {
+  max-width: 600px;
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
+@media (min-width: 600px) {
+  .admin-user-page {
+    max-width: 800px;
+  }
+}
+
 .search-input :deep(.q-field__control) {
   border-radius: 30px;
 }
