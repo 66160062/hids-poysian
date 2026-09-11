@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
 import { IsNumber, IsOptional } from 'class-validator';
 
 export class CreateAssignmentDto {
@@ -10,7 +10,11 @@ export class CreateAssignmentDto {
   @IsNumber()
   inspectorId!: number;
 
-  @ApiProperty({ description: 'รหัสรอบตรวจ (round)', example: 1, required: false })
+  @ApiPropertyOptional({
+    description:
+      'รหัสรอบตรวจ — ถ้าระบุ จะมอบหมายเฉพาะรอบนี้เท่านั้น ถ้าไม่ระบุ จะมอบหมายทั้ง job (เข้าถึงได้ทุกรอบ)',
+    example: 1,
+  })
   @IsOptional()
   @IsNumber()
   roundId?: number;

@@ -11,9 +11,7 @@ import {
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ApiOperation, ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
-import { diskStorage } from 'multer';
-import { v4 as uuidv4 } from 'uuid';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
 import { Request } from 'express';
 import { ConstructionDailyReportsService } from './construction-daily-reports.service';
 import { AuthGuard } from 'src/auth/auth.guard';
@@ -50,15 +48,7 @@ export class ConstructionDailyReportsController {
         { name: 'panoramaFile', maxCount: 1 },
         { name: 'photos', maxCount: 20 },
       ],
-      {
-        storage: diskStorage({
-          destination: './uploads',
-          filename: (req, file, cb) => {
-            const uniqueName = `${uuidv4()}${extname(file.originalname)}`;
-            cb(null, uniqueName);
-          },
-        }),
-      },
+      { storage: memoryStorage() },
     ),
   )
   create(

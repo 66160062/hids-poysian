@@ -22,38 +22,30 @@ import {
   ApiOperation,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { v4 as uuidv4 } from 'uuid';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
+import { StorageService } from 'src/storage/storage.service';
 
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly storageService: StorageService,
+  ) {}
   @Post()
   @ApiOperation({ summary: 'สร้างผู้ใช้งานใหม่' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ description: 'ข้อมูลผู้ใช้งาน', type: CreateUserDto })
-  @UseInterceptors(
-    FileInterceptor('imageUrl', {
-      storage: diskStorage({
-        destination: './uploads/users',
-        filename: (req, file, cb) => {
-          const uniqueFileName = uuidv4() + extname(file.originalname);
-          cb(null, uniqueFileName);
-        },
-      }),
-    }),
-  )
-  create(
+  @UseInterceptors(FileInterceptor('imageUrl', { storage: memoryStorage() }))
+  async create(
     @UploadedFile() file: Express.Multer.File,
     @Body() createUserDto: CreateUserDto,
   ) {
     return this.usersService.create({
       ...createUserDto,
       imageUrl: file
-        ? '/uploads/users/' + file.filename
+        ? await this.storageService.uploadImage(file.buffer, 'users')
         : '/uploads/users/default-avatar.jpg',
     });
   }
@@ -72,17 +64,7 @@ export class UsersController {
   @ApiOperation({ summary: 'อัปเดตข้อมูลผู้ใช้งาน' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ description: 'ข้อมูลที่ต้องการแก้ไข', type: UpdateUserDto })
-  @UseInterceptors(
-    FileInterceptor('imageUrl', {
-      storage: diskStorage({
-        destination: './uploads/users',
-        filename: (req, file, cb) => {
-          const uniqueFileName = uuidv4() + extname(file.originalname);
-          cb(null, uniqueFileName);
-        },
-      }),
-    }),
-  )
+  @UseInterceptors(FileInterceptor('imageUrl', { storage: memoryStorage() }))
   async update(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File,
@@ -91,7 +73,10 @@ export class UsersController {
     const updateData = { ...updateUserDto };
 
     if (file) {
-      updateData.imageUrl = '/uploads/users/' + file.filename;
+      updateData.imageUrl = await this.storageService.uploadImage(
+        file.buffer,
+        'users',
+      );
     }
 
     return this.usersService.update(id, updateData);

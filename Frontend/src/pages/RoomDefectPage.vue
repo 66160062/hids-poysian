@@ -2,14 +2,33 @@
   <q-layout view="lHh Lpr lFf">
     <q-page-container>
       <q-page class="q-pa-md bg-white" style="padding-bottom: 160px;">
-        <!-- Filter button -->
-        <div class="row justify-end q-mb-md">
+        <!-- Sort + Filter buttons -->
+        <div class="row justify-end q-mb-md q-gutter-sm">
+          <q-btn-dropdown
+            outline
+            rounded
+            color="primary"
+            :icon="sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward'"
+            :label="sortOrder === 'desc' ? t('inspection.roomDefect.sortNewest') : t('inspection.roomDefect.sortOldest')"
+            size="sm"
+            class="q-px-md text-weight-bold bg-white"
+          >
+            <q-list>
+              <q-item clickable v-close-popup @click="sortOrder = 'desc'">
+                <q-item-section>{{ t('inspection.roomDefect.sortNewest') }}</q-item-section>
+              </q-item>
+              <q-item clickable v-close-popup @click="sortOrder = 'asc'">
+                <q-item-section>{{ t('inspection.roomDefect.sortOldest') }}</q-item-section>
+              </q-item>
+            </q-list>
+          </q-btn-dropdown>
+
           <q-btn
             outline
             rounded
             color="primary"
             icon="filter_list"
-            label="ตัวกรอง"
+            :label="t('inspection.roomDefect.filter')"
             size="sm"
             class="q-px-md text-weight-bold bg-white"
             @click="showFilter = true"
@@ -21,9 +40,9 @@
         </div>
 
         <!-- Empty -->
-        <div v-if="filteredDefects.length === 0" class="text-center q-py-xl">
+        <div v-if="filteredDefects.length === 0 && pendingCreateCards.length === 0" class="text-center q-py-xl">
           <q-icon name="check_circle" color="positive" size="48px" />
-          <div class="text-body2 text-grey-6 q-mt-sm">ไม่พบรายการ defect ในห้องนี้</div>
+          <div class="text-body2 text-grey-6 q-mt-sm">{{ t('inspection.roomDefect.noDefectsInRoom') }}</div>
         </div>
 
         <!-- List -->
@@ -33,10 +52,21 @@
               v-for="defect in paginatedDefects"
               :key="defect.defectId"
               :defect="toCardData(defect)"
+              :sync-status="store.defectSyncState[defect.defectId]?.status"
+              :sync-error="store.defectSyncState[defect.defectId]?.error ?? ''"
               @click="onEditDefectClick(defect)"
+              @retry="store.retryDefectSync(defect.defectId)"
+            />
+            <DefectDetailCard
+              v-for="pending in pendingCreateCards"
+              :key="pending.defectId"
+              :defect="toCardData(pending)"
+              :sync-status="store.defectSyncState[pending.defectId]?.status"
+              :sync-error="store.defectSyncState[pending.defectId]?.error ?? ''"
+              @retry="store.retryDefectSync(pending.defectId)"
             />
           </div>
-          
+
           <div class="row justify-center q-mt-lg q-mb-md" v-if="totalPages > 1">
             <q-pagination
               v-model="currentPage"
@@ -50,7 +80,7 @@
             />
           </div>
         </div>
-        <ActionFab @add="onAddDefectClick" />
+        <ActionFab v-if="!isLocked" @add="onAddDefectClick" />
       </q-page>
     </q-page-container>
 
@@ -64,8 +94,8 @@
 
         <!-- Header -->
         <div class="row items-center justify-between q-px-md q-py-sm">
-          <span class="text-weight-bold text-body1">ตัวกรอง</span>
-          <q-btn flat dense label="รีเซ็ต" color="primary" @click="resetFilter" />
+          <span class="text-weight-bold text-body1">{{ t('inspection.roomDefect.filter') }}</span>
+          <q-btn flat dense :label="t('inspection.roomDefect.reset')" color="primary" @click="resetFilter" />
         </div>
 
         <q-separator />
@@ -73,7 +103,7 @@
         <div class="q-pa-md column q-gutter-y-lg">
           <!-- สถานะ -->
           <div>
-            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">สถานะ</div>
+            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">{{ t('inspection.roomDefect.status') }}</div>
             <div class="row q-gutter-sm">
               <q-btn
                 v-for="opt in statusOptions"
@@ -105,10 +135,10 @@
 
           <!-- ความรุนแรง -->
           <div>
-            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">ความรุนแรง</div>
+            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">{{ t('inspection.roomDefect.severity') }}</div>
             <div class="row q-gutter-sm">
               <q-btn
-                label="ทั้งหมด"
+                :label="t('inspection.roomDefect.all')"
                 :color="filter.severities.length === 0 ? 'primary' : 'grey-3'"
                 :text-color="filter.severities.length === 0 ? 'white' : 'grey-8'"
                 unelevated
@@ -136,10 +166,10 @@
 
           <!-- ประเภทงาน -->
           <div>
-            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">ประเภทงาน</div>
+            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">{{ t('inspection.roomDefect.jobType') }}</div>
             <div class="row q-gutter-sm">
               <q-btn
-                label="ทั้งหมด"
+                :label="t('inspection.roomDefect.all')"
                 :color="filter.categories.length === 0 ? 'primary' : 'grey-3'"
                 :text-color="filter.categories.length === 0 ? 'white' : 'grey-8'"
                 unelevated
@@ -164,13 +194,53 @@
               />
             </div>
           </div>
+
+          <!-- สถานะพิกัดแปลน -->
+          <div>
+            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">สถานะพิกัดแปลน</div>
+            <div class="row q-gutter-sm">
+              <q-btn
+                label="ทั้งหมด"
+                :color="filter.planStatus === 'all' ? 'primary' : 'grey-3'"
+                :text-color="filter.planStatus === 'all' ? 'white' : 'grey-8'"
+                unelevated
+                rounded
+                no-caps
+                dense
+                class="q-px-md"
+                @click="filter.planStatus = 'all'"
+              />
+              <q-btn
+                label="ระบุพิกัดแล้ว"
+                :color="filter.planStatus === 'pinned' ? 'primary' : 'grey-3'"
+                :text-color="filter.planStatus === 'pinned' ? 'white' : 'grey-8'"
+                unelevated
+                rounded
+                no-caps
+                dense
+                class="q-px-md"
+                @click="filter.planStatus = 'pinned'"
+              />
+              <q-btn
+                label="ยังไม่ระบุพิกัด"
+                :color="filter.planStatus === 'unpinned' ? 'warning' : 'grey-3'"
+                :text-color="filter.planStatus === 'unpinned' ? 'white' : 'grey-8'"
+                unelevated
+                rounded
+                no-caps
+                dense
+                class="q-px-md"
+                @click="filter.planStatus = 'unpinned'"
+              />
+            </div>
+          </div>
         </div>
 
         <!-- Apply -->
         <div class="q-pa-md">
           <q-btn
             color="primary"
-            label="นำไปใช้"
+            :label="t('inspection.roomDefect.apply')"
             class="full-width text-weight-bold"
             style="border-radius: 8px; height: 48px"
             @click="showFilter = false"
@@ -184,13 +254,17 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 
 import DefectDetailCard from '../components/DefectDetailCard.vue';
 import { useInspectionStore } from 'src/stores/useInspection';
+import { useRoundLock } from 'src/composables/useRoundLock';
+import { useInspectionRoutes } from 'src/composables/useInspectionRoutes';
 import type { Defect } from 'src/models';
 
 // ── Route ─────────────────────────────────────────────────────
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const groupKey = route.query.groupKey as string;
@@ -198,6 +272,9 @@ const groupKey = route.query.groupKey as string;
 // ── Store ─────────────────────────────────────────────────────
 
 const store = useInspectionStore();
+const { isLocked, fetchLockState } = useRoundLock(route.params.roundId as string);
+const { addDefectRoute, verifyDefectRoute } = useInspectionRoutes();
+void fetchLockState();
 
 // ── Room defects ──────────────────────────────────────────────
 
@@ -206,21 +283,39 @@ const roomDefects = computed<Defect[]>(() => {
   return group?.defects ?? [];
 });
 
+// defect ที่กำลังบันทึกใหม่เบื้องหลัง (ยังไม่มีใน store.defects จนกว่า fetchDefects จะดึงของจริงมา)
+// match ด้วย room/subRoom/floor เทียบกับ defect ตัวแรกในกลุ่มนี้ เพราะกลุ่มถูกสร้างจากห้อง/ชั้นเดียวกัน
+const pendingCreateCards = computed<Defect[]>(() => {
+  const ref = roomDefects.value[0];
+  if (!ref) return [];
+  return Object.values(store.defectSyncState)
+    .filter((entry) => entry.isCreate && entry.previewDefect)
+    .map((entry) => entry.previewDefect!)
+    .filter(
+      (p) =>
+        (p.room?.roomId ?? null) === (ref.room?.roomId ?? null) &&
+        (p.subRoom?.subRoomId ?? null) === (ref.subRoom?.subRoomId ?? null) &&
+        (p.floor?.floorId ?? null) === (ref.floor?.floorId ?? null),
+    );
+});
+
 // ── Filter state ──────────────────────────────────────────────
 
 const showFilter = ref(false);
+const sortOrder = ref<'desc' | 'asc'>('desc'); // desc = ล่าสุด-ช้าสุด, asc = ช้าสุด-ล่าสุด
 
 const filter = ref({
   statuses: [] as string[], // [] = ทั้งหมด
   severities: [] as string[], // [] = ทั้งหมด
   categories: [] as string[], // [] = ทั้งหมด
+  planStatus: 'all',
 });
 
-const statusOptions = [
-  { value: 'all', label: 'ทั้งหมด' },
-  { value: 'verified', label: 'ผ่าน' },
-  { value: 'not_pass', label: 'ไม่ผ่าน' },
-];
+const statusOptions = computed(() => [
+  { value: 'all', label: t('inspection.roomDefect.all') },
+  { value: 'verified', label: t('inspection.roomDefect.statusVerified') },
+  { value: 'not_pass', label: t('inspection.roomDefect.statusNotPass') },
+]);
 
 // ── Available options จาก defects จริง ───────────────────────
 
@@ -241,6 +336,7 @@ const activeFilterCount = computed(() => {
   if (filter.value.statuses.length > 0) n++;
   if (filter.value.severities.length > 0) n++;
   if (filter.value.categories.length > 0) n++;
+  if (filter.value.planStatus !== 'all') n++;
   return n;
 });
 
@@ -269,6 +365,20 @@ const filteredDefects = computed(() => {
       d.subCategories.some((s) => filter.value.categories.includes(s.category?.name ?? '')),
     );
   }
+
+  // filter plan status
+  if (filter.value.planStatus === 'pinned') {
+    list = list.filter((d) => Boolean(d.planId || d.plan));
+  } else if (filter.value.planStatus === 'unpinned') {
+    list = list.filter((d) => !d.planId && !d.plan);
+  }
+
+  // เรียงตามเวลาที่บันทึก defect (createdAt)
+  list = [...list].sort((a, b) => {
+    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return sortOrder.value === 'desc' ? bTime - aTime : aTime - bTime;
+  });
 
   return list;
 });
@@ -303,7 +413,7 @@ function toggleStatus(val: string) {
 }
 
 function resetFilter() {
-  filter.value = { statuses: [], severities: [], categories: [] };
+  filter.value = { statuses: [], severities: [], categories: [], planStatus: 'all' };
 }
 
 function severityColor(s: string): string {
@@ -326,6 +436,11 @@ function toCardData(d: Defect) {
     tags: d.subCategories.map((s) => s.name),
     status: d.status,
     description: d.description ?? '--',
+    plan: d.plan,
+    planId: d.planId ?? d.plan?.planId,
+    planX: d.planX,
+    planY: d.planY,
+    locationZone: d.locationZone,
   };
 }
 
@@ -337,7 +452,7 @@ const onAddDefectClick = () => {
   const group = store.groupedDefects.find((g) => g.groupKey === groupKey);
   const defect = group?.defects[0];
   void router.push({
-    name: 'addDefect',
+    name: addDefectRoute,
     params: { roundId },
     query: {
       roomId: defect?.room?.roomId,
@@ -350,7 +465,7 @@ const onAddDefectClick = () => {
 const onEditDefectClick = (defect: Defect) => {
   if (defect.status === 'repaired') {
     void router.push({
-      name: 'verifyDefect',
+      name: verifyDefectRoute,
       params: { roundId },
       query: {
         defectId: defect.defectId,
@@ -358,7 +473,7 @@ const onEditDefectClick = (defect: Defect) => {
     });
   } else {
     void router.push({
-      name: 'addDefect',
+      name: addDefectRoute,
       params: { roundId },
       query: {
         defectId: defect.defectId,

@@ -17,7 +17,11 @@ export interface Work {
     customerId: number;
     fullName: string;
     phoneNumber: string;
+    phoneNumber2?: string;
+    phoneNumber3?: string;
     email?: string;
+    email2?: string;
+    email3?: string;
     lineId?: string;
   };
   address?: {

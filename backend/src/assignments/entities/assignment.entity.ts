@@ -23,6 +23,7 @@ export class Assignment {
   @JoinColumn({ name: 'inspector_id' })
   inspector!: User;
 
+  // null = มอบหมายทั้ง job (เข้าถึงได้ทุกรอบ), ไม่ null = มอบหมายเฉพาะรอบนี้เท่านั้น
   @ManyToOne(() => InspectionRound, { nullable: true })
   @JoinColumn({ name: 'round_id' })
   round!: InspectionRound | null;

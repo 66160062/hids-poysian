@@ -1,9 +1,9 @@
 <template>
-  <q-page class="overview-page bg-white">
+  <q-page class="overview-page bg-grey-1">
     <!-- Header label -->
 
     <div class="q-px-md q-pb-xl">
-      <q-banner
+      <!-- <q-banner
         v-if="hasLinkAccess && isCustomerViewOnly"
         dense
         rounded
@@ -13,7 +13,7 @@
           <q-icon name="visibility" color="primary" />
         </template>
         โหมดดูอย่างเดียว · ลิงก์มีเวลาจำกัด ไม่ต้อง login
-      </q-banner>
+      </q-banner> -->
 
       <!-- div class="text-h5 text-weight-bold text-center q-py-md">ภาพรวม</div> -->
 
@@ -21,11 +21,11 @@
       <q-btn
         color="primary"
         icon="download"
-        label="ดาวน์โหลดรายงาน"
+        :label="t('customer.main.downloadReport')"
         class="full-width q-mb-md download-btn"
         unelevated
         size="md"
-        :loading="isLoadingPdf"
+        :loading="isLoadingExportAll"
         @click="handleExportAll"
       />
 
@@ -34,17 +34,17 @@
         outline
         color="primary"
         icon="filter_alt"
-        label="ดาวน์โหลดรายงานเฉพาะประเภท"
+        :label="t('customer.main.downloadByCategory')"
         class="full-width q-mb-md"
         size="md"
-        :loading="isLoadingPdf"
+        :loading="isLoadingByCategory"
         @click="openCategoryDialog"
       />
 
       <!-- Project Info Card -->
       <q-card flat bordered class="info-card q-mb-md">
         <q-card-section>
-          <div class="section-title q-mb-md">ข้อมูลโครงการ</div>
+          <div class="section-title q-mb-md">{{ t('customer.main.projectInfo') }}</div>
           <div class="row q-col-gutter-md">
             <div
               :class="field.full ? 'col-12' : 'col-6'"
@@ -61,7 +61,7 @@
       <!-- Customer Info Card -->
       <q-card flat bordered class="info-card q-mb-md">
         <q-card-section>
-          <div class="section-title q-mb-md">ข้อมูลลูกค้า</div>
+          <div class="section-title q-mb-md">{{ t('customer.main.customerInfo') }}</div>
           <div class="row q-col-gutter-md">
             <div
               :class="field.full ? 'col-12' : 'col-6'"
@@ -81,7 +81,7 @@
         <div class="col-4">
           <q-card flat bordered class="stat-card text-center">
             <q-card-section class="q-pa-sm">
-              <div class="stat-label">จุดบกพร่องทั้งหมด</div>
+              <div class="stat-label">{{ t('customer.main.totalDefects') }}</div>
               <div class="stat-number text-dark">{{ totalDefects }}</div>
             </q-card-section>
           </q-card>
@@ -89,7 +89,7 @@
         <div class="col-4">
           <q-card flat bordered class="stat-card text-center">
             <q-card-section class="q-pa-sm">
-              <div class="stat-label">กำลังดำเนินงาน</div>
+              <div class="stat-label">{{ t('customer.main.inProgress') }}</div>
               <div class="stat-number text-orange">{{ inProgress }}</div>
             </q-card-section>
           </q-card>
@@ -97,7 +97,7 @@
         <div class="col-4">
           <q-card flat bordered class="stat-card text-center">
             <q-card-section class="q-pa-sm">
-              <div class="stat-label">แก้ไขผ่าน</div>
+              <div class="stat-label">{{ t('customer.main.passed') }}</div>
               <div class="stat-number text-primary">{{ passed }}</div>
             </q-card-section>
           </q-card>
@@ -108,7 +108,7 @@
       <q-card flat bordered class="info-card q-mb-md">
         <q-card-section>
           <div class="row items-center justify-between q-mb-sm">
-            <div class="section-title">ความคืบหน้าทั้งหมด</div>
+            <div class="section-title">{{ t('customer.main.overallProgress') }}</div>
             <div class="text-primary text-h6 text-weight-bold">{{ progressPercent }}%</div>
           </div>
           <q-linear-progress
@@ -119,7 +119,9 @@
             size="10px"
             class="q-mb-xs"
           />
-          <div class="text-caption text-grey-6">{{ passed }} / {{ totalDefects }} รายการ</div>
+          <div class="text-caption text-grey-6">
+            {{ t('customer.main.itemsCount', { passed, total: totalDefects }) }}
+          </div>
         </q-card-section>
       </q-card>
 
@@ -147,7 +149,7 @@
       <!-- Defect by Type Card -->
       <q-card flat bordered class="info-card q-mb-md">
         <q-card-section>
-          <div class="section-title q-mb-md">สัดส่วน Defect ตามประเภทงาน</div>
+          <div class="section-title q-mb-md">{{ t('customer.main.defectByType') }}</div>
           <div class="row items-center">
             <!-- SVG Donut (reactive) -->
             <div class="col-auto">
@@ -192,20 +194,20 @@
               <div class="row items-center justify-between q-mb-xs">
                 <span class="row items-center no-wrap">
                   <q-icon name="circle" color="green" size="12px" class="q-mr-xs" />
-                  <span class="text-caption">ผ่านแล้ว</span>
+                  <span class="text-caption">{{ t('customer.main.legendPassed') }}</span>
                 </span>
                 <span class="text-caption text-green text-weight-bold">{{ passed }}</span>
               </div>
               <div class="row items-center justify-between q-mb-xs">
                 <span class="row items-center no-wrap">
                   <q-icon name="circle" color="orange" size="12px" class="q-mr-xs" />
-                  <span class="text-caption">กำลังแก้ไข</span>
+                  <span class="text-caption">{{ t('customer.main.legendInProgress') }}</span>
                 </span>
                 <span class="text-caption text-orange text-weight-bold">{{ inProgress }}</span>
               </div>
               <q-separator class="q-my-xs" />
               <div class="row items-center justify-between">
-                <span class="text-caption">รวมทั้งหมด</span>
+                <span class="text-caption">{{ t('customer.main.legendTotal') }}</span>
                 <span class="text-caption text-weight-bold">{{ totalDefects }}</span>
               </div>
             </div>
@@ -230,8 +232,8 @@
       <!-- Latest Updates Card -->
       <q-card flat bordered class="info-card q-mb-xl">
         <q-card-section>
-          <div class="section-title q-mb-md">อัพเดตล่าสุด</div>
-          <q-list dense>
+          <div class="section-title q-mb-md">{{ t('customer.main.latestUpdates') }}</div>
+          <q-list v-if="updates.length" dense>
             <q-item v-for="(item, i) in updates" :key="i" class="q-px-none q-py-sm">
               <q-item-section avatar style="min-width: 20px">
                 <q-icon name="circle" :color="item.color" size="10px" />
@@ -245,6 +247,7 @@
               </q-item-section>
             </q-item>
           </q-list>
+          <div v-else class="text-body2 text-grey-6">{{ t('customer.main.noUpdates') }}</div>
         </q-card-section>
       </q-card>
     </div>
@@ -252,7 +255,7 @@
       v-if="hasLinkAccess && isCustomerViewOnly"
       color="primary"
       icon="star"
-      label="รีวิวและให้คะแนน"
+      :label="t('customer.main.reviewAndRate')"
       class="full-width q-mb-md download-btn"
       unelevated
       size="md"
@@ -268,7 +271,7 @@
     <q-dialog v-model="showCategoryDialog" position="bottom">
       <q-card style="width: 100%; border-radius: 16px 16px 0 0; max-height: 85vh;">
         <q-card-section class="row items-center q-pb-none">
-          <div class="section-title">เลือกประเภทงานที่ต้องการ Export</div>
+          <div class="section-title">{{ t('customer.main.selectCategoryToExport') }}</div>
           <q-space />
           <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
@@ -284,13 +287,13 @@
               class="full-width q-mb-sm"
             />
             <div v-if="!availableCategories.length" class="text-grey-6 text-caption">
-              ไม่พบประเภทงานในรอบตรวจนี้
+              {{ t('customer.main.noCategoriesFound') }}
             </div>
           </q-card-section>
         </q-scroll-area>
 
         <q-card-actions class="q-px-md q-pb-md q-pt-sm" style="border-top: 1px solid #ebebeb;">
-          <q-btn flat label="ยกเลิก" color="grey-7" v-close-popup />
+          <q-btn flat :label="t('customer.main.cancel')" color="grey-7" v-close-popup />
           <q-space />
           <q-btn
             unelevated
@@ -311,34 +314,39 @@
         <q-toolbar class="bg-white text-dark shadow-2 z-top">
           <q-btn flat round dense icon="close" v-close-popup />
           <q-toolbar-title class="text-weight-bold" style="font-size: 16px;">
-            {{ activeCategoryFilter.length ? 'ตัวอย่างรายงาน (กรองตามประเภท)' : 'ตัวอย่างรายงาน' }}
+            {{
+              activeCategoryFilter.length
+                ? t('customer.main.previewReportFiltered')
+                : t('customer.main.previewReport')
+            }}
           </q-toolbar-title>
           <q-btn
             unelevated
             color="primary"
             icon="download"
-            label="ดาวน์โหลด PDF"
+            :label="t('customer.main.downloadPdf')"
             @click="pdfReportRef?.exportPdf()"
           />
         </q-toolbar>
 
         <q-card-section class="col q-pa-none" style="overflow-y: auto; overflow-x: hidden;">
           <DefectReport
-            v-if="pdfDataLoaded && pdfRound"
+            v-if="pdfRound"
             ref="pdfReportRef"
             :round="pdfRound"
             :defects="filteredPdfDefects"
             :summaryItems="pdfSummaryItems"
+            :check-freshness="true"
           />
         </q-card-section>
       </q-card>
     </q-dialog>
 
-    <q-footer class="bg-white bottom-bar">
+    <q-footer class="bg-white">
       <q-tabs :model-value="activeTab" @update:model-value="(tab) => router.push(`/app/${tab}`)">
-        <q-tab name="overview" icon="home" label="ภาพรวม" />
-        <q-tab name="defect" icon="list_alt" label="รายการ Defect" />
-        <q-tab name="report" icon="description" label="สรุปรายงาน" />
+        <q-tab name="overview" icon="home" :label="t('customer.main.tabOverview')" />
+        <q-tab name="defect" icon="list_alt" :label="t('customer.main.tabDefectList')" />
+        <q-tab name="report" icon="description" :label="t('customer.main.tabReport')" />
       </q-tabs>
     </q-footer>
   </q-page>
@@ -349,14 +357,22 @@ import { useDefectSummary } from 'src/stores/useDefectSummary';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 import ReviewDialog from 'src/components/ReviewDialog.vue';
 import DefectReport from 'src/components/DefectReport.vue';
 import { useLinkAccess } from 'src/stores/useLinkAccess';
 import { api } from 'src/boot/axios';
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
 
-const { isCustomerViewOnly, hasLinkAccess, projectId } = useLinkAccess();
+const overviewSpinner = createIconSpinner('home');
+
+const { isCustomerViewOnly, hasLinkAccess, projectId, linkToken } = useLinkAccess();
+const linkParams = computed(() =>
+  linkToken.value ? { token: linkToken.value } : {},
+);
 const $q = useQuasar();
+const { t, locale } = useI18n();
 
 // ── Defect summary จาก stores ──────────────────────────────────────────
 const {
@@ -425,6 +441,10 @@ interface FieldRow {
 }
 
 function getJobId(): number | null {
+  // ลิงก์ลูกค้าที่ verify แล้วต้องยึด jobId จาก token เสมอ ห้ามให้ query string ทับ
+  // (ป้องกันแก้ ?jobId= ใน URL แล้วดูข้อมูลงานอื่น) — fallback ไปที่ query เฉพาะตอนที่ไม่มี
+  // link token เลย (เช่น staff ที่ login ปกติแล้วเปิดหน้านี้เพื่อ preview)
+  if (hasLinkAccess.value) return projectId.value;
   const queryJobId = route.query.jobId;
   if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId);
   return projectId.value;
@@ -445,19 +465,25 @@ const projectFields = computed<FieldRow[]>(() => {
     .join(' ');
 
   return [
-    { label: 'ชื่อโครงการ TH', value: job?.projectName || '-' },
-    { label: 'ชื่อโครงการ EN', value: '–', empty: true },
-    { label: 'สถานที่ตั้ง', value: location || '-', full: true },
+    { label: t('customer.main.fieldProjectNameTh'), value: job?.projectName || '-' },
+    { label: t('customer.main.fieldProjectNameEn'), value: '–', empty: true },
+    { label: t('customer.main.fieldLocation'), value: location || '-', full: true },
     {
-      label: 'ประเภท/ชั้น',
+      label: t('customer.main.fieldTypeFloor'),
       value:
-        [job?.houseType?.name, address?.floor ? `${address.floor} ชั้น` : '']
+        [
+          job?.houseType?.name,
+          address?.floor ? t('customer.main.floorUnit', { n: address.floor }) : '',
+        ]
           .filter(Boolean)
           .join(' ') || '-',
     },
-    { label: 'พื้นที่', value: job ? `${job.usableArea} ตร.ม.` : '-' },
     {
-      label: 'วันที่ตรวจ',
+      label: t('customer.main.fieldArea'),
+      value: job ? t('customer.main.areaUnit', { n: job.usableArea }) : '-',
+    },
+    {
+      label: t('customer.main.fieldInspectionDate'),
       value: latestRound.value?.inspectedAt ? formatDate(latestRound.value.inspectedAt) : '-',
     },
   ];
@@ -466,11 +492,11 @@ const projectFields = computed<FieldRow[]>(() => {
 const customerFields = computed<FieldRow[]>(() => {
   const customer = jobData.value?.customer;
   return [
-    { label: 'ชื่อลูกค้า', value: customer?.fullName || '-' },
-    { label: 'ชื่อผู้ประสานงาน', value: '–', empty: true },
-    { label: 'เบอร์โทรศัพท์ลูกค้า', value: customer?.phoneNumber || '-' },
-    { label: 'เบอร์โทรศัพท์ผู้ประสานงาน', value: '–', empty: true },
-    { label: 'อีเมลลูกค้า', value: customer?.email || '-' },
+    { label: t('customer.main.fieldCustomerName'), value: customer?.fullName || '-' },
+    { label: t('customer.main.fieldCoordinatorName'), value: '–', empty: true },
+    { label: t('customer.main.fieldCustomerPhone'), value: customer?.phoneNumber || '-' },
+    { label: t('customer.main.fieldCoordinatorPhone'), value: '–', empty: true },
+    { label: t('customer.main.fieldCustomerEmail'), value: customer?.email || '-' },
   ];
 });
 
@@ -480,8 +506,8 @@ const latestRound = computed(() => rounds.value[rounds.value.length - 1]);
 const pdfRound = ref<InspectionRound | null>(null);
 const pdfDefects = ref<Defect[]>([]);
 const pdfSummaryItems = ref<InspectionSummaryItem[]>([]);
-const pdfDataLoaded = ref(false);
-const isLoadingPdf = ref(false);
+const isLoadingExportAll = ref(false);
+const isLoadingByCategory = ref(false);
 
 const showReportDialog = ref(false);
 const pdfReportRef = ref<InstanceType<typeof DefectReport> | null>(null);
@@ -511,44 +537,40 @@ const filteredPdfDefects = computed(() => {
   );
 });
 
-async function ensurePdfDataLoaded() {
-  if (pdfDataLoaded.value) return true;
+async function ensurePdfDataLoaded(loadingRef: typeof isLoadingExportAll) {
   const roundId = latestRound.value?.roundId;
   if (!roundId) {
-    $q.notify({ type: 'warning', message: 'ยังไม่มีข้อมูลรอบตรวจ' });
+    $q.notify({ type: 'warning', message: t('customer.main.noRoundData') });
     return false;
   }
-  isLoadingPdf.value = true;
-  $q.loading.show({ message: 'กำลังเตรียมข้อมูลรายงาน...' });
+  loadingRef.value = true;
   try {
     const [roundRes, defectsRes, summaryRes] = await Promise.all([
-      api.get(`/inspection-rounds/${roundId}`),
-      api.get(`/defects/round/${roundId}`),
-      api.get(`/inspection-summary-items/round/${roundId}`),
+      api.get(`/inspection-rounds/${roundId}`, { params: linkParams.value }),
+      api.get(`/defects/round/${roundId}`, { params: linkParams.value }),
+      api.get(`/inspection-summary-items/round/${roundId}`, { params: linkParams.value }),
     ]);
     pdfRound.value = roundRes.data;
     pdfDefects.value = defectsRes.data;
     pdfSummaryItems.value = summaryRes.data;
-    pdfDataLoaded.value = true;
     return true;
   } catch (e) {
     console.error(e);
-    $q.notify({ color: 'negative', message: 'เกิดข้อผิดพลาดในการดึงข้อมูลรายงาน' });
+    $q.notify({ color: 'negative', message: t('customer.main.fetchReportError') });
     return false;
   } finally {
-    isLoadingPdf.value = false;
-    $q.loading.hide();
+    loadingRef.value = false;
   }
 }
 
 async function handleExportAll() {
   activeCategoryFilter.value = [];
-  if (!(await ensurePdfDataLoaded())) return;
+  if (!(await ensurePdfDataLoaded(isLoadingExportAll))) return;
   showReportDialog.value = true;
 }
 
 async function openCategoryDialog() {
-  if (!(await ensurePdfDataLoaded())) return;
+  if (!(await ensurePdfDataLoaded(isLoadingByCategory))) return;
   selectedCategoryIds.value = [];
   showCategoryDialog.value = true;
 }
@@ -562,7 +584,7 @@ function confirmCategoryExport() {
 function formatDate(dateStr: string) {
   if (!dateStr) return '';
   const date = new Date(dateStr);
-  return date.toLocaleDateString('th-TH', {
+  return date.toLocaleDateString(locale.value, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -577,65 +599,100 @@ const workflowSteps = computed(() => {
   const isRepairDone = totalDefects.value > 0 && passed.value === totalDefects.value;
   const isCompleted = jobData.value?.status === 'Completed';
 
-  return [
+  const steps = [
     {
       icon: 'search',
-      label: `ตรวจรอบที่ ${round?.roundNumber ?? 1}`,
+      label: t('customer.main.stepInspectRound', { round: round?.roundNumber ?? 1 }),
       status: isInspected ? 'done' : 'active',
     },
     {
       icon: 'description',
-      label: 'ส่งรายงาน',
+      label: t('customer.main.stepSubmitReport'),
       status: isSubmitted ? 'done' : isInspected ? 'active' : 'pending',
     },
     {
       icon: 'build',
-      label: 'ซ่อมแซม',
-      status: isRepairDone ? 'done' : totalDefects.value > 0 ? 'active' : 'pending',
-    },
-    {
-      icon: 'search',
-      label: `ตรวจรอบที่ ${(round?.roundNumber ?? 1) + 1}`,
-      status: nextRound?.inspectedAt ? 'done' : nextRound ? 'active' : 'pending',
-    },
-    {
-      icon: 'check_circle',
-      label: 'เสร็จสิ้น',
-      status: isCompleted ? 'done' : 'pending',
+      label: t('customer.main.stepRepair'),
+      status: !isSubmitted ? 'pending' : isRepairDone ? 'done' : 'active',
     },
   ];
+
+  if (nextRound || !isCompleted) {
+    steps.push({
+      icon: 'search',
+      label: t('customer.main.stepInspectRound', { round: (round?.roundNumber ?? 1) + 1 }),
+      status: nextRound?.inspectedAt ? 'done' : nextRound ? 'active' : 'pending',
+    });
+  }
+
+  steps.push({
+    icon: 'check_circle',
+    label: t('customer.main.stepCompleted'),
+    status: isCompleted ? 'done' : 'pending',
+  });
+
+  return steps;
 });
 
-// ไม่มี endpoint สำหรับ activity log ในระบบปัจจุบัน จึงยังเป็น mock
-const updates = [
-  {
-    color: 'green',
-    title: 'ผู้รับเหมาแก้ไขเพิ่ม 6 รายการแล้ว',
-    sub: 'งานสี: ห้องนั่งเล่น • ห้องนอนชั้น2',
-    date: 'วันนี้',
-  },
-  {
-    color: 'orange',
-    title: 'ส่งรายงาน PDF ให้คุณสมชายแล้ว',
-    sub: 'ครั้งที่ 1 · 132 รายการ',
-    date: 'เมื่อวาน',
-  },
-  { color: 'blue', title: 'รอวิศวกรเข้าตรวจ', sub: 'วันที่ตรวจ : 21 ก.พ. 2569', date: '15 ก.พ.' },
-];
+interface ActivityLogResponse {
+  activityId: number;
+  color: 'green' | 'orange' | 'blue' | 'purple';
+  title: string;
+  sub?: string | null;
+  createdAt: string;
+}
+
+const activityLogs = ref<ActivityLogResponse[]>([]);
+
+function formatUpdateDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diffDays = Math.round((startOfDay(now) - startOfDay(date)) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return t('customer.main.today');
+  if (diffDays === 1) return t('customer.main.yesterday');
+  return date.toLocaleDateString(locale.value, { day: 'numeric', month: 'short' });
+}
+
+const updates = computed(() =>
+  activityLogs.value.map((log) => ({
+    color: log.color,
+    title: log.title,
+    sub: log.sub ?? '',
+    date: formatUpdateDate(log.createdAt),
+  })),
+);
 
 onMounted(async () => {
   const jobId = getJobId();
   if (!jobId) return;
 
-  const [jobRes, roundsRes] = await Promise.all([
-    api.get<JobResponse>(`/inspection-jobs/${jobId}`),
-    api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`),
+  $q.loading.show({
+    spinner: overviewSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
+  try {
+    await loadOverview(jobId);
+  } finally {
+    $q.loading.hide();
+  }
+});
+
+async function loadOverview(jobId: number) {
+  const [jobRes, roundsRes, activityLogsRes] = await Promise.all([
+    api.get<JobResponse>(`/inspection-jobs/${jobId}`, { params: linkParams.value }),
+    api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`, { params: linkParams.value }),
+    api.get<ActivityLogResponse[]>(`/activity-logs/${jobId}`, { params: linkParams.value }),
   ]);
   jobData.value = jobRes.data;
   rounds.value = roundsRes.data;
+  activityLogs.value = activityLogsRes.data;
 
-  await fetchSummary(jobId);
-});
+  await fetchSummary(jobId, linkToken.value);
+}
 </script>
 
 <style scoped>
@@ -751,10 +808,5 @@ onMounted(async () => {
 }
 .wf-line.grey {
   background: #e0e0e0;
-}
-
-.bottom-bar {
-  border-top: 1px solid #ebebeb;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
 }
 </style>

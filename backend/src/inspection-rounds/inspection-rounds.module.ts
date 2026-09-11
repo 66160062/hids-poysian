@@ -7,6 +7,7 @@ import {
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InspectionRound } from './entities/inspection-round.entity';
 import { Defect } from 'src/defects/entities/defect.entity';
+import { Assignment } from 'src/assignments/entities/assignment.entity';
 import { InspectionJobsModule } from 'src/inspection-jobs/inspection-jobs.module';
 import { InspectionTeamMembersModule } from 'src/inspection-team-members/inspection-team-members.module';
 import { UsersModule } from 'src/users/users.module';
@@ -14,10 +15,11 @@ import { AuthModule } from 'src/auth/auth.module';
 import { NotificationsModule } from 'src/notifications/notifications.module';
 import { MailModule } from 'src/mail/mail.module';
 import { PdfModule } from 'src/pdf/pdf.module';
+import { ContractorModule } from 'src/contractor/contractor.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InspectionRound, Defect]),
+    TypeOrmModule.forFeature([InspectionRound, Defect, Assignment]),
     InspectionJobsModule,
     InspectionTeamMembersModule,
     UsersModule,
@@ -25,6 +27,7 @@ import { PdfModule } from 'src/pdf/pdf.module';
     NotificationsModule,
     MailModule,
     PdfModule,
+    ContractorModule,
   ],
   controllers: [InspectionRoundsController, ProjectApprovalController],
   providers: [InspectionRoundsService],

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<title>AI Summary Model Comparison</title>
+<style>
+  body { font-family: 'Sarabun', 'Segoe UI', sans-serif; background: #f5f7fa; color: #1a1a1a; margin: 0; padding: 24px; }
+  h1 { font-size: 20px; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 24px; }
+  table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  th, td { padding: 10px 14px; text-align: left; font-size: 13px; border-bottom: 1px solid #eee; }
+  th { background: #1976d2; color: white; }
+  .bar-track { background: #eee; border-radius: 4px; height: 6px; margin-bottom: 4px; overflow: hidden; }
+  .bar { height: 100%; border-radius: 4px; }
+  .tag-free { background: #4CAF50; color: white; font-size: 10px; padding: 1px 6px; border-radius: 10px; }
+  .tag-error { background: #ef4444; color: white; font-size: 10px; padding: 1px 6px; border-radius: 10px; }
+  .tag-score { background: #1976d2; color: white; font-size: 10px; padding: 1px 6px; border-radius: 10px; }
+  .run-card { background: white; border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .run-card-error { border-left: 4px solid #ef4444; }
+  .run-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+  .scenario-badge { background: #eee; padding: 1px 8px; border-radius: 10px; font-size: 11px; color: #555; }
+  .run-text { font-size: 13px; line-height: 1.6; white-space: pre-wrap; background: #fafafa; padding: 8px 10px; border-radius: 6px; }
+  .run-error { font-size: 13px; color: #ef4444; }
+  .rubric-list { font-size: 11px; color: #555; margin: 8px 0 0; padding-left: 18px; }
+  h2 { font-size: 16px; margin-top: 32px; }
+</style>
+</head>
+<body>
+  <h1>เปรียบเทียบโมเดล AI สำหรับสรุปผลตรวจบ้านท้ายเล่ม</h1>
+  <div class="meta">สร้างเมื่อ 5/9/2569 18:25:42 — 3 สถานการณ์ทดสอบ (บ้านสภาพดี, บ้านสภาพปานกลาง, บ้านมีปัญหาเยอะ)</div>
+
+  <table>
+    <thead><tr><th>Provider</th><th>สำเร็จ/ทั้งหมด</th><th>ความเร็วเฉลี่ย</th><th>Cost เฉลี่ย/ครั้ง (ประมาณการ)</th><th>Rubric เฉลี่ย</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Gemini (Google) <span class="tag-free">FREE</span></td>
+        <td>0/3</td>
+        <td>
+          <div class="bar-track"><div class="bar" style="width:0%; background:#1976d2"></div></div>
+          -
+        </td>
+        <td>
+          <div class="bar-track"><div class="bar" style="width:0%; background:#ef4444"></div></div>
+          $0 (free)
+        </td>
+        <td>
+          <div class="bar-track"><div class="bar" style="width:0%; background:#4CAF50"></div></div>
+          -
+        </td>
+      </tr>
+      <tr>
+        <td>Groq (open models) <span class="tag-free">FREE</span></td>
+        <td>3/3</td>
+        <td>
+          <div class="bar-track"><div class="bar" style="width:100%; background:#1976d2"></div></div>
+          665 ms
+        </td>
+        <td>
+          <div class="bar-track"><div class="bar" style="width:0%; background:#ef4444"></div></div>
+          $0.000000
+        </td>
+        <td>
+          <div class="bar-track"><div class="bar" style="width:100%; background:#4CAF50"></div></div>
+          5.0 / 5
+        </td>
+      </tr></tbody>
+  </table>
+
+  <h2>ผลลัพธ์แต่ละครั้ง (สำหรับอ่านเนื้อหาจริงประกอบการประเมิน)</h2>
+  
+      <div class="run-card run-card-error">
+        <div class="run-card-header">
+          <b>Gemini (Google)</b>
+          <span class="scenario-badge">บ้านสภาพดี</span>
+          <span class="tag-error">ERROR</span>
+        </div>
+        <div class="run-error">Gemini API error 429</div>
+      </div>
+      <div class="run-card ">
+        <div class="run-card-header">
+          <b>Groq (open models)</b>
+          <span class="scenario-badge">บ้านสภาพดี</span>
+          <span class="tag-score">rubric 5/5</span>
+        </div>
+        <div class="run-text">บ้านหลังนี้มีความสมบูรณ์โดยรวมอยู่ที่ 100% จุดที่ควรให้ความสำคัญเป็นพิเศษคือหมวดงานสีบริเวณชั้น 1 ซึ่งพบข้อบกพร่อง 2 จุด และหมวดงานประตู 1 จุด อีกทั้งยังพบข้อบกพร่องที่ชั้น 2 หนึ่งจุด จากการตรวจพบ defect ทั้งหมด 3 จุดโดยไม่มีการพบ defect แบบ Major และไม่พบรายการตรวจระบบที่ไม่ผ่าน การติดตามการซ่อมที่หมวดสีบนชั้น 1 ก่อนเป็นลำดับแรกเพื่อรักษาความสมบูรณ์ของบ้านต่อไป</div><ul class="rubric-list"><li>✓ ใช้ % ตามที่คำนวณไว้เป๊ะๆ</li><li>✓ พูดถึงหมวดงานที่พบ defect หลัก</li><li>✓ เป็นย่อหน้าเดียว ไม่มี bullet</li><li>✓ ความยาวเหมาะสม (364 ตัวอักษร)</li></ul>
+      </div>
+      <div class="run-card run-card-error">
+        <div class="run-card-header">
+          <b>Gemini (Google)</b>
+          <span class="scenario-badge">บ้านสภาพปานกลาง</span>
+          <span class="tag-error">ERROR</span>
+        </div>
+        <div class="run-error">Gemini API error 429</div>
+      </div>
+      <div class="run-card ">
+        <div class="run-card-header">
+          <b>Groq (open models)</b>
+          <span class="scenario-badge">บ้านสภาพปานกลาง</span>
+          <span class="tag-score">rubric 5/5</span>
+        </div>
+        <div class="run-text">บ้านหลังนี้มีความสมบูรณ์โดยรวมอยู่ที่ 77% จุดที่ควรให้ความสำคัญเป็นพิเศษคือหมวดงานสี โดยพบ defect 4 จุด เป็นจำนวนมากที่สุด จากนั้นงานโครงสร้างและระบบไฟฟ้าก็พบ defect 3 จุดและ 2 จุดตามลำดับ ชั้นที่พบ defect มากที่สุดคือชั้น 1 ซึ่งมี 7 จุด การตรวจระบบที่ไม่ผ่านคือ “ตรวจสอบสโลปห้องน้ำ” พบปัญหาน้ำขัง จึงควรติดตามการซ่อมในจุดนี้ก่อนเป็นลำดับแรกเพื่อความปลอดภัยและความเรียบร้อยของบ้านต่อไป</div><ul class="rubric-list"><li>✓ ใช้ % ตามที่คำนวณไว้เป๊ะๆ</li><li>✓ พูดถึงหมวดงานที่พบ defect หลัก</li><li>✓ เป็นย่อหน้าเดียว ไม่มี bullet</li><li>✓ ความยาวเหมาะสม (385 ตัวอักษร)</li></ul>
+      </div>
+      <div class="run-card run-card-error">
+        <div class="run-card-header">
+          <b>Gemini (Google)</b>
+          <span class="scenario-badge">บ้านมีปัญหาเยอะ</span>
+          <span class="tag-error">ERROR</span>
+        </div>
+        <div class="run-error">Gemini API error 429</div>
+      </div>
+      <div class="run-card ">
+        <div class="run-card-header">
+          <b>Groq (open models)</b>
+          <span class="scenario-badge">บ้านมีปัญหาเยอะ</span>
+          <span class="tag-score">rubric 5/5</span>
+        </div>
+        <div class="run-text">บ้านหลังนี้ความสมบูรณ์โดยรวมอยู่ที่ 25% จุดที่ควรให้ความสำคัญเป็นพิเศษคือหมวดงานโครงสร้างและสุขาภิบาล ซึ่งพบข้อบกพร่องมากที่สุดในชั้น 1 และชั้น 2 นอกจากนี้ รายการตรวจระบบไม่ผ่านยังรวมถึงฐานราก การป้องกันไฟรั่ว ตรวจสอบรั่วซึมจากพื้นห้องน้ำ และการเข้าอยู่อาศัย จึงควรติดตามการแก้ไขในจุดเหล่านี้ก่อนเป็นลำดับแรก และค่อยทำการซ่อมในหมวดงานหลังคาและชั้นดาดฟ้า ตามลำดับความสำคัญที่มีอยู่ในรายงานนี้</div><ul class="rubric-list"><li>✓ ใช้ % ตามที่คำนวณไว้เป๊ะๆ</li><li>✓ พูดถึงหมวดงานที่พบ defect หลัก</li><li>✓ เป็นย่อหน้าเดียว ไม่มี bullet</li><li>✓ ความยาวเหมาะสม (391 ตัวอักษร)</li></ul>
+      </div>
+</body>
+</html>

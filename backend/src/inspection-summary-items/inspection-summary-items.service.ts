@@ -1,9 +1,6 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
-import { promises as fs } from 'fs';
-import { join } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { DataSource, In, Repository } from 'typeorm';
 import { InspectionSummaryItem } from './entities/inspection-summary-item.entity';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { SummaryTemplate } from 'src/summary-templates/entities/summary-template.entity';
@@ -11,11 +8,9 @@ import { SummaryTemplateOption } from 'src/summary-template-options/entities/sum
 import { CreateInspectionSummaryItemDto } from './dto/create-inspection-summary-item.dto';
 import { UpdateInspectionSummaryItemDto } from './dto/update-inspection-summary-item.dto';
 import { CreateInspectionSummaryItemPhotoDto } from './dto/create-inspection-summary-item-photo.dto';
+import { RoundSummaryItemDto } from './dto/replace-round-summary-items.dto';
+import { StorageService } from 'src/storage/storage.service';
 
-// เก็บไฟล์ไว้ที่ <project-root>/uploads/inspection-photos
-// ต้องเปิด static serving path นี้ใน AppModule (ดูคำอธิบายท้ายไฟล์)
-const UPLOAD_ROOT = join(process.cwd(), 'uploads', 'inspection-photos');
-const PUBLIC_PATH_PREFIX = '/uploads/inspection-photos';
 const PHOTO_OPTION_TYPE = 'photo';
 
 @Injectable()
@@ -32,6 +27,10 @@ export class InspectionSummaryItemsService {
 
     @InjectRepository(SummaryTemplateOption)
     private readonly optionsRepo: Repository<SummaryTemplateOption>,
+
+    private readonly dataSource: DataSource,
+
+    private readonly storageService: StorageService,
   ) {}
 
   async create(dto: CreateInspectionSummaryItemDto) {
@@ -93,17 +92,7 @@ export class InspectionSummaryItemsService {
   async remove(id: number) {
     const item = await this.itemsRepo.findOneByOrFail({ itemId: id });
 
-    // ถ้าเป็น item ประเภทรูป (option.type === 'photo') ให้ลบไฟล์บน disk ด้วย
-    if (item.detailValue?.startsWith(PUBLIC_PATH_PREFIX)) {
-      const relativePath = item.detailValue.replace(
-        `${PUBLIC_PATH_PREFIX}/`,
-        '',
-      );
-      const absolutePath = join(UPLOAD_ROOT, relativePath);
-      await fs.unlink(absolutePath).catch(() => {
-        // ไฟล์อาจถูกลบไปแล้ว/ไม่เจอ ไม่ต้อง throw ให้ล้ม การลบ record ทับได้
-      });
-    }
+    await this.storageService.deleteFile(item.detailValue);
 
     return this.itemsRepo.remove(item);
   }
@@ -132,23 +121,10 @@ export class InspectionSummaryItemsService {
       );
     }
 
-    // โฟลเดอร์: uploads/inspection-photos/round-{roundId}/template-{templateId}/
-    const relativeDir = join(
-      `round-${dto.roundId}`,
-      `template-${dto.templateId}`,
+    const photoUrl = await this.storageService.uploadImage(
+      file.buffer,
+      `inspection-photos/round-${dto.roundId}/template-${dto.templateId}`,
     );
-    const targetDir = join(UPLOAD_ROOT, relativeDir);
-    await fs.mkdir(targetDir, { recursive: true });
-
-    const ext = file.originalname.split('.').pop() ?? 'jpg';
-    const fileName = `${uuidv4()}.${ext}`;
-    const absolutePath = join(targetDir, fileName);
-
-    await fs.writeFile(absolutePath, file.buffer);
-
-    // path ที่เก็บใน DB คือ path สาธารณะที่ frontend ใช้ต่อ <base-url> แล้วโหลดรูปได้เลย
-    const publicPath =
-      `${PUBLIC_PATH_PREFIX}/${relativeDir}/${fileName}`.replace(/\\/g, '/');
 
     let refItem: InspectionSummaryItem | undefined;
     if (dto.refItemId) {
@@ -162,7 +138,7 @@ export class InspectionSummaryItemsService {
       template,
       option,
       refItem,
-      detailValue: publicPath,
+      detailValue: photoUrl,
     });
 
     return this.itemsRepo.save(item);
@@ -210,5 +186,51 @@ export class InspectionSummaryItemsService {
       .where('round_id = :roundId', { roundId })
       .andWhere('item_id NOT IN (:...keepIds)', { keepIds })
       .execute();
+  }
+
+  async replaceForRound(roundId: number, items: RoundSummaryItemDto[]) {
+    const round = await this.roundsRepo.findOneByOrFail({ roundId });
+
+    const templateIds = [...new Set(items.map((i) => i.templateId))];
+    const optionIds = [...new Set(items.map((i) => i.optionId))];
+
+    const [templates, options] = await Promise.all([
+      templateIds.length
+        ? this.templatesRepo.findBy({ templateId: In(templateIds) })
+        : Promise.resolve<SummaryTemplate[]>([]),
+      optionIds.length
+        ? this.optionsRepo.findBy({ optionId: In(optionIds) })
+        : Promise.resolve<SummaryTemplateOption[]>([]),
+    ]);
+
+    const templateById = new Map(templates.map((t) => [t.templateId, t]));
+    const optionById = new Map(options.map((o) => [o.optionId, o]));
+
+    const rows = items.map((item) => {
+      const template = templateById.get(item.templateId);
+      const option = optionById.get(item.optionId);
+      if (!template || !option) {
+        throw new BadRequestException(
+          `ไม่พบหัวข้อ ${item.templateId} หรือตัวเลือก ${item.optionId}`,
+        );
+      }
+      return { round, template, option, detailValue: item.detailValue ?? '' };
+    });
+
+    // ต้องเก็บ item ประเภทรูปไว้ เพราะรายการที่ส่งมาแทนที่เป็นแค่คำตอบ ไม่รวมรูปที่อัปโหลดแยกไว้
+    return this.dataSource.transaction(async (manager) => {
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from(InspectionSummaryItem)
+        .where('round_id = :roundId', { roundId })
+        .andWhere(
+          `option_id IS NULL OR option_id NOT IN (SELECT option_id FROM summary_template_option WHERE type = :photo)`,
+          { photo: PHOTO_OPTION_TYPE },
+        )
+        .execute();
+      if (!rows.length) return [];
+      return manager.save(manager.create(InspectionSummaryItem, rows));
+    });
   }
 }

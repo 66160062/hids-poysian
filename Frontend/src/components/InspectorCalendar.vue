@@ -2,21 +2,21 @@
   <div class="inspector-calendar">
     <div class="row justify-between items-center q-mb-md">
       <div class="text-weight-bold" style="font-size: 16px">
-        {{ isMonthlyView ? 'ตารางงานเดือนนี้' : 'ตารางงานสัปดาห์นี้' }}
+        {{ isMonthlyView ? t('components.inspectorCalendar.monthlyTitle') : t('components.inspectorCalendar.weeklyTitle') }}
       </div>
       <div
         class="text-primary text-weight-bold"
         style="font-size: 13px; cursor: pointer"
         @click="toggleView"
       >
-        {{ isMonthlyView ? 'ดูตารางแบบสัปดาห์' : 'ดูตารางงานทั้งหมด' }}
+        {{ isMonthlyView ? t('components.inspectorCalendar.switchToWeekly') : t('components.inspectorCalendar.switchToMonthly') }}
       </div>
     </div>
 
     <div v-if="isMonthlyView" class="row items-center justify-between q-mb-sm">
       <q-btn flat round icon="chevron_left" @click="handlePrevMonth" />
       <div class="text-weight-bold">
-        {{ currentMonth.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' }) }}
+        {{ currentMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' }) }}
       </div>
       <q-btn flat round icon="chevron_right" @click="handleNextMonth" />
     </div>
@@ -25,18 +25,18 @@
     <div class="row items-center q-gutter-x-md q-mb-sm" style="font-size: 11px">
       <div class="row items-center q-gutter-x-xs">
         <div class="dot-legend" style="background: #1976D2"></div>
-        <span class="text-grey-7">ตรวจบ้าน</span>
+        <span class="text-grey-7">{{ t('components.inspectorCalendar.legendDefect') }}</span>
       </div>
       <div class="row items-center q-gutter-x-xs">
         <div class="dot-legend" style="background: #FF9800"></div>
-        <span class="text-grey-7">ตรวจก่อสร้าง</span>
+        <span class="text-grey-7">{{ t('components.inspectorCalendar.legendConstruction') }}</span>
       </div>
     </div>
 
     <div
       class="hide-scrollbar"
-      :class="isMonthlyView ? 'row wrap' : 'row no-wrap q-gutter-x-sm items-start'"
-      :style="isMonthlyView ? '' : 'overflow-x: auto; padding: 10px 0'"
+      :class="isMonthlyView ? 'row wrap' : 'row no-wrap items-start'"
+      :style="isMonthlyView ? '' : 'padding: 10px 0; gap: 4px'"
     >
       <div
         v-for="(day, index) in calendarDays"
@@ -45,7 +45,7 @@
         :style="
           isMonthlyView
             ? 'width: 14.28%; padding: 2px;'
-            : 'min-width: 68px; border-radius: 14px; padding-top: 14px; height: ' +
+            : 'flex: 1 1 0; min-width: 0; border-radius: 14px; padding-top: 14px; height: ' +
               (day.isActive ? '100px' : '85px') +
               ';'
         "
@@ -142,7 +142,10 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { InspectionRound } from 'src/models';
+
+const { t, locale } = useI18n();
 
 // ── Types ─────────────────────────────────────────────────────
 interface CalendarDay {
@@ -171,7 +174,15 @@ const emit = defineEmits<{
 }>();
 
 // ── Constants ─────────────────────────────────────────────────
-const dayLabels = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+const dayLabels = computed(() => [
+  t('components.inspectorCalendar.daySun'),
+  t('components.inspectorCalendar.dayMon'),
+  t('components.inspectorCalendar.dayTue'),
+  t('components.inspectorCalendar.dayWed'),
+  t('components.inspectorCalendar.dayThu'),
+  t('components.inspectorCalendar.dayFri'),
+  t('components.inspectorCalendar.daySat'),
+]);
 
 // ── Internal state for month navigation ───────────────────────
 const currentMonth = ref(new Date());
@@ -195,7 +206,7 @@ const calendarDays = computed<CalendarDay[]>(() => {
 
       return {
         isEmpty: false,
-        label: dayLabels[i] ?? '',
+        label: dayLabels.value[i] ?? '',
         date: d.getDate(),
         dateStr,
         isActive: dateStr === toLocalDateStr(props.selectedDate),
@@ -227,7 +238,7 @@ const calendarDays = computed<CalendarDay[]>(() => {
 
     days.push({
       isEmpty: false,
-      label: dayLabels[currentDate.getDay()] ?? '',
+      label: dayLabels.value[currentDate.getDay()] ?? '',
       date: d,
       dateStr,
       isActive: dateStr === toLocalDateStr(props.selectedDate),
@@ -303,6 +314,14 @@ function handleNextMonth(): void {
   font-size: 24px;
   line-height: 1;
   letter-spacing: -0.02em;
+}
+@media (max-width: 380px) {
+  .calendar-day-label {
+    font-size: 11px;
+  }
+  .calendar-day-number {
+    font-size: 18px;
+  }
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none;

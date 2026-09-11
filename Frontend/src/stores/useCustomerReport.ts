@@ -1,4 +1,5 @@
 import { reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { api } from 'src/boot/axios'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -49,14 +50,18 @@ interface RoundResponse {
 
 // ── Composable ────────────────────────────────────────────────────────────────
 export function useReport() {
+  const { t } = useI18n()
 
   const reportSections = reactive<ReportSection[]>([])
   const isLoading = ref(false)
 
-  async function fetchReport(jobId: number) {
+  async function fetchReport(jobId: number, linkToken?: string | null) {
     isLoading.value = true
+    const params = linkToken ? { token: linkToken } : {}
     try {
-      const { data: rounds } = await api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`)
+      const { data: rounds } = await api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`, {
+        params,
+      })
       const latestRound = rounds[rounds.length - 1]
       if (!latestRound) {
         reportSections.splice(0, reportSections.length)
@@ -65,7 +70,10 @@ export function useReport() {
 
       const [{ data: templates }, { data: items }] = await Promise.all([
         api.get<SummaryTemplateResponse[]>('/summary-templates'),
-        api.get<SummaryItemResponse[]>(`/inspection-summary-items/round/${latestRound.roundId}`),
+        api.get<SummaryItemResponse[]>(
+          `/inspection-summary-items/round/${latestRound.roundId}`,
+          { params },
+        ),
       ])
 
       const sectionsMap = new Map<string, ReportItem[]>()
@@ -107,7 +115,7 @@ export function useReport() {
 
         const note = templateItems.find((i) => i.detailValue)?.detailValue
         if (note) {
-          fields.push({ label: 'หมายเหตุ', type: 'textarea', value: note })
+          fields.push({ label: t('stores.customerReport.note'), type: 'textarea', value: note })
         }
 
         if (!sectionsMap.has(template.category)) sectionsMap.set(template.category, [])

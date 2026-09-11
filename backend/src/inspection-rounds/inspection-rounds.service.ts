@@ -3,18 +3,23 @@ import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InspectionRound } from './entities/inspection-round.entity';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, Not } from 'typeorm';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Defect, DefectStatus } from 'src/defects/entities/defect.entity';
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
+import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
+import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity';
+import { MailService } from 'src/mail/mail.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { NotificationType } from 'src/notifications/entities/notification.entity';
-import { MailService } from 'src/mail/mail.service';
-import { PdfService } from 'src/pdf/pdf.service';
+import { Assignment } from 'src/assignments/entities/assignment.entity';
 import { AuthService } from 'src/auth/auth.service';
-
+import { ContractorService } from 'src/contractor/contractor.service';
+import { StorageService } from 'src/storage/storage.service';
+import { PdfService } from 'src/pdf/pdf.service';
+import { UpdateJobInfoDto } from './dto/update-job-info.dto';
 @Injectable()
 export class InspectionRoundsService {
   private readonly logger = new Logger(InspectionRoundsService.name);
@@ -31,14 +36,26 @@ export class InspectionRoundsService {
     @InjectRepository(Defect)
     private readonly defectsRepo: Repository<Defect>,
     private readonly dataSource: DataSource,
-    private readonly notificationsService: NotificationsService,
+    private readonly activityLogsService: ActivityLogsService,
     private readonly mailService: MailService,
-    private readonly pdfService: PdfService,
+    private readonly notificationsService: NotificationsService,
     private readonly authService: AuthService,
+    private readonly contractorService: ContractorService,
+    private readonly storageService: StorageService,
+    private readonly pdfService: PdfService,
   ) {}
+
+  private formatThaiDate(date: Date): string {
+    return date.toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
 
   async create(
     createInspectionRoundDto: CreateInspectionRoundDto,
+    userId?: number,
   ): Promise<InspectionRound> {
     if (createInspectionRoundDto.scheduledDate) {
       const today = new Date();
@@ -79,6 +96,7 @@ export class InspectionRoundsService {
       const round = queryRunner.manager.create(InspectionRound, {
         ...createInspectionRoundDto,
         job,
+        createdBy: userId ? { id: userId } : undefined,
       });
 
       const savedRound = await queryRunner.manager.save(round);
@@ -124,7 +142,10 @@ export class InspectionRoundsService {
         }
 
         const latestDefects = await queryRunner.manager.find(Defect, {
-          where: { round: { roundId: latestRound.roundId } },
+          where: {
+            round: { roundId: latestRound.roundId },
+            status: Not(DefectStatus.VERIFIED),
+          },
           relations: ['room', 'subRoom', 'floor', 'subCategories', 'inspector'],
         });
 
@@ -143,6 +164,20 @@ export class InspectionRoundsService {
       }
 
       await queryRunner.commitTransaction();
+
+      void this.activityLogsService.log(
+        job.jobId,
+        {
+          type: ActivityLogType.ROUND_SCHEDULED,
+          color: 'blue',
+          title: `นัดหมายตรวจรอบที่ ${savedRound.roundNumber}`,
+          sub: savedRound.scheduledDate
+            ? `วันที่ตรวจ: ${this.formatThaiDate(new Date(savedRound.scheduledDate))}`
+            : undefined,
+        },
+        savedRound.roundId,
+      );
+
       return savedRound;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -253,11 +288,76 @@ export class InspectionRoundsService {
         'job.customer',
         'job.houseType',
         'job.branch',
+        'job.contractor',
+        'job.plans',
+        'job.plans.floor',
         'teamMembers',
         'teamMembers.inspector',
         'teamMembers.inspector.team',
         'teamMembers.team',
+        'createdBy',
       ],
+    });
+  }
+
+  // อัปเดต "ข้อมูลผู้รับเหมา + รูปหน้าโครงการ + แปลนบ้าน" ของ job ที่รอบตรวจนี้สังกัดอยู่ —
+  // ขอบเขตจำกัดเฉพาะ 3 อย่างนี้เท่านั้น (ตั้งใจไม่ใช้ endpoint แก้ไข job แบบเต็มของ admin เพื่อไม่ให้
+  // inspector แก้ field อื่น เช่น ชื่อโครงการ/ลูกค้า/สถานะงาน ได้) — คนเรียกถูกเช็คสิทธิ์มาแล้วที่
+  // RoundAccessGuard (admin หรือ inspector ที่ถูก assign เข้ารอบนี้)
+  async updateJobInfo(
+    roundId: number,
+    dto: UpdateJobInfoDto,
+    files: {
+      projectImageUrl?: Express.Multer.File[];
+      housePlanUrl?: Express.Multer.File[];
+    },
+  ): Promise<InspectionJob> {
+    const round = await this.inspectionRoundsRepo.findOneOrFail({
+      where: { roundId },
+      relations: ['job', 'job.contractor'],
+    });
+    const job = round.job;
+
+    // สร้าง/แก้ไขผู้รับเหมา เฉพาะตอนกรอกชื่อ+เบอร์โทรมาครบ (ทั้งคู่บังคับตาม Contractor entity)
+    if (dto.contractorFullName && dto.contractorPhoneNumber) {
+      const contractorPayload = {
+        fullName: dto.contractorFullName,
+        phoneNumber: dto.contractorPhoneNumber,
+        email: dto.contractorEmail,
+        companyName: dto.contractorCompanyName,
+      };
+      if (job.contractor) {
+        await this.contractorService.update(
+          job.contractor.contractorId,
+          contractorPayload,
+        );
+      } else {
+        job.contractor = await this.contractorService.create(
+          contractorPayload,
+        );
+      }
+    }
+
+    const projectImage = files?.projectImageUrl?.[0];
+    const housePlan = files?.housePlanUrl?.[0];
+    if (projectImage) {
+      job.projectImageUrl = await this.storageService.uploadImage(
+        projectImage.buffer,
+        'inspection_jobs',
+      );
+    }
+    if (housePlan) {
+      job.housePlanUrl = await this.storageService.uploadImage(
+        housePlan.buffer,
+        'inspection_jobs',
+      );
+    }
+
+    await this.inspectionJobsRepo.save(job);
+
+    return this.inspectionJobsRepo.findOneOrFail({
+      where: { jobId: job.jobId },
+      relations: ['contractor'],
     });
   }
 
@@ -318,9 +418,24 @@ export class InspectionRoundsService {
       .leftJoin('round.teamMembers', 'teamMembers')
       .leftJoin('teamMembers.inspector', 'roundInspector')
       .leftJoin('teamMembers.team', 'roundTeam')
+      .leftJoin(
+        Assignment,
+        'directAssignment',
+        '"directAssignment"."round_id" = "round"."round_id" AND "directAssignment"."inspector_id" = :inspectorId AND "directAssignment"."deleted_at" IS NULL',
+        { inspectorId },
+      )
+      .leftJoin(
+        Assignment,
+        'jobAssignment',
+        '"jobAssignment"."job_id" = "job"."job_id" AND "jobAssignment"."inspector_id" = :inspectorId AND "jobAssignment"."round_id" IS NULL AND "jobAssignment"."deleted_at" IS NULL',
+        { inspectorId },
+      )
       .where('round.scheduledDate BETWEEN :start AND :end', { start, end })
       .andWhere(
-        '(roundInspector.id = :inspectorId OR (roundTeam.team_Id = :teamId AND :teamId IS NOT NULL))',
+        `(roundInspector.id = :inspectorId
+          OR (roundTeam.team_Id = :teamId AND :teamId IS NOT NULL)
+          OR "directAssignment"."id" IS NOT NULL
+          OR "jobAssignment"."id" IS NOT NULL)`,
         { inspectorId, teamId },
       )
       .andWhere('round.deleted_at IS NULL')
@@ -359,14 +474,34 @@ export class InspectionRoundsService {
     const round = await this.inspectionRoundsRepo.findOneByOrFail({
       roundId: id,
     });
+
+    // เรียกซ้ำได้ตอนแก้ไขรอบที่ตรวจไปแล้ว (ดูปุ่ม "บันทึกการแก้ไขการตรวจ" ฝั่ง frontend)
+    // แต่ห้ามหลังอนุมัติ ไม่งั้นจะ regenerate PDF/AI summary ทับรายงานที่ส่งลูกค้าไปแล้ว
+    if (round.status === 'APPROVED') {
+      throw new BadRequestException('ไม่สามารถแก้ไขรอบตรวจที่อนุมัติแล้วได้');
+    }
+
     round.inspectedAt = new Date();
-    return this.inspectionRoundsRepo.save(round);
+    const saved = await this.inspectionRoundsRepo.save(round);
+
+    void this.activityLogsService.logForRound(id, {
+      type: ActivityLogType.ROUND_INSPECTED,
+      color: 'blue',
+      title: `วิศวกรเข้าตรวจรอบที่ ${saved.roundNumber} เสร็จสิ้น`,
+    });
+
+    return saved;
   }
 
   async confirmSummary(id: number) {
     const round = await this.inspectionRoundsRepo.findOneByOrFail({
       roundId: id,
     });
+
+    if (round.status === 'APPROVED') {
+      throw new BadRequestException('ไม่สามารถแก้ไขรอบตรวจที่อนุมัติแล้วได้');
+    }
+
     round.summaryCompletedAt = new Date();
     return this.inspectionRoundsRepo.save(round);
   }
@@ -410,13 +545,29 @@ export class InspectionRoundsService {
       const savedRound = await queryRunner.manager.save(round);
       await queryRunner.commitTransaction();
 
-      void this.notificationsService.create({
-        type: NotificationType.ALERT,
-        recipientRole: 'admin',
-        message: `${savedRound.job?.projectName ?? ''}: ตรวจงวดที่ ${savedRound.roundNumber} รออนุมัติ`,
-        jobId: savedRound.job?.jobId,
-        roundId: savedRound.roundId,
-      });
+      if (savedRound.job) {
+        const defectCount = await this.defectsRepo.count({
+          where: { round: { roundId: id } },
+        });
+        void this.activityLogsService.log(
+          savedRound.job.jobId,
+          {
+            type: ActivityLogType.ROUND_SUBMITTED,
+            color: 'orange',
+            title: `ส่งรายงานรอบที่ ${savedRound.roundNumber} ให้ลูกค้าตรวจสอบแล้ว`,
+            sub: `${defectCount} รายการ`,
+          },
+          savedRound.roundId,
+        );
+
+        void this.notificationsService.create({
+          type: NotificationType.ALERT,
+          recipientRole: 'admin',
+          message: `${savedRound.job.projectName}: ตรวจงวดที่ ${savedRound.roundNumber} รออนุมัติ`,
+          jobId: savedRound.job.jobId,
+          roundId: savedRound.roundId,
+        });
+      }
 
       return savedRound;
     } catch (error) {
@@ -432,7 +583,12 @@ export class InspectionRoundsService {
   ): Promise<{ data: InspectionRound; notification: any }> {
     const round = await this.inspectionRoundsRepo.findOneOrFail({
       where: { roundId: id },
-      relations: ['job', 'job.customer', 'teamMembers', 'teamMembers.inspector'],
+      relations: [
+        'job',
+        'job.customer',
+        'teamMembers',
+        'teamMembers.inspector',
+      ],
     });
 
     if (round.status !== 'SUBMITTED') {
@@ -458,6 +614,18 @@ export class InspectionRoundsService {
 
       const approvedRound = await queryRunner.manager.save(round);
       await queryRunner.commitTransaction();
+
+      if (approvedRound.job) {
+        void this.activityLogsService.log(
+          approvedRound.job.jobId,
+          {
+            type: ActivityLogType.ROUND_APPROVED,
+            color: 'green',
+            title: `ลูกค้าอนุมัติรายงานรอบที่ ${approvedRound.roundNumber} แล้ว`,
+          },
+          approvedRound.roundId,
+        );
+      }
 
       const notification = this.buildApprovalNotification(approvedRound);
 

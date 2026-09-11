@@ -5,7 +5,7 @@
       <q-banner v-if="error" class="text-white bg-negative q-mb-md" rounded dense>
         {{ error }}
         <template #action>
-          <q-btn flat label="ลองใหม่" @click="loadData" />
+          <q-btn flat :label="t('contractor.repairDefectList.retry')" @click="loadData" />
         </template>
       </q-banner>
 
@@ -15,17 +15,17 @@
           <div class="row q-col-gutter-xs">
             <div class="col-4 text-center stat-box">
               <q-icon name="meeting_room" color="grey-6" size="18px" />
-              <div class="stat-label">จำนวนห้อง</div>
+              <div class="stat-label">{{ t('contractor.repairDefectList.rooms') }}</div>
               <div class="stat-num">{{ stats.rooms }}</div>
             </div>
             <div class="col-4 text-center stat-box border-lr">
               <q-icon name="build" color="grey-6" size="18px" />
-              <div class="stat-label">ประเภทงาน</div>
+              <div class="stat-label">{{ t('contractor.repairDefectList.jobTypes') }}</div>
               <div class="stat-num">{{ stats.jobTypes }}</div>
             </div>
             <div class="col-4 text-center stat-box">
               <q-icon name="list_alt" color="grey-6" size="18px" />
-              <div class="stat-label">จำนวนรายการ</div>
+              <div class="stat-label">{{ t('contractor.repairDefectList.total') }}</div>
               <div class="stat-num">{{ stats.total }}</div>
             </div>
           </div>
@@ -36,14 +36,14 @@
             <div class="col-6 text-center">
               <div class="row items-center justify-center q-gutter-xs">
                 <q-icon name="check_circle" color="green" size="20px" />
-                <span class="text-caption text-grey-7">ซ่อมแล้ว</span>
+                <span class="text-caption text-grey-7">{{ t('contractor.repairDefectList.repaired') }}</span>
               </div>
               <div class="text-h6 text-green text-weight-bold">{{ stats.passed }}</div>
             </div>
             <div class="col-6 text-center">
               <div class="row items-center justify-center q-gutter-xs">
                 <q-icon name="cancel" color="red" size="20px" />
-                <span class="text-caption text-grey-7">ยังไม่ซ่อม</span>
+                <span class="text-caption text-grey-7">{{ t('contractor.repairDefectList.notRepaired') }}</span>
               </div>
               <div class="text-h6 text-red text-weight-bold">{{ stats.failed }}</div>
             </div>
@@ -57,7 +57,7 @@
           outline
           color="grey-7"
           icon="filter_list"
-          label="ตัวกรอง"
+          :label="t('contractor.repairDefectList.filter')"
           size="sm"
           rounded
           @click="showFilter = true"
@@ -65,7 +65,7 @@
       </div>
 
       <!-- Defect List -->
-      <div class="text-subtitle2 text-weight-bold q-mb-sm">รายการตรวจ</div>
+      <div class="text-subtitle2 text-weight-bold q-mb-sm">{{ t('contractor.repairDefectList.defectListTitle') }}</div>
 
       <q-card
         v-for="item in paginatedDefects"
@@ -101,14 +101,14 @@
                           ? 'orange'
                           : 'red'
                   "
-                  :label="defectStatusLabel(item.status)"
+                  :label="statusLabel(item.status)"
                   class="status-badge"
                 />
               </div>
 
-              <div class="text-caption text-grey-6">ประเภทงาน</div>
+              <div class="text-caption text-grey-6">{{ t('contractor.repairDefectList.jobTypeLabel') }}</div>
               <div class="text-body2 text-weight-bold">{{ item.jobType }}</div>
-              <div class="text-caption text-grey-6">รายการ</div>
+              <div class="text-caption text-grey-6">{{ t('contractor.repairDefectList.itemsLabel') }}</div>
 
               <div class="row q-gutter-xs q-mt-xs">
                 <q-chip
@@ -125,6 +125,22 @@
 
               <!-- Location -->
               <div class="text-caption text-grey-5 q-mt-xs">{{ item.location }}</div>
+
+              <!-- Plan Position Button -->
+              <div v-if="item.planId" class="q-mt-sm">
+                <q-btn
+                  flat
+                  dense
+                  no-caps
+                  size="sm"
+                  color="primary"
+                  icon="place"
+                  :label="t('components.planPosition.viewButton')"
+                  class="bg-blue-1 text-primary q-px-sm"
+                  style="border-radius: 6px; font-weight: 500;"
+                  @click.stop="openPlanPosition(item)"
+                />
+              </div>
             </div>
           </div>
         </q-card-section>
@@ -147,7 +163,7 @@
     <q-dialog v-model="showFilter" position="bottom">
       <q-card style="width: 100%; max-width: 480px; border-radius: 16px 16px 0 0; max-height: 85vh">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-subtitle1 text-weight-bold">ตัวกรอง</div>
+          <div class="text-subtitle1 text-weight-bold">{{ t('contractor.repairDefectList.filter') }}</div>
           <q-space />
           <q-btn flat round icon="close" v-close-popup />
         </q-card-section>
@@ -156,30 +172,30 @@
           <q-card-section>
             <!-- แสดงเฉพาะตอนดูทั้งหมด (ไม่ได้กดมาจากห้อง) -->
             <template v-if="!roomId">
-              <div class="filter-section-title q-mb-xs">ประเภทห้อง</div>
+              <div class="filter-section-title q-mb-xs">{{ t('contractor.repairDefectList.roomTypeLabel') }}</div>
               <FilterChipGroup v-model="selectedRooms" :options="filterRooms" class="q-mb-md" />
             </template>
 
-            <div class="filter-section-title q-mb-xs">ประเภทงาน</div>
+            <div class="filter-section-title q-mb-xs">{{ t('contractor.repairDefectList.jobTypeFilterLabel') }}</div>
             <FilterChipGroup v-model="selectedJobTypes" :options="filterJobTypes" class="q-mb-md" />
 
-            <div class="filter-section-title q-mb-xs">ประเภทความรุนแรง</div>
+            <div class="filter-section-title q-mb-xs">{{ t('contractor.repairDefectList.severityLabel') }}</div>
             <FilterChipGroup
               v-model="selectedSeverities"
               :options="filterSeverities"
               class="q-mb-md"
             />
 
-            <div class="filter-section-title q-mb-xs">สถานะ</div>
+            <div class="filter-section-title q-mb-xs">{{ t('contractor.repairDefectList.statusLabel') }}</div>
             <FilterChipGroup v-model="selectedStatuses" :options="filterStatuses" />
           </q-card-section>
         </q-scroll-area>
 
         <q-card-actions class="q-px-md q-pb-md">
-          <q-btn flat label="ล้างทั้งหมด" color="red" class="col" @click="resetFilter" />
+          <q-btn flat :label="t('contractor.repairDefectList.clearAll')" color="red" class="col" @click="resetFilter" />
           <q-btn
             unelevated
-            label="ค้นหา"
+            :label="t('contractor.repairDefectList.search')"
             color="primary"
             icon="search"
             class="col"
@@ -188,30 +204,66 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Dialog ดูตำแหน่งในแปลน (Read-only) -->
+    <PlanPositionDialog
+      v-model="showPlanDialog"
+      :job-id="getJobId()"
+      :initial-plan-id="activeDefect?.planId ?? null"
+      :initial-x="activeDefect?.planX ?? null"
+      :initial-y="activeDefect?.planY ?? null"
+      :initial-zone="activeDefect?.locationZone ?? null"
+      readonly
+    />
   </q-page>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia'; // ✅ เพิ่ม
 import {
   useContractorRepair,
-  defectStatusLabel,
   type DefectItem,
 } from 'src/stores/useContractormain';
 import { useLinkAccess } from 'src/stores/useLinkAccess';
 import FilterChipGroup from 'src/components/FilterChipGroup.vue';
+import PlanPositionDialog from 'src/components/PlanPositionDialog.vue';
+import { useQuasar } from 'quasar';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+
+const $q = useQuasar();
+const repairListSpinner = createIconSpinner('build');
 
 const route = useRoute();
 const router = useRouter();
-const { projectId } = useLinkAccess();
+const { t } = useI18n();
+const { hasLinkAccess, projectId, linkToken } = useLinkAccess();
+
+// Translated status label — mirrors defectStatusLabel() in the store, but locale-aware.
+// Kept local to this page since the store's export must stay language-neutral for other consumers.
+function statusLabel(status: string): string {
+  switch (status) {
+    case 'verified':
+      return t('contractor.repairDefectList.status.verified');
+    case 'repaired':
+      return t('contractor.repairDefectList.status.repaired');
+    case 'rejected':
+      return t('contractor.repairDefectList.status.rejected');
+    case 'pending_repair':
+    default:
+      return t('contractor.repairDefectList.status.pending');
+  }
+}
 
 const store = useContractorRepair();
 const { rooms, allDefectItems, error } = storeToRefs(store); // ✅ storeToRefs สำหรับ state
 const { getDefectsByRoom, fetchRepairData } = store; // ✅ function ใช้ตรงๆ
 
 function getJobId(): number | null {
+  // ลิงก์ผู้รับเหมาที่ verify แล้วต้องยึด jobId จาก token เสมอ ห้ามให้ query string ทับ
+  if (hasLinkAccess.value) return projectId.value;
   const queryJobId = route.query.jobId;
   if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId);
   return projectId.value;
@@ -220,25 +272,56 @@ function getJobId(): number | null {
 async function loadData() {
   const jobId = getJobId();
   if (!jobId) return;
-  await fetchRepairData(jobId);
+  await fetchRepairData(jobId, linkToken.value);
 }
 
 // โหลดข้อมูลเองถ้ายังไม่มีใน store (เช่น เปิดลิงก์ตรงมาที่หน้านี้ ไม่ได้ผ่านหน้า repair-overview มาก่อน)
-onMounted(() => {
+onMounted(async () => {
   if (allDefectItems.value.length > 0) return;
-  void loadData();
+  $q.loading.show({
+    spinner: repairListSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
+  try {
+    await loadData();
+  } finally {
+    $q.loading.hide();
+  }
 });
 
-const filterRooms = computed(() => ['ทั้งหมด', ...rooms.value.map((r) => r.name)]);
-const filterJobTypes = ['ทั้งหมด', 'ผนัง', 'กระเบื้อง', 'ประตู', 'ไฟฟ้า', 'ประปา', 'ฝ้าเพดาน'];
-const filterSeverities = ['ทั้งหมด', 'Major', 'Minor'];
-const filterStatuses = ['รอดำเนินการ', 'ซ่อมแล้ว', 'ไม่ผ่าน', 'ผ่าน'];
+const filterRooms = computed(() => [t('contractor.repairDefectList.all'), ...rooms.value.map((r) => r.name)]);
+const filterJobTypes = computed(() => [
+  t('contractor.repairDefectList.all'),
+  'ผนัง',
+  'กระเบื้อง',
+  'ประตู',
+  'ไฟฟ้า',
+  'ประปา',
+  'ฝ้าเพดาน',
+]);
+const filterSeverities = computed(() => [t('contractor.repairDefectList.all'), 'Major', 'Minor']);
+const filterStatuses = computed(() => [
+  t('contractor.repairDefectList.status.pending'),
+  t('contractor.repairDefectList.status.repaired'),
+  t('contractor.repairDefectList.status.rejected'),
+  t('contractor.repairDefectList.status.verified'),
+]);
 
 const showFilter = ref(false);
 const selectedRooms = ref<string[]>([]);
 const selectedJobTypes = ref<string[]>([]);
 const selectedSeverities = ref<string[]>([]);
 const selectedStatuses = ref<string[]>([]);
+
+const showPlanDialog = ref(false);
+const activeDefect = ref<DefectItem | null>(null);
+
+function openPlanPosition(defect: DefectItem) {
+  activeDefect.value = defect;
+  showPlanDialog.value = true;
+}
 
 const roomId = computed(() => {
   const id = Number(route.params.id);
@@ -266,15 +349,15 @@ const defectItems = computed(() =>
   baseItems.value.filter((item: DefectItem) => {
     const matchRoom =
       selectedRooms.value.length === 0 ||
-      selectedRooms.value.includes('ทั้งหมด') ||
+      selectedRooms.value.includes(t('contractor.repairDefectList.all')) ||
       selectedRooms.value.some((r) => item.location.startsWith(r.split(',')[0] ?? ''));
     const matchJob =
       selectedJobTypes.value.length === 0 ||
-      selectedJobTypes.value.includes('ทั้งหมด') ||
+      selectedJobTypes.value.includes(t('contractor.repairDefectList.all')) ||
       selectedJobTypes.value.includes(item.jobType);
     const matchStatus =
       selectedStatuses.value.length === 0 ||
-      selectedStatuses.value.includes(defectStatusLabel(item.status));
+      selectedStatuses.value.includes(statusLabel(item.status));
     return matchRoom && matchJob && matchStatus;
   }),
 );

@@ -9,30 +9,51 @@ import {
   Delete,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFiles,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { InspectionRoundsService } from './inspection-rounds.service';
 import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
+import { UpdateJobInfoDto } from './dto/update-job-info.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { RoundAccessGuard } from 'src/auth/round-access.guard';
+import { InspectorSelfOrAdminGuard } from 'src/auth/inspector-self-or-admin.guard';
+import { ReportsService } from 'src/reports/reports.service';
+import { AiSummaryService } from 'src/ai-summary/ai-summary.service';
 
 @Controller('inspection-rounds')
-@UseGuards(AuthGuard)
 export class InspectionRoundsController {
   constructor(
     private readonly inspectionRoundsService: InspectionRoundsService,
+    private readonly reportsService: ReportsService,
+    private readonly aiSummaryService: AiSummaryService,
   ) {}
 
   @Post()
-  create(@Body() createInspectionRoundDto: CreateInspectionRoundDto) {
-    return this.inspectionRoundsService.create(createInspectionRoundDto);
+  @UseGuards(AuthGuard)
+  create(
+    @Body() createInspectionRoundDto: CreateInspectionRoundDto,
+    @Req() req: Request & { user?: { sub: number } },
+  ) {
+    return this.inspectionRoundsService.create(
+      createInspectionRoundDto,
+      req.user?.sub,
+    );
   }
 
   @Get()
+  @UseGuards(AuthGuard)
   findAll() {
     return this.inspectionRoundsService.findAll();
   }
 
   @Get('week/:inspectorId')
+  @UseGuards(AuthGuard, InspectorSelfOrAdminGuard)
   findByWeek(
     @Param('inspectorId') inspectorId: string,
     @Query('date') dateString?: string,
@@ -41,6 +62,7 @@ export class InspectionRoundsController {
   }
 
   @Get('month/:inspectorId')
+  @UseGuards(AuthGuard, InspectorSelfOrAdminGuard)
   async getRoundsByMonth(
     @Param('inspectorId') inspectorId: string,
     @Query('date') dateString?: string,
@@ -48,32 +70,64 @@ export class InspectionRoundsController {
     return this.inspectionRoundsService.findByMonth(+inspectorId, dateString);
   }
 
+  // ทั้ง staff (Bearer) และเจ้าของลิงก์ลูกค้า/ผู้รับเหมา (?token=) เรียกใช้ตัวนี้ร่วมกัน —
+  // ดูรายละเอียดรอบตรวจ, ใช้เตรียมข้อมูล export PDF ฝั่งลูกค้าด้วย
   @Get(':id')
+  @UseGuards(RoundAccessGuard)
   findOne(@Param('id') id: string) {
     return this.inspectionRoundsService.findOne(+id);
   }
 
+  // เช็ค cache PDF เดิม ไม่ trigger การ generate ใดๆ ทั้งสิ้น
+  // ส่ง generatedAt กลับไปด้วยให้ UI โชว์ได้ว่าไฟล์นี้ข้อมูล ณ เวลาไหน (PDF อาจล้าหลังการแก้ defect ล่าสุดได้)
+  @Get(':id/report')
+  @UseGuards(AuthGuard)
+  getReport(@Param('id') id: string) {
+    return this.reportsService.getCachedReportUrl(+id);
+  }
+
+  // สั่งสร้างสรุปท้ายเล่มใหม่แบบ manual เลือก provider เอง (เช่นปุ่ม "สร้างสรุปใหม่" ในหน้า admin)
+  // ไม่ผ่านการเช็ค hash เหมือน flow อัตโนมัติที่ผูกกับการ regenerate PDF
+  @Post(':id/ai-summary/generate')
+  @UseGuards(AuthGuard)
+  generateAiSummary(
+    @Param('id') id: string,
+    @Body('provider') provider: string,
+  ) {
+    return this.aiSummaryService.generateWithProvider(+id, provider);
+  }
+
+  // จุดที่ inspector บอกว่า "ตรวจ/แก้ไขรอบนี้เสร็จแล้ว" — ก่อนหน้านี้ defect แต่ละตัวที่เพิ่ม/แก้/ลบ
+  // ระหว่างตรวจไม่ trigger regenerate แล้ว (ดู DefectsController.maybeScheduleRegeneration) ต้องมา
+  // trigger รวมทีเดียวตรงนี้แทน ไม่งั้นรอบที่เพิ่งตรวจเสร็จจะไม่มี PDF/AI summary ใหม่ให้เลย
   @Patch(':id/confirm-inspection')
-  confirmInspection(@Param('id') id: string) {
-    return this.inspectionRoundsService.confirmInspection(+id);
+  @UseGuards(RoundAccessGuard)
+  async confirmInspection(@Param('id') id: string) {
+    const round = await this.inspectionRoundsService.confirmInspection(+id);
+    this.reportsService.scheduleRegeneration(+id);
+    return round;
   }
 
   @Patch(':id/confirm-summary')
+  @UseGuards(RoundAccessGuard)
   confirmSummary(@Param('id') id: string) {
     return this.inspectionRoundsService.confirmSummary(+id);
   }
 
   @Patch(':id/submit')
+  @UseGuards(RoundAccessGuard)
   submit(@Param('id') id: string) {
     return this.inspectionRoundsService.submit(+id);
   }
 
   @Patch(':id/approve')
+  @UseGuards(RoundAccessGuard)
   approve(@Param('id') id: string) {
     return this.inspectionRoundsService.approveReport(+id);
   }
 
   @Patch(':id')
+  @UseGuards(RoundAccessGuard)
   update(
     @Param('id') id: string,
     @Body() updateInspectionRoundDto: UpdateInspectionRoundDto,
@@ -81,20 +135,51 @@ export class InspectionRoundsController {
     return this.inspectionRoundsService.update(+id, updateInspectionRoundDto);
   }
 
+  // endpoint แบบจำกัดสิทธิ์: แก้ได้แค่ "ข้อมูลผู้รับเหมา + รูปหน้าโครงการ + แปลนบ้าน" ของ job
+  // ที่รอบนี้สังกัด — ให้ inspector ที่ถูก assign เข้ารอบนี้ (หรือ admin) เติม/แก้ข้อมูลที่ office
+  // อาจกรอกไม่ครบตอนสร้างงานได้ โดยไม่เปิดช่องให้แก้ field อื่นของ job เหมือน admin
+  @Patch(':id/job-info')
+  @UseGuards(RoundAccessGuard)
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'projectImageUrl', maxCount: 1 },
+        { name: 'housePlanUrl', maxCount: 1 },
+      ],
+      { storage: memoryStorage() },
+    ),
+  )
+  updateJobInfo(
+    @Param('id') id: string,
+    @UploadedFiles()
+    files: {
+      projectImageUrl?: Express.Multer.File[];
+      housePlanUrl?: Express.Multer.File[];
+    },
+    @Body() updateJobInfoDto: UpdateJobInfoDto,
+  ) {
+    return this.inspectionRoundsService.updateJobInfo(
+      +id,
+      updateJobInfoDto,
+      files,
+    );
+  }
+
   @Delete(':id')
+  @UseGuards(RoundAccessGuard)
   remove(@Param('id') id: string) {
     return this.inspectionRoundsService.remove(+id);
   }
 }
 
 @Controller('projects')
-@UseGuards(AuthGuard)
 export class ProjectApprovalController {
   constructor(
     private readonly inspectionRoundsService: InspectionRoundsService,
   ) {}
 
   @Put(':id/approve')
+  @UseGuards(RoundAccessGuard)
   approve(@Param('id') id: string) {
     return this.inspectionRoundsService.approveReport(+id);
   }

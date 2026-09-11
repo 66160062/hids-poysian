@@ -2,26 +2,23 @@
   <q-layout view="lHh Lpr lFf" class="bg-grey-1">
     <q-header class="bg-white text-dark" >
       <q-toolbar class="q-px-sm">
-        <q-btn
-          flat
-          dense
-          no-caps
-          icon="chevron_left"
-          label="กลับ"
+        <q-icon
+          name="arrow_back_ios_new"
           color="primary"
-          class="text-weight-medium"
+          size="24px"
+          class="cursor-pointer"
           @click="goBack"
         />
         <q-space />
-        <q-toolbar-title class="text-center text-weight-bold text-body1 absolute-center">
-          แก้ไขผู้ใช้
+        <q-toolbar-title class="text-center text-weight-bold absolute-center page-title">
+          {{ t('inspector.profile.title') }}
         </q-toolbar-title>
         <q-space />
         <q-btn
           flat
           dense
           no-caps
-          label="บันทึก"
+          :label="t('inspector.profile.save')"
           color="primary"
           class="text-weight-bold"
           @click="submitForm"
@@ -30,13 +27,13 @@
     </q-header>
 
     <q-page-container>
-      <q-page class="admin-profile-page q-pb-xl">
+      <q-page class="inspector-profile-page q-pb-xl">
         <q-form ref="profileFormRef" @submit="saveChanges" class="q-pa-md">
           <div class="column items-center q-mb-xl">
             <div class="relative-position q-mb-md">
               <q-avatar size="90px" :color="!displayImageUrl ? 'primary' : ''" :text-color="!displayImageUrl ? 'white' : ''" class="text-h3">
                 <img v-if="displayImageUrl" :src="displayImageUrl" />
-                <span v-else>{{ form.full_name?.charAt(0).toUpperCase() || 'A' }}</span>
+                <span v-else>{{ form.full_name?.charAt(0).toUpperCase() || 'I' }}</span>
               </q-avatar>
               <q-btn
                 round
@@ -49,7 +46,7 @@
               />
               <input type="file" accept="image/*" ref="fileInputRef" style="display: none" @change="onFileSelected" />
             </div>
-            <div class="text-h6 text-weight-bold q-mb-xs">{{ form.full_name || 'ชื่อผู้ใช้' }}</div>
+            <div class="text-h6 text-weight-bold q-mb-xs">{{ form.full_name || t('inspector.profile.defaultUserName') }}</div>
             <q-badge color="green-1" text-color="green-8" class="q-px-sm q-py-xs status-badge">
               <div class="row items-center text-weight-medium">
                 <div class="active-dot q-mr-sm"></div>
@@ -59,29 +56,29 @@
           </div>
 
           <div class="q-mb-lg">
-            <div class="text-weight-bold text-grey-8 q-mb-sm q-px-xs">ข้อมูลทั่วไป</div>
+            <div class="text-weight-bold text-grey-8 q-mb-sm q-px-xs">{{ t('inspector.profile.generalInfo') }}</div>
             <q-card flat bordered class="custom-card">
               <q-card-section class="q-pa-none">
                 <q-input
                   v-model="form.full_name"
                   borderless
-                  label="ชื่อ นามสกุล *"
+                  :label="t('inspector.profile.fullNameLabel')"
                   stack-label
                   class="custom-input q-px-md q-py-xs"
-                  :rules="[(val) => !!val || 'กรุณาระบุชื่อ']"
+                  :rules="[(val) => !!val || t('inspector.profile.ruleRequireName')]"
                   hide-bottom-space
                 />
                 <q-separator color="grey-2" />
                 <q-input
                   v-model="form.phone_number"
                   borderless
-                  label="เบอร์โทรศัพท์ *"
+                  :label="t('inspector.profile.phoneLabel')"
                   stack-label
                   class="custom-input q-px-md q-py-xs"
                   mask="###-###-####"
                   :rules="[
-                    (val) => !!val || 'กรุณาระบุเบอร์โทร',
-                    (val) => val.length === 12 || 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก',
+                    (val) => !!val || t('inspector.profile.ruleRequirePhone'),
+                    (val) => val.length === 12 || t('inspector.profile.ruleInvalidPhone'),
                   ]"
                   hide-bottom-space
                 />
@@ -90,10 +87,10 @@
                   v-model="form.email"
                   type="email"
                   borderless
-                  label="ที่อยู่อีเมล *"
+                  :label="t('inspector.profile.emailLabel')"
                   stack-label
                   class="custom-input q-px-md q-py-xs"
-                  :rules="[(val) => !!val || 'กรุณาระบุอีเมล']"
+                  :rules="[(val) => !!val || t('inspector.profile.ruleRequireEmail')]"
                   hide-bottom-space
                 />
                 <q-separator color="grey-2" />
@@ -110,7 +107,7 @@
           </div>
 
           <div class="q-mb-lg">
-            <div class="text-weight-bold text-grey-8 q-mb-sm q-px-xs">เปลี่ยนรหัสผ่าน</div>
+            <div class="text-weight-bold text-grey-8 q-mb-sm q-px-xs">{{ t('inspector.profile.changePassword') }}</div>
             <q-card flat bordered class="custom-card">
               <q-card-section class="q-pa-none">
                 <q-input
@@ -118,7 +115,7 @@
                   type="password"
                   autocomplete="new-password"
                   borderless
-                  label="รหัสผ่านปัจจุบัน"
+                  :label="t('inspector.profile.currentPassword')"
                   stack-label
                   class="custom-input q-px-md q-py-xs"
                 />
@@ -128,7 +125,7 @@
                   type="password"
                   autocomplete="new-password"
                   borderless
-                  label="รหัสผ่านใหม่"
+                  :label="t('inspector.profile.newPassword')"
                   stack-label
                   class="custom-input q-px-md q-py-xs"
                 />
@@ -138,7 +135,7 @@
                   type="password"
                   autocomplete="new-password"
                   borderless
-                  label="ยืนยันรหัสผ่านใหม่"
+                  :label="t('inspector.profile.confirmNewPassword')"
                   stack-label
                   class="custom-input q-px-md q-py-xs"
                 />
@@ -148,21 +145,8 @@
 
           <div class="q-mb-xl q-pb-xl">
             <q-card flat class="bg-red-1 custom-card q-pa-md" style="border: 1px solid #ffcdd2;">
-              <div class="text-red-8 text-weight-bold q-mb-xs" style="font-size: 14px;">Danger Zone</div>
               <div class="text-grey-7 q-mb-md" style="font-size: 11px; line-height: 1.5;">
-                การปิดใช้งานบัญชีนี้จะยกเลิกสิทธิ์การเข้าถึงแพลตฟอร์ม HIDS ทั้งหมดสำหรับผู้ใช้รายนี้ทันที
-              </div>
-              <q-btn
-                outline
-                color="red"
-                class="full-width bg-white q-mb-md"
-                no-caps
-                style="border-radius: 8px; font-weight: 600;"
-                label="ปิดการใช้งานบัญชี"
-              />
-              <q-separator color="red-2" class="q-my-md" />
-              <div class="text-grey-7 q-mb-md" style="font-size: 11px; line-height: 1.5;">
-                ออกจากระบบและปิดเซสชั่นปัจจุบัน
+                {{ t('inspector.profile.logoutDescription') }}
               </div>
               <q-btn
                 outline
@@ -170,7 +154,7 @@
                 class="full-width bg-white"
                 no-caps
                 style="border-radius: 8px; font-weight: 600;"
-                label="ออกจากระบบ"
+                :label="t('inspector.profile.logout')"
                 icon="logout"
                 @click="logout"
               />
@@ -181,39 +165,58 @@
       </q-page>
     </q-page-container>
 
-    <q-footer class="bg-white border-top q-pa-md">
-      <div class="row q-gutter-x-sm max-width-container">
-        <q-btn
-          flat
-          class="col bg-grey-2 text-dark"
-          no-caps
-          style="border-radius: 8px; font-weight: 600; height: 44px;"
-          label="ยกเลิก"
-          @click="goBack"
-        />
-        <q-btn
-          unelevated
-          color="primary"
-          class="col"
-          no-caps
-          style="border-radius: 8px; font-weight: 600; height: 44px;"
-          label="บันทึกการเปลี่ยนแปลง"
-          @click="submitForm"
-        />
-      </div>
-    </q-footer>
+    <!-- Crop Dialog: shown right after picking a profile picture -->
+    <q-dialog v-model="showCropDialog" persistent>
+      <q-card style="width: 480px; max-width: 90vw; border-radius: 16px">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6 text-weight-bold">{{ t('inspector.profile.cropTitle') }}</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="cancelCrop" />
+        </q-card-section>
+        <q-card-section class="q-pt-md">
+          <div class="text-caption text-grey-7 q-mb-sm">{{ t('inspector.profile.cropHint') }}</div>
+          <cropper
+            v-if="cropSourceUrl"
+            ref="cropperRef"
+            class="profile-cropper"
+            :src="cropSourceUrl"
+            :stencil-props="{ aspectRatio: 1 }"
+          />
+          <div class="row justify-end q-mt-md q-gutter-sm">
+            <q-btn
+              :label="t('inspector.profile.cropCancel')"
+              color="grey-6"
+              flat
+              @click="cancelCrop"
+              style="border-radius: 8px"
+            />
+            <q-btn
+              :label="t('inspector.profile.cropConfirm')"
+              color="primary"
+              unelevated
+              @click="confirmCrop"
+              style="border-radius: 8px"
+            />
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-layout>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useQuasar, LocalStorage, QForm } from 'quasar';
 import { useAuthStore } from 'src/stores/useAuth';
 import { api } from 'src/boot/axios';
+import { Cropper } from 'vue-advanced-cropper';
+import 'vue-advanced-cropper/dist/style.css';
 
 const router = useRouter();
 const $q = useQuasar();
+const { t } = useI18n();
 const authStore = useAuthStore();
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string || 'http://localhost:3000';
@@ -245,6 +248,11 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
 const selectedFile = ref<File | null>(null);
 const previewImage = ref<string | null>(null);
 
+// รูปที่เพิ่งเลือกจากเครื่อง รอเข้ากระบวนการตัดกรอบ ก่อนกลายเป็น selectedFile จริง
+const showCropDialog = ref(false);
+const cropSourceUrl = ref('');
+const cropperRef = ref<InstanceType<typeof Cropper> | null>(null);
+
 const displayImageUrl = computed(() => {
   if (previewImage.value) return previewImage.value;
   if (authStore.currentUser?.imageUrl && !authStore.currentUser.imageUrl.includes('unknown.jpg')) {
@@ -262,25 +270,57 @@ const onFileSelected = (event: Event) => {
   if (target.files && target.files.length > 0) {
     const file = target.files[0];
     if (file) {
-      selectedFile.value = file;
-      previewImage.value = URL.createObjectURL(file);
+      cropSourceUrl.value = URL.createObjectURL(file);
+      showCropDialog.value = true;
     }
   }
+  target.value = '';
+};
+
+const cancelCrop = () => {
+  if (cropSourceUrl.value) {
+    URL.revokeObjectURL(cropSourceUrl.value);
+  }
+  cropSourceUrl.value = '';
+  showCropDialog.value = false;
+};
+
+const confirmCrop = () => {
+  const result = cropperRef.value?.getResult();
+  const canvas = result?.canvas;
+  if (!canvas) {
+    cancelCrop();
+    return;
+  }
+  canvas.toBlob((blob) => {
+    if (!blob) {
+      cancelCrop();
+      return;
+    }
+    if (previewImage.value) {
+      URL.revokeObjectURL(previewImage.value);
+    }
+    const croppedFile = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
+    selectedFile.value = croppedFile;
+    previewImage.value = URL.createObjectURL(croppedFile);
+
+    URL.revokeObjectURL(cropSourceUrl.value);
+    cropSourceUrl.value = '';
+    showCropDialog.value = false;
+  }, 'image/jpeg', 0.92);
 };
 
 const loadUserData = async () => {
   const user = authStore.currentUser;
   if (user && user.id) {
     try {
-      // Fetch fresh data from backend to ensure we have the latest fields
       const res = await api.get(`/users/${user.id}`);
       if (res.data) {
         form.value.full_name = res.data.fullName || '';
         form.value.phone_number = res.data.phoneNumber || '';
         form.value.email = res.data.email || '';
         form.value.line_id = res.data.lineId || '';
-        
-        // Update store and local storage with fresh data
+
         const updatedUser = { ...user, ...res.data };
         authStore.user = updatedUser;
         LocalStorage.set('user', updatedUser);
@@ -289,8 +329,7 @@ const loadUserData = async () => {
     } catch (error) {
       console.error('Failed to fetch latest user data:', error);
     }
-    
-    // Fallback to store data if fetch fails
+
     form.value.full_name = user.fullName || '';
     form.value.phone_number = user.phoneNumber || '';
     form.value.email = user.email || '';
@@ -312,7 +351,7 @@ const saveChanges = async () => {
 
   if (!form.value.full_name || !form.value.phone_number || !form.value.email) {
     $q.notify({
-      message: 'กรุณากรอกข้อมูลที่บังคับให้ครบถ้วน',
+      message: t('inspector.profile.notifyFillRequired'),
       color: 'warning',
       icon: 'warning',
       position: 'top',
@@ -328,22 +367,21 @@ const saveChanges = async () => {
 
   if (passwordForm.value.newPassword) {
     if (!passwordForm.value.oldPassword) {
-      $q.notify({ message: 'กรุณากรอกรหัสผ่านปัจจุบัน', color: 'negative', position: 'top' });
+      $q.notify({ message: t('inspector.profile.notifyNeedCurrentPassword'), color: 'negative', position: 'top' });
       return;
     }
     try {
-      // Verify old password using login endpoint
       await api.post('/auth/login', { email: user.email, password: passwordForm.value.oldPassword });
     } catch {
-      $q.notify({ message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง', color: 'negative', position: 'top' });
+      $q.notify({ message: t('inspector.profile.notifyWrongCurrentPassword'), color: 'negative', position: 'top' });
       return;
     }
     if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
-      $q.notify({ message: 'รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน', color: 'negative', position: 'top' });
+      $q.notify({ message: t('inspector.profile.notifyPasswordMismatch'), color: 'negative', position: 'top' });
       return;
     }
     if (passwordForm.value.newPassword.length < 6) {
-      $q.notify({ message: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร', color: 'warning', position: 'top' });
+      $q.notify({ message: t('inspector.profile.notifyPasswordTooShort'), color: 'warning', position: 'top' });
       return;
     }
     formData.append('password', passwordForm.value.newPassword);
@@ -354,10 +392,9 @@ const saveChanges = async () => {
   }
 
   try {
-    $q.loading.show({ message: 'กำลังบันทึกข้อมูล...' });
+    $q.loading.show({ message: t('inspector.profile.loadingSave') });
     const res = await api.patch(`/users/${user.id}`, formData);
-    
-    // Update local state
+
     if (res.data) {
       authStore.user = res.data;
       LocalStorage.set('user', res.data);
@@ -367,14 +404,14 @@ const saveChanges = async () => {
     selectedFile.value = null;
 
     $q.notify({
-      message: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+      message: t('inspector.profile.notifySaveSuccess'),
       color: 'positive',
       icon: 'check_circle',
       position: 'top'
     });
   } catch (error) {
     console.error('Failed to update profile:', error);
-    $q.notify({ message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', color: 'negative', position: 'top' });
+    $q.notify({ message: t('inspector.profile.notifySaveError'), color: 'negative', position: 'top' });
   } finally {
     $q.loading.hide();
   }
@@ -382,18 +419,17 @@ const saveChanges = async () => {
 
 const logout = () => {
   $q.dialog({
-    title: 'ยืนยันการออกจากระบบ',
-    message: 'คุณแน่ใจหรือว่าต้องการออกจากระบบ?',
+    title: t('inspector.profile.logoutConfirmTitle'),
+    message: t('inspector.profile.logoutConfirmMessage'),
     cancel: true,
     persistent: true
   }).onOk(() => {
-    // Clear user data and redirect to login
     localStorage.clear();
     sessionStorage.clear();
     void router.push('/login');
     $q.notify({
-      message: 'ออกจากระบบเรียบร้อยแล้ว',
-      color: 'positive',
+      message: t('inspector.profile.notifyLogoutSuccess'),
+      color: 'info',
       position: 'top'
     });
   });
@@ -401,14 +437,14 @@ const logout = () => {
 </script>
 
 <style scoped>
-.admin-profile-page {
+.inspector-profile-page {
   max-width: 600px;
   margin: 0 auto;
 }
 
-.max-width-container {
-  max-width: 600px;
-  margin: 0 auto;
+.page-title {
+  font-size: 21px;
+  letter-spacing: 0.01em;
 }
 
 .custom-card {
@@ -446,12 +482,13 @@ const logout = () => {
   background-color: #4caf50;
 }
 
-.border-top {
-  border-top: 1px solid #f0f0f0;
+.profile-cropper {
+  height: 320px;
+  background: #ddd;
 }
 
 @media (min-width: 600px) {
-  .admin-profile-page, .max-width-container {
+  .inspector-profile-page {
     max-width: 800px;
   }
 }

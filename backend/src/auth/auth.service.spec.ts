@@ -2,27 +2,43 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { IsNull } from 'typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
+import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
+import { Assignment } from 'src/assignments/entities/assignment.entity';
+import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
+import { User } from 'src/users/entities/user.entity';
 
 describe('AuthService', () => {
   let service: AuthService;
-  let jwtService: { signAsync: jest.Mock; verifyAsync: jest.Mock };
+  let jwtService: {
+    signAsync: jest.Mock;
+    verifyAsync: jest.Mock;
+    verify: jest.Mock;
+  };
   let jobsRepo: {
     findOneBy: jest.Mock;
     save: jest.Mock;
   };
+  let assignmentsRepo: { findOne: jest.Mock };
+  let teamMembersRepo: { findOne: jest.Mock };
+  let authUsersRepo: { findOne: jest.Mock };
 
   beforeEach(async () => {
     jwtService = {
       signAsync: jest.fn().mockResolvedValue('signed-link-token'),
       verifyAsync: jest.fn(),
+      verify: jest.fn(),
     };
     jobsRepo = {
       findOneBy: jest.fn(),
       save: jest.fn(),
     };
+    assignmentsRepo = { findOne: jest.fn() };
+    teamMembersRepo = { findOne: jest.fn() };
+    authUsersRepo = { findOne: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -32,6 +48,18 @@ describe('AuthService', () => {
         {
           provide: getRepositoryToken(InspectionJob),
           useValue: jobsRepo,
+        },
+        {
+          provide: getRepositoryToken(Assignment),
+          useValue: assignmentsRepo,
+        },
+        {
+          provide: getRepositoryToken(InspectionTeamMember),
+          useValue: teamMembersRepo,
+        },
+        {
+          provide: getRepositoryToken(User),
+          useValue: authUsersRepo,
         },
       ],
     }).compile();
@@ -43,7 +71,7 @@ describe('AuthService', () => {
     expect(service).toBeDefined();
   });
 
-  it('generates a short-lived customer link token', async () => {
+  it('generates a year-lived customer link token', async () => {
     jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
     process.env.LINK_BASE_URL = 'https://hids.example.com/';
 
@@ -51,7 +79,7 @@ describe('AuthService', () => {
       token: 'signed-link-token',
       url: 'https://hids.example.com/#/view/prj-12?token=signed-link-token',
       role: 'customer',
-      expires_at: 1900,
+      expires_at: 31_537_000,
       admin_controlled: false,
     });
 
@@ -60,7 +88,7 @@ describe('AuthService', () => {
         project_id: 12,
         role: 'customer',
       },
-      { expiresIn: 900 },
+      { expiresIn: 31_536_000 },
     );
 
     delete process.env.LINK_BASE_URL;
@@ -112,7 +140,7 @@ describe('AuthService', () => {
     expect(jobsRepo.save).not.toHaveBeenCalled();
   });
 
-  it('creates a real JWT that expires in 15 minutes for customer links', async () => {
+  it('creates a real JWT that expires in 1 year for customer links', async () => {
     const realJwtService = new JwtService({
       secret: 'test-secret',
       signOptions: { expiresIn: '1h' },
@@ -121,6 +149,9 @@ describe('AuthService', () => {
       {} as UsersService,
       realJwtService,
       jobsRepo as never,
+      assignmentsRepo as never,
+      teamMembersRepo as never,
+      authUsersRepo as never,
     );
     jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
 
@@ -129,7 +160,7 @@ describe('AuthService', () => {
 
     expect(decoded.project_id).toBe(12);
     expect(decoded.role).toBe('customer');
-    expect(decoded.exp).toBe(1900);
+    expect(decoded.exp).toBe(31_537_000);
   });
 
   it('verifies customer link token and rejects revoked contractor links', async () => {
@@ -172,5 +203,227 @@ describe('AuthService', () => {
         contractorShareToken: null,
       }),
     );
+  });
+
+  describe('tryVerifyBearerToken', () => {
+    it('returns null when no header is present', () => {
+      expect(service.tryVerifyBearerToken(undefined)).toBeNull();
+    });
+
+    it('returns null when the header has no token part', () => {
+      expect(service.tryVerifyBearerToken('Bearer')).toBeNull();
+    });
+
+    it('returns null when the token fails verification', () => {
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('invalid');
+      });
+
+      expect(service.tryVerifyBearerToken('Bearer bad-token')).toBeNull();
+    });
+
+    it('returns the decoded payload for a valid staff token', () => {
+      jwtService.verify.mockReturnValue({ sub: 1, role: 'admin' });
+
+      expect(service.tryVerifyBearerToken('Bearer good-token')).toEqual({
+        sub: 1,
+        role: 'admin',
+      });
+    });
+  });
+
+  describe('verifyJobAccess', () => {
+    it('trusts a valid staff Bearer token regardless of jobId', async () => {
+      jwtService.verify.mockReturnValue({ sub: 1, role: 'admin' });
+
+      await expect(
+        service.verifyJobAccess('Bearer good-token', undefined, 999),
+      ).resolves.toEqual({ sub: 1, role: 'admin' });
+    });
+
+    it('rejects when there is no staff token and no link token', async () => {
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('invalid');
+      });
+
+      await expect(
+        service.verifyJobAccess(undefined, undefined, 12),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('allows a link token whose project_id matches the requested job', async () => {
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('invalid');
+      });
+      jwtService.verifyAsync.mockResolvedValue({
+        project_id: 12,
+        role: 'customer',
+      });
+
+      await expect(
+        service.verifyJobAccess(undefined, 'link-token', 12),
+      ).resolves.toEqual({ project_id: 12, role: 'customer' });
+    });
+
+    it('rejects a link token whose project_id does not match the requested job', async () => {
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('invalid');
+      });
+      jwtService.verifyAsync.mockResolvedValue({
+        project_id: 12,
+        role: 'customer',
+      });
+
+      await expect(
+        service.verifyJobAccess(undefined, 'link-token', 99),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('allows an inspector who is assigned to the job', async () => {
+      jwtService.verify.mockReturnValue({ sub: 7, role: 'inspector' });
+      assignmentsRepo.findOne.mockResolvedValue({ id: 1 });
+
+      await expect(
+        service.verifyJobAccess('Bearer token', undefined, 12),
+      ).resolves.toEqual({ sub: 7, role: 'inspector' });
+
+      expect(assignmentsRepo.findOne).toHaveBeenCalledWith({
+        where: { job: { jobId: 12 }, inspector: { id: 7 }, round: IsNull() },
+      });
+    });
+
+    it('rejects an inspector who is not assigned to the job', async () => {
+      jwtService.verify.mockReturnValue({ sub: 7, role: 'inspector' });
+      assignmentsRepo.findOne.mockResolvedValue(null);
+      authUsersRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.verifyJobAccess('Bearer token', undefined, 12),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('allows an inspector whose team (not the inspector directly) is assigned to a round of the job', async () => {
+      jwtService.verify.mockReturnValue({ sub: 7, role: 'inspector' });
+      assignmentsRepo.findOne.mockResolvedValue(null);
+      authUsersRepo.findOne.mockResolvedValue({ id: 7, teamId: 3 });
+      teamMembersRepo.findOne.mockResolvedValue({ id: 1 });
+
+      await expect(
+        service.verifyJobAccess('Bearer token', undefined, 12),
+      ).resolves.toEqual({ sub: 7, role: 'inspector' });
+
+      expect(teamMembersRepo.findOne).toHaveBeenCalledWith({
+        where: { round: { job: { jobId: 12 } }, team: { team_Id: 3 } },
+      });
+    });
+  });
+
+  describe('verifyRoundAccess', () => {
+    const round = { roundId: 5, job: { jobId: 12 } } as InspectionRound;
+
+    it('trusts a valid staff Bearer token for a non-inspector role', async () => {
+      jwtService.verify.mockReturnValue({ sub: 1, role: 'admin' });
+
+      await expect(
+        service.verifyRoundAccess('Bearer good-token', undefined, round),
+      ).resolves.toEqual({ sub: 1, role: 'admin' });
+      expect(teamMembersRepo.findOne).not.toHaveBeenCalled();
+      expect(assignmentsRepo.findOne).not.toHaveBeenCalled();
+    });
+
+    it('allows an inspector assigned directly to the round', async () => {
+      jwtService.verify.mockReturnValue({ sub: 7, role: 'inspector' });
+      teamMembersRepo.findOne.mockResolvedValue({ id: 1 });
+      assignmentsRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.verifyRoundAccess('Bearer token', undefined, round),
+      ).resolves.toEqual({ sub: 7, role: 'inspector' });
+    });
+
+    it('allows an inspector assigned to the parent job even without a round-level entry', async () => {
+      jwtService.verify.mockReturnValue({ sub: 7, role: 'inspector' });
+      teamMembersRepo.findOne.mockResolvedValue(null);
+      assignmentsRepo.findOne.mockResolvedValue({ id: 1 });
+
+      await expect(
+        service.verifyRoundAccess('Bearer token', undefined, round),
+      ).resolves.toEqual({ sub: 7, role: 'inspector' });
+    });
+
+    it('allows an inspector individually assigned to just this round via assignment (not job-wide)', async () => {
+      jwtService.verify.mockReturnValue({ sub: 7, role: 'inspector' });
+      teamMembersRepo.findOne.mockResolvedValue(null);
+      // assignment แถวนี้ผูก round ตรงๆ (round ไม่ใช่ null) — ต้องปลดล็อกแค่รอบนี้ ไม่ใช่ทั้ง job
+      // แยกจาก query ของ isInspectorAssignedToJob ด้วยการเช็คว่า where มี job หรือไม่
+      assignmentsRepo.findOne.mockImplementation(
+        (query: { where: { job?: unknown; round?: unknown } }) =>
+          Promise.resolve(
+            !query.where.job && query.where.round ? { id: 1 } : null,
+          ),
+      );
+      authUsersRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.verifyRoundAccess('Bearer token', undefined, round),
+      ).resolves.toEqual({ sub: 7, role: 'inspector' });
+    });
+
+    it('rejects an inspector with no assignment to the round or its job', async () => {
+      jwtService.verify.mockReturnValue({ sub: 7, role: 'inspector' });
+      teamMembersRepo.findOne.mockResolvedValue(null);
+      assignmentsRepo.findOne.mockResolvedValue(null);
+      authUsersRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.verifyRoundAccess('Bearer token', undefined, round),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('allows an inspector whose team (not the inspector directly) was assigned to the round', async () => {
+      jwtService.verify.mockReturnValue({ sub: 7, role: 'inspector' });
+      // แถวใน inspection_team_member ผูกกับ team (ไม่มี inspector ตรงๆ) — เกิดจากตอน admin
+      // เลือกทั้งทีมตอนสร้าง/เปิดรอบ (ดู daily-reports.service.ts resolveTeamMember). ใช้
+      // mockImplementation ตาม query แทน mockResolvedValueOnce เพราะ isInspectorAssignedToRound
+      // และ isInspectorAssignedToJob รันขนานกันผ่าน Promise.all ลำดับการเรียกจึงไม่แน่นอน
+      teamMembersRepo.findOne.mockImplementation(
+        (query: { where: { inspector?: unknown; team?: unknown } }) =>
+          Promise.resolve(query.where.team ? { id: 1 } : null),
+      );
+      assignmentsRepo.findOne.mockResolvedValue(null);
+      authUsersRepo.findOne.mockResolvedValue({ id: 7, teamId: 3 });
+
+      await expect(
+        service.verifyRoundAccess('Bearer token', undefined, round),
+      ).resolves.toEqual({ sub: 7, role: 'inspector' });
+    });
+
+    it('allows a link token whose project_id matches the round job', async () => {
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('invalid');
+      });
+      jwtService.verifyAsync.mockResolvedValue({
+        project_id: 12,
+        role: 'customer',
+      });
+
+      await expect(
+        service.verifyRoundAccess(undefined, 'link-token', round),
+      ).resolves.toEqual({ project_id: 12, role: 'customer' });
+    });
+
+    it('rejects a link token whose project_id does not match the round job', async () => {
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('invalid');
+      });
+      jwtService.verifyAsync.mockResolvedValue({
+        project_id: 99,
+        role: 'customer',
+      });
+
+      await expect(
+        service.verifyRoundAccess(undefined, 'link-token', round),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
   });
 });

@@ -1,5 +1,11 @@
 <template>
   <div style="overflow: hidden; width: 100%">
+    <div v-if="checkFreshness && isReportStale" class="row items-center q-pa-sm q-mb-sm freshness-banner">
+      <q-icon name="autorenew" color="warning" size="18px" class="q-mr-sm" />
+      <div class="text-caption text-grey-8">
+        {{ t('reports.defect.freshnessBanner') }}
+      </div>
+    </div>
     <div
       ref="reportRef"
       class="pdf-wrapper"
@@ -9,101 +15,101 @@
       <div class="pdf-page">
         <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
           <div class="text-caption text-grey-7">
-            {{ round.job.projectName }}, ครั้งที่ {{ round.roundNumber }},
+            {{ round.job.projectName }}, {{ t('reports.defect.roundOf', { n: round.roundNumber }) }},
             {{ formatDate(round.scheduledDate) }}
           </div>
-          <div class="text-caption text-grey-7">หน้า | 1 / {{ totalPages }}</div>
+          <div class="text-caption text-grey-7">{{ t('reports.defect.page') }} | 1 / {{ totalPages }}</div>
+        </div>
+        <div v-if="generatedAtLabel" class="row justify-end q-px-md">
+          <div class="text-caption text-grey-6" style="font-size: 9px">
+            {{ t('reports.defect.asOf', { date: generatedAtLabel }) }}
+          </div>
         </div>
 
         <div class="row justify-center q-py-sm">
           <img loading="eager" :src="reportLogo" style="height: 100px; object-fit: contain" />
         </div>
 
-        <div class="row justify-center q-mb-md">
+        <div class="row justify-center q-mb-sm">
           <img
             loading="eager"
             :src="
-              round.job.projectImageUrl
-                ? `${apiUrl}${round.job.projectImageUrl}`
-                : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600'
+              resolveImageUrl(
+                round.job.projectImageUrl,
+                'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600',
+              )
             "
-            style="
-              width: 95%;
-              max-height: 200px;
-              object-fit: cover;
-              border-radius: 8px;
-              margin-bottom: 16px;
-            "
+            style="width: 95%; max-height: 150px; object-fit: cover; border-radius: 8px"
           />
         </div>
 
-        <div class="row q-col-gutter-md q-px-md q-mb-md">
+        <div class="row q-col-gutter-md q-px-md q-mb-sm">
           <div class="col-6">
-            <div class="section-title q-mb-xs">ข้อมูลโครงการ</div>
+            <div class="section-title q-mb-xs">{{ t('reports.defect.projectInfo') }}</div>
             <div class="info-box q-pa-sm">
               <div class="row q-mb-xs">
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">ชื่อโครงการ TH</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.projectNameTh') }}</div>
                   <div class="text-caption text-bold">{{ round.job.projectName }}</div>
                 </div>
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">จังหวัด</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.province') }}</div>
                   <div class="text-caption text-bold">{{ round.job.address?.province }}</div>
                 </div>
               </div>
               <div class="row q-mb-xs">
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">เขต/อำเภอ</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.district') }}</div>
                   <div class="text-caption text-bold">{{ round.job.address?.district }}</div>
                 </div>
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">แขวง/ตำบล</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.subDistrict') }}</div>
                   <div class="text-caption text-bold">{{ round.job.address?.subDistrict }}</div>
                 </div>
               </div>
               <div class="row">
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">ประเภท</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.type') }}</div>
                   <div class="text-caption text-bold">
-                    {{ round.job.houseType?.name }} {{ round.job.address?.floor }} ชั้น
+                    {{ round.job.houseType?.name }} {{ round.job.address?.floor }} {{ t('reports.defect.floorSuffix') }}
                   </div>
                 </div>
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">พื้นที่</div>
-                  <div class="text-caption text-bold">{{ round.job.usableArea }} ตร.ม.</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.area') }}</div>
+                  <div class="text-caption text-bold">{{ round.job.usableArea }} {{ t('reports.defect.areaUnit') }}</div>
                 </div>
               </div>
             </div>
           </div>
 
           <div class="col-6">
-            <div class="section-title q-mb-xs">ข้อมูลลูกค้า</div>
+            <div class="section-title q-mb-xs">{{ t('reports.defect.customerInfo') }}</div>
             <div class="info-box q-pa-sm">
               <div class="row q-mb-xs">
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">ชื่อลูกค้า</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.customerName') }}</div>
                   <div class="text-caption text-bold">{{ round.job.customer?.fullName }}</div>
                 </div>
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">เบอร์โทรศัพท์</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.phoneNumber') }}</div>
                   <div class="text-caption text-bold">{{ round.job.customer?.phoneNumber }}</div>
                 </div>
               </div>
-              <div class="text-caption text-grey-7">อีเมล</div>
+              <div class="text-caption text-grey-7">{{ t('reports.defect.email') }}</div>
               <div class="text-caption text-description-header text-bold">
                 {{ round.job.customer.email }}
               </div>
               <div class="row q-mt-xs">
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">ผู้ประสานงาน</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.coordinator') }}</div>
                   <div class="text-caption text-bold">
-                    {{ round.teamMember?.inspector?.team?.teamName || '-' }}
+                    {{ round.createdBy?.fullName || '-' }}
                   </div>
                 </div>
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">เบอร์ผู้ประสานงาน</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.coordinatorPhone') }}</div>
                   <div class="text-caption text-bold">
-                    {{ round.teamMember?.inspector?.team?.contactInfo || '-' }}
+                    {{ round.createdBy?.phoneNumber || '-' }}
                   </div>
                 </div>
               </div>
@@ -111,21 +117,21 @@
           </div>
         </div>
 
-        <div class="row q-col-gutter-sm q-px-md q-mb-md">
+        <div class="row q-col-gutter-sm q-px-md q-mb-sm">
           <div v-for="stat in summaryStats" :key="stat.label" class="col-2">
             <div class="text-center q-pa-sm stat-card">
               <div class="text-caption" style="font-size: 10px">
                 {{ stat.label }}
               </div>
               <div class="text-h6 text-bold" :style="`color: ${stat.color}`">{{ stat.value }}</div>
-              <div class="text-caption" style="font-size: 10px">รายการ</div>
+              <div class="text-caption" style="font-size: 10px">{{ t('reports.defect.itemsSuffix') }}</div>
             </div>
           </div>
         </div>
 
-        <div class="q-px-md q-mb-md">
+        <div class="q-px-md q-mb-sm">
           <div class="row items-center justify-between q-mb-xs">
-            <div class="section-title" style="margin-bottom: 0">จำนวน Defect ตามประเภทงาน</div>
+            <div class="section-title" style="margin-bottom: 0">{{ t('reports.defect.defectsByCategory') }}</div>
             <div class="mini-legend">
               <span class="mini-legend-item"
                 ><span class="mini-legend-swatch" style="background: #ef4444" />Major</span
@@ -133,31 +139,30 @@
               <span class="mini-legend-item"
                 ><span class="mini-legend-swatch" style="background: #fb8c00" />Minor</span
               >
+              <span class="mini-legend-item"
+                ><span class="mini-legend-swatch" style="background: #1976d2" />{{ t('reports.defect.total') }}</span
+              >
             </div>
           </div>
-          <div class="mini-chart">
-            <div v-for="cat in categoryCounts" :key="cat.name" class="mini-bar-col">
-              <div class="mini-bar-count">{{ cat.count }}</div>
-              <div v-if="cat.major > 0 && cat.minor > 0" class="mini-bar-split">
-                <span style="color: #ef4444">{{ cat.major }}</span>
-                <span>/</span>
-                <span style="color: #fb8c00">{{ cat.minor }}</span>
-              </div>
-              <div
-                class="mini-bar-stack"
-                :style="`height: ${Math.max((cat.count / maxCategoryCount) * 100, 8)}%`"
-              >
-                <div :style="`height: ${cat.minorPct}%; background: #fb8c00`" />
-                <div :style="`height: ${cat.majorPct}%; background: #ef4444`" />
-              </div>
-              <div class="mini-bar-label">{{ cat.name }}</div>
+          <div class="category-table">
+            <div
+              v-for="row in categoryTableRows"
+              :key="row.name"
+              class="category-table-row"
+              :class="{ 'category-table-row-other': row.isOther }"
+            >
+              <span class="category-table-rank">{{ row.rank }}</span>
+              <span class="category-table-name">{{ row.name }}</span>
+              <span class="category-table-count" style="color: #ef4444">{{ row.major }}</span>
+              <span class="category-table-count" style="color: #fb8c00">{{ row.minor }}</span>
+              <span class="category-table-total">{{ row.count }}</span>
             </div>
           </div>
         </div>
 
-        <div class="row q-col-gutter-sm q-px-md q-mb-md">
+        <div class="row q-col-gutter-sm q-px-md q-mb-sm">
           <div class="col-6">
-            <div class="section-title q-mb-xs">จำนวน Defect ตามชั้น</div>
+            <div class="section-title q-mb-xs">{{ t('reports.defect.defectsByFloor') }}</div>
             <div class="mini-chart">
               <div v-for="f in floorCounts" :key="f.name" class="mini-bar-col">
                 <div class="mini-bar-count">{{ f.count }}</div>
@@ -170,9 +175,9 @@
             </div>
           </div>
           <div class="col-6">
-            <div class="section-title q-mb-xs">สถานะการซ่อม</div>
+            <div class="section-title q-mb-xs">{{ t('reports.defect.repairStatus') }}</div>
             <div class="mini-chart donut-panel">
-              <svg viewBox="0 0 42 42" width="100" height="100" class="donut-svg">
+              <svg viewBox="0 0 42 42" width="80" height="80" class="donut-svg">
                 <circle
                   v-for="seg in statusDonutSegments"
                   :key="seg.key"
@@ -204,7 +209,7 @@
             <img loading="eager" :src="LineLogo" style="height: 16px" />
             <span>@poysian,</span>
             <img loading="eager" :src="FacebookLogo" style="height: 16px" />
-            <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
+            <span>{{ t('reports.defect.footerTagline') }},</span>
             <img loading="eager" :src="CallLogo" style="height: 16px" />
             <span>098-765-4321,</span>
             <img loading="eager" :src="GmailLogo" style="height: 12px" />
@@ -217,10 +222,10 @@
       <div v-for="(chunk, pageIndex) in majorChunks" :key="`major-${pageIndex}`" class="pdf-page">
         <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
           <div class="text-caption text-grey-7">
-            {{ round.job.projectName }}, ครั้งที่ {{ round.roundNumber }},
+            {{ round.job.projectName }}, {{ t('reports.defect.roundOf', { n: round.roundNumber }) }},
             {{ formatDate(round.scheduledDate) }}
           </div>
-          <div class="text-caption text-grey-7">หน้า | {{ pageIndex + 2 }} / {{ totalPages }}</div>
+          <div class="text-caption text-grey-7">{{ t('reports.defect.page') }} | {{ pageIndex + 2 }} / {{ totalPages }}</div>
         </div>
 
         <div class="text-center text-bold q-py-sm" style="font-size: 16px; color: #ef4444">
@@ -231,29 +236,29 @@
           <div v-for="defect in chunk" :key="defect.defectId" class="defect-card">
             <div class="badge-id">#{{ defect.defectId }}</div>
             <div class="badge-main" style="background: #ef4444">{{ defect.severity }}</div>
-            <img loading="eager" :src="defect.imageUrl ? `${apiUrl}${defect.imageUrl}` : 'https://via.placeholder.com/400x300?text=No+Image'" class="defect-img" />
+            <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image')" class="defect-img" />
             <div class="card-body">
               <div class="room-title">{{ getRoomShortName(defect) }}</div>
               <div class="info-row">
-                <span class="label">ประเภทงาน:</span>
+                <span class="label">{{ t('reports.defect.jobTypeLabel') }}</span>
                 {{ defect.subCategories?.[0]?.category?.name }}
               </div>
               <div class="info-row">
-                <span class="label">รายการ:</span>
+                <span class="label">{{ t('reports.defect.itemsLabel') }}</span>
                 {{ defect.subCategories?.map((s) => s.name).join(', ') }}
               </div>
               <div class="info-row">
-                <span class="label">หมายเหตุ:</span> {{ defect.description }}
+                <span class="label">{{ t('reports.defect.noteLabel') }}</span> {{ defect.description }}
               </div>
               <div class="info-row">
-                <span class="label">สถานะ:</span>
+                <span class="label">{{ t('reports.defect.statusLabel') }}</span>
                 {{
                   defect.status === 'pending_repair'
-                    ? 'กำลังรอซ่อม'
+                    ? t('reports.defect.statusPendingRepair')
                     : defect.status === 'rejected'
-                      ? 'ซ่อมไม่ผ่าน'
+                      ? t('reports.defect.statusRejected')
                       : defect.status === 'verified'
-                        ? 'ซ่อมผ่านแล้ว'
+                        ? t('reports.defect.statusVerified')
                         : defect.status
                 }}
               </div>
@@ -267,7 +272,7 @@
             <img loading="eager" :src="LineLogo" style="height: 16px" />
             <span>@poysian,</span>
             <img loading="eager" :src="FacebookLogo" style="height: 16px" />
-            <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
+            <span>{{ t('reports.defect.footerTagline') }},</span>
             <img loading="eager" :src="CallLogo" style="height: 16px" />
             <span>098-765-4321,</span>
             <img loading="eager" :src="GmailLogo" style="height: 12px" />
@@ -280,11 +285,11 @@
       <div v-for="(page, pageIndex) in allDefectChunks" :key="`all-${pageIndex}`" class="pdf-page">
         <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
           <div class="text-caption text-grey-7">
-            {{ round.job.projectName }}, ครั้งที่ {{ round.roundNumber }},
+            {{ round.job.projectName }}, {{ t('reports.defect.roundOf', { n: round.roundNumber }) }},
             {{ formatDate(round.scheduledDate) }}
           </div>
           <div class="text-caption text-grey-7">
-            หน้า | {{ 1 + majorChunks.length + pageIndex + 1 }} / {{ totalPages }}
+            {{ t('reports.defect.page') }} | {{ 1 + majorChunks.length + pageIndex + 1 }} / {{ totalPages }}
           </div>
         </div>
 
@@ -321,22 +326,22 @@
               >
                 {{ defect.severity }}
               </div>
-              <img loading="eager" :src="defect.imageUrl ? `${apiUrl}${defect.imageUrl}` : 'https://via.placeholder.com/400x300?text=No+Image'" class="defect-img" />
+              <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image')" class="defect-img" />
               <div class="card-body">
                 <div class="info-row">
-                  <span class="label">ประเภทงาน:</span>
+                  <span class="label">{{ t('reports.defect.jobTypeLabel') }}</span>
                   {{ defect.subCategories?.[0]?.category?.name }}
                 </div>
                 <div class="info-row">
-                  <span class="label">รายการ:</span>
+                  <span class="label">{{ t('reports.defect.itemsLabel') }}</span>
                   {{ defect.subCategories?.map((s) => s.name).join(', ') }}
                 </div>
                 <div class="info-row">
-                  <span class="label">หมายเหตุ:</span> {{ defect.description }}
+                  <span class="label">{{ t('reports.defect.noteLabel') }}</span> {{ defect.description }}
                 </div>
                 <div class="info-row">
-                  <span class="label">สถานะ:</span>
-                  {{ defect.status === 'pending_repair' ? 'กำลังรอซ่อม' : defect.status }}
+                  <span class="label">{{ t('reports.defect.statusLabel') }}</span>
+                  {{ defect.status === 'pending_repair' ? t('reports.defect.statusPendingRepair') : defect.status }}
                 </div>
                 <img loading="eager" :src="reportLogo" class="card-logo-watermark-img" />
               </div>
@@ -367,7 +372,7 @@
             <img loading="eager" :src="LineLogo" style="height: 16px" />
             <span>@poysian,</span>
             <img loading="eager" :src="FacebookLogo" style="height: 16px" />
-            <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
+            <span>{{ t('reports.defect.footerTagline') }},</span>
             <img loading="eager" :src="CallLogo" style="height: 16px" />
             <span>098-765-4321,</span>
             <img loading="eager" :src="GmailLogo" style="height: 12px" />
@@ -383,17 +388,17 @@
       >
         <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
           <div class="text-caption text-grey-7">
-            {{ round.job.projectName }}, ครั้งที่ {{ round.roundNumber }},
+            {{ round.job.projectName }}, {{ t('reports.defect.roundOf', { n: round.roundNumber }) }},
             {{ formatDate(round.scheduledDate) }}
           </div>
           <div class="text-caption text-grey-7">
-            หน้า | {{ 1 + majorChunks.length + allDefectChunks.length + pageIndex + 1 }} /
+            {{ t('reports.defect.page') }} | {{ 1 + majorChunks.length + allDefectChunks.length + pageIndex + 1 }} /
             {{ totalPages }}
           </div>
         </div>
 
         <div class="text-center text-bold q-py-sm" style="font-size: 16px; color: #1976d2">
-          สรุปผลการตรวจ
+          {{ t('reports.defect.summaryTitle') }}
         </div>
 
         <div
@@ -524,7 +529,230 @@
             <img loading="eager" :src="LineLogo" style="height: 16px" />
             <span>@poysian,</span>
             <img loading="eager" :src="FacebookLogo" style="height: 16px" />
-            <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
+            <span>{{ t('reports.defect.footerTagline') }},</span>
+            <img loading="eager" :src="CallLogo" style="height: 16px" />
+            <span>098-765-4321,</span>
+            <img loading="eager" :src="GmailLogo" style="height: 12px" />
+            <span>poysian@gmail.com</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- หน้าแผนผังแสดงตำแหน่งข้อบกพร่อง (ก่อนหน้า AI Summary) -->
+      <div
+        v-for="(planPage, pageIdx) in planPages"
+        :key="planPage.planId"
+        class="pdf-page"
+      >
+        <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
+          <div class="text-caption text-grey-7">
+            {{ round.job.projectName }}, {{ t('reports.defect.roundOf', { n: round.roundNumber }) }},
+            {{ formatDate(round.scheduledDate) }}
+          </div>
+          <div class="text-caption text-grey-7">
+            {{ t('reports.defect.page') }} | {{ 1 + majorChunks.length + allDefectChunks.length + summaryChunks.length + pageIdx + 1 }} / {{ totalPages }}
+          </div>
+        </div>
+        <div v-if="generatedAtLabel" class="row justify-end q-px-md">
+          <div class="text-caption text-grey-6" style="font-size: 9px">
+            {{ t('reports.defect.asOf', { date: generatedAtLabel }) }}
+          </div>
+        </div>
+
+        <div class="page-content q-px-md q-py-sm column">
+          <!-- Title -->
+          <div class="row items-center justify-between q-mb-xs">
+            <div class="text-subtitle1 text-weight-bold text-primary">
+              {{ t('reports.defect.planTitlePrefix') }} — {{ planPage.planName }}
+              <span v-if="planPage.floorLabel" class="text-caption text-grey-7">({{ planPage.floorLabel }})</span>
+            </div>
+            <div class="text-caption text-grey-7">
+              {{ t('reports.defect.foundDefectsCount', { n: planPage.defects.length }) }}
+            </div>
+          </div>
+
+          <!-- Floor Plan Image with Pin Overlays -->
+          <div class="report-plan-container shadow-1 rounded-borders q-mb-sm">
+            <img
+              loading="eager"
+              :src="resolveImageUrl(planPage.imageUrl, 'https://via.placeholder.com/800x600?text=No+Plan+Image')"
+              class="report-plan-image"
+            />
+            <!-- Pins -->
+            <div
+              v-for="item in planPage.defects"
+              :key="item.defect.defectId"
+              class="report-plan-pin flex flex-center"
+              :style="{
+                left: `${item.planX}%`,
+                top: `${item.planY}%`,
+                backgroundColor: item.defect.severity === 'Major' ? '#e53935' : '#fb8c00',
+              }"
+            >
+              {{ item.displayIndex }}
+            </div>
+          </div>
+
+          <!-- Legend Table -->
+          <div class="report-plan-legend">
+            <div class="text-caption text-weight-bold text-grey-8 q-mb-xs">
+              {{ t('reports.defect.legendTitle') }}
+            </div>
+            <table class="report-legend-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px;">{{ t('reports.defect.colRank') }}</th>
+                  <th style="width: 140px;">{{ t('reports.defect.colRoomArea') }}</th>
+                  <th>{{ t('reports.defect.colDefectList') }}</th>
+                  <th style="width: 80px;">{{ t('reports.defect.colSeverity') }}</th>
+                  <th style="width: 70px;">{{ t('reports.defect.colStatus') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in planPage.defects.slice(0, 10)" :key="item.defect.defectId">
+                  <td class="text-center">
+                    <span
+                      class="legend-index-badge"
+                      :style="{
+                        backgroundColor: item.defect.severity === 'Major' ? '#e53935' : '#fb8c00',
+                      }"
+                    >
+                      {{ item.displayIndex }}
+                    </span>
+                  </td>
+                  <td>{{ getRoomShortName(item.defect) }}</td>
+                  <td>
+                    <span v-if="item.defect.subCategories && item.defect.subCategories.length">
+                      {{ item.defect.subCategories.map((s) => s.name).join(', ') }}
+                    </span>
+                    <span v-else>{{ item.defect.description || '-' }}</span>
+                  </td>
+                  <td class="text-center">
+                    <span
+                      class="legend-severity-tag"
+                      :class="item.defect.severity === 'Major' ? 'text-red text-weight-bold' : 'text-orange text-weight-medium'"
+                    >
+                      {{ item.defect.severity }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <span :class="item.defect.status === 'verified' ? 'text-green text-weight-bold' : 'text-red'">
+                      {{ item.defect.status === 'verified' ? t('reports.defect.passed') : t('reports.defect.failed') }}
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="planPage.defects.length > 10">
+                  <td colspan="5" class="text-center text-caption text-grey-6">
+                    {{ t('reports.defect.moreItems', { n: planPage.defects.length - 10 }) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="pdf-footer">
+          <span>© 2026, POYSIAN</span>
+          <div class="footer-contacts">
+            <img loading="eager" :src="LineLogo" style="height: 16px" />
+            <span>@poysian,</span>
+            <img loading="eager" :src="FacebookLogo" style="height: 16px" />
+            <span>{{ t('reports.defect.footerTagline') }},</span>
+            <img loading="eager" :src="CallLogo" style="height: 16px" />
+            <span>098-765-4321,</span>
+            <img loading="eager" :src="GmailLogo" style="height: 12px" />
+            <span>poysian@gmail.com</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- หน้า AI Summary ท้ายเล่ม -->
+      <div v-if="hasAiSummary" class="pdf-page">
+        <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
+          <div class="text-caption text-grey-7">
+            {{ round.job.projectName }}, {{ t('reports.defect.roundOf', { n: round.roundNumber }) }},
+            {{ formatDate(round.scheduledDate) }}
+          </div>
+          <div class="text-caption text-grey-7">{{ t('reports.defect.page') }} | {{ totalPages }} / {{ totalPages }}</div>
+        </div>
+        <div v-if="generatedAtLabel" class="row justify-end q-px-md">
+          <div class="text-caption text-grey-6" style="font-size: 9px">
+            {{ t('reports.defect.asOf', { date: generatedAtLabel }) }}
+          </div>
+        </div>
+
+        <div class="text-center text-bold q-py-sm" style="font-size: 16px; color: #1976d2">
+          {{ t('reports.defect.overallSummaryTitle') }}
+        </div>
+
+        <div class="row justify-center q-my-md">
+          <div class="completion-gauge">
+            <svg viewBox="0 0 120 120" width="160" height="160">
+              <circle cx="60" cy="60" r="52" fill="none" stroke="#eee" stroke-width="12" />
+              <circle
+                cx="60"
+                cy="60"
+                r="52"
+                fill="none"
+                :stroke="completionColor"
+                stroke-width="12"
+                stroke-linecap="round"
+                :stroke-dasharray="`${completionDash} ${completionGap}`"
+                transform="rotate(-90 60 60)"
+              />
+            </svg>
+            <div class="completion-gauge-label">
+              <div class="text-h4 text-bold" :style="`color: ${completionColor}`">
+                {{ round.completionPercent }}%
+              </div>
+              <div class="text-caption text-grey-7">{{ t('reports.defect.completeness') }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ที่มาของคะแนน — ให้ลูกค้าเห็นว่า % รวมมาจากสองส่วนไหน ไม่ใช่ตัวเลขลอยๆ -->
+        <div v-if="round.completionDefectScore != null" class="row q-col-gutter-sm q-mx-md q-mb-md">
+          <div class="col-6">
+            <div class="score-part">
+              <div class="text-caption text-grey-7">{{ t('reports.defect.defectScoreLabel') }}</div>
+              <div class="text-h6 text-bold" style="color: #1976d2">
+                {{ round.completionDefectScore }}%
+              </div>
+              <div class="text-caption text-grey-6" style="font-size: 9px">
+                {{ t('reports.defect.defectScoreNote') }}
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="score-part">
+              <div class="text-caption text-grey-7">{{ t('reports.defect.systemScoreLabel') }}</div>
+              <div class="text-h6 text-bold" style="color: #1976d2">
+                {{ round.completionSystemScore != null ? round.completionSystemScore + '%' : '-' }}
+              </div>
+              <div class="text-caption text-grey-6" style="font-size: 9px">
+                {{
+                  round.completionSystemScore != null
+                    ? t('reports.defect.systemScoreNoteFilled')
+                    : t('reports.defect.systemScoreNoteEmpty')
+                }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="round.aiSummaryText" class="q-mx-md q-pa-md ai-summary-box">
+          <div class="text-caption text-weight-bold text-grey-8 q-mb-xs">{{ t('reports.defect.aiSummaryTitle') }}</div>
+          <div class="text-body2" style="line-height: 1.6">{{ round.aiSummaryText }}</div>
+        </div>
+
+        <div class="pdf-footer">
+          <span>© 2026, POYSIAN</span>
+          <div class="footer-contacts">
+            <img loading="eager" :src="LineLogo" style="height: 16px" />
+            <span>@poysian,</span>
+            <img loading="eager" :src="FacebookLogo" style="height: 16px" />
+            <span>{{ t('reports.defect.footerTagline') }},</span>
             <img loading="eager" :src="CallLogo" style="height: 16px" />
             <span>098-765-4321,</span>
             <img loading="eager" :src="GmailLogo" style="height: 12px" />
@@ -537,7 +765,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { api } from 'src/boot/axios';
+
+const { t, locale } = useI18n();
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
 import PoysianLogo from 'src/assets/Logos/Poysian.png';
 import LineLogo from 'src/assets/Logos/LINE.png';
@@ -546,11 +778,31 @@ import CallLogo from 'src/assets/Logos/Call.png';
 import GmailLogo from 'src/assets/Logos/Gmail.png';
 const apiUrl = import.meta.env.VITE_API_URL;
 
-const props = defineProps<{
-  round: InspectionRound;
-  defects: Defect[];
-  summaryItems: InspectionSummaryItem[];
-}>();
+// ค่า default เก่าในฐานข้อมูลที่ไม่เคยมีไฟล์จริงรองรับ (ข้อมูลเสียของระบบเดิม) — แทนที่ด้วยรูปจริงที่อัปโหลดเก็บไว้ใน Supabase Storage แล้ว
+const LEGACY_IMAGE_REPLACEMENTS: Record<string, string> = {
+  '/defect-images/unknown.jpg':
+    'https://wduuxuwwbesgrcmcsnxq.supabase.co/storage/v1/object/public/hids-uploads/defects/unknown2.jpg',
+};
+
+const resolveImageUrl = (url: string | null | undefined, placeholder = ''): string => {
+  if (!url) return placeholder;
+  const replacement = LEGACY_IMAGE_REPLACEMENTS[url];
+  if (replacement) return replacement;
+  return /^(https?:|data:|blob:)/.test(url) ? url : `${apiUrl}${url}`;
+};
+
+const props = withDefaults(
+  defineProps<{
+    round: InspectionRound;
+    defects: Defect[];
+    summaryItems: InspectionSummaryItem[];
+    // เปิดเช็ค+โชว์ banner ว่ารายงานนี้เก่ากว่าข้อมูล defect ปัจจุบันไหม — ใช้เฉพาะหน้าที่คนเปิดดูจริง
+    // (Admin/Customer/Inspector) ห้ามเปิดใน PrintDefectReportPage.vue เพราะ Puppeteer จะ screenshot
+    // banner นี้ติดไปในตัว PDF ด้วย
+    checkFreshness?: boolean;
+  }>(),
+  { checkFreshness: false },
+);
 
 interface SummaryLabelGroup {
   label: string;
@@ -619,6 +871,37 @@ onMounted(() => {
   pageScale.value = Math.min(1, screenWidth / pageWidthPx);
 });
 
+const isReportStale = ref(false);
+let freshnessTimer: ReturnType<typeof setInterval> | null = null;
+
+// เทียบ hash ข้อมูล defect สดกับ hash ตอน generate PDF/AI summary ครั้งล่าสุด (backend คำนวณให้
+// ผ่าน isStale — ดู ReportsService.getCachedReportUrl) ระหว่างรอ debounce 30 วิ + เวลา render จริง
+// คนที่กดเข้ามาดูจะเห็นสรุป/PDF เก่าอยู่ เลย poll เตือนไว้กันงงว่าทำไมข้อมูลไม่ตรงกับที่เพิ่งแก้
+async function checkReportFreshness() {
+  try {
+    const { data } = await api.get<{ isStale: boolean }>(
+      `/inspection-rounds/${props.round.roundId}/report`,
+    );
+    isReportStale.value = data.isStale;
+    if (!data.isStale && freshnessTimer) {
+      clearInterval(freshnessTimer);
+      freshnessTimer = null;
+    }
+  } catch {
+    // เช็คไม่สำเร็จ ไม่โชว์ banner ผิดๆ ปล่อยผ่านเงียบๆ
+  }
+}
+
+onMounted(() => {
+  if (!props.checkFreshness) return;
+  void checkReportFreshness();
+  freshnessTimer = setInterval(() => void checkReportFreshness(), 8000);
+});
+
+onUnmounted(() => {
+  if (freshnessTimer) clearInterval(freshnessTimer);
+});
+
 const reportRef = ref<HTMLElement | null>(null);
 
 const summaryStats = computed(() => [
@@ -634,17 +917,17 @@ const summaryStats = computed(() => [
     color: '#fb8c00',
   },
   {
-    label: 'กำลังรอซ่อม',
+    label: t('reports.defect.statusPendingRepair'),
     value: props.defects.filter((d) => d.status === 'pending_repair').length,
     color: '#fb8c00',
   },
   {
-    label: 'ซ่อมไม่ผ่าน',
+    label: t('reports.defect.statusRejected'),
     value: props.defects.filter((d) => d.status === 'rejected').length,
     color: '#ef4444',
   },
   {
-    label: 'ซ่อมผ่านแล้ว',
+    label: t('reports.defect.statusVerified'),
     value: props.defects.filter((d) => d.status === 'verified').length,
     color: '#4CAF50',
   },
@@ -653,7 +936,7 @@ const summaryStats = computed(() => [
 const categoryCounts = computed(() => {
   const counts = new Map<string, { major: number; minor: number }>();
   props.defects.forEach((d) => {
-    const name = d.subCategories?.[0]?.category?.name ?? 'ไม่ระบุประเภท';
+    const name = d.subCategories?.[0]?.category?.name ?? t('reports.defect.unnamedCategory');
     const entry = counts.get(name) ?? { major: 0, minor: 0 };
     if (d.severity === 'Major') entry.major += 1;
     else entry.minor += 1;
@@ -674,7 +957,36 @@ const categoryCounts = computed(() => {
     .sort((a, b) => b.count - a.count);
 });
 
-const maxCategoryCount = computed(() => Math.max(1, ...categoryCounts.value.map((c) => c.count)));
+const CATEGORY_TABLE_LIMIT = 24;
+
+const categoryTableRows = computed(() => {
+  const rows = categoryCounts.value.map((cat, index) => ({
+    rank: index + 1,
+    name: cat.name,
+    major: cat.major,
+    minor: cat.minor,
+    count: cat.count,
+    isOther: false,
+  }));
+
+  if (rows.length <= CATEGORY_TABLE_LIMIT) return rows;
+
+  const shown = rows.slice(0, CATEGORY_TABLE_LIMIT);
+  const rest = categoryCounts.value.slice(CATEGORY_TABLE_LIMIT);
+  const otherMajor = rest.reduce((sum, c) => sum + c.major, 0);
+  const otherMinor = rest.reduce((sum, c) => sum + c.minor, 0);
+
+  shown.push({
+    rank: CATEGORY_TABLE_LIMIT + 1,
+    name: t('reports.defect.otherCategoriesFallback', { n: rest.length }),
+    major: otherMajor,
+    minor: otherMinor,
+    count: otherMajor + otherMinor,
+    isOther: true,
+  });
+
+  return shown;
+});
 
 const CHART_GRADIENT = ['#0b3d68', '#1462a8', '#1976d2', '#5b9de0', '#a9cdec'];
 
@@ -694,7 +1006,7 @@ function barColor(count: number, max: number) {
 const floorCounts = computed(() => {
   const byFloor = new Map<string, { count: number; order: number }>();
   props.defects.forEach((d) => {
-    const name = d.floor?.label ?? 'ไม่ระบุชั้น';
+    const name = d.floor?.label ?? t('reports.defect.unnamedFloor');
     const order = d.floor?.floorOrder ?? Number.MAX_SAFE_INTEGER;
     const existing = byFloor.get(name);
     byFloor.set(name, { count: (existing?.count ?? 0) + 1, order });
@@ -706,18 +1018,18 @@ const floorCounts = computed(() => {
 
 const maxFloorCount = computed(() => Math.max(1, ...floorCounts.value.map((f) => f.count)));
 
-const STATUS_META: { key: string; label: string; color: string }[] = [
-  { key: 'pending_repair', label: 'กำลังรอซ่อม', color: '#fb8c00' },
-  { key: 'repaired', label: 'ซ่อมแล้ว', color: '#1976d2' },
-  { key: 'rejected', label: 'ซ่อมไม่ผ่าน', color: '#ef4444' },
-  { key: 'verified', label: 'ซ่อมผ่านแล้ว', color: '#4CAF50' },
-];
+const STATUS_META = computed<{ key: string; label: string; color: string }[]>(() => [
+  { key: 'pending_repair', label: t('reports.defect.statusPendingRepair'), color: '#fb8c00' },
+  { key: 'repaired', label: t('reports.defect.statusRepaired'), color: '#1976d2' },
+  { key: 'rejected', label: t('reports.defect.statusRejected'), color: '#ef4444' },
+  { key: 'verified', label: t('reports.defect.statusVerified'), color: '#4CAF50' },
+]);
 
 const statusDonutSegments = computed(() => {
   const circumference = 2 * Math.PI * 15;
   const total = props.defects.length;
   let offset = 0;
-  return STATUS_META.map((meta) => {
+  return STATUS_META.value.map((meta) => {
     const count = props.defects.filter((d) => d.status === meta.key).length;
     const dash = total > 0 ? (count / total) * circumference : 0;
     const seg = { ...meta, count, dash, gap: circumference - dash, offset };
@@ -767,10 +1079,79 @@ const allDefectChunks = computed(() => {
   return pages;
 });
 
+const hasAiSummary = computed(
+  () => props.round.completionPercent != null || !!props.round.aiSummaryText,
+);
+
+// Compute plan pages for PDF - groups defects by planId, only plans with pinned defects
+const planPages = computed(() => {
+  const planMap = new Map<
+    number,
+    {
+      planId: number;
+      planName: string;
+      imageUrl: string;
+      floorLabel: string | null;
+      defects: { defect: Defect; planX: number; planY: number; displayIndex: number }[];
+    }
+  >();
+
+  let globalIndex = 1;
+  props.defects.forEach((defect) => {
+    const planId = defect.plan?.planId ?? defect.planId;
+    const planX = defect.planX;
+    const planY = defect.planY;
+    if (!planId || planX == null || planY == null) return;
+
+    if (!planMap.has(planId)) {
+      const planData = defect.plan;
+      planMap.set(planId, {
+        planId,
+        planName: planData?.name ?? t('reports.defect.planNameFallback', { id: planId }),
+        imageUrl: planData?.imageUrl ?? '',
+        floorLabel: planData?.floor?.label ?? null,
+        defects: [],
+      });
+    }
+    planMap.get(planId)!.defects.push({
+      defect,
+      planX: Number(planX),
+      planY: Number(planY),
+      displayIndex: globalIndex++,
+    });
+  });
+
+  return Array.from(planMap.values());
+});
+
 // const totalPages = computed(() => 1 + majorChunks.value.length + allDefectChunks.value.length);
 const totalPages = computed(
-  () => 1 + majorChunks.value.length + allDefectChunks.value.length + summaryChunks.value.length,
+  () =>
+    1 +
+    majorChunks.value.length +
+    allDefectChunks.value.length +
+    summaryChunks.value.length +
+    planPages.value.length +
+    (hasAiSummary.value ? 1 : 0),
 );
+
+const completionColor = computed(() => {
+  const pct = props.round.completionPercent ?? 0;
+  if (pct >= 80) return '#4CAF50';
+  if (pct >= 50) return '#fb8c00';
+  return '#ef4444';
+});
+
+const completionDash = computed(() => {
+  const circumference = 2 * Math.PI * 52;
+  const pct = props.round.completionPercent ?? 0;
+  return (pct / 100) * circumference;
+});
+
+const completionGap = computed(() => {
+  const circumference = 2 * Math.PI * 52;
+  return circumference - completionDash.value;
+});
 
 function getRoomShortName(defect: Defect) {
   return `${defect.room?.roomName ?? '-'}, ${defect.subRoom?.roomName ?? '-'}, ${defect.floor?.label ?? '-'}`;
@@ -778,14 +1159,46 @@ function getRoomShortName(defect: Defect) {
 
 function formatDate(dateStr: string) {
   if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('th-TH', {
+  return new Date(dateStr).toLocaleDateString(locale.value, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
 }
 
-function exportPdf() {
+// เวลาที่ PDF ไฟล์นี้ถูก render จริง (backend/src/reports/reports.service.ts) — โชว์ในตัวรายงาน
+// เพื่อให้เช็คได้ว่าไฟล์ที่กำลังดู/ดาวน์โหลดเป็นข้อมูล ณ เวลาไหน เพราะ PDF อาจ regenerate ช้ากว่าการแก้ defect ล่าสุดได้ (debounce 30 วิ + เวลา render)
+const generatedAtLabel = computed(() => {
+  if (!props.round.lastPdfGeneratedAt) return '';
+  return new Date(props.round.lastPdfGeneratedAt).toLocaleString(locale.value, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+});
+
+// เช็ค cache PDF ที่ backend generate ไว้ล่วงหน้าก่อนเสมอ (backend/src/reports/reports.service.ts) —
+// มีแล้วเปิดโหลดทันที ไม่ต้อง render ฝั่ง client เลย ถ้ายังไม่มี (เช่นรอบแรกที่ debounce ยังไม่ settle)
+// ค่อย fallback ไปสร้างแบบเดิมผ่าน window.print()
+async function exportPdf() {
+  try {
+    const { data } = await api.get<{ url: string | null; generatedAt: string | null }>(
+      `/inspection-rounds/${props.round.roundId}/report`,
+    );
+    if (data.url) {
+      window.open(data.url, '_blank');
+      return;
+    }
+  } catch {
+    // เช็ค cache ไม่สำเร็จ ปล่อยผ่านไป fallback ด้านล่าง
+  }
+
+  exportPdfClientSide();
+}
+
+function exportPdfClientSide() {
   if (!reportRef.value) return;
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
@@ -908,13 +1321,6 @@ function getDefectCategoryNames(defect: Defect) {
   return categoryNames.length ? categoryNames : ['ไม่ระบุระบบ'];
 }
 
-function resolveImageUrl(imageUrl: string) {
-  if (imageUrl.startsWith('http') || imageUrl.startsWith('data:') || imageUrl.startsWith('blob:')) {
-    return imageUrl;
-  }
-  return `${apiUrl}${imageUrl}`;
-}
-
 function getStickerMeta(source: InspectionSummaryItem | Defect): StickerMeta {
   const text =
     'option' in source
@@ -1017,14 +1423,14 @@ const summaryChunks = computed(() => {
   border: 1px solid #e0e0e0;
   border-radius: 4px;
   background: #fafafa;
-  min-height: 85px;
+  min-height: 65px;
 }
 .stat-card {
   border: 1px solid #e0e0e0;
   border-radius: 8px;
 }
 .mini-chart {
-  height: 150px;
+  height: 115px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1032,13 +1438,70 @@ const summaryChunks = computed(() => {
   border: 1px solid #e2e6ea;
   border-radius: 4px;
   background: #fafbfc;
-  padding: 10px 6px 6px;
+  padding: 8px 6px 6px;
+  overflow: hidden;
+}
+.category-table {
+  column-count: 3;
+  column-gap: 14px;
+  border: 1px solid #e2e6ea;
+  border-radius: 4px;
+  background: #fafbfc;
+  padding: 6px 8px;
+}
+.category-table-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 0;
+  border-bottom: 1px solid #edf0f2;
+  break-inside: avoid;
+  font-size: 8px;
+}
+.category-table-row:last-child {
+  border-bottom: none;
+}
+.category-table-rank {
+  min-width: 12px;
+  color: #9e9e9e;
+  font-variant-numeric: tabular-nums;
+}
+.category-table-name {
+  flex: 1;
+  min-width: 0;
+  color: #212121;
+  word-break: break-word;
+}
+.category-table-count {
+  min-width: 12px;
+  text-align: right;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+}
+.category-table-total {
+  min-width: 14px;
+  text-align: right;
+  font-weight: bold;
+  color: #1976d2;
+  font-variant-numeric: tabular-nums;
+}
+.category-table-row-other .category-table-name {
+  color: #757575;
+  font-style: italic;
 }
 .mini-bar-col {
   flex: 1;
   min-width: 0;
   max-width: 34px;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+.mini-bar-track {
+  width: 100%;
+  height: 95px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1073,14 +1536,6 @@ const summaryChunks = computed(() => {
   color: #45505b;
   word-break: break-word;
   max-height: 24px;
-  overflow: hidden;
-}
-.mini-bar-stack {
-  width: 100%;
-  max-width: 20px;
-  display: flex;
-  flex-direction: column-reverse;
-  border-radius: 2px 2px 0 0;
   overflow: hidden;
 }
 .mini-legend {
@@ -1124,6 +1579,35 @@ const summaryChunks = computed(() => {
   color: #212121;
   font-variant-numeric: tabular-nums;
   margin-left: 2px;
+}
+.completion-gauge {
+  position: relative;
+  width: 160px;
+  height: 160px;
+}
+.completion-gauge-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+.ai-summary-box {
+  background: #f5f7fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+.freshness-banner {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 8px;
+}
+.score-part {
+  background: #f5f7fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-align: center;
 }
 .defects-grid {
   display: grid;
@@ -1527,5 +2011,72 @@ const summaryChunks = computed(() => {
 
 .page-content {
   flex: 1;
+}
+
+.report-plan-container {
+  position: relative;
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+  max-height: 160mm;
+}
+
+.report-plan-image {
+  width: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.report-plan-pin {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.report-plan-legend {
+  width: 100%;
+}
+
+.report-legend-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.report-legend-table th,
+.report-legend-table td {
+  border: 1px solid #e0e0e0;
+  padding: 3px 6px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.report-legend-table th {
+  background: #f5f5f5;
+  font-weight: bold;
+}
+
+.legend-index-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: white;
+  font-size: 9px;
+  font-weight: bold;
 }
 </style>

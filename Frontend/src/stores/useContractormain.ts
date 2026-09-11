@@ -2,6 +2,7 @@ import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
+import { t } from 'src/boot/i18n';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 
@@ -25,6 +26,10 @@ export interface DefectItem {
   tags: string[];
   afterImage?: string;
   repairNote?: string;
+  planId?: number | null;
+  planX?: number | null;
+  planY?: number | null;
+  locationZone?: string | null;
 }
 
 export interface RepairStats {
@@ -55,6 +60,11 @@ interface DefectResponse {
   subRoom?: { subRoomId: number; roomName: string } | null;
   floor?: { floorId: number; label: string };
   subCategories?: DefectSubCategoryResponse[];
+  plan?: { planId: number; name: string; imageUrl: string } | null;
+  planId?: number | null;
+  planX?: number | null;
+  planY?: number | null;
+  locationZone?: string | null;
 }
 
 interface RoundResponse {
@@ -69,14 +79,14 @@ interface JobResponse {
 export function defectStatusLabel(status: string): string {
   switch (status) {
     case 'verified':
-      return 'ผ่าน';
+      return t('stores.contractorMain.statusVerified');
     case 'repaired':
-      return 'ซ่อมแล้ว';
+      return t('stores.contractorMain.statusRepaired');
     case 'rejected':
-      return 'ไม่ผ่าน';
+      return t('stores.contractorMain.statusRejected');
     case 'pending_repair':
     default:
-      return 'รอดำเนินการ';
+      return t('stores.contractorMain.statusPending');
   }
 }
 
@@ -117,22 +127,22 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
   });
 
   // ── API INTEGRATION ──────────────────────────────────────────────────────
-  const fetchRepairData = async (jobId: number) => {
+  const fetchRepairData = async (jobId: number, linkToken?: string | null) => {
     loading.value = true;
     error.value = null;
     currentJobId.value = jobId;
+    const params = linkToken ? { token: linkToken } : {};
     try {
       const [{ data: job }, { data: roundsData }] = await Promise.all([
-        api.get<JobResponse>(`/inspection-jobs/${jobId}`),
-        api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`),
+        api.get<JobResponse>(`/inspection-jobs/${jobId}`, { params }),
+        api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`, { params }),
       ]);
       contractorId.value = job.contractor?.contractorId ?? null;
-      const defectLists = await Promise.all(
-        roundsData.map((round) =>
-          api.get<DefectResponse[]>(`/defects/round/${round.roundId}`).then((res) => res.data),
-        ),
-      );
-      const defects = defectLists.flat();
+      // roundsData มาเรียงตาม roundNumber ASC — เอาเฉพาะรอบล่าสุด ไม่รวมรอบก่อนหน้า
+      const latestRound = roundsData[roundsData.length - 1];
+      const { data: defects } = latestRound
+        ? await api.get<DefectResponse[]>(`/defects/round/${latestRound.roundId}`, { params })
+        : { data: [] as DefectResponse[] };
 
       const roomMap = new Map<string, RepairRoom>();
       const items: DefectItem[] = [];
@@ -143,7 +153,9 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
       for (const defect of defects) {
         const roomName = defect.room?.roomName || '-';
         const subRoomName = defect.subRoom?.roomName || '-';
-        const floorLabel = defect.floor?.label ? `ชั้น ${defect.floor.label}` : '-';
+        const floorLabel = defect.floor?.label
+          ? t('stores.contractorMain.floorPrefix', { label: defect.floor.label })
+          : '-';
         const key = `${defect.room?.roomId ?? 0}-${defect.subRoom?.subRoomId ?? 0}-${defect.floor?.floorId ?? 0}`;
 
         let room = roomMap.get(key);
@@ -185,13 +197,17 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
           jobType: categoryNames.join(', ') || '-',
           status: defect.status,
           tags: (defect.subCategories ?? []).map((sub) => sub.name),
+          planId: defect.plan?.planId ?? defect.planId ?? null,
+          planX: defect.planX != null ? Number(defect.planX) : null,
+          planY: defect.planY != null ? Number(defect.planY) : null,
+          locationZone: defect.locationZone ?? null,
         });
       }
 
       baseRooms.value = Array.from(roomMap.values());
       allDefectItems.value = items;
     } catch (e) {
-      error.value = 'โหลดข้อมูลไม่สำเร็จ';
+      error.value = t('stores.contractorMain.loadFailed');
       console.error(e);
     } finally {
       loading.value = false;

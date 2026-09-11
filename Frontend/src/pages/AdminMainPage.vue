@@ -1,9 +1,6 @@
 <template>
   <q-page class="admin-page bg-grey-1">
     <div class="q-px-md q-pt-md">
-      <!-- Loading Indicator -->
-      <q-inner-loading :showing="loading" label="กำลังโหลดข้อมูล..." />
-
       <!-- Error Banner -->
       <q-banner v-if="error" class="text-white bg-negative q-mb-md" rounded dense>
         <template v-slot:avatar>
@@ -11,7 +8,7 @@
         </template>
         {{ error }}
         <template v-slot:action>
-          <q-btn flat label="ลองใหม่" @click="fetchAdminDashboard" />
+          <q-btn flat :label="t('adminWork.main.retry')" @click="fetchAdminDashboard" />
         </template>
       </q-banner>
 
@@ -55,7 +52,7 @@
             </q-avatar>
             <div class="text-h4 text-weight-bold text-dark q-mb-xs">{{ dashboard.totalProjects.toLocaleString() }}</div>
             <div class="text-caption text-grey-6" style="line-height: 1.2;">
-              โครงการทั้งหมด<br>ที่ได้รับการตรวจสอบ
+              {{ t('adminWork.main.totalProjectsLine1') }}<br>{{ t('adminWork.main.totalProjectsLine2') }}
             </div>
           </q-card>
         </div>
@@ -70,7 +67,7 @@
             </q-avatar>
             <div class="text-h4 text-weight-bold text-dark q-mb-xs">{{ dashboard.inProgress }}</div>
             <div class="text-caption text-grey-6" style="line-height: 1.2;">
-              ดำเนินงานอยู่
+              {{ t('adminWork.main.inProgress') }}
             </div>
           </q-card>
         </div>
@@ -81,14 +78,14 @@
           <q-card flat bordered class="mini-card" style="flex: 1;">
             <div class="row items-center q-mb-xs">
               <div class="dot-indicator bg-blue q-mr-sm"></div>
-              <div class="text-grey-7" style="font-size: 13px;">งานตรวจบ้าน</div>
+              <div class="text-grey-7" style="font-size: 13px;">{{ t('adminWork.main.homeInspectionJobs') }}</div>
             </div>
             <div class="text-h5 text-weight-bold text-dark">{{ dashboard.totalProjects - dashboard.construction }}</div>
           </q-card>
           <q-card flat bordered class="mini-card" style="flex: 1;">
             <div class="row items-center q-mb-xs">
               <div class="dot-indicator bg-orange q-mr-sm"></div>
-              <div class="text-grey-7" style="font-size: 13px;">งานก่อสร้าง</div>
+              <div class="text-grey-7" style="font-size: 13px;">{{ t('adminWork.main.constructionJobs') }}</div>
             </div>
             <div class="text-h5 text-weight-bold text-dark">{{ dashboard.construction }}</div>
           </q-card>
@@ -98,8 +95,8 @@
       <q-card flat bordered class="calendar-card q-mb-md">
         <div class="q-pa-md">
           <div class="row items-center justify-between q-mb-md">
-            <div class="text-weight-bold text-h6" style="font-size: 16px;">ตารางรายเดือน</div>
-            <q-btn unelevated color="blue-1" text-color="primary" label="วันนี้" size="sm" class="today-btn" @click="setToday" />
+            <div class="text-weight-bold text-h6" style="font-size: 16px;">{{ t('adminWork.main.monthlySchedule') }}</div>
+            <q-btn unelevated color="blue-1" text-color="primary" :label="t('adminWork.main.today')" size="sm" class="today-btn" @click="setToday" />
           </div>
           <div class="row items-center justify-between">
             <div class="row items-center text-dark text-weight-bold" style="font-size: 15px;">
@@ -140,10 +137,10 @@
         </div>
 
         <div class="calendar-footer row items-center justify-between">
-          <div class="text-caption text-weight-medium text-grey-8">ยอดรวมการตรวจสอบประจำวัน</div>
+          <div class="text-caption text-weight-medium text-grey-8">{{ t('adminWork.main.dailyInspectionTotal') }}</div>
           <div class="row items-center">
             <div class="small-blue-dot q-mr-xs"></div>
-            <div class="text-caption text-grey-6">จำนวนงาน</div>
+            <div class="text-caption text-grey-6">{{ t('adminWork.main.jobCount') }}</div>
           </div>
         </div>
       </q-card>
@@ -152,14 +149,14 @@
         <div class="row items-center justify-between q-pa-md">
           <div class="row items-center text-weight-bold text-dark" style="font-size: 16px;">
             <q-icon name="playlist_add_check" color="primary" size="24px" class="q-mr-sm" />
-            รายการทำงาน
+            {{ t('adminWork.main.workList') }}
           </div>
           <div
             class="text-primary text-weight-medium cursor-pointer"
             style="font-size: 13px;"
             @click="goToWorkList"
           >
-            ดูทั้งหมด
+            {{ t('adminWork.main.viewAll') }}
           </div>
         </div>
 
@@ -185,7 +182,7 @@
               <div v-if="getTaskBranchName(task)" class="text-grey-6 ellipsis" style="font-size: 12px; margin-top: 2px;">
                 {{ getTaskBranchName(task) }}
               </div>
-              <div class="text-grey-6 ellipsis" style="font-size: 12px; margin-top: 2px;">{{ task.inspectionType === 'CONSTRUCTION_INSPECTION' || task.inspectionType === 'ตรวจก่อสร้าง' ? 'งานก่อสร้าง' : 'ตรวจบ้าน' }}</div>
+              <div class="text-grey-6 ellipsis" style="font-size: 12px; margin-top: 2px;">{{ task.inspectionType === 'CONSTRUCTION_INSPECTION' || task.inspectionType === 'ตรวจก่อสร้าง' ? t('adminWork.main.constructionJob') : t('adminWork.main.homeInspectionJob') }}</div>
             </div>
 
             <div class="q-pl-sm">
@@ -206,7 +203,7 @@
             :disabled="currentPage === 1"
             @click="currentPage = Math.max(1, currentPage - 1)"
           />
-          <div class="text-caption text-grey-7">หน้า {{ currentPage }} / {{ totalPages }}</div>
+          <div class="text-caption text-grey-7">{{ t('adminWork.main.pageOf', { current: currentPage, total: totalPages }) }}</div>
           <q-btn
             dense flat round color="grey-7" icon="chevron_right"
             :disabled="currentPage === totalPages"
@@ -220,7 +217,7 @@
       <q-dialog v-model="showTaskDialog" persistent>
         <q-card style="min-width: 320px; max-width: 90vw">
           <q-card-section class="row items-center justify-between">
-            <div class="text-h6">รายละเอียดงาน</div>
+            <div class="text-h6">{{ t('adminWork.main.taskDetailTitle') }}</div>
             <q-btn dense flat icon="close" @click="showTaskDialog = false" />
           </q-card-section>
           <q-separator />
@@ -231,12 +228,12 @@
               สาขา: <strong>{{ selectedTaskBranchName }}</strong>
             </div>
             <div class="q-mb-sm">
-              สถานะ: <strong>{{ selectedTask?.status }}</strong>
+              {{ t('adminWork.main.statusLabel') }} <strong>{{ selectedTask?.status }}</strong>
             </div>
           </q-card-section>
           <q-card-actions align="right">
-            <q-btn flat label="ปิด" @click="showTaskDialog = false" />
-            <q-btn color="primary" label="ไปที่รายการ" @click="goToWorkList" />
+            <q-btn flat :label="t('adminWork.main.close')" @click="showTaskDialog = false" />
+            <q-btn color="primary" :label="t('adminWork.main.goToList')" @click="goToWorkList" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -248,11 +245,16 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
 import type { AxiosResponse } from 'axios';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
 
+const homeSpinner = createIconSpinner('home');
 const router = useRouter();
-const loading = ref<boolean>(false);
+const $q = useQuasar();
+const { t } = useI18n();
 const error = ref<string>('');
 
 // ==========================================
@@ -303,12 +305,12 @@ const displayMonth = ref(today.getMonth());
 const displayYear = ref(today.getFullYear());
 
 const daysEng = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-const monthNamesThai = [
-  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
-];
+const monthKeys = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+  'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+] as const;
 
-const currentMonthName = computed(() => monthNamesThai[displayMonth.value]);
+const currentMonthName = computed(() => t(`adminWork.main.months.${monthKeys[displayMonth.value]}`));
 
 const calendarDaysList = computed(() => {
   const year = displayYear.value;
@@ -463,7 +465,12 @@ interface DashboardApiResponse extends DashboardStats {
 }
 
 async function fetchAdminDashboard(): Promise<void> {
-  loading.value = true;
+  $q.loading.show({
+    spinner: homeSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   error.value = '';
 
   try {
@@ -503,10 +510,10 @@ async function fetchAdminDashboard(): Promise<void> {
     }
 
   } catch (err: unknown) {
-    error.value = 'เกิดข้อผิดพลาดในการโหลดข้อมูล โปรดลองใหม่อีกครั้ง';
+    error.value = t('adminWork.main.loadError');
     console.error('fetchAdminDashboard error:', err);
   } finally {
-    loading.value = false;
+    $q.loading.hide();
   }
 }
 

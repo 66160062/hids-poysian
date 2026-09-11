@@ -1,16 +1,22 @@
 <template>
   <q-page class="bg-grey-1">
     <!-- Header -->
-    <div class="header-bar bg-white row items-center justify-between q-px-md q-py-sm shadow-1">
-      <q-btn flat round icon="chevron_left" color="primary" @click="goBack" />
-      <div class="text-subtitle1 text-weight-bold">รายละเอียด</div>
-      <q-btn flat no-caps label="แก้ไข" color="primary" @click="onEdit" />
+    <div class="header-bar bg-white row items-center justify-between q-px-md q-py-sm">
+      <q-icon
+        name="arrow_back_ios_new"
+        color="primary"
+        size="24px"
+        class="cursor-pointer job-back-icon"
+        @click="goBack"
+      />
+      <div class="text-weight-bold job-detail-title">{{ t('adminJobs.construction.detailTitle') }}</div>
+      <q-btn flat no-caps :label="t('adminJobs.construction.edit')" color="primary" @click="onEdit" />
     </div>
 
     <!-- Loading State -->
     <div v-if="isLoading" class="text-center q-py-xl absolute-center full-width">
       <q-spinner color="primary" size="3em" />
-      <div class="text-grey-6 q-mt-md">กำลังโหลดข้อมูล...</div>
+      <div class="text-grey-6 q-mt-md">{{ t('adminJobs.construction.loadingData') }}</div>
     </div>
 
     <div v-else class="detail-content q-pa-md">
@@ -46,7 +52,7 @@
             </div>
             <div class="row items-center">
               <q-icon name="straighten" size="18px" color="primary" class="q-mr-sm" />
-              <span class="text-body2 text-grey-8">{{ job.area }} ตร.ม.</span>
+              <span class="text-body2 text-grey-8">{{ job.area }} {{ t('adminJobs.construction.sqm') }}</span>
             </div>
             <div v-if="job.appointmentDate" class="row items-center">
               <q-icon name="calendar_today" size="18px" color="primary" class="q-mr-sm" />
@@ -64,29 +70,29 @@
             <div class="col-6">
               <div class="row items-center q-mb-xs text-grey-6">
                 <q-icon name="person" size="16px" class="q-mr-xs" />
-                <span class="text-caption">ลูกค้า</span>
+                <span class="text-caption">{{ t('adminJobs.construction.customerLabel') }}</span>
               </div>
               <div class="text-weight-bold text-body2">{{ job.customerName }}</div>
               <div class="text-caption text-primary q-mt-xs">
                 <q-icon name="phone" size="13px" class="q-mr-xs" />
                 {{ job.customerPhone }}
               </div>
-              <div class="text-caption text-grey-7 q-mt-xs">Email : {{ job.customerEmail }}</div>
+              <div class="text-caption text-grey-7 q-mt-xs">{{ t('adminJobs.construction.emailPrefix') }} {{ job.customerEmail }}</div>
             </div>
 
             <!-- ผู้ประสานงาน -->
             <div class="col-6">
               <div class="row items-center q-mb-xs text-grey-6">
                 <q-icon name="contacts" size="16px" class="q-mr-xs" />
-                <span class="text-caption">ผู้ประสานงาน</span>
+                <span class="text-caption">{{ t('adminJobs.construction.coordinatorLabel') }}</span>
               </div>
               <div class="text-weight-bold text-body2">{{ job.coordName }}</div>
               <div class="text-caption text-primary q-mt-xs">
                 <q-icon name="phone" size="13px" class="q-mr-xs" />
                 {{ job.coordPhone }}
               </div>
-              <div class="text-caption text-grey-7 q-mt-xs">Email : {{ job.coordEmail }}</div>
-              <div class="text-caption text-grey-7 q-mt-xs">Line ID: {{ job.coordLine }}</div>
+              <div class="text-caption text-grey-7 q-mt-xs">{{ t('adminJobs.construction.emailPrefix') }} {{ job.coordEmail }}</div>
+              <div class="text-caption text-grey-7 q-mt-xs">{{ t('adminJobs.construction.lineIdPrefix') }} {{ job.coordLine }}</div>
             </div>
           </div>
 
@@ -111,7 +117,7 @@
             <q-btn
               unelevated
               color="primary"
-              label="View Plan"
+              :label="t('adminJobs.construction.viewPlan')"
               icon="grid_view"
               class="plan-btn"
               no-caps
@@ -124,7 +130,7 @@
       <!-- Contractor Progress Section -->
       <div v-if="inspectionRounds.length > 0 && job.status === 'เสร็จสิ้น'" class="q-mb-lg">
         <div class="row items-center justify-between q-mb-sm">
-          <div class="text-subtitle2 text-weight-bold">ความคืบหน้างานซ่อมของผู้รับเหมา</div>
+          <div class="text-subtitle2 text-weight-bold">{{ t('adminJobs.construction.contractorProgressTitle') }}</div>
           <div class="text-caption text-weight-bold" :class="job.contractorProgress >= 50 ? 'text-positive' : 'text-orange'">
             {{ Math.round(job.contractorProgress) }}%
           </div>
@@ -137,24 +143,24 @@
           class="q-mb-xs"
         />
         <div class="text-caption text-grey-6 text-right">
-          {{ job.contractorProgress >= 50 ? 'พร้อมสร้างรอบตรวจที่ 2 แล้ว' : 'ควรรอให้ถึง 50% ก่อนสร้างรอบถัดไป' }}
+          {{ job.contractorProgress >= 50 ? t('adminJobs.construction.readyForRound2') : t('adminJobs.construction.waitFor50Percent') }}
         </div>
       </div>
 
       <!-- รอบการตรวจ Section -->
-      <div class="text-subtitle2 text-weight-bold q-mb-sm">รอบการตรวจ</div>
+      <div class="text-subtitle2 text-weight-bold q-mb-sm">{{ t('adminJobs.construction.roundsTitle') }}</div>
       <q-card flat bordered class="card-round">
         <q-card-section v-if="inspectionRounds.length === 0" class="column items-center q-py-xl">
           <q-icon name="playlist_add_check_circle" size="56px" color="grey-4" class="q-mb-md" />
           <div class="text-body2 text-grey-6 text-center">
-            ยังไม่มีการสร้างรอบการตรวจ<br />
-            เริ่มต้นด้วยการสร้างรอบการตรวจแรกสำหรับโครงการนี้
+            {{ t('adminJobs.construction.noRoundsYet') }}<br />
+            {{ t('adminJobs.construction.startFirstRoundHint') }}
           </div>
           <q-btn
             unelevated
             color="primary"
             icon="add_circle"
-            label="สร้างรอบการตรวจใหม่"
+            :label="t('adminJobs.construction.createNewRound')"
             class="q-mt-lg create-round-btn"
             no-caps
             @click="onCreateRound"
@@ -178,12 +184,12 @@
               </q-item-section>
               <q-item-section>
                 <q-item-label class="text-weight-medium"
-                  >รอบที่ {{ round.roundNumber }}</q-item-label
+                  >{{ t('adminJobs.construction.roundNumberLabel', { number: round.roundNumber }) }}</q-item-label
                 >
                 <q-item-label caption class="column q-gutter-y-xs">
-                  <span>วันที่: {{ round.date }}</span>
+                  <span>{{ t('adminJobs.construction.datePrefix') }} {{ round.date }}</span>
                   <span v-if="round.inspectors && round.inspectors.length" class="text-primary text-caption text-weight-medium">
-                    ผู้ตรวจ: {{ round.inspectors.join(', ') }}
+                    {{ t('adminJobs.construction.inspectorsPrefix') }} {{ round.inspectors.join(', ') }}
                   </span>
                 </q-item-label>
               </q-item-section>
@@ -206,7 +212,7 @@
                 unelevated
                 color="primary"
                 icon="add_circle"
-                label="สร้างรอบการตรวจใหม่"
+                :label="t('adminJobs.construction.createNewRound')"
                 class="full-width create-round-btn"
                 no-caps
                 :disable="isLatestRoundNotCompleted"
@@ -214,7 +220,7 @@
                 @click="onCreateRound"
               />
               <q-tooltip v-if="isLatestRoundNotCompleted" class="bg-red text-white" anchor="top middle" self="bottom middle">
-                กรุณาปิดรอบก่อนหน้าให้เสร็จสิ้นก่อน
+                {{ t('adminJobs.construction.closeRoundFirst') }}
               </q-tooltip>
             </div>
           </div>
@@ -238,19 +244,30 @@
       </q-card>
     </q-dialog>
 
+    <!-- Plan Position Dialog (Read-only) -->
+    <PlanPositionDialog
+      v-model="showPlanDialog"
+      :job-id="jobId"
+      :initial-plan-id="selectedDefectPlanId"
+      :initial-x="selectedDefect?.planX ?? null"
+      :initial-y="selectedDefect?.planY ?? null"
+      :initial-zone="selectedDefect?.locationZone ?? null"
+      readonly
+    />
+
     <!-- Create New Round Dialog -->
     <q-dialog v-model="showCreateRoundDialog" transition-show="scale" transition-hide="scale">
       <q-card class="create-round-card q-pa-lg">
         <!-- Dialog Header -->
         <div class="row items-center justify-between q-mb-md">
-          <div class="text-h6 text-weight-bold text-dark-blue">สร้างรอบการตรวจใหม่</div>
+          <div class="text-h6 text-weight-bold text-dark-blue">{{ t('adminJobs.construction.createNewRound') }}</div>
           <q-btn icon="close" flat round dense v-close-popup class="text-grey-6 close-dialog-btn" />
         </div>
 
         <div class="row q-col-gutter-md q-mb-md">
           <!-- Inspection Date Field -->
           <div class="col-12 col-sm-6">
-            <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">วันที่นัดตรวจ</div>
+            <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">{{ t('adminJobs.construction.scheduledDateLabel') }}</div>
             <q-input
               borderless
               dense
@@ -271,7 +288,7 @@
 
           <!-- Time Field -->
           <div class="col-12 col-sm-6">
-            <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">รอบการเข้าตรวจ</div>
+            <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">{{ t('adminJobs.construction.timeSlotLabel') }}</div>
             <q-btn-toggle
               v-model="timeInput"
               spread
@@ -283,8 +300,8 @@
               text-color="grey-8"
               style="border: 1px solid #e0e0e0"
               :options="[
-                {label: 'เช้า (9:00-12:00)', value: '09:00:00'},
-                {label: 'บ่าย (13:00-16:00)', value: '13:00:00'}
+                {label: t('adminJobs.construction.morningSlot'), value: '09:00:00'},
+                {label: t('adminJobs.construction.afternoonSlot'), value: '13:00:00'}
               ]"
             />
           </div>
@@ -292,7 +309,7 @@
 
         <!-- Select Team vs Individuals Toggle -->
         <div class="q-mb-md">
-          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">รูปแบบการมอบหมายงาน</div>
+          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">{{ t('adminJobs.construction.assignmentModeLabel') }}</div>
           <q-btn-toggle
             v-model="assignmentMode"
             spread
@@ -303,8 +320,8 @@
             color="white"
             text-color="grey-8"
             :options="[
-              {label: 'มอบหมายให้ทีม', value: 'team'},
-              {label: 'มอบหมายรายบุคคล', value: 'individual'}
+              {label: t('adminJobs.construction.assignToTeam'), value: 'team'},
+              {label: t('adminJobs.construction.assignToIndividual'), value: 'individual'}
             ]"
             class="q-mb-md border-grey"
             style="border: 1px solid #e0e0e0"
@@ -313,13 +330,13 @@
 
         <!-- Select Team -->
         <div v-if="assignmentMode === 'team'" class="q-mb-lg">
-          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">เลือกทีม (Team)</div>
+          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">{{ t('adminJobs.construction.selectTeamLabel') }}</div>
           <q-select
             borderless
             dense
             v-model="selectedTeam"
             :options="teamStore.teamOptions"
-            placeholder="ค้นหาและเลือกทีม..."
+            :placeholder="t('adminJobs.construction.searchTeamPlaceholder')"
             class="custom-select"
             popup-content-class="custom-dropdown-popup"
             emit-value
@@ -334,7 +351,7 @@
         <!-- Build Inspection Team Field -->
         <div class="q-mb-lg">
           <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">
-            {{ assignmentMode === 'team' ? 'ผู้ตรวจเพิ่มเติม (ถ้ามี)' : 'เลือกผู้ตรวจ (รายบุคคล)' }}
+            {{ assignmentMode === 'team' ? t('adminJobs.construction.additionalInspectorsLabel') : t('adminJobs.construction.selectIndividualInspectorsLabel') }}
           </div>
           <q-select
             borderless
@@ -344,7 +361,7 @@
             use-input
             v-model="selectedInspectors"
             :options="filteredInspectorOptions"
-            placeholder="Search and select team members..."
+            :placeholder="t('adminJobs.construction.searchInspectorsPlaceholder')"
             class="custom-select"
             @filter="filterInspectors"
             popup-content-class="custom-dropdown-popup"
@@ -354,7 +371,7 @@
             </template>
           </q-select>
           <div class="text-caption text-grey-5 q-mt-xs q-pl-sm font-sub">
-            Start typing to search for inspectors
+            {{ t('adminJobs.construction.startTypingHint') }}
           </div>
         </div>
 
@@ -363,7 +380,7 @@
           <div class="col-6">
             <q-btn
               outline
-              label="ยกเลิก"
+              :label="t('adminJobs.construction.cancel')"
               class="full-width cancel-btn"
               no-caps
               v-close-popup
@@ -372,7 +389,7 @@
           <div class="col-6">
             <q-btn
               unelevated
-              label="สร้างรอบการตรวจ"
+              :label="t('adminJobs.construction.createRoundSubmit')"
               class="full-width submit-btn"
               no-caps
               :loading="isSubmittingRound"
@@ -389,14 +406,14 @@
         <q-toolbar class="bg-white shadow-1">
           <q-btn flat round dense icon="close" v-close-popup />
           <q-toolbar-title class="text-subtitle1 text-weight-bold">
-            ตรวจรอบที่ {{ selectedRound?.roundNumber ?? '-' }}
+            {{ t('adminJobs.construction.reviewRoundTitle', { number: selectedRound?.roundNumber ?? '-' }) }}
           </q-toolbar-title>
 
           <q-btn
             unelevated
             color="warning"
             icon="edit"
-            label="แก้ไขการตรวจ"
+            :label="t('adminJobs.construction.editInspection')"
             no-caps
             class="q-mr-sm"
             @click="goToEditConstruction(selectedRound)"
@@ -420,9 +437,9 @@
               <q-card flat bordered class="card-round review-panel">
                 <q-card-section class="row items-center justify-between">
                   <div>
-                    <div class="text-subtitle2 text-weight-bold">รายการ Defect</div>
+                    <div class="text-subtitle2 text-weight-bold">{{ t('adminJobs.construction.defectListTitle') }}</div>
                     <div class="text-caption text-grey-6">
-                      {{ roundDefects.length }} รายการ
+                      {{ roundDefects.length }} {{ t('adminJobs.construction.itemsSuffix') }}
                     </div>
                   </div>
                   <q-chip v-if="selectedRound" dense :color="getRoundStatusColor(selectedRound.status)" text-color="dark">
@@ -433,17 +450,17 @@
 
                 <div v-if="isLoadingRoundDefects" class="column items-center q-pa-xl">
                   <q-spinner color="primary" size="32px" />
-                  <div class="text-caption text-grey-6 q-mt-sm">กำลังโหลด defect...</div>
+                  <div class="text-caption text-grey-6 q-mt-sm">{{ t('adminJobs.construction.loadingDefects') }}</div>
                 </div>
 
                 <q-card-section v-else-if="roundDefectsError" class="column items-center q-py-xl">
                   <q-icon name="error_outline" size="48px" color="negative" />
-                  <div class="text-body2 text-negative q-mt-sm text-center">{{ roundDefectsError }}</div>
+                  <div class="text-body2 text-negative q-mt-sm text-center">{{ t(roundDefectsError) }}</div>
                   <q-btn
                     flat
                     color="primary"
                     icon="refresh"
-                    label="ลองใหม่"
+                    :label="t('adminJobs.construction.retry')"
                     class="q-mt-sm"
                     no-caps
                     @click="retryFetchRoundDefects"
@@ -452,9 +469,9 @@
 
                 <q-card-section v-else-if="roundDefects.length === 0" class="column items-center q-py-xl">
                   <q-icon name="fact_check" size="48px" color="grey-4" />
-                  <div class="text-body2 text-grey-6 q-mt-sm text-center">ไม่พบรายการ defect ในรอบนี้</div>
+                  <div class="text-body2 text-grey-6 q-mt-sm text-center">{{ t('adminJobs.construction.noDefectsInRound') }}</div>
                   <div class="text-caption text-grey-5 q-mt-xs text-center">
-                    หากเป็นรอบที่รออนุมัติ ให้ตรวจสอบว่า inspector ได้บันทึก defect แล้วหรือไม่
+                    {{ t('adminJobs.construction.checkInspectorSavedDefectsHint') }}
                   </div>
                 </q-card-section>
 
@@ -495,13 +512,22 @@
                         <q-item-label caption lines="2">
                           {{ defect.description || '-' }}
                         </q-item-label>
-                        <div class="row q-gutter-xs q-mt-xs">
+                        <div class="row items-center q-gutter-xs q-mt-xs">
                           <q-chip dense size="sm" :color="defect.severity === 'Major' ? 'red-1' : 'orange-1'" text-color="dark">
                             {{ defect.severity }}
                           </q-chip>
                           <q-chip dense size="sm" color="grey-2" text-color="dark">
-                            {{ defect.status }}
+                            {{ defectStatusLabel(defect.status) }}
                           </q-chip>
+                          <q-icon
+                            :name="getDefectPlanId(defect) ? 'place' : 'location_off'"
+                            :color="getDefectPlanId(defect) ? 'positive' : 'warning'"
+                            size="20px"
+                          >
+                            <q-tooltip>
+                              {{ getDefectPlanId(defect) ? t('adminJobs.construction.planPinned') : t('adminJobs.construction.planNotPinned') }}
+                            </q-tooltip>
+                          </q-icon>
                         </div>
                       </q-item-section>
                     </q-item>
@@ -530,7 +556,7 @@
                   <q-card-section v-if="!selectedDefect" class="column items-center q-py-xl">
                     <q-icon name="edit_note" size="56px" color="grey-4" />
                     <div class="text-body2 text-grey-6 q-mt-sm text-center">
-                      {{ roundDefectsError ? 'ยังแก้ไขไม่ได้เพราะโหลด defect ไม่สำเร็จ' : 'เลือกรายการ defect เพื่อแก้ไข' }}
+                      {{ roundDefectsError ? t('adminJobs.construction.cannotEditLoadFailed') : t('adminJobs.construction.selectDefectToEdit') }}
                     </div>
                   </q-card-section>
 
@@ -539,9 +565,23 @@
                       <div class="row items-center justify-between q-mb-md">
                         <div>
                           <div class="text-subtitle2 text-weight-bold">
-                            แก้ไข Defect #{{ selectedDefect.defectId }}
+                            {{ t('adminJobs.construction.editDefectTitle', { id: selectedDefect.defectId }) }}
                           </div>
                           <div class="text-caption text-grey-6">{{ getDefectRoomLabel(selectedDefect) }}</div>
+                          <div v-if="selectedDefectPlanId" class="q-mt-xs">
+                            <q-btn
+                              flat
+                              dense
+                              no-caps
+                              size="sm"
+                              color="primary"
+                              icon="place"
+                              :label="t('components.planPosition.viewButton')"
+                              class="bg-blue-1 text-primary q-px-sm"
+                              style="border-radius: 6px; font-weight: 500;"
+                              @click="showPlanDialog = true"
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -555,7 +595,7 @@
                         >
                           <template v-slot:error>
                             <div class="absolute-full flex flex-center bg-grey-3 text-grey-7">
-                              ไม่สามารถโหลดรูปภาพได้
+                              {{ t('adminJobs.construction.imageLoadFailed') }}
                             </div>
                           </template>
                         </q-img>
@@ -571,7 +611,7 @@
                           type="textarea"
                           rows="4"
                           v-model="defectEditForm.description"
-                          label="รายละเอียด defect"
+                          :label="t('adminJobs.construction.defectDescriptionLabel')"
                         />
 
                         <q-select
@@ -581,7 +621,7 @@
                           map-options
                           v-model="defectEditForm.severity"
                           :options="severityOptions"
-                          label="ความรุนแรง"
+                          :label="t('adminJobs.construction.severityLabel')"
                         />
 
                         <q-select
@@ -594,7 +634,7 @@
                           v-model="defectEditForm.subCategoryIds"
                           :options="defectSubCategoryOptions"
                           :loading="isLoadingDefectMaster"
-                          label="ประเภทตำหนิ"
+                          :label="t('adminJobs.construction.defectTypeLabel')"
                         />
 
                         <q-file
@@ -603,7 +643,7 @@
                           clearable
                           accept="image/*"
                           v-model="defectEditForm.file"
-                          label="เปลี่ยนรูป defect"
+                          :label="t('adminJobs.construction.changeDefectImage')"
                         >
                           <template #prepend>
                             <q-icon name="image" />
@@ -615,12 +655,12 @@
                     <q-separator />
 
                     <q-card-actions align="right" class="q-pa-md">
-                      <q-btn flat color="grey-7" label="ยกเลิก" no-caps @click="resetSelectedDefectForm" />
+                      <q-btn flat color="grey-7" :label="t('adminJobs.construction.cancel')" no-caps @click="resetSelectedDefectForm" />
                       <q-btn
                         unelevated
                         color="primary"
                         icon="save"
-                        label="บันทึก"
+                        :label="t('adminJobs.construction.save')"
                         no-caps
                         :loading="isSavingDefect"
                         @click="saveDefectChanges"
@@ -632,13 +672,13 @@
                 <!-- Report Management Section -->
                 <div class="col-auto bg-blue-grey-1 q-pa-md" style="border-radius: 0 0 16px 16px;">
                   <div class="row items-center justify-between">
-                    <div class="text-subtitle2 text-weight-bold text-primary">จัดการรายงานการตรวจ</div>
+                    <div class="text-subtitle2 text-weight-bold text-primary">{{ t('adminJobs.construction.reportManagementTitle') }}</div>
                     <div class="row q-gutter-x-sm">
                       <q-btn
                         unelevated
                         color="primary"
                         icon="summarize"
-                        label="สรุปรายงาน"
+                        :label="t('adminJobs.construction.summarizeReport')"
                         class="text-weight-bold"
                         style="border-radius: 8px"
                         no-caps
@@ -649,7 +689,7 @@
                         outline
                         color="primary"
                         icon="visibility"
-                        label="ดูรายงาน (PDF)"
+                        :label="t('adminJobs.construction.viewReportPdf')"
                         class="text-weight-bold"
                         style="border-radius: 8px"
                         no-caps
@@ -672,14 +712,14 @@
         <q-toolbar class="bg-white shadow-1">
           <q-btn flat round dense icon="close" v-close-popup />
           <q-toolbar-title class="text-subtitle1 text-weight-bold">
-            รายงานการก่อสร้างประจำวัน รอบที่ {{ selectedRound?.roundNumber ?? '-' }}
+            {{ t('adminJobs.construction.dailyConstructionReportTitle', { number: selectedRound?.roundNumber ?? '-' }) }}
           </q-toolbar-title>
 
           <q-btn
             unelevated
             color="primary"
             icon="download"
-            label="ดาวน์โหลด PDF"
+            :label="t('adminJobs.construction.downloadPdf')"
             no-caps
             class="q-mr-sm"
             @click="constructionPdfRef?.printPdf()"
@@ -689,7 +729,7 @@
             unelevated
             color="warning"
             icon="edit"
-            label="แก้ไขการตรวจ"
+            :label="t('adminJobs.construction.editInspection')"
             no-caps
             class="q-mr-sm"
             @click="goToEditConstruction(selectedRound)"
@@ -719,6 +759,7 @@
 import { computed, ref, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
 import { useUserStore } from '../stores/useUser';
 import { useTeamStore } from '../stores/useTeam';
@@ -727,10 +768,29 @@ import type { ExtendedConstructionReport } from 'src/stores/useConstructionDaily
 import ConstructionReportPdf from 'src/components/ConstructionReportPdf.vue';
 import type { Defect } from 'src/models';
 import InspectionItemCard from '../components/InspectionItemCard.vue';
+import PlanPositionDialog from '../components/PlanPositionDialog.vue';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
 
+const pdfSpinner = createIconSpinner('picture_as_pdf');
+
+const { t, locale } = useI18n();
 const constructionPdfRef = ref<InstanceType<typeof ConstructionReportPdf> | null>(null);
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
+
+function defectStatusLabel(status: string): string {
+  switch (status) {
+    case 'verified':
+      return t('adminJobs.construction.statusVerified');
+    case 'repaired':
+      return t('adminJobs.construction.statusRepaired');
+    case 'rejected':
+      return t('adminJobs.construction.statusRejected');
+    case 'pending_repair':
+    default:
+      return t('adminJobs.construction.statusPendingRepair');
+  }
+}
 
 const getImageUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
@@ -840,6 +900,12 @@ const roundDefects = ref<AdminDefect[]>([]);
 const roundDefectsError = ref('');
 const selectedRound = ref<RoundView | null>(null);
 const selectedDefect = ref<AdminDefect | null>(null);
+const showPlanDialog = ref(false);
+// /defects/round/:id doesn't return a flat planId, only the joined `plan` relation — mirrors useDefectlist.ts's fallback
+function getDefectPlanId(defect: AdminDefect | null): number | null {
+  return defect?.planId ?? defect?.plan?.planId ?? null;
+}
+const selectedDefectPlanId = computed(() => getDefectPlanId(selectedDefect.value));
 const defectSubCategoryOptions = ref<DefectCategoryOption[]>([]);
 const showRoundReviewDialog = ref(false);
 
@@ -859,9 +925,10 @@ interface GroupedDefectItem {
   defects: AdminDefect[];
 }
 
-const getFloorLabel = (d: AdminDefect) => d.floor?.label ?? 'ไม่ระบุชั้น';
-const getRoomName = (d: AdminDefect) => d.subRoom?.roomName ?? d.room?.roomName ?? 'ไม่ระบุห้อง';
-const getRoomType = (d: AdminDefect) => d.room?.roomName ?? 'ไม่ระบุประเภท';
+const getFloorLabel = (d: AdminDefect) => d.floor?.label ?? t('adminJobs.construction.floorNotSpecified');
+const getRoomName = (d: AdminDefect) =>
+  d.subRoom?.roomName ?? d.room?.roomName ?? t('adminJobs.construction.roomNotSpecified');
+const getRoomType = (d: AdminDefect) => d.room?.roomName ?? t('adminJobs.construction.roomTypeNotSpecified');
 
 const groupedDefects = computed<GroupedDefectItem[]>(() => {
   const map = new Map<string, GroupedDefectItem>();
@@ -954,7 +1021,7 @@ const formatRoundDate = (dateStr: string) => {
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return dateStr;
 
-  const formattedDate = date.toLocaleDateString('th-TH', {
+  const formattedDate = date.toLocaleDateString(locale.value, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -963,9 +1030,9 @@ const formatRoundDate = (dateStr: string) => {
 
   const hour = date.getHours();
   if (hour === 9) {
-    return `${formattedDate} (รอบเช้า)`;
+    return `${formattedDate} (${t('adminJobs.construction.morningRoundSuffix')})`;
   } else if (hour === 13) {
-    return `${formattedDate} (รอบบ่าย)`;
+    return `${formattedDate} (${t('adminJobs.construction.afternoonRoundSuffix')})`;
   }
 
   return formattedDate;
@@ -990,11 +1057,11 @@ const mapRoundToView = (round: RoundApiResponse) => {
   if (round.teamMembers && round.teamMembers.length > 0) {
     inspectors = round.teamMembers.map(member => {
       if (member.team?.team_name) {
-        return `[ทีม] ${member.team.team_name}`;
+        return `[${t('adminJobs.construction.teamTag')}] ${member.team.team_name}`;
       } else if (member.inspector?.fullName) {
         return member.inspector.fullName;
       }
-      return 'ไม่ระบุชื่อ';
+      return t('adminJobs.construction.nameNotSpecified');
     });
   } else if (round.teamMember?.inspector?.fullName) {
     // Fallback for old data structure if any
@@ -1002,7 +1069,7 @@ const mapRoundToView = (round: RoundApiResponse) => {
   } else if (jobTeamMembers.value.length > 0) {
     inspectors = jobTeamMembers.value.map((m) => m.fullName);
   } else {
-    inspectors = ['ไม่ระบุ'];
+    inspectors = [t('adminJobs.construction.notSpecified')];
   }
 
   return {
@@ -1075,10 +1142,19 @@ async function loadPageData() {
     await userStore.fetchUsers().catch((err) => {
       console.warn('Failed to fetch users for inspector picker:', err);
     });
+
+    // เข้ามาจากการแจ้งเตือน (มี roundId ใน query) ให้เปิด dialog รีวิวรอบนั้นให้เลย
+    const targetRoundId = Number(route.query.roundId);
+    if (targetRoundId) {
+      const targetRound = inspectionRounds.value.find((r) => r.id === targetRoundId);
+      if (targetRound) {
+        void openRoundReview(targetRound);
+      }
+    }
   } catch (error) {
     console.error('Failed to load job detail:', error);
     $q.notify({
-      message: 'ไม่สามารถโหลดข้อมูลงานได้',
+      message: t('adminJobs.construction.loadJobDataFailed'),
       color: 'negative',
       icon: 'error',
       position: 'top',
@@ -1138,7 +1214,7 @@ const job = computed(() => {
     projectName: data.projectName || '-',
     houseType: data.houseType?.name || '-',
     area: data.usableArea?.toString() || '-',
-    appointmentDate: latestRound?.date || (data.createdAt ? new Date(data.createdAt).toLocaleDateString('th-TH') : '-'),
+    appointmentDate: latestRound?.date || (data.createdAt ? new Date(data.createdAt).toLocaleDateString(locale.value) : '-'),
     address: formatAddressStr(data.address),
     customerName: data.customer?.fullName || '-',
     customerPhone: data.customer?.phoneNumber || '-',
@@ -1168,7 +1244,9 @@ const inspectionRounds = ref<{
 
 const canApproveSelectedRound = computed(() => selectedRound.value?.statusKey === 'SUBMITTED');
 const approvalButtonLabel = computed(() =>
-  selectedRound.value?.statusKey === 'APPROVED' ? 'อนุมัติแล้ว' : 'อนุมัติ',
+  selectedRound.value?.statusKey === 'APPROVED'
+    ? t('adminJobs.construction.approved')
+    : t('adminJobs.construction.approve'),
 );
 
 const goBack = async () => {
@@ -1213,7 +1291,7 @@ const openGoogleMaps = () => {
     window.open(mapsUrl, '_blank');
   } else {
     $q.notify({
-      message: 'ไม่พบข้อมูลที่อยู่สำหรับค้นหาในแผนที่',
+      message: t('adminJobs.construction.noAddressForMapSearch'),
       color: 'warning',
       position: 'top',
       icon: 'warning'
@@ -1231,19 +1309,6 @@ const viewProjectImage = () => {
   }
 };
 
-const viewPlan = () => {
-  if (job.value.housePlanImage) {
-    currentImageUrl.value = job.value.housePlanImage;
-    showImageDialog.value = true;
-  } else {
-    $q.notify({
-      message: 'ไม่มีรูปแปลนบ้านสำหรับโครงการนี้',
-      color: 'warning',
-      icon: 'warning',
-      position: 'top',
-    });
-  }
-};
 
 const viewDefectImage = () => {
   if (!selectedDefect.value?.imageUrl) return;
@@ -1255,7 +1320,7 @@ function getDefectRoomLabel(defect: AdminDefect) {
   const floor = defect.floor?.label;
   const room = defect.room?.roomName;
   const subRoom = defect.subRoom?.roomName;
-  return [floor, room, subRoom].filter(Boolean).join(' / ') || 'ไม่ระบุห้อง';
+  return [floor, room, subRoom].filter(Boolean).join(' / ') || t('adminJobs.construction.roomNotSpecified');
 }
 
 async function openRoundReview(round: RoundView) {
@@ -1270,11 +1335,16 @@ async function openRoundReview(round: RoundView) {
 
 async function handleViewReport(round: RoundView) {
   if (!round.summaryCompletedAt) {
-    $q.notify({ type: 'warning', message: 'กรุณาสรุปรายงานก่อนดูรายงาน' });
+    $q.notify({ type: 'warning', message: t('adminJobs.construction.summarizeReportFirst') });
     return;
   }
   isLoadingReport.value = true;
-  $q.loading.show({ message: 'กำลังเตรียมข้อมูลรายงาน...' });
+  $q.loading.show({
+    spinner: pdfSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     const reportData = await reportStore.fetchReportByRound(round.id);
     if (reportData) {
@@ -1290,7 +1360,7 @@ async function handleViewReport(round: RoundView) {
       showReportDialog.value = true;
     } else {
       $q.notify({
-        message: 'ไม่พบข้อมูลรายงานก่อสร้างในรอบนี้',
+        message: t('adminJobs.construction.noConstructionReportFound'),
         color: 'warning',
         icon: 'warning',
         position: 'top',
@@ -1299,7 +1369,7 @@ async function handleViewReport(round: RoundView) {
   } catch (err) {
     console.error(err);
     $q.notify({
-      message: 'โหลดข้อมูลรายงานไม่สำเร็จ',
+      message: t('adminJobs.construction.loadReportFailed'),
       color: 'negative',
       icon: 'error',
       position: 'top',
@@ -1309,6 +1379,20 @@ async function handleViewReport(round: RoundView) {
     isLoadingReport.value = false;
   }
 }
+
+const viewPlan = () => {
+  if (job.value.housePlanImage) {
+    currentImageUrl.value = job.value.housePlanImage;
+    showImageDialog.value = true;
+  } else {
+    $q.notify({
+      message: t('adminJobs.construction.noHousePlanImage'),
+      color: 'warning',
+      icon: 'warning',
+      position: 'top',
+    });
+  }
+};
 
 async function fetchRoundDefects(roundId: number) {
   isLoadingRoundDefects.value = true;
@@ -1321,9 +1405,9 @@ async function fetchRoundDefects(roundId: number) {
     console.error('Failed to load round defects:', error);
     roundDefects.value = [];
     selectedDefect.value = null;
-    roundDefectsError.value = 'โหลดรายการ defect ไม่สำเร็จ';
+    roundDefectsError.value = 'adminJobs.construction.loadDefectsFailed';
     $q.notify({
-      message: 'โหลดรายการ defect ไม่สำเร็จ',
+      message: t('adminJobs.construction.loadDefectsFailed'),
       color: 'negative',
       icon: 'error',
       position: 'top',
@@ -1380,7 +1464,7 @@ async function saveDefectChanges() {
     }
 
     $q.notify({
-      message: 'บันทึก defect สำเร็จ',
+      message: t('adminJobs.construction.saveDefectSuccess'),
       color: 'positive',
       icon: 'check_circle',
       position: 'top',
@@ -1388,7 +1472,7 @@ async function saveDefectChanges() {
   } catch (error) {
     console.error('Failed to update defect:', error);
     $q.notify({
-      message: 'บันทึก defect ไม่สำเร็จ',
+      message: t('adminJobs.construction.saveDefectFailed'),
       color: 'negative',
       icon: 'error',
       position: 'top',
@@ -1402,10 +1486,12 @@ function confirmApproveRound() {
   if (!selectedRound.value) return;
 
   $q.dialog({
-    title: 'ยืนยันการอนุมัติ',
-    message: `ต้องการอนุมัติรอบที่ ${selectedRound.value.roundNumber} ใช่ไหม?`,
-    ok: { label: 'อนุมัติ', color: 'positive' },
-    cancel: { label: 'ยกเลิก', flat: true, color: 'grey-7' },
+    title: t('adminJobs.construction.confirmApproveTitle'),
+    message: t('adminJobs.construction.confirmApproveMessage', {
+      number: selectedRound.value.roundNumber,
+    }),
+    ok: { label: t('adminJobs.construction.approve'), color: 'positive' },
+    cancel: { label: t('adminJobs.construction.cancel'), flat: true, color: 'grey-7' },
     persistent: true,
   }).onOk(() => {
     void approveSelectedRound();
@@ -1425,7 +1511,7 @@ async function approveSelectedRound() {
     selectedRound.value = updatedRound ?? null;
 
     $q.notify({
-      message: 'อนุมัติรอบตรวจเรียบร้อยแล้ว',
+      message: t('adminJobs.construction.approveRoundSuccess'),
       color: 'positive',
       icon: 'verified',
       position: 'top',
@@ -1433,7 +1519,7 @@ async function approveSelectedRound() {
   } catch (error) {
     console.error('Failed to approve round:', error);
     $q.notify({
-      message: 'อนุมัติไม่สำเร็จ กรุณาตรวจสอบว่าส่งอนุมัติจาก inspector แล้ว',
+      message: t('adminJobs.construction.approveRoundFailed'),
       color: 'negative',
       icon: 'error',
       position: 'top',
@@ -1511,10 +1597,12 @@ const formatDateDisplay = (dateStr: string) => {
 const onCreateRound = () => {
   if (job.value.status === 'เสร็จสิ้น' && job.value.contractorProgress < 50) {
     $q.dialog({
-      title: 'แจ้งเตือนความคืบหน้างานซ่อม',
-      message: `ผู้รับเหมาซ่อมแซมไปได้เพียง ${Math.round(job.value.contractorProgress)}% ซึ่งยังไม่ถึงเกณฑ์ 50% คุณยืนยันที่จะสร้างรอบตรวจที่ 2 หรือไม่?`,
-      cancel: { label: 'ยกเลิก', flat: true, color: 'grey-7' },
-      ok: { label: 'ยืนยันสร้าง', color: 'primary' },
+      title: t('adminJobs.construction.confirmCreateRoundTitle'),
+      message: t('adminJobs.construction.confirmCreateRoundMessage', {
+        percent: Math.round(job.value.contractorProgress),
+      }),
+      cancel: { label: t('adminJobs.construction.cancel'), flat: true, color: 'grey-7' },
+      ok: { label: t('adminJobs.construction.confirmCreate'), color: 'primary' },
       persistent: true,
     }).onOk(() => {
       openCreateRoundDialog();
@@ -1551,7 +1639,7 @@ const openCreateRoundDialog = () => {
 const submitCreateRound = async () => {
   if (!scheduledDate.value) {
     $q.notify({
-      message: 'กรุณาเลือกวันที่ตรวจ',
+      message: t('adminJobs.construction.selectDateRequired'),
       color: 'warning',
       icon: 'warning',
       position: 'top',
@@ -1561,7 +1649,7 @@ const submitCreateRound = async () => {
 
   if (assignmentMode.value === 'team' && !selectedTeam.value && selectedInspectors.value.length === 0) {
     $q.notify({
-      message: 'กรุณาเลือกทีม หรือ ผู้ตรวจอย่างน้อย 1 คน',
+      message: t('adminJobs.construction.selectTeamOrInspectorRequired'),
       color: 'warning',
       icon: 'warning',
       position: 'top',
@@ -1571,7 +1659,7 @@ const submitCreateRound = async () => {
 
   if (assignmentMode.value === 'individual' && selectedInspectors.value.length === 0) {
     $q.notify({
-      message: 'กรุณาเลือกผู้ตรวจอย่างน้อย 1 คน',
+      message: t('adminJobs.construction.selectInspectorRequired'),
       color: 'warning',
       icon: 'warning',
       position: 'top',
@@ -1604,10 +1692,10 @@ const submitCreateRound = async () => {
       }
     }
 
-    await api.post(`/daily-reports/${jobId.value}/rounds`, roundPayload);
+    const { data: createdRoundResp } = await api.post(`/daily-reports/${jobId.value}/rounds`, roundPayload);
 
-    // 2. ดึงรอบที่เพิ่งถูกสร้างขึ้นมา (backend สร้างไปที่ล่าสุดแล้ว)
-    // สำหรับคนที่เหลือ ให้ยิงเข้า /assignments เพื่อผูกกับรอบนั้น (ซึ่ง Backend ผูกกับรอบล่าสุดให้)
+    // 2. สำหรับคนที่เหลือ ให้ยิงเข้า /assignments พร้อม roundId ของรอบที่เพิ่งสร้าง
+    // เพื่อผูกสิทธิ์เฉพาะรอบนี้ ไม่ปลดล็อกทั้ง job
     let extraInspectors = selectedInspectors.value;
     if (assignmentMode.value === 'individual' || (!selectedTeam.value && assignmentMode.value === 'team')) {
       // ตัดคนแรกออก เพราะถูกส่งไปสร้างรอบแล้ว
@@ -1617,7 +1705,8 @@ const submitCreateRound = async () => {
     for (const inspector of extraInspectors) {
       await api.post('/assignments', {
         jobId: jobId.value,
-        inspectorId: inspector.value
+        inspectorId: inspector.value,
+        roundId: createdRoundResp.roundId,
       });
     }
 
@@ -1628,7 +1717,9 @@ const submitCreateRound = async () => {
 
     const createdRound = inspectionRounds.value[inspectionRounds.value.length - 1];
     $q.notify({
-      message: `สร้างรอบการตรวจที่ ${createdRound?.roundNumber ?? ''} สำเร็จ`,
+      message: t('adminJobs.construction.createRoundSuccess', {
+        number: createdRound?.roundNumber ?? '',
+      }),
       color: 'positive',
       icon: 'check_circle',
       position: 'top',
@@ -1638,7 +1729,7 @@ const submitCreateRound = async () => {
   } catch (error) {
     console.error('Failed to create round:', error);
     $q.notify({
-      message: 'ไม่สามารถสร้างรอบการตรวจได้ กรุณาลองใหม่อีกครั้ง',
+      message: t('adminJobs.construction.createRoundFailed'),
       color: 'negative',
       icon: 'error',
       position: 'top',
@@ -1667,6 +1758,22 @@ function getRoundStatusColor(status: string) {
   position: sticky;
   top: 0;
   z-index: 100;
+}
+
+.job-back-icon {
+  position: relative;
+  z-index: 2;
+}
+
+.job-detail-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  pointer-events: none;
+  font-size: 21px;
+  letter-spacing: 0.01em;
 }
 
 .detail-content {

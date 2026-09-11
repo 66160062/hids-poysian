@@ -21,18 +21,24 @@ const routes: RouteRecordRaw[] = [
     path: '/customer',
     component: () => import('layouts/CustomerScreen.vue'),
     children: [
-      { path: '', component: () => import('pages/CustomerMainPage.vue') },
+      { path: '', component: () => import('pages/CustomerMainPage.vue'), meta: { icon: 'home' } },
       {
         path: 'defect',
         name: 'defectList',
         component: () => import('pages/CustomerDefectListPage.vue'),
-        meta: { title: 'รายการ Defect' },
+        meta: { title: 'nav.customer.titleDefectList', icon: 'assignment' },
       },
       {
         path: 'report',
         name: 'reportList',
         component: () => import('pages/CustomerReportPage.vue'),
-        meta: { title: 'สรุปรายงาน' },
+        meta: { title: 'nav.customer.titleReportList', icon: 'bar_chart' },
+      },
+      {
+        path: 'defect-detail/:id',
+        name: 'customerDefectDetail',
+        component: () => import('pages/ContractorUpdateRepairPage.vue'),
+        meta: { title: 'nav.customer.titleDefectDetail' },
       },
     ],
   },
@@ -73,32 +79,28 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         component: () => import('pages/AdminMainPage.vue'),
-        meta: { title: 'หน้าหลัก', icon: 'home' },
+        meta: { title: 'nav.admin.titleDashboard', icon: 'home' },
       },
       {
         path: 'work',
         component: () => import('pages/AdminWorkListPage.vue'),
-        meta: { title: 'จัดการงานตรวจ', icon: 'business_center' },
+        meta: { title: 'nav.admin.titleWork', icon: 'business_center' },
       },
 
       {
         path: 'profile',
         component: () => import('pages/AdminProfilePage.vue'),
-        meta: { title: 'โปรไฟล์', icon: 'person' },
-      },
-      {
-        path: 'notifications',
-        component: () => import('pages/AdminNotificationsPage.vue'),
-        meta: { title: 'การแจ้งเตือน', icon: 'notifications' },
+        meta: { title: 'nav.admin.titleProfile', icon: 'person' },
       },
       {
         path: 'users',
         component: () => import('pages/AdminUserManagementPage.vue'),
-        meta: { title: 'จัดการผู้ใช้', icon: 'group' },
+        meta: { title: 'nav.admin.titleUsers', icon: 'group' },
       },
       {
         path: 'teams',
         component: () => import('pages/AdminTeamManagementPage.vue'),
+        meta: { title: 'nav.admin.titleTeams', icon: 'groups' },
       },
       {
         path: 'branches',
@@ -113,17 +115,28 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'menu',
         component: () => import('pages/AdminMainPage.vue'),
-        meta: { title: 'หมวดหมู่งาน', icon: 'category' },
+        meta: { title: 'nav.admin.titleMenu', icon: 'category' },
       },
       {
         path: 'report',
         component: () => import('pages/AdminMainPage.vue'),
-        meta: { title: 'รายงาน', icon: 'bar_chart' },
+        meta: { title: 'nav.admin.titleReport', icon: 'bar_chart' },
       },
       {
         path: 'settings',
         component: () => import('pages/AdminMainPage.vue'),
-        meta: { title: 'ตั้งค่า', icon: 'settings' },
+        meta: { title: 'nav.admin.titleSettings', icon: 'settings' },
+      },
+    ],
+  },
+  {
+    path: '/admin/notifications',
+    component: () => import('layouts/FullScreen.vue'),
+    children: [
+      {
+        path: '',
+        component: () => import('pages/AdminNotificationsPage.vue'),
+        meta: { title: 'nav.admin.titleNotifications', icon: 'notifications' },
       },
     ],
   },
@@ -159,7 +172,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/admin/report/:roundId',
-    component: () => import('layouts/FullScreen.vue'),
+    component: () => import('layouts/AdminInspectionScreen.vue'),
     children: [
       {
         path: '',
@@ -178,13 +191,41 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    // แอดมินใช้หน้าตรวจชุดเดียวกับ inspector เพื่อแก้ defect ของรอบที่ยื่นอนุมัติมาแล้ว
+    // (inspector แก้ไม่ได้ตอน SUBMITTED แล้ว — ดู useRoundLock) แยก route ไว้ไม่ให้หลุดเข้า shell ของ inspector
+    path: '/admin/inspection/:roundId',
+    component: () => import('layouts/AdminInspectionScreen.vue'),
+    children: [
+      {
+        path: '',
+        name: 'adminInspection',
+        component: () => import('pages/InspectionPage.vue'),
+      },
+      {
+        path: 'room-defect',
+        name: 'adminRoomDefect',
+        component: () => import('pages/RoomDefectPage.vue'),
+      },
+      {
+        path: 'add-defect',
+        name: 'adminAddDefect',
+        component: () => import('pages/AddDefectPage.vue'),
+      },
+      {
+        path: 'verify-defect',
+        name: 'adminVerifyDefect',
+        component: () => import('pages/VerifyDefectPage.vue'),
+      },
+    ],
+  },
+  {
     path: '/inspector',
     component: () => import('layouts/InspectorScreen.vue'),
     children: [
       {
         path: 'Inspectsdashboard',
         component: () => import('pages/InspectorDashboardPage.vue'),
-        meta: { title: 'การตรวจบ้าน' },
+        meta: { title: 'การตรวจบ้าน', icon: 'engineering' },
       },
       {
         path: 'job/:roundId',
@@ -225,7 +266,29 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'Consdashboard',
         component: () => import('pages/ConstructorDashboardPage.vue'),
-        meta: { title: 'ตรวจก่อสร้าง' },
+        meta: { title: 'ตรวจก่อสร้าง', icon: 'assignment_turned_in' },
+      },
+    ],
+  },
+  {
+    // route แยกต่างหาก ไม่ซ้อนใน InspectorScreen.vue เพราะหน้านี้มี q-layout/q-header เป็นของตัวเองอยู่แล้ว
+    // (ซ้อนกันจะทำให้ header ของ InspectorScreen ทับกับ header ของหน้านี้)
+    path: '/inspector/profile',
+    component: () => import('layouts/FullScreen.vue'),
+    children: [
+      {
+        path: '',
+        component: () => import('pages/InspectorProfilePage.vue'),
+      },
+    ],
+  },
+  {
+    path: '/inspector/notifications',
+    component: () => import('layouts/FullScreen.vue'),
+    children: [
+      {
+        path: '',
+        component: () => import('pages/InspectorNotificationsPage.vue'),
       },
       {
         path: 'notifications',
@@ -245,14 +308,19 @@ const routes: RouteRecordRaw[] = [
   component: () => import('layouts/ContractorScreen.vue'),
   redirect: '/contractor/defect-list',
   children: [
-    { path: 'repair-overview', component: () => import('pages/ContractorMainPage.vue'),           meta: { title: 'จุดที่ต้องแก้ไข' } },
-    { path: 'defect-list',     component: () => import('pages/ContractorRepairDefectListPage.vue'),          meta: { title: 'รายการ Defect' } },
-    { path: 'defect-list/:id', component: () => import('pages/ContractorRepairDefectListPage.vue'),          meta: { title: 'รายการ Defect' } },
-    { path: 'defect-detail/:id', component: () => import('pages/ContractorUpdateRepairPage.vue'), meta: { title: 'อัพเดตสถานะซ่อม' } },
+    { path: 'repair-overview', component: () => import('pages/ContractorMainPage.vue'),           meta: { title: 'nav.contractor.titleRepairOverview', icon: 'home_repair_service' } },
+    { path: 'defect-list',     component: () => import('pages/ContractorRepairDefectListPage.vue'),          meta: { title: 'nav.contractor.titleDefectList', icon: 'assignment' } },
+    { path: 'defect-list/:id', component: () => import('pages/ContractorRepairDefectListPage.vue'),          meta: { title: 'nav.contractor.titleDefectList', icon: 'assignment' } },
+    { path: 'defect-detail/:id', component: () => import('pages/ContractorUpdateRepairPage.vue'), meta: { title: 'nav.contractor.titleDefectDetail' } },
   ],
   meta: { requiresAuth: false },
 },
 
+  {
+    // route headless สำหรับ Puppeteer เท่านั้น (backend/src/reports/reports.service.ts) — ไม่มี layout/UI รอบข้าง
+    path: '/print/report/:roundId',
+    component: () => import('pages/PrintDefectReportPage.vue'),
+  },
   {
     path: '/:catchAll(.*)*',
     component: () => import('pages/ErrorNotFound.vue'),

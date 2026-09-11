@@ -1,22 +1,15 @@
 <template>
-  <q-page class="bg-grey-3 row justify-center">
+  <q-page class="bg-grey-1 row justify-center">
     <div
-      class="bg-white relative-position"
+      class="bg-white relative-position detail-card"
       :style="{
         width: '100%',
         maxWidth: isMobile ? '430px' : '800px',
         minHeight: '100vh',
-        boxShadow: '0 0 20px rgba(0,0,0,0.1)',
       }"
     >
-      <div
-        v-if="route.path.includes('/admin')"
-        class="row items-center q-pt-md q-pb-sm q-px-md relative-position"
-      >
-        <q-btn flat round dense icon="arrow_back_ios_new" color="primary" @click="router.back()" />
-        <div class="text-h6 text-weight-bold q-ml-sm text-primary">สรุปรายงานการตรวจ</div>
-      </div>
-      <div v-else class="row items-center justify-between q-pb-md q-px-md relative-position"></div>
+      <!-- ปุ่มย้อนกลับ/หัวข้ออยู่ที่ layout แล้ว (InspectorScreen / AdminInspectionScreen) -->
+      <div class="row items-center justify-between q-pb-md q-px-md relative-position"></div>
 
       <div class="q-px-lg q-pb-xl col column">
         <div class="text-weight-bold q-mb-md" style="font-size: 18px">
@@ -81,6 +74,7 @@
                         :key="opt.optionId"
                         :label="opt.value"
                         :model-value="isSelected(template.templateId, opt.optionId)"
+                        :disable="isLocked"
                         @update:model-value="toggleOption(template.templateId, opt.optionId)"
                       />
                     </div>
@@ -91,6 +85,7 @@
                       :options="options.map((o) => ({ label: o.value, value: o.optionId }))"
                       :model-value="getSelected(template.templateId, groupName)"
                       type="radio"
+                      :disable="isLocked"
                       @update:model-value="selectOption(template.templateId, $event, groupName)"
                     />
                   </div>
@@ -100,8 +95,9 @@
                     v-model="detailValues[template.templateId]"
                     outlined
                     dense
-                    placeholder="หมายเหตุเพิ่มเติม"
+                    :placeholder="t('inspection.report.additionalNote')"
                     class="q-mt-sm"
+                    :disable="isLocked"
                   />
 
                   <!-- Photo Evidence -->
@@ -186,10 +182,10 @@
         </div>
       </div>
 
-      <div class="q-px-lg q-pb-xl">
+      <div v-if="!isLocked" class="q-px-lg q-pb-xl">
         <q-btn
           color="primary"
-          label="บันทึกรายงาน"
+          :label="t('inspection.report.saveReport')"
           class="full-width q-py-md"
           style="border-radius: 12px; font-size: 16px"
           @click="saveAll"
@@ -202,16 +198,21 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { api } from 'src/boot/axios';
+import { useRoundLock } from 'src/composables/useRoundLock';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
 import type { InspectionSummaryItem, SummaryTemplate, SummaryTemplateOption } from 'src/models';
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
 const isMobile = computed(() => $q.screen.lt.md);
 const roundId = route.params.roundId as string;
-const loading = ref(true);
+const summaryReportSpinner = createIconSpinner('summarize');
+const { isLocked, fetchLockState } = useRoundLock(roundId);
 
 const templates = ref<SummaryTemplate[]>([]);
 const summaryItems = ref<InspectionSummaryItem[]>([]);
@@ -352,7 +353,9 @@ async function fetchSummaryItems() {
       if (!photos.value[templateId]) photos.value[templateId] = [];
       photos.value[templateId]?.push({
         id: item.itemId,
-        url: `${apiBaseUrl}${item.detailValue}`,
+        url: item.detailValue?.startsWith('http')
+          ? item.detailValue
+          : `${apiBaseUrl}${item.detailValue}`,
       });
       return;
     }
@@ -397,7 +400,7 @@ function groupOptions(options: SummaryTemplateOption[]) {
   options
     .filter((opt) => opt.type !== 'photo') // option ประเภท photo แสดงในกล่อง "รูปหลักฐาน" แยกต่างหากอยู่แล้ว
     .forEach((opt) => {
-      const g = opt.group || 'ทั่วไป';
+      const g = opt.group || t('inspection.report.generalGroup');
       if (!groups[g]) groups[g] = [];
       groups[g].push(opt);
     });
@@ -430,9 +433,7 @@ async function executeSaveAll() {
   $q.loading.show();
 
   try {
-    await api.delete(`/inspection-summary-items/round/${roundId}`);
-
-    for (const template of templates.value) {
+    const items = templates.value.flatMap((template) => {
       const allSelected = [
         ...(selectedOptions.value[String(template.templateId)] ?? []),
         ...Object.entries(selectedOptions.value)
@@ -440,15 +441,14 @@ async function executeSaveAll() {
           .flatMap(([, v]) => v),
       ];
 
-      for (const optionId of allSelected) {
-        await api.post('/inspection-summary-items', {
-          roundId: Number(roundId),
-          templateId: template.templateId,
-          optionId,
-          detailValue: detailValues.value[template.templateId] ?? '',
-        });
-      }
-    }
+      return allSelected.map((optionId) => ({
+        templateId: template.templateId,
+        optionId,
+        detailValue: detailValues.value[template.templateId] ?? '',
+      }));
+    });
+
+    await api.put(`/inspection-summary-items/round/${roundId}`, { items });
 
     for (const [templateIdStr, items] of Object.entries(photos.value)) {
       const templateId = Number(templateIdStr);
@@ -469,11 +469,11 @@ async function executeSaveAll() {
 
     await api.patch(`/inspection-rounds/${roundId}/confirm-summary`);
 
-    $q.notify({ type: 'positive', message: 'บันทึกสำเร็จ', position: 'top' });
+    $q.notify({ type: 'positive', message: t('inspection.report.saveSuccess'), position: 'top' });
     router.back();
   } catch (error) {
     console.error('Save error:', error);
-    $q.notify({ type: 'negative', message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
+    $q.notify({ type: 'negative', message: t('inspection.report.saveError') });
   } finally {
     $q.loading.hide();
   }
@@ -493,14 +493,14 @@ function saveAll() {
   }
 
   $q.dialog({
-    title: 'ยืนยันการบันทึกรายงาน',
-    message: 'ต้องการบันทึกข้อมูลรายงานใช่หรือไม่ ? (สามารถบันทึกเพื่อกลับมาทำต่อภายหลังได้)',
+    title: t('inspection.report.confirmSaveTitle'),
+    message: t('inspection.report.confirmSaveMessage'),
     ok: {
-      label: 'ยืนยัน',
+      label: t('inspection.report.confirm'),
       color: 'primary',
     },
     cancel: {
-      label: 'ยกเลิก',
+      label: t('inspection.report.cancel'),
       color: 'grey-7',
       flat: true,
     },
@@ -511,16 +511,26 @@ function saveAll() {
 }
 
 onMounted(async () => {
-  loading.value = true;
+  $q.loading.show({
+    spinner: summaryReportSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
-    await Promise.all([fetchTemplates(), fetchSummaryItems()]);
+    await Promise.all([fetchTemplates(), fetchSummaryItems(), fetchLockState()]);
   } finally {
-    loading.value = false;
+    $q.loading.hide();
   }
 });
 </script>
 
 <style scoped>
+.detail-card {
+  border-left: 1px solid #e0e0e0;
+  border-right: 1px solid #e0e0e0;
+}
+
 .custom-expansion {
   border: 1px solid #1975d2;
   border-radius: 8px;

@@ -1,10 +1,12 @@
 import { ref, computed } from 'vue'
 import { api } from 'src/boot/axios'
+import { t } from 'src/boot/i18n'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string
 
 // ── Types ────────────────────────────────────────────────────────────────────
 export interface DefectItem {
+  defectId:      number
   image:         string
   location:      string
   jobType:       string
@@ -13,6 +15,11 @@ export interface DefectItem {
   roomName:      string
   categoryNames: string[]
   severity:      string
+  jobId?:        number
+  planId?:       number | null
+  planX?:        number | null
+  planY?:        number | null
+  locationZone?: string | null
 }
 
 export interface DefectSummary {
@@ -38,6 +45,11 @@ interface DefectResponse {
   subRoom?: { subRoomId: number; roomName: string } | null
   floor?: { floorId: number; label: string }
   subCategories?: DefectSubCategoryResponse[]
+  planId?: number | null
+  planX?: number | null
+  planY?: number | null
+  locationZone?: string | null
+  plan?: { planId: number; name: string; imageUrl: string } | null
 }
 
 interface RoundResponse {
@@ -50,19 +62,19 @@ export function useDefectList() {
   const allDefectItems = ref<DefectItem[]>([])
   const isLoading = ref(false)
 
-  async function fetchDefects(jobId: number) {
+  async function fetchDefects(jobId: number, linkToken?: string | null) {
     isLoading.value = true
+    const params = linkToken ? { token: linkToken } : {}
     try {
-      const { data: rounds } = await api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`)
+      const { data: rounds } = await api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`, {
+        params,
+      })
 
-      const defectLists = await Promise.all(
-        rounds.map((round) =>
-          api
-            .get<DefectResponse[]>(`/defects/round/${round.roundId}`)
-            .then((res) => res.data),
-        ),
-      )
-      const defects = defectLists.flat()
+      // rounds มาเรียงตาม roundNumber ASC — เอาเฉพาะรอบล่าสุด ไม่รวมรอบก่อนหน้า
+      const latestRound = rounds[rounds.length - 1]
+      const { data: defects } = latestRound
+        ? await api.get<DefectResponse[]>(`/defects/round/${latestRound.roundId}`, { params })
+        : { data: [] as DefectResponse[] }
 
       allDefectItems.value = defects.map((defect) => {
         const categoryNames = Array.from(
@@ -74,9 +86,10 @@ export function useDefectList() {
         )
         const roomName = defect.room?.roomName || '-'
         const subRoomName = defect.subRoom?.roomName || '-'
-        const floorLabel = defect.floor?.label ? `ชั้น${defect.floor.label}` : '-'
+        const floorLabel = defect.floor?.label ? t('stores.defectList.floorPrefix', { label: defect.floor.label }) : '-'
 
         return {
+          defectId: defect.defectId,
           image: defect.imageUrl
             ? defect.imageUrl.startsWith('http')
               ? defect.imageUrl
@@ -89,6 +102,11 @@ export function useDefectList() {
           roomName,
           categoryNames,
           severity: defect.severity,
+          jobId,
+          planId: defect.planId ?? defect.plan?.planId ?? null,
+          planX: defect.planX != null ? Number(defect.planX) : null,
+          planY: defect.planY != null ? Number(defect.planY) : null,
+          locationZone: defect.locationZone ?? null,
         }
       })
     } finally {
