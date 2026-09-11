@@ -246,6 +246,58 @@ describe('ReportsService', () => {
     });
   });
 
+  describe('getLatestReportPdf', () => {
+    const fetchMock = jest.fn();
+    const originalFetch = global.fetch;
+
+    beforeEach(() => {
+      global.fetch = fetchMock;
+    });
+
+    afterEach(() => {
+      fetchMock.mockReset();
+      global.fetch = originalFetch;
+    });
+
+    it('regenerates right away, cancels the pending debounce, and returns the pdf bytes', async () => {
+      jest.useFakeTimers();
+      const regenerate = jest
+        .spyOn(service, 'regenerateIfChanged')
+        .mockResolvedValue('https://example.com/reports/latest.pdf');
+      fetchMock.mockResolvedValue({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(Buffer.from('%PDF-1.7')),
+      });
+
+      service.scheduleRegeneration(1);
+      const pdf = await service.getLatestReportPdf(1);
+      jest.advanceTimersByTime(30_000);
+
+      expect(regenerate).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://example.com/reports/latest.pdf',
+      );
+      expect(pdf.toString()).toBe('%PDF-1.7');
+      jest.useRealTimers();
+    });
+
+    it('throws when the round has no report to attach', async () => {
+      jest.spyOn(service, 'regenerateIfChanged').mockResolvedValue(null);
+
+      await expect(service.getLatestReportPdf(1)).rejects.toThrow();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('throws when downloading the stored pdf fails', async () => {
+      jest
+        .spyOn(service, 'regenerateIfChanged')
+        .mockResolvedValue('https://example.com/reports/latest.pdf');
+      fetchMock.mockResolvedValue({ ok: false, status: 404 });
+
+      await expect(service.getLatestReportPdf(1)).rejects.toThrow('404');
+    });
+  });
+
   describe('scheduleRegeneration', () => {
     it('debounces repeated calls for the same round into a single regeneration', () => {
       jest.useFakeTimers();

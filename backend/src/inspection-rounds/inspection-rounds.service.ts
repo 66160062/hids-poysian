@@ -18,7 +18,7 @@ import { Assignment } from 'src/assignments/entities/assignment.entity';
 import { AuthService } from 'src/auth/auth.service';
 import { ContractorService } from 'src/contractor/contractor.service';
 import { StorageService } from 'src/storage/storage.service';
-import { PdfService } from 'src/pdf/pdf.service';
+import { ReportsService } from 'src/reports/reports.service';
 import { UpdateJobInfoDto } from './dto/update-job-info.dto';
 @Injectable()
 export class InspectionRoundsService {
@@ -42,7 +42,7 @@ export class InspectionRoundsService {
     private readonly authService: AuthService,
     private readonly contractorService: ContractorService,
     private readonly storageService: StorageService,
-    private readonly pdfService: PdfService,
+    private readonly reportsService: ReportsService,
   ) {}
 
   private formatThaiDate(date: Date): string {
@@ -670,8 +670,10 @@ export class InspectionRoundsService {
         'customer',
       );
 
-      // 2. สร้าง PDF รายงาน
-      const pdfBuffer = await this.pdfService.generateReport(round.roundId);
+      // 2. แนบ PDF ไฟล์เดียวกับที่เปิดดูในแอป (render ทันที ไม่รอ debounce)
+      const pdfBuffer = await this.reportsService.getLatestReportPdf(
+        round.roundId,
+      );
 
       // 3. ส่ง Email
       await this.mailService.sendApprovalEmail({

@@ -62,7 +62,6 @@ import { Notification } from './notifications/entities/notification.entity';
 import { Branch } from './branches/entities/branch.entity';
 import { BranchesModule } from './branches/branches.module';
 import { MailModule } from './mail/mail.module';
-import { PdfModule } from './pdf/pdf.module';
 import { StorageModule } from './storage/storage.module';
 import { ReportsModule } from './reports/reports.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
@@ -161,7 +160,6 @@ import { JobPlansModule } from './job-plans/job-plans.module';
     NotificationsModule,
     BranchesModule,
     MailModule,
-    PdfModule,
   ],
   controllers: [AppController],
   providers: [AppService],

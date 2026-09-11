@@ -14,7 +14,7 @@ import { NotificationsService } from 'src/notifications/notifications.service';
 import { AuthService } from 'src/auth/auth.service';
 import { ContractorService } from 'src/contractor/contractor.service';
 import { StorageService } from 'src/storage/storage.service';
-import { PdfService } from 'src/pdf/pdf.service';
+import { ReportsService } from 'src/reports/reports.service';
 
 function createQueryRunnerMock() {
   return {
@@ -52,7 +52,7 @@ describe('InspectionRoundsService', () => {
   let defectsRepo: { count: jest.Mock };
   let activityLogsService: { log: jest.Mock; logForRound: jest.Mock };
   let mailService: { sendApprovalEmail: jest.Mock };
-  let pdfService: { generateReport: jest.Mock };
+  let reportsService: { getLatestReportPdf: jest.Mock };
   let notificationsService: { create: jest.Mock };
   let authService: { generateLinkToken: jest.Mock };
   let contractorService: { create: jest.Mock; update: jest.Mock };
@@ -79,8 +79,8 @@ describe('InspectionRoundsService', () => {
     defectsRepo = { count: jest.fn().mockResolvedValue(0) };
     activityLogsService = { log: jest.fn(), logForRound: jest.fn() };
     mailService = { sendApprovalEmail: jest.fn().mockResolvedValue(undefined) };
-    pdfService = {
-      generateReport: jest.fn().mockResolvedValue(Buffer.from('%PDF')),
+    reportsService = {
+      getLatestReportPdf: jest.fn().mockResolvedValue(Buffer.from('%PDF')),
     };
     notificationsService = { create: jest.fn() };
     authService = {
@@ -113,7 +113,7 @@ describe('InspectionRoundsService', () => {
         { provide: AuthService, useValue: authService },
         { provide: ContractorService, useValue: contractorService },
         { provide: StorageService, useValue: storageService },
-        { provide: PdfService, useValue: pdfService },
+        { provide: ReportsService, useValue: reportsService },
       ],
     }).compile();
 
@@ -326,7 +326,7 @@ describe('InspectionRoundsService', () => {
       await new Promise((resolve) => setImmediate(resolve));
 
       expect(authService.generateLinkToken).toHaveBeenCalledWith(1, 'customer');
-      expect(pdfService.generateReport).toHaveBeenCalledWith(1);
+      expect(reportsService.getLatestReportPdf).toHaveBeenCalledWith(1);
       expect(mailService.sendApprovalEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           customerEmail: 'customer@example.com',
@@ -334,7 +334,7 @@ describe('InspectionRoundsService', () => {
           projectName: 'บ้านตัวอย่าง',
           roundNumber: 2,
           tokenUrl: 'http://localhost:9000/#/view/prj-1?token=mock-token',
-          pdfBuffer: expect.any(Buffer),
+          pdfBuffer: Buffer.from('%PDF'),
         }),
       );
     });
@@ -351,7 +351,7 @@ describe('InspectionRoundsService', () => {
       await service.approveReport(1);
       await new Promise((resolve) => setImmediate(resolve));
 
-      expect(pdfService.generateReport).not.toHaveBeenCalled();
+      expect(reportsService.getLatestReportPdf).not.toHaveBeenCalled();
       expect(mailService.sendApprovalEmail).not.toHaveBeenCalled();
     });
   });

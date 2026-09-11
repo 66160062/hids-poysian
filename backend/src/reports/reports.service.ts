@@ -70,6 +70,28 @@ export class ReportsService {
     };
   }
 
+  // ใช้ตอนแนบรายงานไปกับอีเมลอนุมัติ: ต้องได้ไฟล์ล่าสุดทันที ไม่รอ debounce และเป็นไฟล์เดียวกับที่เปิดดูในแอป
+  async getLatestReportPdf(roundId: number): Promise<Buffer> {
+    const pending = this.debounceTimers.get(roundId);
+    if (pending) {
+      clearTimeout(pending);
+      this.debounceTimers.delete(roundId);
+    }
+
+    const url = await this.regenerateIfChanged(roundId);
+    if (!url) {
+      throw new Error(`ไม่พบรายงาน PDF ของรอบตรวจ ${roundId}`);
+    }
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(
+        `ดาวน์โหลดรายงาน PDF ของรอบตรวจ ${roundId} ไม่สำเร็จ (HTTP ${response.status})`,
+      );
+    }
+    return Buffer.from(await response.arrayBuffer());
+  }
+
   // จุดหลัก: เช็ค hash ก่อนเสมอ ข้าม Puppeteer ถ้าข้อมูล defect ไม่ได้เปลี่ยนจริงตั้งแต่ครั้งก่อน
   async regenerateIfChanged(roundId: number): Promise<string | null> {
     const round = await this.roundRepo.findOneBy({ roundId });

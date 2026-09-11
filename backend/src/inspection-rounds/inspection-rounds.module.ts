@@ -14,7 +14,6 @@ import { UsersModule } from 'src/users/users.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { NotificationsModule } from 'src/notifications/notifications.module';
 import { MailModule } from 'src/mail/mail.module';
-import { PdfModule } from 'src/pdf/pdf.module';
 import { ContractorModule } from 'src/contractor/contractor.module';
 
 @Module({
@@ -26,7 +25,6 @@ import { ContractorModule } from 'src/contractor/contractor.module';
     AuthModule,
     NotificationsModule,
     MailModule,
-    PdfModule,
     ContractorModule,
   ],
   controllers: [InspectionRoundsController, ProjectApprovalController],
