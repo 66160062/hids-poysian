@@ -14,7 +14,7 @@
           <tr>
             <td style="width: 60%; text-align: center; font-size: 18px; font-weight: bold; background-color: #f0f0f0;">{{ t('reports.constructionPdf.title') }}</td>
             <td style="width: 40%; font-size: 12px; padding: 4px;">
-              <div><strong>{{ t('reports.constructionPdf.projectName') }}</strong> <span class="sensitive-data">{{ report?.round?.job?.projectName || '-' }}</span></div>
+              <div><strong>{{ t('reports.constructionPdf.projectName') }}</strong> <span class="sensitive-data">{{ pickLocalized(report?.round?.job?.projectName, report?.round?.job?.projectNameEn) || '-' }}</span></div>
               <div><strong>{{ t('reports.constructionPdf.docNumber') }}</strong> <span class="sensitive-data">{{ report?.dailyReportId ? `DOC-${report.dailyReportId}` : '-' }}</span></div>
             </td>
           </tr>
@@ -28,7 +28,7 @@
             <td style="width: 50%; padding: 4px; border-right: 1px solid #000;">
               <table class="inner-table">
                 <tbody>
-                  <tr><td style="width: 30%"><strong>{{ t('reports.constructionPdf.project') }}</strong></td><td><span class="sensitive-data">{{ report?.round?.job?.projectName || '-' }}</span></td></tr>
+                  <tr><td style="width: 30%"><strong>{{ t('reports.constructionPdf.project') }}</strong></td><td><span class="sensitive-data">{{ pickLocalized(report?.round?.job?.projectName, report?.round?.job?.projectNameEn) || '-' }}</span></td></tr>
                   <tr><td><strong>{{ t('reports.constructionPdf.contractor') }}</strong></td><td><span class="sensitive-data">{{ report?.contractorName || '-' }}</span></td></tr>
                   <tr><td><strong>{{ t('reports.constructionPdf.reporter') }}</strong></td><td><span class="sensitive-data">{{ report?.reporterName || '-' }}</span></td></tr>
                   <tr><td><strong>{{ t('reports.constructionPdf.position') }}</strong></td><td>{{ report?.position || t('reports.constructionPdf.positionDefault') }}</td></tr>
@@ -209,8 +209,12 @@
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { ExtendedConstructionReport } from 'src/stores/useConstructionDailyReport';
+import { useLocalizedField } from 'src/composables/useLocalizedField';
+import { usePersonnelLabel } from 'src/composables/usePersonnelLabel';
 
 const { t, locale } = useI18n();
+const { pickLocalized } = useLocalizedField();
+const { translatePersonnelType } = usePersonnelLabel();
 
 const props = defineProps<{
   report: ExtendedConstructionReport | null;
@@ -276,7 +280,7 @@ const paddedPersonnel = computed(() => {
   return PERSONNEL_TYPES.map(type => {
     const found = data.find(p => p.type === 'PERSONNEL' && p.name === type);
     return {
-      type,
+      type: translatePersonnelType(type),
       count: found?.count ? found.count.toString() : '',
       hours: found?.hours ? found.hours.toString() : ''
     };
@@ -303,7 +307,7 @@ const paddedWorkers = computed(() => {
   return WORKER_TYPES.map(type => {
     const found = data.find(p => p.type === 'WORKER' && p.name === type);
     return {
-      type,
+      type: translatePersonnelType(type),
       count: found?.count ? found.count.toString() : '',
       hours: found?.hours ? found.hours.toString() : ''
     };

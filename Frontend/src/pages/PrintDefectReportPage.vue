@@ -12,16 +12,26 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
+import { isSupportedLocale } from 'src/boot/i18n';
 import DefectReport from 'src/components/DefectReport.vue';
 
 // หน้านี้ไม่มี UI สำหรับผู้ใช้ทั่วไป — Puppeteer (backend/src/reports/reports.service.ts) เปิดหน้านี้
 // headless แล้วรอ [data-report-ready="true"] ก่อน snapshot เป็น PDF, mount DefectReport.vue ตัวจริง
 // เพื่อให้หน้าตาตรงกับตอนกด export ผ่าน window.print() แบบเดิมเป๊ะๆ
-
+//
+// headless browser ของ Puppeteer ไม่มี localStorage เดิม (เห็นแค่ token ที่ backend ฉีดให้) เลยอ่าน
+// locale จาก ?lang= query แทน — override ทับค่า default ก่อน mount DefectReport เพื่อให้ PDF ออกมา
+// เป็นภาษาที่ backend ขอ (ดู renderReportPdf ใน reports.service.ts)
+const { locale } = useI18n({ useScope: 'global' });
 const route = useRoute();
 const roundId = route.params.roundId as string;
+const requestedLang = route.query.lang;
+if (typeof requestedLang === 'string' && isSupportedLocale(requestedLang)) {
+  locale.value = requestedLang;
+}
 
 const round = ref<InspectionRound | null>(null);
 const defects = ref<Defect[]>([]);
