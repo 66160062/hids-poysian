@@ -14,9 +14,12 @@
     </div>
 
     <div class="q-px-md q-mb-md">
-      <div class="row justify-between items-end">
+      <div class="row justify-between items-center">
         <div class="text-weight-bold" style="font-size: 16px">{{ t('inspector.dashboard.title') }}</div>
-        <div class="text-weight-bold" style="font-size: 15px">{{ t('inspector.dashboard.dateLabel', { date: selectedDateLabel }) }}</div>
+        <div class="date-chip">
+          <q-icon name="event" size="14px" />
+          <span>{{ t('inspector.dashboard.dateLabel', { date: selectedDateLabel }) }}</span>
+        </div>
       </div>
       <div class="text-grey-6 q-mt-xs" style="font-size: 12px">
         {{ t('inspector.dashboard.summary', { count: filteredDayRounds.length }) }}
@@ -122,22 +125,47 @@ const selectedDateLabel = computed(() => {
 // ── Calendar Event Handlers ───────────────────────────────────
 function onMonthlyViewChange(value: boolean): void {
   isMonthlyView.value = value;
-  void fetchRounds();
+  void fetchRounds(false);
 }
 
 function onMonthChanged(date: Date): void {
   currentMonth.value = date;
-  void fetchRounds();
+  void fetchRounds(false);
 }
 
 // ── Data Fetching ─────────────────────────────────────────────
-async function fetchRounds(): Promise<void> {
+// รอบเดือนที่เคยโหลดแล้วจะถูกแคชไว้ + พรีเฟตช์เดือนก่อน/หลังล่วงหน้าเงียบ ๆ
+// เพื่อให้กดเปลี่ยนเดือนแล้วเห็นผลทันทีโดยไม่ต้องรอ fetch ทุกครั้ง
+const monthCache = new Map<string, InspectionRound[]>();
+
+function monthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+async function fetchRounds(showLoading = true): Promise<void> {
   if (!inspectorId.value) {
     rounds.value = [];
     return;
   }
 
-  loading.value = true;
+  if (isMonthlyView.value) {
+    const cached = monthCache.get(monthKey(currentMonth.value));
+    if (cached) {
+      rounds.value = cached;
+      void prefetchAdjacentMonths(currentMonth.value);
+      return;
+    }
+  }
+
+  if (showLoading) {
+    loading.value = true;
+    $q.loading.show({
+      spinner: inspectDashboardSpinner,
+      spinnerColor: 'primary',
+      spinnerSize: 70,
+      backgroundColor: 'white',
+    });
+  }
   try {
     const dateParam = isMonthlyView.value
       ? toLocalDateStr(currentMonth.value)
@@ -147,15 +175,48 @@ async function fetchRounds(): Promise<void> {
       : `/inspection-rounds/week/${inspectorId.value}?date=${dateParam}`;
 
     const res = await api.get(endpoint);
-    rounds.value = Array.isArray(res.data) ? res.data : [];
+    const data = Array.isArray(res.data) ? res.data : [];
+    rounds.value = data;
+
+    if (isMonthlyView.value) {
+      monthCache.set(monthKey(currentMonth.value), data);
+      void prefetchAdjacentMonths(currentMonth.value);
+    }
   } catch (e: unknown) {
     if (e instanceof Error) {
       console.error('fetchRounds error:', e.message);
     }
     rounds.value = [];
   } finally {
-    loading.value = false;
+    if (showLoading) {
+      loading.value = false;
+      $q.loading.hide();
+    }
   }
+}
+
+async function prefetchAdjacentMonths(base: Date): Promise<void> {
+  if (!inspectorId.value) return;
+
+  const prev = new Date(base);
+  prev.setMonth(prev.getMonth() - 1);
+  const next = new Date(base);
+  next.setMonth(next.getMonth() + 1);
+
+  await Promise.all(
+    [prev, next].map(async (monthDate) => {
+      const key = monthKey(monthDate);
+      if (monthCache.has(key)) return;
+      try {
+        const res = await api.get(
+          `/inspection-rounds/month/${inspectorId.value}?date=${toLocalDateStr(monthDate)}`,
+        );
+        monthCache.set(key, Array.isArray(res.data) ? res.data : []);
+      } catch {
+        // เงียบไว้ — ถ้าพลาดก็แค่ไปโหลดใหม่ตอนผู้ใช้เลื่อนไปเดือนนั้นจริง ๆ
+      }
+    }),
+  );
 }
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -191,18 +252,8 @@ function getBangkokHour(dateStr: string): number {
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────
-onMounted(async () => {
-  $q.loading.show({
-    spinner: inspectDashboardSpinner,
-    spinnerColor: 'primary',
-    spinnerSize: 70,
-    backgroundColor: 'white',
-  });
-  try {
-    await fetchRounds();
-  } finally {
-    $q.loading.hide();
-  }
+onMounted(() => {
+  void fetchRounds();
 });
 
 onActivated(() => {
@@ -212,8 +263,10 @@ onActivated(() => {
 
 <style scoped>
 .inspector-dashboard-page {
-  max-width: 600px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  max-width: 480px;
   margin: 0 auto;
+  width: 100%;
   min-height: 100vh;
   padding-bottom: 90px;
 }
@@ -223,9 +276,33 @@ onActivated(() => {
   border: 1px solid #e0e0e0;
 }
 
-@media (min-width: 600px) {
+.date-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #F5F5F5;
+  color: #424242;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+@media (min-width: 768px) {
   .inspector-dashboard-page {
-    max-width: 800px;
+    max-width: 720px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .inspector-dashboard-page {
+    max-width: 1100px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .inspector-dashboard-page {
+    max-width: 1280px;
   }
 }
 </style>
