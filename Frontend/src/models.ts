@@ -53,7 +53,7 @@ export interface InspectionRound {
       email?: string;
       companyName?: string;
     } | null;
-    createdBy?: { fullName: string; phoneNumber: string } | null;
+    createdBy?: { fullName: string; phoneNumber: string; email?: string } | null;
     usableArea: string;
     address: {
       houseNumber: string;
