@@ -130,13 +130,81 @@ describe('AdminService', () => {
       expect(result.tasks[0]).toMatchObject({
         team: 'ยังไม่ระบุทีม',
         customer: 'ยังไม่ระบุลูกค้า',
-        status: 'ร่าง (Draft)',
+        status: 'ร่าง',
+        statusCode: 'DRAFT',
+        roundNumber: null,
+        referenceDate: '2026-07-31T17:00:00.000Z',
       });
+    });
+
+    it('sends a language-neutral status code and round number for a closed job', async () => {
+      jobsRepo.find.mockImplementation(
+        ({ relations }: { relations: string[] }) => {
+          if (relations?.includes('rounds')) {
+            return Promise.resolve([
+              {
+                jobId: 1,
+                projectName: 'บ้านทดสอบ',
+                status: 'Completed',
+                inspectionType: '',
+                createdAt: new Date('2026-08-01T00:00:00+07:00'),
+                houseType: null,
+                customer: null,
+                rounds: [
+                  {
+                    roundId: 5,
+                    roundNumber: 2,
+                    status: 'APPROVED',
+                    scheduledDate: null,
+                    teamMembers: [],
+                  },
+                ],
+              },
+            ]);
+          }
+          return Promise.resolve([]);
+        },
+      );
+      roundsRepo.find.mockResolvedValue([]);
+
+      const result = await service.getDashboardData('2026-08-01');
+
+      expect(result.tasks[0]).toMatchObject({
+        status: 'เสร็จสิ้น 2',
+        statusCode: 'COMPLETED',
+        roundNumber: 2,
+      });
+    });
+
+    it('keys the status breakdown by status code in display order', async () => {
+      jobsRepo.find.mockImplementation(
+        ({ relations }: { relations: string[] }) => {
+          if (
+            relations?.includes('houseType') &&
+            !relations.includes('rounds')
+          ) {
+            return Promise.resolve([
+              { status: 'Draft', inspectionType: '', houseType: null },
+              { status: 'Active', inspectionType: '', houseType: null },
+              { status: 'Active', inspectionType: '', houseType: null },
+            ]);
+          }
+          return Promise.resolve([]);
+        },
+      );
+      roundsRepo.find.mockResolvedValue([]);
+
+      const result = await service.getDashboardData('2026-08-01');
+
+      expect(result.homeStatusBreakdown).toEqual([
+        { status: 'กำลังดำเนินการ', statusCode: 'IN_PROGRESS', count: 2 },
+        { status: 'ร่าง', statusCode: 'DRAFT', count: 1 },
+      ]);
     });
   });
 
   describe('getAllWorkList', () => {
-    it('labels a job with an approved second round as finished with its round number', async () => {
+    it('labels a closed job as finished with its latest round number', async () => {
       jobsRepo.find.mockResolvedValue([
         {
           jobId: 1,
@@ -144,6 +212,7 @@ describe('AdminService', () => {
           houseType: null,
           usableArea: 120,
           customer: null,
+          status: 'Completed',
           createdAt: new Date('2026-08-01T00:00:00Z'),
         },
       ]);
@@ -162,6 +231,36 @@ describe('AdminService', () => {
       expect(result[0]).toMatchObject({
         status: 'เสร็จสิ้น 2',
         statusKey: 'others',
+      });
+    });
+
+    it('keeps a job in progress when its round is approved but the job is not closed', async () => {
+      jobsRepo.find.mockResolvedValue([
+        {
+          jobId: 1,
+          projectName: 'บ้านทดสอบ',
+          houseType: null,
+          usableArea: 120,
+          customer: null,
+          status: 'Active',
+          createdAt: new Date('2026-08-01T00:00:00Z'),
+        },
+      ]);
+      roundsRepo.find.mockResolvedValue([
+        {
+          job: { jobId: 1 },
+          status: 'APPROVED',
+          roundNumber: 2,
+          scheduledDate: new Date('2026-08-05T00:00:00Z'),
+          teamMembers: [],
+        },
+      ]);
+
+      const result = await service.getAllWorkList();
+
+      expect(result[0]).toMatchObject({
+        status: 'กำลังดำเนินการ',
+        statusKey: 'in_progress',
       });
     });
 
@@ -198,11 +297,12 @@ describe('AdminService', () => {
       expect(jobsRepo.save).not.toHaveBeenCalled();
     });
 
-    it('updates a job to Completed when its latest round is approved with roundNumber >= 2', async () => {
+    it('does not promote a job to Completed just because a later round is approved', async () => {
       jobsRepo.find.mockResolvedValue([
         {
           jobId: 1,
           status: 'Pending',
+          completedAt: null,
           rounds: [
             { roundId: 1, roundNumber: 1, status: 'APPROVED' },
             { roundId: 2, roundNumber: 2, status: 'APPROVED' },
@@ -215,7 +315,29 @@ describe('AdminService', () => {
 
       expect(result).toEqual({ synced: 1 });
       expect(jobsRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'Completed' }),
+        expect.objectContaining({ status: 'Active', completedAt: null }),
+      );
+    });
+
+    it('backfills completedAt from the latest approval for a job closed before the column existed', async () => {
+      const approvedAt = new Date('2026-08-10T00:00:00Z');
+      jobsRepo.find.mockResolvedValue([
+        {
+          jobId: 1,
+          status: 'Completed',
+          completedAt: null,
+          rounds: [
+            { roundId: 2, roundNumber: 2, status: 'APPROVED', approvedAt },
+          ],
+        },
+      ]);
+      jobsRepo.save.mockImplementation((value) => value);
+
+      const result = await service.syncJobStatuses();
+
+      expect(result).toEqual({ synced: 1 });
+      expect(jobsRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'Completed', completedAt: approvedAt }),
       );
     });
 

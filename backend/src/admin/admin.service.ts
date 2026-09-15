@@ -5,12 +5,31 @@ import { InspectionJob } from '../inspection-jobs/entities/inspection-job.entity
 import { InspectionRound } from '../inspection-rounds/entities/inspection-round.entity';
 import { Defect } from '../defects/entities/defect.entity';
 import { Branch } from '../branches/entities/branch.entity';
-import { Team } from '../teams/entities/team.entity';
 import {
   DashboardBranchOption,
   DashboardResponse,
+  DashboardStatusCode,
+  DashboardStatusCount,
   DashboardTaskItem,
 } from './dto/dashboard-response.dto';
+
+/** ลำดับการแสดงผลสถานะงานใต้ตัวเลขรวมในการ์ดสรุป */
+const STATUS_DISPLAY_ORDER: DashboardStatusCode[] = [
+  'IN_PROGRESS',
+  'PENDING_APPROVAL',
+  'COMPLETED',
+  'CANCELLED',
+  'DRAFT',
+];
+
+/** ข้อความไทยของแต่ละสถานะ — Frontend แปลจาก statusCode เอง ส่วนนี้คงไว้ให้ field `status` เดิม */
+const STATUS_LABEL_TH: Record<DashboardStatusCode, string> = {
+  IN_PROGRESS: 'กำลังดำเนินการ',
+  PENDING_APPROVAL: 'รออนุมัติ',
+  COMPLETED: 'เสร็จสิ้น',
+  CANCELLED: 'ยกเลิก',
+  DRAFT: 'ร่าง',
+};
 import { WorkListResponse, WorkListItem } from './dto/work-list-response.dto';
 
 /**
@@ -32,8 +51,6 @@ export class AdminService {
     private readonly defectsRepo: Repository<Defect>,
     @InjectRepository(Branch)
     private readonly branchRepo: Repository<Branch>,
-    @InjectRepository(Team)
-    private readonly teamRepo: Repository<Team>,
   ) {}
 
   /**
@@ -50,9 +67,6 @@ export class AdminService {
         : undefined;
     const jobWhere: FindOptionsWhere<InspectionJob> | undefined =
       selectedBranchId ? { branchId: selectedBranchId } : undefined;
-    // ทีมตรวจและ Branch คือหน่วยงานเดียวกัน: sync ทีมที่มีอยู่ให้มี
-    // Branch เสมอ เพื่อให้ตัวเลือกบน Dashboard แสดงทันทีแม้ยังไม่มีงาน
-    await this.syncBranchesFromTeams();
     const branchRows = await this.branchRepo.find({
       where: { status: 'active' },
       order: { branchName: 'ASC' },
@@ -80,6 +94,8 @@ export class AdminService {
     let townhouse = 0;
     let condo = 0;
     let construction = 0;
+    const homeStatusCounts = new Map<DashboardStatusCode, number>();
+    const constructionStatusCounts = new Map<DashboardStatusCode, number>();
 
     for (const job of allJobs) {
       // นับงานที่กำลังดำเนินการ (Active หรือ Draft)
@@ -89,14 +105,21 @@ export class AdminService {
 
       // จำแนกประเภทงาน (ตรวจบ้าน / ก่อสร้าง)
       const inspectionType = job.inspectionType || '';
-      if (
+      const isConstruction =
         inspectionType === 'CONSTRUCTION_INSPECTION' ||
         inspectionType === 'ตรวจก่อสร้าง' ||
         inspectionType === 'Construction' ||
-        inspectionType === 'งานก่อสร้าง'
-      ) {
+        inspectionType === 'งานก่อสร้าง';
+      if (isConstruction) {
         construction++;
       }
+
+      // นับจำนวนงานแยกตามสถานะ สำหรับแสดงใต้ตัวเลขรวมในการ์ดสรุป
+      const { statusCode } = this.mapJobStatus(job.status);
+      const statusCounts = isConstruction
+        ? constructionStatusCounts
+        : homeStatusCounts;
+      statusCounts.set(statusCode, (statusCounts.get(statusCode) ?? 0) + 1);
 
       // จำแนกประเภทบ้านจากชื่อ HouseType
       const houseTypeName: string = job.houseType?.name ?? '';
@@ -203,7 +226,11 @@ export class AdminService {
 
         // กำหนดสถานะแสดงผลและสี (ใช้สถานะรอบตรวจ ถ้าไม่มีใช้สถานะงาน)
         const statusMapping = latestRound
-          ? this.mapRoundStatus(latestRound.status, latestRound.roundNumber)
+          ? this.mapRoundStatus(
+              latestRound.status,
+              job.status,
+              latestRound.roundNumber,
+            )
           : this.mapJobStatus(job.status);
 
         const iconMapping = this.mapHouseTypeIcon(job.houseType?.name ?? '');
@@ -262,7 +289,12 @@ export class AdminService {
           inspectionType: job.inspectionType ?? '',
           title: job.projectName ?? 'ไม่ระบุโครงการ',
           meta,
+          referenceDate: !isNaN(referenceDate.getTime())
+            ? referenceDate.toISOString()
+            : null,
           status: statusMapping.displayStatus,
+          statusCode: statusMapping.statusCode,
+          roundNumber: latestRound?.roundNumber ?? null,
           statusBgClass: statusMapping.statusBgClass,
           statusTextColor: statusMapping.statusTextColor,
           icon: iconMapping.icon,
@@ -284,67 +316,30 @@ export class AdminService {
       townhouse,
       condo,
       construction,
+      homeStatusBreakdown: this.toStatusBreakdown(homeStatusCounts),
+      constructionStatusBreakdown: this.toStatusBreakdown(
+        constructionStatusCounts,
+      ),
       branches,
       calendarEvents,
       tasks,
     };
   }
 
-  private async syncBranchesFromTeams(): Promise<void> {
-    const teams = await this.teamRepo.find({ where: { status: 'active' } });
-    if (!teams.length) return;
-
-    const existingBranches = await this.branchRepo.find({
-      where: teams.map((team) => ({ teamId: team.team_Id })),
-    });
-    const byTeamId = new Map(existingBranches.map((branch) => [branch.teamId, branch]));
-    const toSave: Branch[] = [];
-
-    for (const team of teams) {
-      const branch = byTeamId.get(team.team_Id);
-      if (branch) {
-        branch.branchName = team.team_name;
-        branch.logoUrl = team.logo_url;
-        branch.status = 'active';
-        toSave.push(branch);
-      } else {
-        toSave.push(this.branchRepo.create({
-          teamId: team.team_Id,
-          team,
-          branchName: team.team_name,
-          logoUrl: team.logo_url,
-          status: 'active',
-        }));
-      }
-    }
-
-    const savedBranches = await this.branchRepo.save(toSave);
-
-    // Backfill legacy jobs that were assigned to a team before Branch existed.
-    // Do not overwrite an existing branch selection; it is the explicit source
-    // of truth for jobs already migrated or manually assigned.
-    for (const branch of savedBranches) {
-      if (!branch.teamId) continue;
-      await this.jobsRepo.query(
-        `UPDATE inspection_job AS job
-         SET branch_id = $1
-         WHERE job.branch_id IS NULL
-           AND EXISTS (
-             SELECT 1
-             FROM inspection_round AS round
-             INNER JOIN inspection_team_member AS member
-               ON member.round_id = round.round_id
-              AND member.deleted_at IS NULL
-             LEFT JOIN "user" AS inspector
-               ON inspector.id = member.inspector_id
-              AND inspector.deleted_at IS NULL
-             WHERE round.job_id = job.job_id
-               AND round.deleted_at IS NULL
-               AND (member.team_id = $2 OR inspector.team_id = $2)
-           )`,
-        [branch.branchId, branch.teamId],
-      );
-    }
+  /**
+   * แปลง Map<สถานะ, จำนวน> เป็น array ที่เรียงลำดับตาม STATUS_DISPLAY_ORDER
+   * เพื่อให้ Frontend แสดงผลได้ตามลำดับที่คาดเดาได้
+   */
+  private toStatusBreakdown(
+    counts: Map<DashboardStatusCode, number>,
+  ): DashboardStatusCount[] {
+    return STATUS_DISPLAY_ORDER.filter((code) => counts.has(code)).map(
+      (code) => ({
+        status: STATUS_LABEL_TH[code],
+        statusCode: code,
+        count: counts.get(code) ?? 0,
+      }),
+    );
   }
 
   /**
@@ -394,7 +389,7 @@ export class AdminService {
 
         // กำหนดสถานะและสี
         // ถ้ามีรอบตรวจแล้วใช้สถานะของรอบตรวจ ถ้าไม่มีใช้สถานะของงาน
-        let displayStatus = 'ร่าง (Draft)';
+        let displayStatus = 'ร่าง';
         let statusBgClass = 'bg-grey-2';
         let statusTextColor = 'grey-8';
         let statusKey = 'waiting';
@@ -404,7 +399,8 @@ export class AdminService {
             latestRound.status === 'COMPLETED' ||
             latestRound.status === 'APPROVED'
           ) {
-            if (latestRound.roundNumber >= 2) {
+            // งานถูกปิดตอนแอดมินอนุมัติรอบที่ defect ผ่านครบ (ดู InspectionRoundsService.approveReport)
+            if (job.status === 'Completed') {
               displayStatus = `เสร็จสิ้น ${latestRound.roundNumber}`;
               statusBgClass = 'bg-green-1';
               statusTextColor = 'positive';
@@ -481,34 +477,42 @@ export class AdminService {
    */
   private mapRoundStatus(
     status: string,
+    jobStatus: string,
     roundNumber?: number,
   ): {
     displayStatus: string;
+    statusCode: DashboardStatusCode;
     statusBgClass: string;
     statusTextColor: string;
   } {
     if (status === 'COMPLETED' || status === 'APPROVED') {
-      if (roundNumber && roundNumber < 2) {
+      if (jobStatus !== 'Completed') {
         return {
-          displayStatus: 'กำลังดำเนินการ',
+          displayStatus: STATUS_LABEL_TH.IN_PROGRESS,
+          statusCode: 'IN_PROGRESS',
           statusBgClass: 'bg-blue-1',
           statusTextColor: 'primary',
         };
       }
       return {
-        displayStatus: roundNumber ? `เสร็จสิ้น ${roundNumber}` : 'เสร็จสิ้น',
+        displayStatus: roundNumber
+          ? `${STATUS_LABEL_TH.COMPLETED} ${roundNumber}`
+          : STATUS_LABEL_TH.COMPLETED,
+        statusCode: 'COMPLETED',
         statusBgClass: 'bg-green-1',
         statusTextColor: 'positive',
       };
     } else if (status === 'SUBMITTED') {
       return {
-        displayStatus: 'รออนุมัติ',
+        displayStatus: STATUS_LABEL_TH.PENDING_APPROVAL,
+        statusCode: 'PENDING_APPROVAL',
         statusBgClass: 'bg-orange-1',
         statusTextColor: 'orange-8',
       };
     } else {
       return {
-        displayStatus: 'กำลังดำเนินการ',
+        displayStatus: STATUS_LABEL_TH.IN_PROGRESS,
+        statusCode: 'IN_PROGRESS',
         statusBgClass: 'bg-blue-1',
         statusTextColor: 'primary',
       };
@@ -518,28 +522,44 @@ export class AdminService {
   /**
    * Map สถานะของ InspectionJob → สีและข้อความที่ Frontend ต้องใช้ (กรณีที่ยังไม่มีรอบนัดหมาย)
    */
-  private mapJobStatus(status: string) {
+  private mapJobStatus(status: string): {
+    displayStatus: string;
+    statusCode: DashboardStatusCode;
+    statusBgClass: string;
+    statusTextColor: string;
+  } {
     if (status === 'Active') {
       return {
-        displayStatus: 'กำลังดำเนินการ',
+        displayStatus: STATUS_LABEL_TH.IN_PROGRESS,
+        statusCode: 'IN_PROGRESS',
         statusBgClass: 'bg-blue-1',
         statusTextColor: 'primary',
       };
     } else if (status === 'Completed') {
       return {
-        displayStatus: 'เสร็จสิ้น',
+        displayStatus: STATUS_LABEL_TH.COMPLETED,
+        statusCode: 'COMPLETED',
         statusBgClass: 'bg-green-1',
         statusTextColor: 'positive',
       };
     } else if (status === 'Cancelled') {
       return {
-        displayStatus: 'ยกเลิก',
+        displayStatus: STATUS_LABEL_TH.CANCELLED,
+        statusCode: 'CANCELLED',
         statusBgClass: 'bg-red-1',
         statusTextColor: 'negative',
       };
+    } else if (status === 'Pending') {
+      return {
+        displayStatus: STATUS_LABEL_TH.PENDING_APPROVAL,
+        statusCode: 'PENDING_APPROVAL',
+        statusBgClass: 'bg-orange-1',
+        statusTextColor: 'orange-8',
+      };
     } else {
       return {
-        displayStatus: 'ร่าง (Draft)',
+        displayStatus: STATUS_LABEL_TH.DRAFT,
+        statusCode: 'DRAFT',
         statusBgClass: 'bg-grey-2',
         statusTextColor: 'grey-8',
       };
@@ -598,11 +618,8 @@ export class AdminService {
         latestRound.status === 'APPROVED' ||
         latestRound.status === 'COMPLETED'
       ) {
-        if (latestRound.roundNumber >= 2) {
-          newStatus = 'Completed';
-        } else {
-          newStatus = 'Active';
-        }
+        // ไม่คำนวณ "ปิดงาน" ใหม่ที่นี่ — ตัดสินครั้งเดียวตอนอนุมัติ (approveReport) แล้วเก็บไว้ใน job.status
+        newStatus = job.status === 'Completed' ? 'Completed' : 'Active';
       } else if (latestRound.status === 'SUBMITTED') {
         newStatus = 'Pending';
       } else if (
@@ -613,8 +630,18 @@ export class AdminService {
         newStatus = 'Active';
       }
 
-      if (job.status !== newStatus) {
+      // งานที่ปิดไปก่อนมีคอลัมน์ completedAt — ใช้เวลาอนุมัติรอบล่าสุดแทน
+      const newCompletedAt =
+        newStatus === 'Completed'
+          ? (job.completedAt ?? latestRound.approvedAt ?? null)
+          : null;
+
+      if (
+        job.status !== newStatus ||
+        job.completedAt?.getTime() !== newCompletedAt?.getTime()
+      ) {
         job.status = newStatus;
+        job.completedAt = newCompletedAt;
         await this.jobsRepo.save(job);
         count++;
       }
