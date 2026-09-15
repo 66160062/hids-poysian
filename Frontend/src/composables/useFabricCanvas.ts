@@ -20,8 +20,11 @@ export function useFabricCanvas() {
     canvas.value = fabCanvas;
 
     try {
-      const img = await fabric.FabricImage.fromURL(imageUrl);
-      
+      // ต้องขอรูปแบบ CORS (crossOrigin: 'anonymous') ไม่งั้น canvas จะถูก "taint"
+      // ทันทีที่รูปมาจากคนละ origin (เช่น Supabase Storage หรือ backend คนละพอร์ต)
+      // และ toDataURL() ตอนกด save จะโยน SecurityError แบบเงียบ ๆ
+      const img = await fabric.FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' });
+
       // Center and scale image
       const scale = Math.min(
         fabCanvas.width / img.width,
@@ -120,13 +123,21 @@ export function useFabricCanvas() {
   const exportAsBlob = (): Promise<Blob | null> => {
     return new Promise((resolve) => {
       if (!canvas.value) return resolve(null);
-      
-      const dataUrl = canvas.value.toDataURL({
-        format: 'jpeg',
-        quality: 0.8,
-        multiplier: 1
-      });
-      
+
+      let dataUrl: string;
+      try {
+        dataUrl = canvas.value.toDataURL({
+          format: 'jpeg',
+          quality: 0.8,
+          multiplier: 1
+        });
+      } catch (error) {
+        // toDataURL() โยน SecurityError แบบ sync ถ้า canvas ถูก taint (พื้นหลังเป็นรูปข้ามโดเมนที่โหลดไม่ใช่ crossOrigin)
+        console.error('Failed to export canvas (tainted?)', error);
+        resolve(null);
+        return;
+      }
+
       fetch(dataUrl)
         .then(res => res.blob())
         .then(blob => resolve(blob))
