@@ -1,6 +1,6 @@
 <template>
   <q-page class="admin-page bg-grey-1">
-    <div class="q-px-md q-pt-md">
+    <div class="page-content">
       <!-- Error Banner -->
       <q-banner v-if="error" class="text-white bg-negative q-mb-md" rounded dense>
         <template v-slot:avatar>
@@ -13,7 +13,6 @@
       </q-banner>
 
       <q-select
-        v-if="branches.length > 0"
         v-model="selectedBranchId"
         :options="branchOptions"
         option-value="value"
@@ -23,28 +22,28 @@
         dense
         outlined
         class="branch-select q-mb-md"
-        label="สาขา"
+        :label="t('common.branch.label')"
         @update:model-value="onBranchChange"
       >
         <template v-slot:prepend>
           <q-icon name="business" color="primary" />
         </template>
       </q-select>
-      <q-banner v-if="branches.length" rounded class="bg-blue-1 text-primary q-mb-md">
-        <template #avatar><q-icon name="groups" /></template>
+      <!-- <q-banner v-if="branches.length" rounded class="bg-blue-1 text-primary q-mb-md"> -->
+        <!-- <template #avatar><q-icon name="groups" /></template>
         <div class="text-weight-bold">{{ selectedBranchDisplayName }}</div>
-        <div class="text-caption">{{ selectedBranchId === 'all' ? 'กำลังแสดงงานของทุกทีมตรวจ' : 'กำลังแสดงงานของทีมตรวจ / Branch นี้' }}</div>
-      </q-banner>
-      <q-banner v-else rounded class="bg-orange-1 text-orange-9 q-mb-md">
+        <div class="text-caption">{{ selectedBranchId === 'all' ? 'กำลังแสดงงานของทุกทีมตรวจ' : 'กำลังแสดงงานของทีมตรวจ / Branch นี้' }}</div> -->
+      <!-- </q-banner> -->
+      <!-- <q-banner v-if="branches.length === 0" rounded class="bg-orange-1 text-orange-9 q-mb-md">
         <template #avatar><q-icon name="info" /></template>
         ยังไม่มี Branch — สร้างทีมตรวจ แล้วระบบจะสร้าง Branch ให้เมื่อมีการเปิดเล่มหรือมอบหมายงาน
-      </q-banner>
-      <div class="row justify-end q-mb-sm">
+      </q-banner> -->
+      <!-- <div class="row justify-end q-mb-sm">
         <q-btn flat dense color="primary" icon="groups" label="จัดการทีมตรวจ / Branch" to="/admin/teams" />
-      </div>
+      </div> -->
 
-      <div class="row q-col-gutter-md q-mb-md">
-        <div class="col-6">
+      <div class="row q-col-gutter-md q-mb-md kpi-grid">
+        <div class="col-6 col-md-3 card-stagger">
           <q-card flat bordered class="stat-box relative-position overflow-hidden">
             <div class="bg-blob blob-blue"></div>
             <q-avatar size="36px" class="bg-blue-1 text-blue q-mb-sm" style="border-radius: 8px;">
@@ -56,7 +55,7 @@
             </div>
           </q-card>
         </div>
-        <div class="col-6">
+        <div class="col-6 col-md-3 card-stagger">
           <q-card flat bordered class="stat-box relative-position overflow-hidden">
             <div class="bg-blob blob-orange"></div>
             <div class="absolute-top-right q-pa-sm">
@@ -71,28 +70,49 @@
             </div>
           </q-card>
         </div>
-      </div>
-
-      <div class="hide-scrollbar q-mb-md" style="overflow-x: auto; padding-bottom: 4px;">
-        <div class="row no-wrap q-gutter-x-sm">
-          <q-card flat bordered class="mini-card" style="flex: 1;">
+        <div class="col-6 col-md-3 card-stagger">
+          <q-card flat bordered class="mini-card">
             <div class="row items-center q-mb-xs">
               <div class="dot-indicator bg-blue q-mr-sm"></div>
               <div class="text-grey-7" style="font-size: 13px;">{{ t('adminWork.main.homeInspectionJobs') }}</div>
             </div>
             <div class="text-h5 text-weight-bold text-dark">{{ dashboard.totalProjects - dashboard.construction }}</div>
+            <div v-if="dashboard.homeStatusBreakdown.length" class="status-breakdown">
+              <div v-for="item in dashboard.homeStatusBreakdown" :key="item.statusCode" class="status-row">
+                <span class="status-row-dot" :style="{ backgroundColor: statusAccentColor(item.statusCode).text }"></span>
+                <span class="status-row-label">{{ jobStatusLabel(item.statusCode) }}</span>
+                <span
+                  class="status-row-count"
+                  :style="{ color: statusAccentColor(item.statusCode).text }"
+                >{{ item.count }}</span>
+              </div>
+            </div>
           </q-card>
-          <q-card flat bordered class="mini-card" style="flex: 1;">
+        </div>
+        <div class="col-6 col-md-3 card-stagger">
+          <q-card flat bordered class="mini-card">
             <div class="row items-center q-mb-xs">
               <div class="dot-indicator bg-orange q-mr-sm"></div>
               <div class="text-grey-7" style="font-size: 13px;">{{ t('adminWork.main.constructionJobs') }}</div>
             </div>
             <div class="text-h5 text-weight-bold text-dark">{{ dashboard.construction }}</div>
+            <div v-if="dashboard.constructionStatusBreakdown.length" class="status-breakdown">
+              <div v-for="item in dashboard.constructionStatusBreakdown" :key="item.statusCode" class="status-row">
+                <span class="status-row-dot" :style="{ backgroundColor: statusAccentColor(item.statusCode).text }"></span>
+                <span class="status-row-label">{{ jobStatusLabel(item.statusCode) }}</span>
+                <span
+                  class="status-row-count"
+                  :style="{ color: statusAccentColor(item.statusCode).text }"
+                >{{ item.count }}</span>
+              </div>
+            </div>
           </q-card>
         </div>
       </div>
 
-      <q-card flat bordered class="calendar-card q-mb-md">
+      <div class="row q-col-gutter-md q-mb-md content-grid">
+      <div class="col-12 col-lg-7 card-stagger card-stagger--delay-5">
+      <q-card flat bordered class="calendar-card full-height-card">
         <div class="q-pa-md">
           <div class="row items-center justify-between q-mb-md">
             <div class="text-weight-bold text-h6" style="font-size: 16px;">{{ t('adminWork.main.monthlySchedule') }}</div>
@@ -111,7 +131,7 @@
         </div>
 
         <div class="calendar-header-grid">
-          <div class="day-name" v-for="d in daysEng" :key="d">{{ d }}</div>
+          <div class="day-name" v-for="(d, i) in dayNames" :key="dayKeys[i]">{{ d }}</div>
         </div>
 
         <div class="calendar-grid-wrapper">
@@ -144,8 +164,10 @@
           </div>
         </div>
       </q-card>
+      </div>
 
-      <q-card flat bordered class="work-list-card q-mb-md">
+      <div class="col-12 col-lg-5 card-stagger card-stagger--delay-6">
+      <q-card flat bordered class="work-list-card full-height-card">
         <div class="row items-center justify-between q-pa-md">
           <div class="row items-center text-weight-bold text-dark" style="font-size: 16px;">
             <q-icon name="playlist_add_check" color="primary" size="24px" class="q-mr-sm" />
@@ -168,7 +190,7 @@
           <div
             v-for="task in visibleTasks"
             :key="task.id"
-            class="task-item row items-center q-px-md q-py-sm clickable"
+            class="task-item task-item-stagger row items-center q-px-md q-py-sm clickable"
             @click="openTaskDetail(task)"
           >
             <div class="q-mr-md">
@@ -191,7 +213,7 @@
                 :text-color="task.statusTextColor"
                 class="status-badge"
               >
-                {{ task.status }}
+                {{ jobStatusLabel(task.statusCode, task.roundNumber) }}
               </q-badge>
             </div>
           </div>
@@ -211,8 +233,10 @@
           />
         </div>
       </q-card>
+      </div>
+      </div>
 
-      <div class="text-center text-caption text-grey-5 q-mt-sm">HIDS Admin v1.0</div>
+      <!-- <div class="text-center text-caption text-grey-5 q-mt-sm">HIDS Admin v1.0</div> -->
 
       <q-dialog v-model="showTaskDialog" persistent>
         <q-card style="min-width: 320px; max-width: 90vw">
@@ -223,12 +247,12 @@
           <q-separator />
           <q-card-section>
             <div class="text-subtitle1 q-mb-xs">{{ selectedTask?.title }}</div>
-            <div class="text-caption q-mb-xs">{{ selectedTask?.meta }}</div>
+            <div class="text-caption q-mb-xs">{{ formatTaskMeta(selectedTask) }}</div>
             <div v-if="selectedTaskBranchName" class="q-mb-sm">
-              สาขา: <strong>{{ selectedTaskBranchName }}</strong>
+              {{ t('common.branch.labelWithColon') }} <strong>{{ selectedTaskBranchName }}</strong>
             </div>
             <div class="q-mb-sm">
-              {{ t('adminWork.main.statusLabel') }} <strong>{{ selectedTask?.status }}</strong>
+              {{ t('adminWork.main.statusLabel') }} <strong>{{ jobStatusLabel(selectedTask?.statusCode, selectedTask?.roundNumber) }}</strong>
             </div>
           </q-card-section>
           <q-card-actions align="right">
@@ -250,16 +274,37 @@ import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
 import type { AxiosResponse } from 'axios';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
+import { useJobStatus, type JobStatusCode } from 'src/composables/useJobStatus';
 
 const homeSpinner = createIconSpinner('home');
 const router = useRouter();
 const $q = useQuasar();
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const { jobStatusLabel } = useJobStatus();
 const error = ref<string>('');
 
 // ==========================================
 // 🎯 Interface สำหรับ Dashboard Stats
 // ==========================================
+interface StatusCount {
+  status: string;
+  statusCode: JobStatusCode;
+  count: number;
+}
+
+const STATUS_ACCENT_COLORS: Partial<Record<JobStatusCode, { bg: string; text: string }>> = {
+  IN_PROGRESS: { bg: '#e3f2fd', text: '#1565c0' },
+  PENDING_APPROVAL: { bg: '#fff3e0', text: '#c9660c' },
+  COMPLETED: { bg: '#e6f4ea', text: '#1e7e34' },
+  CANCELLED: { bg: '#fdecea', text: '#c62828' },
+  DRAFT: { bg: '#eeeef0', text: '#5f6368' },
+};
+const DEFAULT_STATUS_ACCENT_COLOR = { bg: '#eeeef0', text: '#5f6368' };
+
+function statusAccentColor(code: JobStatusCode): { bg: string; text: string } {
+  return STATUS_ACCENT_COLORS[code] ?? DEFAULT_STATUS_ACCENT_COLOR;
+}
+
 interface DashboardStats {
   totalProjects: number;
   inProgress: number;
@@ -267,6 +312,8 @@ interface DashboardStats {
   townhouse: number;
   condo: number;
   construction: number;
+  homeStatusBreakdown: StatusCount[];
+  constructionStatusBreakdown: StatusCount[];
 }
 
 interface BranchOption {
@@ -281,21 +328,23 @@ const dashboard = ref<DashboardStats>({
   townhouse: 0,
   condo: 0,
   construction: 0,
+  homeStatusBreakdown: [],
+  constructionStatusBreakdown: [],
 });
 
 const branches = ref<BranchOption[]>([]);
 const selectedBranchId = ref<number | 'all'>(getStoredBranchId());
 const branchOptions = computed(() => [
-  { label: 'ทุกสาขา', value: 'all' as const },
+  { label: t('common.branch.all'), value: 'all' as const },
   ...branches.value.map((branch) => ({
     label: branch.name,
     value: branch.id,
   })),
 ]);
-const selectedBranchDisplayName = computed(() => {
-  if (selectedBranchId.value === 'all') return 'ทุกทีมตรวจ / ทุก Branch';
-  return branches.value.find((branch) => branch.id === selectedBranchId.value)?.name ?? 'ทีมตรวจที่เลือก';
-});
+// const selectedBranchDisplayName = computed(() => {
+//   if (selectedBranchId.value === 'all') return '';
+//   return branches.value.find((branch) => branch.id === selectedBranchId.value)?.name ?? 'ทีมตรวจที่เลือก';
+// });
 
 // ==========================================
 // 🎯 ระบบปฏิทิน
@@ -304,7 +353,9 @@ const today = new Date();
 const displayMonth = ref(today.getMonth());
 const displayYear = ref(today.getFullYear());
 
-const daysEng = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+// เริ่มสัปดาห์วันจันทร์ ให้ตรงกับ startOffset ใน calendarDaysList
+const dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+const dayNames = computed(() => dayKeys.map((key) => t(`adminWork.main.days.${key}`)));
 const monthKeys = [
   'jan', 'feb', 'mar', 'apr', 'may', 'jun',
   'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
@@ -385,7 +436,10 @@ interface TaskItem {
   inspectionType: string;
   title: string;
   meta: string;
+  referenceDate: string | null;
   status: string;
+  statusCode: JobStatusCode;
+  roundNumber: number | null;
   statusBgClass: string;
   statusTextColor: string;
   icon: string;
@@ -425,6 +479,25 @@ const selectedTaskBranchName = computed(() => getTaskBranchName(selectedTask.val
 
 function getTaskBranchName(task: TaskItem | null): string {
   return task?.branchName?.trim() ?? '';
+}
+
+// backend ส่ง referenceDate (ISO) มาให้จัดรูปแบบตามภาษาที่เลือกเอง — field `meta` เดิมเป็นภาษาไทยตายตัว
+function formatTaskMeta(task: TaskItem | null): string {
+  if (!task?.referenceDate) return '-';
+  const date = new Date(task.referenceDate);
+  if (isNaN(date.getTime())) return '-';
+  const dateStr = date.toLocaleDateString(locale.value, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Asia/Bangkok',
+  });
+  const timeStr = date.toLocaleTimeString(locale.value, {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Bangkok',
+  });
+  return `${dateStr} • ${timeStr}`;
 }
 
 function openTaskDetail(task: TaskItem) {
@@ -492,6 +565,12 @@ async function fetchAdminDashboard(): Promise<void> {
       townhouse: data.townhouse,
       condo: data.condo,
       construction: data.construction,
+      homeStatusBreakdown: Array.isArray(data.homeStatusBreakdown)
+        ? data.homeStatusBreakdown
+        : [],
+      constructionStatusBreakdown: Array.isArray(data.constructionStatusBreakdown)
+        ? data.constructionStatusBreakdown
+        : [],
     };
 
     branches.value = Array.isArray(data.branches) ? data.branches : [];
@@ -524,12 +603,50 @@ onMounted((): void => {
 
 <style scoped>
 .admin-page {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   max-width: 480px;
   margin: 0 auto;
+  width: 100%;
+}
+@media (min-width: 768px) {
+  .admin-page {
+    max-width: 720px;
+  }
+}
+@media (min-width: 1024px) {
+  .admin-page {
+    max-width: 1100px;
+  }
+}
+@media (min-width: 1440px) {
+  .admin-page {
+    max-width: 1280px;
+  }
+}
+.page-content {
+  padding: 16px 16px 24px;
+}
+@media (min-width: 768px) {
+  .page-content {
+    padding: 24px 24px 32px;
+  }
+}
+@media (min-width: 1024px) {
+  .page-content {
+    padding: 28px 32px 40px;
+  }
 }
 .branch-select :deep(.q-field__control) {
   border-radius: 12px;
   background: #fff;
+}
+@media (min-width: 768px) {
+  .branch-select {
+    max-width: 320px;
+  }
+}
+.full-height-card {
+  height: 100%;
 }
 .stat-box {
   border-radius: 16px;
@@ -560,15 +677,53 @@ onMounted((): void => {
   background: #fff;
   border-color: #f0f0f0;
   padding: 16px;
-  min-width: 140px;
+  height: 100%;
 }
 .dot-indicator {
   width: 8px;
   height: 8px;
   border-radius: 50%;
 }
-.hide-scrollbar::-webkit-scrollbar { display: none; }
-.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.status-breakdown {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #e8e8e8;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  animation: card-in 260ms var(--ease-out) both;
+}
+.status-row-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-row-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #33363b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.status-row-count {
+  flex-shrink: 0;
+  min-width: 24px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
 .content-box {
   border-radius: 12px;
   background: #fff;
@@ -627,6 +782,12 @@ onMounted((): void => {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+}
+@media (min-width: 1024px) {
+  .cal-cell {
+    min-height: 84px;
+    padding: 8px;
+  }
 }
 .cal-cell.not-current-month .date-number {
   color: #bdbdbd;
@@ -708,6 +869,43 @@ onMounted((): void => {
 .clickable {
   cursor: pointer;
 }
-</style>
 
-```
+/* ─── Stagger fade-in on load ──────────────────────────────────── */
+.card-stagger {
+  animation: card-in 320ms var(--ease-out) both;
+}
+.card-stagger:nth-child(1) { animation-delay: 0ms; }
+.card-stagger:nth-child(2) { animation-delay: 40ms; }
+.card-stagger:nth-child(3) { animation-delay: 80ms; }
+.card-stagger:nth-child(4) { animation-delay: 120ms; }
+.card-stagger--delay-5 { animation-delay: 160ms; }
+.card-stagger--delay-6 { animation-delay: 200ms; }
+
+.task-item-stagger {
+  animation: card-in 280ms var(--ease-out) both;
+}
+.task-item-stagger:nth-child(1) { animation-delay: 0ms; }
+.task-item-stagger:nth-child(2) { animation-delay: 30ms; }
+.task-item-stagger:nth-child(3) { animation-delay: 60ms; }
+.task-item-stagger:nth-child(4) { animation-delay: 90ms; }
+.task-item-stagger:nth-child(n + 5) { animation-delay: 120ms; }
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-stagger,
+  .task-item-stagger,
+  .status-row {
+    animation-duration: 0.01ms !important;
+  }
+}
+</style>
