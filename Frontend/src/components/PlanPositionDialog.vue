@@ -6,9 +6,9 @@
     transition-show="slide-up"
     transition-hide="slide-down"
   >
-    <q-card class="column no-wrap bg-grey-1" style="height: 100dvh">
+    <q-card flat class="column no-wrap bg-white" style="height: 100dvh">
       <!-- Top Header -->
-      <q-toolbar class="bg-white text-dark shadow-1 col-auto q-px-md">
+      <q-toolbar class="bg-white text-dark col-auto q-px-md plan-toolbar">
         <q-btn
           flat
           round
@@ -19,67 +19,34 @@
         />
         <q-toolbar-title class="text-subtitle1 text-weight-bold row items-center q-gutter-x-xs">
           <q-icon name="place" color="primary" size="22px" />
-          <span>{{ readonly ? 'ตำแหน่งในแปลนบ้าน' : 'ระบุตำแหน่งในแปลนบ้าน' }}</span>
+          <span>{{ readonly ? t('components.planPosition.viewTitle') : t('components.planPosition.editTitle') }}</span>
         </q-toolbar-title>
         <q-btn
           v-if="plans.length > 0 && !readonly"
-          flat
+          unelevated
+          rounded
           dense
           no-caps
-          color="primary"
+          color="blue-1"
+          text-color="primary"
           icon="add_photo_alternate"
-          label="เพิ่มแปลน"
+          :label="t('components.planPosition.addPlanButton')"
+          class="q-px-md add-plan-btn"
           @click="showUploadSection = !showUploadSection"
         />
       </q-toolbar>
 
       <!-- Loading State -->
-      <div v-if="isLoadingPlans" class="col flex flex-center column text-grey-6">
-        <q-spinner-dots size="48px" color="primary" />
-        <div class="text-body2 q-mt-md">กำลังโหลดข้อมูลแปลนบ้าน...</div>
+      <div v-if="isLoadingPlans" class="col flex flex-center bg-white plan-loading-state">
+        <IconBounceSpinner icon="photo_size_select_actual" color="primary" size="56px" />
       </div>
 
       <!-- Main Content -->
       <div v-else class="col column no-wrap overflow-hidden">
         <!-- If plans exist -->
         <template v-if="plans.length > 0 && !showUploadSection">
-          <!-- Plan selector tabs / chips -->
-          <div class="bg-white q-px-sm q-py-xs shadow-1 col-auto">
-            <div class="row items-center no-wrap q-gutter-x-sm overflow-auto q-py-xs">
-              <q-btn
-                v-for="plan in plans"
-                :key="plan.planId"
-                unelevated
-                rounded
-                dense
-                no-caps
-                class="q-px-md text-weight-medium"
-                :color="activePlan?.planId === plan.planId ? 'primary' : 'grey-3'"
-                :text-color="activePlan?.planId === plan.planId ? 'white' : 'dark'"
-                @click="selectPlan(plan)"
-              >
-                <div class="row items-center no-wrap q-gutter-x-xs">
-                  <span>{{ plan.name }}</span>
-                  <q-badge
-                    v-if="currentPlanId === plan.planId && currentPinX !== null"
-                    color="negative"
-                    rounded
-                    floating
-                  />
-                  <span
-                    v-if="plan.floor?.label"
-                    class="text-caption"
-                    :class="activePlan?.planId === plan.planId ? 'text-blue-1' : 'text-grey-6'"
-                  >
-                    ({{ plan.floor.label }})
-                  </span>
-                </div>
-              </q-btn>
-            </div>
-          </div>
-
           <!-- Interactive Plan Viewer Area -->
-          <div class="col relative-position flex flex-center bg-grey-9 overflow-hidden q-pa-sm">
+          <div ref="viewerAreaRef" class="col relative-position flex flex-center plan-viewer-bg overflow-hidden q-pa-sm">
             <div
               v-if="activePlan"
               class="relative-position plan-canvas-wrapper"
@@ -94,9 +61,12 @@
               <img
                 ref="imageRef"
                 :src="formatImageUrl(activePlan.imageUrl)"
-                alt="แปลนบ้าน"
-                class="plan-image shadow-3 rounded-borders"
+                :alt="t('components.planPosition.planImageAlt')"
+                class="plan-image rounded-borders"
+                :style="planImageStyle"
+                draggable="false"
                 @load="onImageLoad"
+                @dragstart.prevent
               />
 
               <!-- Pin Marker (only shown on the currently pinned plan) -->
@@ -113,200 +83,240 @@
             </div>
 
             <!-- Hint overlay -->
-            <div class="absolute-top row justify-center q-mt-sm pointer-events-none" style="z-index: 5">
-              <q-chip
-                dense
-                color="black"
-                text-color="white"
-                class="bg-opacity-80 text-caption q-px-sm"
-              >
+            <div class="absolute-top row justify-center q-mt-sm pointer-events-none plan-hint-row">
+              <div class="plan-hint-chip row items-center no-wrap">
                 <q-icon name="place" size="14px" class="q-mr-xs text-negative" />
                 <span v-if="readonly">
-                  {{ currentPinX !== null ? `ตำแหน่งหมุด: (${currentPinX}%, ${currentPinY}%)` : 'ยังไม่มีหมุดตำแหน่งบนแปลนนี้' }}
+                  {{ currentPinX !== null ? t('components.planPosition.pinPositionLabel', { x: currentPinX, y: currentPinY }) : t('components.planPosition.noPinYet') }}
                 </span>
                 <span v-else>
-                  {{ currentPinX !== null ? `พิกัด: (${currentPinX}%, ${currentPinY}%) แตะเพื่อย้ายหมุด` : 'แตะบนรูปแปลนเพื่อปักหมุดตำแหน่ง Defect' }}
+                  {{ currentPinX !== null ? t('components.planPosition.coordinatesMoveHint', { x: currentPinX, y: currentPinY }) : t('components.planPosition.tapToPinHint') }}
                 </span>
-              </q-chip>
+              </div>
             </div>
 
             <!-- Reset Zoom Button -->
             <q-btn
               v-if="scale > 1.01"
+              unelevated
               round
               dense
               color="dark"
               text-color="white"
               icon="zoom_out_map"
               class="zoom-reset-btn"
-              style="position: absolute; right: 12px; bottom: 12px; z-index: 6; opacity: 0.85;"
               @click="resetZoom"
             >
-              <q-tooltip>รีเซ็ตการซูม</q-tooltip>
+              <q-tooltip>{{ t('components.planPosition.resetZoomTooltip') }}</q-tooltip>
             </q-btn>
+          </div>
+
+          <!-- Plan Thumbnail Slider -->
+          <div class="bg-white q-py-sm col-auto plan-slider-shell">
+            <div class="dialog-inset">
+              <div ref="sliderRef" class="plan-slider" role="tablist" :aria-label="t('components.planPosition.planSelectorLabel')">
+                <button
+                  v-for="plan in plans"
+                  :key="plan.planId"
+                  type="button"
+                  role="tab"
+                  class="plan-thumb-btn"
+                  :class="{ 'is-active': activePlan?.planId === plan.planId }"
+                  :aria-selected="activePlan?.planId === plan.planId"
+                  @click="(e) => selectPlan(plan, e)"
+                >
+                  <span class="plan-thumb-frame">
+                    <img
+                      :src="formatImageUrl(plan.imageUrl)"
+                      :alt="plan.name"
+                      loading="lazy"
+                      class="plan-thumb-img"
+                    />
+                    <span
+                      v-if="currentPlanId === plan.planId && currentPinX !== null"
+                      class="plan-thumb-pin-dot"
+                    />
+                    <span class="plan-thumb-scrim" />
+                    <span class="plan-thumb-label">
+                      {{ plan.name }}<template v-if="plan.floor?.label"> · {{ plan.floor.label }}</template>
+                    </span>
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
         </template>
 
         <!-- If NO plans exist OR user clicks "+ เพิ่มแปลน" -->
         <div v-else class="col column overflow-y-auto q-pa-md bg-white">
-          <div class="text-center q-my-sm">
-            <div class="text-h6 text-weight-bold text-primary">
-              {{ plans.length === 0 ? 'ยังไม่มีรูปแปลนบ้านในระบบ' : 'เพิ่มรูปแปลนบ้านใหม่' }}
-            </div>
-            <div class="text-caption text-grey-7">
-              คุณสามารถถ่ายรูปแปลนกระดาษหน้างาน หรือเลือกบันทึกโซนห้องแทนได้
-            </div>
-          </div>
-
-          <!-- Choice 1: Upload Plan -->
-          <q-card flat bordered class="q-pa-md q-my-sm rounded-borders bg-blue-1 border-primary">
-            <div class="row items-center q-gutter-x-sm text-subtitle2 text-weight-bold text-primary q-mb-sm">
-              <q-icon name="camera_alt" size="22px" />
-              <span>ทางเลือกที่ 1: ถ่ายรูป / อัปโหลดแปลนบ้าน</span>
-            </div>
-            <div class="text-caption text-grey-8 q-mb-md">
-              ถ่ายรูปพิมพ์เขียวหรือเอกสารแปลนบ้าน ระบบจะบันทึกเข้าสู่โครงการนี้ทันที
+          <div class="dialog-inset-narrow">
+            <div class="column items-center q-my-md">
+              <div class="text-h6 text-weight-bold text-dark text-center">
+                {{ t('components.planPosition.uploadPlanTitle') }}
+              </div>
             </div>
 
-            <!-- New Plan Form -->
-            <div class="column q-gutter-y-sm">
-              <q-input
-                outlined
-                dense
-                bg-color="white"
-                v-model="newPlanName"
-                label="ชื่อแปลน (เช่น แปลนชั้น 1, แปลนห้องนั่งเล่น)"
-                placeholder="แปลนชั้น 1"
-              />
-
-              <!-- Action buttons to capture / select photo -->
-              <div class="row q-gutter-sm q-mt-xs">
-                <q-btn
-                  unelevated
-                  color="primary"
-                  icon="photo_camera"
-                  label="ถ่ายรูปแปลน"
-                  class="col"
-                  :loading="isUploadingPlan"
-                  @click="triggerCamera"
+            <!-- Choice 1: Upload Plan -->
+            <q-card flat bordered class="q-pa-md q-my-sm upload-card">
+              <!-- New Plan Form -->
+              <div class="column q-gutter-y-sm">
+                <q-input
+                  outlined
+                  dense
+                  bg-color="white"
+                  v-model="newPlanName"
+                  class="plan-name-input"
+                  :label="t('components.planPosition.planNameLabel')"
+                  :placeholder="t('components.planPosition.planNamePlaceholder')"
                 />
-                <q-btn
-                  outline
-                  color="primary"
-                  icon="photo_library"
-                  label="เลือกจากอัลบั้ม"
-                  class="col"
-                  :loading="isUploadingPlan"
-                  @click="triggerGallery"
+
+                <!-- Action buttons to capture / select photo -->
+                <div class="row q-gutter-sm q-mt-xs photo-action-row">
+                  <q-btn
+                    unelevated
+                    rounded
+                    no-caps
+                    color="primary"
+                    icon="photo_camera"
+                    :label="t('components.planPosition.takePhotoButton')"
+                    class="col action-pill"
+                    :loading="isUploadingPlan"
+                    @click="triggerCamera"
+                  />
+                  <q-btn
+                    outline
+                    rounded
+                    no-caps
+                    color="primary"
+                    icon="photo_library"
+                    :label="t('components.planPosition.chooseFromGalleryButton')"
+                    class="col action-pill"
+                    :loading="isUploadingPlan"
+                    @click="triggerGallery"
+                  />
+                </div>
+
+                <!-- Hidden inputs -->
+                <input
+                  ref="cameraInput"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  style="display: none"
+                  @change="onPlanFileSelected"
+                />
+                <input
+                  ref="galleryInput"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  style="display: none"
+                  @change="onPlanFileSelected"
                 />
               </div>
+            </q-card>
 
-              <!-- Hidden inputs -->
-              <input
-                ref="cameraInput"
-                type="file"
-                accept="image/*"
-                capture="environment"
-                style="display: none"
-                @change="onPlanFileSelected"
-              />
-              <input
-                ref="galleryInput"
-                type="file"
-                accept="image/*"
-                style="display: none"
-                @change="onPlanFileSelected"
+            <div v-if="plans.length > 0" class="row justify-center q-mt-sm">
+              <q-btn
+                flat
+                rounded
+                no-caps
+                color="grey-8"
+                :label="t('components.planPosition.backToExistingPlansButton')"
+                icon="arrow_back"
+                @click="showUploadSection = false"
               />
             </div>
-          </q-card>
-
-          <div v-if="plans.length > 0" class="row justify-center q-mt-sm">
-            <q-btn
-              flat
-              color="grey-8"
-              label="กลับไปเลือกแปลนเดิมที่มีอยู่"
-              icon="arrow_back"
-              @click="showUploadSection = false"
-            />
           </div>
         </div>
 
         <!-- Location Zone Section -->
-        <div v-if="!readonly" class="bg-white q-px-md q-py-sm col-auto border-top shadow-up-1">
-          <div class="row items-center justify-between q-mb-xs">
-            <div class="text-caption text-weight-bold text-grey-8 row items-center q-gutter-x-xs">
-              <q-icon name="label" size="16px" color="primary" />
-              <span>ระบุโซน/ตำแหน่งเฉพาะ (ตัวเลือกเพิ่มเติม)</span>
+        <div v-if="!readonly" class="bg-white q-py-sm col-auto border-top">
+          <div class="dialog-inset q-px-md">
+            <div class="row items-center justify-between q-mb-xs">
+              <div class="text-caption text-weight-bold text-grey-8 row items-center q-gutter-x-xs">
+                <q-icon name="label" size="16px" color="primary" />
+                <span>{{ t('components.planPosition.zoneLabel') }}</span>
+              </div>
+              <q-btn
+                v-if="locationZone"
+                flat
+                dense
+                round
+                size="xs"
+                color="grey-6"
+                icon="close"
+                @click="locationZone = ''"
+              />
             </div>
-            <q-btn
-              v-if="locationZone"
-              flat
+
+            <!-- Preset Zone Chips -->
+            <div class="row no-wrap q-gutter-x-xs overflow-auto q-py-xs zone-chip-row">
+              <q-chip
+                v-for="zone in presetZones"
+                :key="zone"
+                clickable
+                dense
+                :color="locationZone === zone ? 'primary' : 'grey-2'"
+                :text-color="locationZone === zone ? 'white' : 'dark'"
+                class="zone-chip"
+                @click="selectPresetZone(zone)"
+              >
+                {{ zone }}
+              </q-chip>
+            </div>
+
+            <!-- Custom Zone Text Input -->
+            <q-input
+              outlined
               dense
-              round
-              size="xs"
-              color="grey-6"
-              icon="close"
-              @click="locationZone = ''"
+              v-model="locationZone"
+              class="custom-input q-mt-xs"
+              :placeholder="t('components.planPosition.zonePlaceholder')"
             />
           </div>
-
-          <!-- Preset Zone Chips -->
-          <div class="row no-wrap q-gutter-x-xs overflow-auto q-py-xs">
-            <q-chip
-              v-for="zone in presetZones"
-              :key="zone"
-              clickable
-              dense
-              size="12px"
-              :color="locationZone === zone ? 'primary' : 'grey-2'"
-              :text-color="locationZone === zone ? 'white' : 'dark'"
-              @click="selectPresetZone(zone)"
-            >
-              {{ zone }}
-            </q-chip>
-          </div>
-
-          <!-- Custom Zone Text Input -->
-          <q-input
-            outlined
-            dense
-            v-model="locationZone"
-            placeholder="หรือพิมพ์ระบุโซน เช่น ผนังฝั่งระเบียง, ใต้ตู้ซิงค์"
-            class="q-mt-xs"
-          />
         </div>
-        <div v-else-if="locationZone" class="bg-white q-px-md q-py-sm col-auto border-top shadow-up-1 row items-center q-gutter-x-sm">
-          <q-icon name="label" size="18px" color="primary" />
-          <span class="text-caption text-weight-bold text-grey-8">โซน/ตำแหน่ง:</span>
-          <q-badge color="info" class="text-caption q-px-sm">{{ locationZone }}</q-badge>
+        <div v-else-if="locationZone" class="bg-white q-py-sm col-auto border-top">
+          <div class="dialog-inset q-px-md row items-center q-gutter-x-sm">
+            <q-icon name="label" size="18px" color="primary" />
+            <span class="text-caption text-weight-bold text-grey-8">{{ t('components.planPosition.zoneReadonlyLabel') }}</span>
+            <q-badge color="info" class="text-caption q-px-sm zone-readonly-badge">{{ locationZone }}</q-badge>
+          </div>
         </div>
 
         <!-- Footer Actions -->
-        <div v-if="!readonly" class="bg-white q-px-md q-py-sm col-auto border-top row items-center justify-between">
-          <q-btn
-            flat
-            color="negative"
-            icon="clear"
-            label="ล้างหมุด / ไม่ระบุ"
-            :disable="currentPinX === null && currentPlanId === null"
-            @click="handleClearPin"
-          />
-
-          <div class="row q-gutter-x-sm">
+        <div v-if="!readonly" class="bg-white q-py-sm col-auto border-top">
+          <div class="dialog-inset q-px-md row items-center justify-between wrap q-gutter-y-sm footer-actions-row">
             <q-btn
               flat
-              color="grey-7"
-              label="ยกเลิก"
-              @click="closeDialog"
+              rounded
+              no-caps
+              color="negative"
+              icon="clear"
+              :label="t('components.planPosition.clearPinButton')"
+              :disable="currentPinX === null && currentPlanId === null"
+              @click="handleClearPin"
             />
-            <q-btn
-              unelevated
-              color="primary"
-              icon="check"
-              label="ยืนยันตำแหน่ง"
-              class="q-px-lg text-weight-bold"
-              @click="handleConfirm"
-            />
+
+            <div class="row q-gutter-x-sm">
+              <q-btn
+                flat
+                rounded
+                no-caps
+                color="grey-7"
+                :label="t('components.planPosition.cancelButton')"
+                @click="closeDialog"
+              />
+              <q-btn
+                unelevated
+                no-caps
+                color="primary"
+                icon="check"
+                :label="t('components.planPosition.confirmPositionButton')"
+                class="confirm-btn text-weight-bold"
+                @click="handleConfirm"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -315,10 +325,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { api } from 'src/boot/axios';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useQuasar } from 'quasar';
-import type { JobPlan } from 'src/models';
+import { useI18n } from 'vue-i18n';
+import { api } from 'src/boot/axios';
+import IconBounceSpinner from 'src/components/IconBounceSpinner.vue';
+import { defaultPlanNames } from 'src/composables/useDefaultPlanName';
+import type { HousePlan } from 'src/models';
 
 const props = withDefaults(
   defineProps<{
@@ -350,13 +363,22 @@ const emit = defineEmits<{
 }>();
 
 const $q = useQuasar();
+const { t } = useI18n();
 
 // ── State ─────────────────────────────────────────────────────
 const isLoadingPlans = ref(false);
 const isUploadingPlan = ref(false);
 const showUploadSection = ref(false);
-const plans = ref<JobPlan[]>([]);
-const activePlan = ref<JobPlan | null>(null);
+const plans = ref<HousePlan[]>([]);
+const activePlan = ref<HousePlan | null>(null);
+const sliderRef = ref<HTMLElement | null>(null);
+
+function scrollActiveThumbIntoView() {
+  requestAnimationFrame(() => {
+    const el = sliderRef.value?.querySelector<HTMLElement>('.plan-thumb-btn.is-active');
+    el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  });
+}
 
 const currentPlanId = ref<number | null>(null);
 const currentPinX = ref<number | null>(null);
@@ -367,6 +389,33 @@ const newPlanName = ref('');
 const imageRef = ref<HTMLImageElement | null>(null);
 const cameraInput = ref<HTMLInputElement | null>(null);
 const galleryInput = ref<HTMLInputElement | null>(null);
+
+// ── Viewer area sizing ────────────────────────────────────────
+// วัดพื้นที่จริงที่เหลือให้รูปแปลนด้วย ResizeObserver แทนการพึ่ง CSS
+// max-height:100% เพราะ .plan-canvas-wrapper เป็น inline-block ที่ห่อขนาดตามรูป
+// (ไม่ใช่กล่องที่มี height แน่นอน) ทำให้ % ไม่ resolve ตาม spec แบบเชื่อถือได้ในทุกเบราว์เซอร์ —
+// ผลคือบนจอคอมพิวเตอร์รูปขยายจนทับ label ของ thumbnail/โซนด้านล่าง ต้องวัดจริงด้วย JS แทน
+const viewerAreaRef = ref<HTMLElement | null>(null);
+const viewerAreaHeight = ref<number | null>(null);
+let viewerResizeObserver: ResizeObserver | null = null;
+
+watch(viewerAreaRef, (el) => {
+  viewerResizeObserver?.disconnect();
+  if (!el) return;
+  viewerResizeObserver = new ResizeObserver((entries) => {
+    const entry = entries[0];
+    if (entry) viewerAreaHeight.value = entry.contentRect.height;
+  });
+  viewerResizeObserver.observe(el);
+});
+
+onBeforeUnmount(() => {
+  viewerResizeObserver?.disconnect();
+});
+
+const planImageStyle = computed(() =>
+  viewerAreaHeight.value ? { maxHeight: `${viewerAreaHeight.value}px` } : {},
+);
 
 // ── Zoom & Pan (view-only gesture — never changes the saved image, only how it's displayed) ──
 const MIN_SCALE = 1;
@@ -499,16 +548,16 @@ function onPointerCancel(e: PointerEvent) {
   endPointer(e, false);
 }
 
-const presetZones = [
-  'ผนังฝั่งประตู',
-  'ผนังฝั่งหน้าต่าง',
-  'เพดาน',
-  'พื้นห้อง',
-  'ผนังฝั่งระเบียง',
-  'หลังประตู',
-  'ใต้ตู้ซิงค์',
-  'เสาโครงสร้าง',
-];
+const presetZones = computed(() => [
+  t('components.planPosition.zoneDoorWall'),
+  t('components.planPosition.zoneWindowWall'),
+  t('components.planPosition.zoneCeiling'),
+  t('components.planPosition.zoneFloor'),
+  t('components.planPosition.zoneBalconyWall'),
+  t('components.planPosition.zoneBehindDoor'),
+  t('components.planPosition.zoneUnderSink'),
+  t('components.planPosition.zoneStructuralColumn'),
+]);
 
 // ── Helpers ───────────────────────────────────────────────────
 const formatImageUrl = (url: string) => {
@@ -525,7 +574,7 @@ const fetchPlans = async () => {
   if (!props.jobId) return;
   isLoadingPlans.value = true;
   try {
-    const { data } = await api.get<JobPlan[]>(`/jobs/${props.jobId}/plans`);
+    const { data } = await api.get<HousePlan[]>(`/jobs/${props.jobId}/house-plans`);
     plans.value = data;
 
     // Auto-select initial plan or matching floor plan
@@ -543,6 +592,7 @@ const fetchPlans = async () => {
         activePlan.value = firstPlan;
       }
       showUploadSection.value = false;
+      scrollActiveThumbIntoView();
     } else {
       activePlan.value = null;
       showUploadSection.value = true;
@@ -551,14 +601,15 @@ const fetchPlans = async () => {
     console.error('Failed to fetch job plans', error);
     // Try alias endpoint if first failed
     try {
-      const { data } = await api.get<JobPlan[]>(`/inspection-jobs/${props.jobId}/plans`);
+      const { data } = await api.get<HousePlan[]>(`/inspection-jobs/${props.jobId}/house-plans`);
       plans.value = data;
       if (plans.value.length > 0) {
         activePlan.value = plans.value[0] ?? null;
+        scrollActiveThumbIntoView();
       }
     } catch {
       $q.notify({
-        message: 'ไม่สามารถโหลดรูปแปลนบ้านได้',
+        message: t('components.planPosition.loadPlansFailed'),
         color: 'warning',
         icon: 'warning',
       });
@@ -568,9 +619,13 @@ const fetchPlans = async () => {
   }
 };
 
-const selectPlan = (plan: JobPlan) => {
+const selectPlan = (plan: HousePlan, event?: MouseEvent) => {
   activePlan.value = plan;
   resetZoom();
+  const btn = event?.currentTarget as HTMLElement | undefined;
+  if (btn) {
+    btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
 };
 
 // ── Pinning Logic ─────────────────────────────────────────────
@@ -621,49 +676,72 @@ const triggerGallery = () => {
 
 const onPlanFileSelected = async (event: Event) => {
   const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
-  if (!file || !props.jobId) return;
-
+  const files = target.files ? Array.from(target.files) : [];
   target.value = '';
+  if (!files.length || !props.jobId) return;
 
-  const planName =
-    newPlanName.value.trim() ||
-    `แปลนบ้าน ${plans.value.length + 1}`;
-
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('name', planName);
-  if (props.selectedFloorId) {
-    formData.append('floorId', String(props.selectedFloorId));
-  }
-  formData.append('orderIndex', String(plans.value.length));
-
+  const trimmedName = newPlanName.value.trim();
   isUploadingPlan.value = true;
-  try {
-    const { data: createdPlan } = await api.post<JobPlan>(
-      `/jobs/${props.jobId}/plans`,
-      formData,
-    );
+  let successCount = 0;
+  let lastCreatedPlan: HousePlan | null = null;
 
+  for (const [index, file] of files.entries()) {
+    const defaultNames = defaultPlanNames(plans.value.length + 1);
+    const planName = trimmedName
+      ? files.length > 1
+        ? `${trimmedName} ${index + 1}`
+        : trimmedName
+      : defaultNames.th;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('name', planName);
+    if (!trimmedName) formData.append('nameEn', defaultNames.en);
+    if (props.selectedFloorId) {
+      formData.append('floorId', String(props.selectedFloorId));
+    }
+    formData.append('orderIndex', String(plans.value.length));
+
+    try {
+      const { data: createdPlan } = await api.post<HousePlan>(
+        `/jobs/${props.jobId}/house-plans`,
+        formData,
+      );
+      plans.value.push(createdPlan);
+      lastCreatedPlan = createdPlan;
+      successCount += 1;
+    } catch (err) {
+      console.error('Upload plan error', err);
+    }
+  }
+
+  isUploadingPlan.value = false;
+
+  if (successCount > 0) {
     $q.notify({
-      message: 'อัปโหลดรูปแปลนสำเร็จ',
+      message:
+        successCount === files.length
+          ? t('components.planPosition.uploadPlanSuccess')
+          : t('components.planPosition.uploadPlanPartialSuccess', {
+              success: successCount,
+              total: files.length,
+            }),
       color: 'positive',
       icon: 'check_circle',
     });
 
-    plans.value.push(createdPlan);
-    activePlan.value = createdPlan;
+    activePlan.value = lastCreatedPlan;
     showUploadSection.value = false;
     newPlanName.value = '';
-  } catch (err) {
-    console.error('Upload plan error', err);
+    scrollActiveThumbIntoView();
+  }
+
+  if (successCount < files.length) {
     $q.notify({
-      message: 'ไม่สามารถอัปโหลดรูปแปลนได้',
+      message: t('components.planPosition.uploadPlanFailed'),
       color: 'negative',
       icon: 'error',
     });
-  } finally {
-    isUploadingPlan.value = false;
   }
 };
 
@@ -700,6 +778,298 @@ watch(
 </script>
 
 <style scoped>
+/* ─── Responsive content inset (mirrors the admin/inspector form-container
+   pattern: full-width on phones, centered max-width on tablet/desktop) ──── */
+.dialog-inset {
+  width: 100%;
+}
+
+.dialog-inset-narrow {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  align-self: center;
+}
+
+@media (min-width: 600px) {
+  .dialog-inset {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .dialog-inset-narrow {
+    max-width: 480px;
+  }
+}
+
+/* ─── Toolbar ─────────────────────────────────────────────────── */
+.plan-toolbar {
+  min-height: 56px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.add-plan-btn {
+  transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.add-plan-btn:active {
+  transform: scale(0.96);
+}
+
+/* ─── Plan Thumbnail Slider ─────────────────────────────────── */
+.plan-slider-shell {
+  position: relative;
+}
+
+.plan-slider {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding: 4px 16px 6px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.plan-slider::-webkit-scrollbar {
+  display: none;
+}
+
+.plan-thumb-btn {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 14px;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.plan-thumb-btn:active {
+  transform: scale(0.96);
+}
+
+.plan-thumb-btn.is-active {
+  transform: translateY(-2px);
+}
+
+.plan-thumb-frame {
+  position: relative;
+  display: block;
+  width: 76px;
+  height: 76px;
+  border-radius: 14px;
+  overflow: hidden;
+  outline: 1px solid rgba(0, 0, 0, 0.12);
+  outline-offset: -1px;
+  transition: outline-color 180ms ease;
+}
+
+.plan-thumb-btn.is-active .plan-thumb-frame {
+  outline: 3px solid var(--q-primary, #1976d2);
+  outline-offset: 1px;
+}
+
+.plan-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.plan-thumb-scrim {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 34%;
+  background: rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.plan-thumb-label {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 5px;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.plan-thumb-pin-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--q-negative, #e53935);
+  border: 2px solid #fff;
+  z-index: 2;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .plan-thumb-btn:not(.is-active):hover .plan-thumb-frame {
+    outline-color: rgba(0, 0, 0, 0.2);
+  }
+
+  .plan-thumb-btn:not(.is-active):hover {
+    transform: translateY(-1px);
+  }
+}
+
+.plan-thumb-btn:focus-visible {
+  outline: none;
+}
+
+.plan-thumb-btn:focus-visible .plan-thumb-frame {
+  outline: 2px solid var(--q-primary, #1976d2);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-thumb-btn,
+  .plan-thumb-frame {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (min-width: 600px) {
+  .plan-thumb-frame {
+    width: 92px;
+    height: 92px;
+  }
+}
+
+/* ─── Viewer background & hint chip ──────────────────────────── */
+.plan-viewer-bg {
+  background: #1c1c1e;
+}
+
+.plan-hint-row {
+  z-index: 5;
+}
+
+.plan-hint-chip {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #141416;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.zoom-reset-btn {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 6;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.zoom-reset-btn:active {
+  transform: scale(0.94);
+}
+
+/* ─── Empty state / upload card ──────────────────────────────── */
+.upload-card {
+  border-radius: 16px;
+  border-color: #f0f0f0;
+  background: #fcfdfe;
+}
+
+.custom-input :deep(.q-field__control) {
+  border-radius: 12px;
+  background-color: #f8fafc;
+}
+
+.custom-input :deep(.q-field__control:before) {
+  border-bottom: none;
+}
+
+/* Plan name field — same shape/motion language as the contractor page's
+   search input, minus the focus glow (this dialog stays shadow-free). */
+.plan-name-input :deep(.q-field__control) {
+  border-radius: 12px;
+  transition: border-color 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.plan-name-input.q-field--focused :deep(.q-field__control) {
+  border-color: var(--q-primary, #1976d2);
+}
+
+.action-pill {
+  border-radius: 14px;
+  height: 46px;
+  transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.action-pill:active {
+  transform: scale(0.97);
+}
+
+/* ─── Zone section ────────────────────────────────────────────── */
+.zone-chip-row {
+  padding-bottom: 2px;
+}
+
+.zone-chip {
+  border-radius: 999px;
+  font-size: 12px;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.zone-readonly-badge {
+  border-radius: 999px;
+}
+
+/* ─── Footer confirm button ──────────────────────────────────── */
+.confirm-btn {
+  border-radius: 999px;
+  padding: 0 24px;
+  height: 44px;
+  transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.confirm-btn:active {
+  transform: scale(0.97);
+}
+
+@media (max-width: 359px) {
+  .footer-actions-row {
+    justify-content: center !important;
+  }
+
+  .photo-action-row {
+    flex-direction: column;
+  }
+}
+
+.plan-loading-state {
+  animation: plan-loading-fade-in 0.25s ease-out;
+}
+
+@keyframes plan-loading-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .plan-canvas-wrapper {
   display: inline-block;
   max-width: 100%;
@@ -726,9 +1096,17 @@ watch(
 .plan-image {
   display: block;
   max-width: 100%;
-  max-height: 58vh;
+  /* ใช้ 100% ของ .plan-canvas-wrapper (flex item ที่คำนวณความสูงจริงตาม
+     พื้นที่ที่เหลือใน .plan-viewer-bg) แทนหน่วย vh ตายตัว เพราะ vh ไม่รู้ว่า
+     toolbar/thumbnail/โซน/footer ตอนนี้กินพื้นที่ไปเท่าไหร่ — ถ้าตั้งเป็น vh
+     คงที่ รูปจะสูงเกินพื้นที่จริงแล้วโดน overflow-hidden ตัดจนเห็นแปลนไม่ครบ */
+  max-height: 100%;
   object-fit: contain;
   margin: 0 auto;
+  -webkit-user-drag: none;
+  user-select: none;
+  outline: 1px solid rgba(255, 255, 255, 0.08);
+  outline-offset: -1px;
 }
 
 /* Pin marker styling & Pulse Animation */
@@ -744,7 +1122,6 @@ watch(
 }
 
 .pin-core {
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
   animation: pin-bounce 0.4s ease-out;
 }
 
@@ -791,10 +1168,6 @@ watch(
 
 .border-top {
   border-top: 1px solid #e0e0e0;
-}
-
-.border-primary {
-  border: 1px dashed var(--q-primary);
 }
 
 .pointer-events-none {
