@@ -8,13 +8,13 @@ export default {
     titleUsers: 'จัดการผู้ใช้',
     titleTeams: 'จัดการทีม',
     titleMenu: 'หมวดหมู่งาน',
-    titleReport: 'รายงาน',
+    titleBusinessDashboard: 'แดชบอร์ด',
     titleSettings: 'ตั้งค่า',
     menuDashboard: 'หน้าหลัก',
     menuWork: 'งาน',
     menuUsers: 'จัดการผู้ใช้',
     menuTeams: 'จัดการทีม',
-    menuReport: 'รายงาน',
+    menuBusinessDashboard: 'แดชบอร์ด',
     menuSettings: 'ตั้งค่า',
   },
   customer: {
@@ -42,5 +42,6 @@ export default {
     headerConstruction: 'การตรวจก่อสร้าง',
     headerDefault: 'ระบบตรวจบ้าน',
     roomDefectFallback: 'รายการ Defect',
+    editJob: 'แก้ไข',
   },
 };

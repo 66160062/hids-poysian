@@ -8,13 +8,13 @@ export default {
     titleUsers: 'Manage Users',
     titleTeams: 'Manage Teams',
     titleMenu: 'Job Categories',
-    titleReport: 'Reports',
+    titleBusinessDashboard: 'Dashboard',
     titleSettings: 'Settings',
     menuDashboard: 'Home',
     menuWork: 'Jobs',
     menuUsers: 'Users',
     menuTeams: 'Teams',
-    menuReport: 'Reports',
+    menuBusinessDashboard: 'Dashboard',
     menuSettings: 'Settings',
   },
   customer: {
@@ -42,5 +42,6 @@ export default {
     headerConstruction: 'Construction Inspection',
     headerDefault: 'Home Inspection System',
     roomDefectFallback: 'Defect List',
+    editJob: 'Edit',
   },
 };

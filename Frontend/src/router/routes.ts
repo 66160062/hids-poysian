@@ -1,9 +1,25 @@
 import type { RouteRecordRaw } from 'vue-router';
+import { useAuthStore } from 'src/stores/useAuth';
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/login',
+    redirect: () => {
+      const auth = useAuthStore();
+
+      if (!auth.token) return '/login';
+
+      switch (auth.user?.role) {
+        case 'admin':
+          return '/admin';
+        case 'inspector':
+          return '/inspector/Inspectsdashboard';
+        case 'customer':
+          return '/customer';
+        default:
+          return '/login';
+      }
+    },
   },
 
   {
@@ -118,15 +134,15 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'nav.admin.titleMenu', icon: 'category' },
       },
       {
-        path: 'report',
-        component: () => import('pages/AdminMainPage.vue'),
-        meta: { title: 'nav.admin.titleReport', icon: 'bar_chart' },
+        path: 'dashboard',
+        component: () => import('pages/AdminDashboardPage.vue'),
+        meta: { title: 'nav.admin.titleBusinessDashboard', icon: 'bar_chart' },
       },
-      {
-        path: 'settings',
-        component: () => import('pages/AdminMainPage.vue'),
-        meta: { title: 'nav.admin.titleSettings', icon: 'settings' },
-      },
+      // {
+      //   path: 'settings',
+      //   component: () => import('pages/AdminMainPage.vue'),
+      //   meta: { title: 'nav.admin.titleSettings', icon: 'settings' },
+      // },
     ],
   },
   {
@@ -221,6 +237,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/inspector',
     component: () => import('layouts/InspectorScreen.vue'),
+    redirect: '/inspector/Inspectsdashboard',
     children: [
       {
         path: 'Inspectsdashboard',
@@ -323,7 +340,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/:catchAll(.*)*',
-    component: () => import('pages/ErrorNotFound.vue'),
+    redirect: '/',
   },
 ];
 

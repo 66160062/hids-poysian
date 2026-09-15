@@ -16,13 +16,13 @@
         <div class="row items-center">
           <LanguageToggle />
           <q-btn
-  flat
-  round
-  icon="notifications_none"
-  color="dark"
-  aria-label="Notifications"
-  @click="$router.push('/admin/notifications')"
->
+            flat
+            round
+            icon="notifications_none"
+            color="dark"
+            :aria-label="t('nav.admin.titleNotifications')"
+            @click="$router.push('/admin/notifications')"
+          >
   <q-badge v-if="unreadCount > 0" color="red" floating rounded>{{ unreadCount }}</q-badge>
 </q-btn>
           <q-avatar
@@ -73,7 +73,7 @@ import { useAuthStore } from 'src/stores/useAuth';
 import { api } from 'src/boot/axios';
 import LanguageToggle from 'src/components/LanguageToggle.vue';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
@@ -107,8 +107,8 @@ const menuList = computed(() => [
   { name: 'work', label: t('nav.admin.menuWork'), icon: 'business_center', link: '/admin/work' },
   { name: 'users', label: t('nav.admin.menuUsers'), icon: 'group', link: '/admin/users' },
   { name: 'teams', label: t('nav.admin.menuTeams'), icon: 'groups', link: '/admin/teams' },
-  { name: 'report', label: t('nav.admin.menuReport'), icon: 'bar_chart', link: '/admin/report' },
-  { name: 'settings', label: t('nav.admin.menuSettings'), icon: 'settings', link: '/admin/settings' },
+  { name: 'business-dashboard', label: t('nav.admin.menuBusinessDashboard'), icon: 'bar_chart', link: '/admin/dashboard' },
+  // { name: 'settings', label: t('nav.admin.menuSettings'), icon: 'settings', link: '/admin/settings' },
 ]);
 
 function isActive(link: string) {
@@ -160,6 +160,11 @@ onUnmounted(() => {
 });
 
 watch(() => route.path, () => {
+  void nextTick(() => requestAnimationFrame(updateIndicator));
+});
+
+// เปลี่ยนภาษาแล้วความกว้างของ label เปลี่ยน ต้องคำนวณตำแหน่งขีดใต้ใหม่
+watch(locale, () => {
   void nextTick(() => requestAnimationFrame(updateIndicator));
 });
 </script>
