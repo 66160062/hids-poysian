@@ -1,7 +1,7 @@
 <template>
   <q-layout view="lHh Lpr lFf">
     <q-header v-if="!hideHeader" class="bg-white text-dark">
-      <q-toolbar class="relative-position">
+      <q-toolbar class="relative-position no-wrap">
         <template v-if="isJobPage">
           <q-icon
             name="arrow_back_ios_new"
@@ -22,18 +22,18 @@
           />
         </template>
         <template v-else>
-          <div class="row items-center">
+          <div class="row items-center no-wrap col" style="min-width: 0">
             <q-icon
               v-if="route.meta.icon"
               :name="route.meta.icon as string"
               color="primary"
               size="24px"
               class="q-mr-xs"
+              style="flex-shrink: 0"
             />
-            <q-toolbar-title class="text-weight-bold">{{ headerTitle }}</q-toolbar-title>
+            <q-toolbar-title class="text-weight-bold ellipsis">{{ headerTitle }}</q-toolbar-title>
           </div>
-          <q-space />
-          <div class="row items-center">
+          <div class="row items-center no-wrap" style="flex-shrink: 0">
             <LanguageToggle />
             <q-btn
               flat

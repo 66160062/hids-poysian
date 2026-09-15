@@ -258,7 +258,7 @@
           >
             <span class="text-weight-bold q-ml-sm">{{ t('inspector.detail.viewReport') }}</span>
             <q-icon
-              :name="isSummaryDone ? 'visibility' : 'lock'"
+              :name="isSummaryDone ? 'chevron_right' : 'lock'"
               :class="isSummaryDone ? 'text-white' : 'text-grey-5'"
               size="24px"
               style="padding: 2px;"

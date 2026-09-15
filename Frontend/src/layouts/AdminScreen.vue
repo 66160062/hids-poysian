@@ -1,19 +1,19 @@
 <template>
   <q-layout view="lHh Lpr lFf">
     <q-header class="bg-white text-dark">
-      <q-toolbar>
-        <div class="row items-center cursor-pointer" @click="$router.push('/admin')">
+      <q-toolbar class="no-wrap">
+        <div class="row items-center no-wrap col cursor-pointer" style="min-width: 0" @click="$router.push('/admin')">
           <q-icon
             v-if="route.meta.icon"
             :name="route.meta.icon as string"
             color="primary"
             size="24px"
             class="q-mr-xs"
+            style="flex-shrink: 0"
           />
-          <q-toolbar-title class="text-weight-bold">{{ currentTitle }}</q-toolbar-title>
+          <q-toolbar-title class="text-weight-bold ellipsis">{{ currentTitle }}</q-toolbar-title>
         </div>
-        <q-space />
-        <div class="row items-center">
+        <div class="row items-center no-wrap" style="flex-shrink: 0">
           <LanguageToggle />
           <q-btn
             flat

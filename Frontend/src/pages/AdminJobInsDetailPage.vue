@@ -39,10 +39,10 @@
 
       <!-- Project Name & Status -->
       <div class="row items-center justify-between no-wrap q-mb-xs q-mt-sm">
-        <div class="text-primary text-weight-bold ellipsis" style="font-size: 20px">
+        <div class="col ellipsis text-primary text-weight-bold" style="font-size: 20px; min-width: 0">
           {{ t('adminJobs.inspection.projectLabel') }} {{ pickLocalized(job.projectName, job.projectNameEn) }}
         </div>
-        <div class="row items-center q-gutter-x-sm">
+        <div class="row items-center q-gutter-x-sm" style="flex-shrink: 0">
           <q-badge
             v-if="isDefect(job.inspectionType)"
             color="primary"
@@ -101,7 +101,7 @@
       </div>
 
       <!-- House Plan -->
-      <div class="row items-center no-wrap q-gutter-md q-mb-sm">
+      <div class="row items-center justify-between no-wrap q-gutter-md q-mb-sm">
         <div
           v-if="job.housePlanImage"
           class="plan-thumb relative-position cursor-pointer"
@@ -371,14 +371,12 @@
                   <div class="text-weight-bold" style="font-size: 14px; color: #333">
                     {{ t('adminJobs.inspection.roundNumberLabel', { number: round.roundNumber }) }}
                   </div>
-                  <q-chip
-                    dense
-                    :color="getRoundStatusColor(round.status)"
-                    text-color="dark"
-                    class="text-caption q-my-none q-mr-none q-ml-md"
+                  <q-badge
+                    class="status-badge q-ml-md"
+                    :class="[getJobStatusBgClass(round.status), `text-${getJobStatusTextColor(round.status)}`]"
                   >
                     {{ jobStatusLabel(round.status) }}
-                  </q-chip>
+                  </q-badge>
                   <div
                     v-if="round.statusKey === 'SUBMITTED'"
                     class="q-ml-lg"
@@ -456,7 +454,7 @@
               <span class="text-weight-bold q-ml-sm">
                 {{ t('adminJobs.inspection.viewReportPdf') }}
               </span>
-              <q-icon name="visibility" size="24px" />
+              <q-icon name="chevron_right" size="24px" />
             </q-btn>
           </q-card>
         </div>
@@ -1632,21 +1630,8 @@ const submitCreateRound = async () => {
   }
 };
 
-// status ในสามฟังก์ชันนี้คือรหัสจาก useJobStatus (IN_PROGRESS/PENDING_APPROVAL/COMPLETED) ไม่ใช่ข้อความที่แสดง
-function getRoundStatusColor(status: string) {
-  switch (status) {
-    case 'IN_PROGRESS':
-      return 'orange-2';
-    case 'PENDING_APPROVAL':
-      return 'blue-2';
-    case 'COMPLETED':
-      return 'green-2';
-    default:
-      return 'grey-3';
-  }
-}
-
-// สีป้ายสถานะงาน (ไม่ใช่รอบ) ให้ตรงกับ statusBgClass/statusTextColor ใน InspectorDetailPage.vue
+// status ในสองฟังก์ชันนี้คือรหัสจาก useJobStatus (IN_PROGRESS/PENDING_APPROVAL/COMPLETED) ไม่ใช่ข้อความที่แสดง
+// ใช้ร่วมกันทั้งป้ายสถานะงานและป้ายสถานะรอบ ให้ตรงกับ statusBgClass/statusTextColor ใน InspectorDetailPage.vue
 function getJobStatusBgClass(status: string) {
   switch (status) {
     case 'COMPLETED':
