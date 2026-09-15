@@ -6,6 +6,7 @@ import imageCompression from 'browser-image-compression';
 import { useContractorRepair } from 'src/stores/useContractormain';
 import { useLinkAccess } from 'src/stores/useLinkAccess';
 import { api } from 'src/boot/axios';
+import { localizedName } from 'src/composables/useLocalizedField';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 
@@ -17,6 +18,8 @@ export interface RepairDetail {
   location: string;
   tags: string[];
   status: string;
+  description?: string;
+  severity?: string;
   jobId?: number | null;
   planId?: number | null;
   planX?: number | null;
@@ -27,7 +30,8 @@ export interface RepairDetail {
 interface DefectSubCategoryResponse {
   subCategoryId: number;
   name: string;
-  category?: { categoryId: number; name: string };
+  nameEn?: string | null;
+  category?: { categoryId: number; name: string; nameEn?: string | null };
 }
 
 interface DefectDetailResponse {
@@ -37,6 +41,8 @@ interface DefectDetailResponse {
   contractorImageUrl?: string;
   contractorNote?: string;
   status: string;
+  description?: string;
+  severity?: string;
   room?: { roomId: number; roomName: string };
   subRoom?: { subRoomId: number; roomName: string } | null;
   floor?: { floorId: number; label: string };
@@ -86,6 +92,8 @@ export function useRepairDetail(defectId: number) {
     location: found?.location ?? '-',
     tags: found?.tags ?? [],
     status: found?.status ?? '-',
+    description: found?.description ?? '',
+    severity: found?.severity ?? '',
     planId: found?.planId ?? null,
     planX: found?.planX ?? null,
     planY: found?.planY ?? null,
@@ -113,6 +121,7 @@ export function useRepairDetail(defectId: number) {
   const submitError = ref<string | null>(null);
   const savedAfterImage = ref(found?.afterImage ?? '');
   const savedNote = ref(found?.repairNote ?? '');
+  const isLoading = ref(!found);
 
   // เข้าหน้านี้ตรง ๆ (เช่น จากรายการ defect ฝั่งลูกค้า) โดยที่ store ของ contractor ยังไม่มีข้อมูล — ดึงเองจาก API
   if (!found) {
@@ -128,7 +137,7 @@ export function useRepairDetail(defectId: number) {
         const categoryNames = Array.from(
           new Set(
             (data.subCategories ?? [])
-              .map((sub) => sub.category?.name)
+              .map((sub) => localizedName(sub.category))
               .filter((name): name is string => !!name),
           ),
         );
@@ -142,8 +151,10 @@ export function useRepairDetail(defectId: number) {
           beforeImage: resolveUrl(data.imageUrl) || 'https://placehold.co/600x400/e0e0e0/999?text=Before',
           jobType: categoryNames.join(', ') || '-',
           location: `${roomName}, ${subRoomName}, ${floorLabel}`,
-          tags: (data.subCategories ?? []).map((sub) => sub.name),
+          tags: (data.subCategories ?? []).map((sub) => localizedName(sub)),
           status: data.status,
+          description: data.description ?? '',
+          severity: data.severity ?? '',
           jobId: data.round?.job?.jobId ?? null,
           planId: data.planId ?? data.plan?.planId ?? null,
           planX: data.planX != null ? Number(data.planX) : null,
@@ -154,6 +165,8 @@ export function useRepairDetail(defectId: number) {
         savedNote.value = data.contractorNote || '';
       } catch (e) {
         console.error(e);
+      } finally {
+        isLoading.value = false;
       }
     })();
   }
@@ -221,5 +234,6 @@ export function useRepairDetail(defectId: number) {
     confirmSuccess,
     savedAfterImage,
     savedNote,
+    isLoading,
   };
 }

@@ -48,14 +48,14 @@ export interface GroupedDefectItem {
 
 // ── Helpers: ดึงค่าจาก nested Defect object ─────────────────
 
-const getFloorLabel = (d: Defect) => d.floor?.label ?? 'ไม่ระบุชั้น';
+const getFloorLabel = (d: Defect) => d.floor?.label ?? t('common.unspecified.floor');
 
 const getRoomName = (d: Defect) =>
   d.subRoom?.roomName ?? // ห้องย่อย (ละเอียดกว่า)
   d.room?.roomName ?? // fallback ประเภทห้อง
-  'ไม่ระบุห้อง';
+  t('common.unspecified.room');
 
-const getRoomType = (d: Defect) => d.room?.roomName ?? 'ไม่ระบุประเภท';
+const getRoomType = (d: Defect) => d.room?.roomName ?? t('common.unspecified.roomType');
 
 // เวลาที่ defect ตัวนี้ถูกแก้ไข/เพิ่มล่าสุด — ใช้ updatedAt ก่อน (ครอบคลุมทั้งแก้ไขและเพิ่มใหม่) fallback เป็น createdAt
 const getLastActivity = (d: Defect) => {

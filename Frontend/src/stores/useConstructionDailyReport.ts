@@ -71,7 +71,7 @@ export interface ConstructionDailyReportResponse {
 export interface ExtendedConstructionReport extends ConstructionDailyReportResponse {
   round?: {
     roundNumber: number;
-    job?: { projectName: string; [key: string]: unknown } | null;
+    job?: { projectName: string; projectNameEn?: string | null; [key: string]: unknown } | null;
   };
   contractorName?: string;
   reporterName?: string;

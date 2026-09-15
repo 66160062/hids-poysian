@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { api } from 'src/boot/axios'
+import { localizedName } from 'src/composables/useLocalizedField'
 
 // circumference ของ circle r=36 → 2π×36 ≈ 226.2
 const CIRCUMFERENCE = 226.2
@@ -7,7 +8,8 @@ const CIRCUMFERENCE = 226.2
 interface DefectSubCategoryResponse {
   subCategoryId: number
   name: string
-  category?: { categoryId: number; name: string }
+  nameEn?: string | null
+  category?: { categoryId: number; name: string; nameEn?: string | null }
 }
 
 interface DefectResponse {
@@ -49,7 +51,7 @@ export function useDefectSummary() {
       for (const defect of defects) {
         const categoryNames = new Set(
           (defect.subCategories ?? [])
-            .map((sub) => sub.category?.name)
+            .map((sub) => localizedName(sub.category))
             .filter((name): name is string => !!name),
         )
         for (const name of categoryNames) {

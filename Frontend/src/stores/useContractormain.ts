@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 import { useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
 import { t } from 'src/boot/i18n';
+import { localizedName } from 'src/composables/useLocalizedField';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 
@@ -22,8 +23,12 @@ export interface DefectItem {
   image: string;
   location: string;
   jobType: string;
+  categoryNames: string[];
   status: string;
   tags: string[];
+  createdAt: string;
+  description?: string;
+  severity?: string;
   afterImage?: string;
   repairNote?: string;
   planId?: number | null;
@@ -49,13 +54,17 @@ export interface UpdateRepairPayload {
 interface DefectSubCategoryResponse {
   subCategoryId: number;
   name: string;
-  category?: { categoryId: number; name: string };
+  nameEn?: string | null;
+  category?: { categoryId: number; name: string; nameEn?: string | null };
 }
 
 interface DefectResponse {
   defectId: number;
   imageUrl?: string;
   status: string;
+  createdAt: string;
+  description?: string;
+  severity?: string;
   room?: { roomId: number; roomName: string };
   subRoom?: { subRoomId: number; roomName: string } | null;
   floor?: { floorId: number; label: string };
@@ -179,7 +188,7 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
         const categoryNames = Array.from(
           new Set(
             (defect.subCategories ?? [])
-              .map((sub) => sub.category?.name)
+              .map((sub) => localizedName(sub.category))
               .filter((name): name is string => !!name),
           ),
         );
@@ -195,8 +204,12 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
             : '',
           location: room.name,
           jobType: categoryNames.join(', ') || '-',
+          categoryNames,
           status: defect.status,
-          tags: (defect.subCategories ?? []).map((sub) => sub.name),
+          tags: (defect.subCategories ?? []).map((sub) => localizedName(sub)),
+          createdAt: defect.createdAt,
+          description: defect.description ?? '',
+          severity: defect.severity ?? '',
           planId: defect.plan?.planId ?? defect.planId ?? null,
           planX: defect.planX != null ? Number(defect.planX) : null,
           planY: defect.planY != null ? Number(defect.planY) : null,

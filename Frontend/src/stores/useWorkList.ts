@@ -6,8 +6,8 @@ export interface Work {
   jobId: number;
   inspectionType: string;
   projectName: string;
+  projectNameEn?: string | null;
   locationCoordinate: string;
-  housePlanUrl: string;
   usableArea: number;
   projectImageUrl: string;
   status: string;
@@ -23,6 +23,7 @@ export interface Work {
     email2?: string;
     email3?: string;
     lineId?: string;
+    preferredLocale?: string;
   };
   address?: {
     addressId: number;
@@ -37,6 +38,7 @@ export interface Work {
   houseType?: {
     house_type_id: number;
     name: string;
+    nameEn?: string | null;
   };
   contractor?: {
     contractorId: number;
@@ -52,7 +54,7 @@ export interface Work {
     scheduledDate: string;
   }[];
   branchId?: number | null;
-  branch?: { branchId: number; teamId?: number | null; branchName: string; logoUrl?: string | null } | null;
+  branch?: { branchId: number; branchName: string; logoUrl?: string | null } | null;
 }
 
 export interface StatusMeta {
@@ -135,6 +137,16 @@ export const useWorkListStore = defineStore('workList', () => {
     }
   };
 
+  const fetchJobById = async <T = Work>(id: number): Promise<T> => {
+    try {
+      const response = await api.get<T>(`/inspection-jobs/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch job', error);
+      throw error;
+    }
+  };
+
   const createJob = async (formData: FormData) => {
     try {
       const response = await api.post('/inspection-jobs', formData);
@@ -166,5 +178,5 @@ export const useWorkListStore = defineStore('workList', () => {
     }
   };
 
-  return { works, statusMeta, meta, absoluteJobCounts, isLoading, fetchJobs, fetchStatusMeta, fetchAbsoluteJobCounts, createJob, removeJob, updateJob };
+  return { works, statusMeta, meta, absoluteJobCounts, isLoading, fetchJobs, fetchJobById, fetchStatusMeta, fetchAbsoluteJobCounts, createJob, removeJob, updateJob };
 });

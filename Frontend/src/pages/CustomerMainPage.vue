@@ -17,99 +17,124 @@
 
       <!-- div class="text-h5 text-weight-bold text-center q-py-md">ภาพรวม</div> -->
 
-      <!-- Download Btn -->
+      <!-- ให้คะแนนได้เมื่อแอดมินปิดงานแล้วเท่านั้น (backend เช็คซ้ำใน RatingsService) -->
       <q-btn
+        v-if="canReview"
         color="primary"
-        icon="download"
-        :label="t('customer.main.downloadReport')"
+        icon="star"
+        :label="t('customer.main.reviewAndRate')"
         class="full-width q-mb-md download-btn"
         unelevated
         size="md"
-        :loading="isLoadingExportAll"
-        @click="handleExportAll"
+        @click="review"
       />
 
-      <!-- Export by Category Btn -->
-      <q-btn
-        outline
-        color="primary"
-        icon="filter_alt"
-        :label="t('customer.main.downloadByCategory')"
-        class="full-width q-mb-md"
-        size="md"
-        :loading="isLoadingByCategory"
-        @click="openCategoryDialog"
-      />
-
-      <!-- Project Info Card -->
-      <q-card flat bordered class="info-card q-mb-md">
-        <q-card-section>
-          <div class="section-title q-mb-md">{{ t('customer.main.projectInfo') }}</div>
-          <div class="row q-col-gutter-md">
-            <div
-              :class="field.full ? 'col-12' : 'col-6'"
-              v-for="field in projectFields"
-              :key="field.label"
-            >
-              <div class="field-label">{{ field.label }}</div>
-              <div class="field-value">{{ field.value }}</div>
+      <!-- Download Actions -->
+      <div class="row q-col-gutter-sm q-mb-md">
+        <div class="col-6">
+          <q-btn
+            no-caps
+            unelevated
+            class="download-action download-action--solid full-width"
+            :loading="isLoadingExportAll"
+            @click="handleExportAll"
+          >
+            <div class="column items-center">
+              <q-icon name="description" size="24px" class="q-mb-xs" />
+              <span class="download-action-label">{{ t('customer.main.downloadReport') }}</span>
             </div>
-          </div>
-        </q-card-section>
-      </q-card>
+          </q-btn>
+        </div>
+        <div class="col-6">
+          <q-btn
+            no-caps
+            unelevated
+            class="download-action download-action--outline full-width"
+            :loading="isLoadingByCategory"
+            @click="openCategoryDialog"
+          >
+            <div class="column items-center">
+              <q-icon name="filter_alt" size="24px" class="q-mb-xs" />
+              <span class="download-action-label">{{ t('customer.main.downloadByCategory') }}</span>
+            </div>
+          </q-btn>
+        </div>
+      </div>
 
-      <!-- Customer Info Card -->
-      <q-card flat bordered class="info-card q-mb-md">
-        <q-card-section>
-          <div class="section-title q-mb-md">{{ t('customer.main.customerInfo') }}</div>
-          <div class="row q-col-gutter-md">
-            <div
-              :class="field.full ? 'col-12' : 'col-6'"
-              v-for="field in customerFields"
-              :key="field.label"
-            >
-              <div class="field-label">{{ field.label }}</div>
-              <div class="field-value" :class="field.empty ? 'text-grey-4' : ''">
-                {{ field.value }}
+      <!-- Project Info & Customer Info: stacked on mobile, side-by-side from tablet up -->
+      <div class="row q-col-gutter-md q-mb-md">
+        <div class="col-12 col-md-6">
+          <q-card flat bordered class="info-card card-stagger full-height">
+            <q-card-section>
+              <div class="section-title q-mb-md">{{ t('customer.main.projectInfo') }}</div>
+              <div class="row q-col-gutter-md">
+                <div
+                  :class="field.full ? 'col-12' : 'col-6'"
+                  v-for="field in projectFields"
+                  :key="field.label"
+                >
+                  <div class="field-label">{{ field.label }}</div>
+                  <div class="field-value">{{ field.value }}</div>
+                </div>
               </div>
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <q-card flat bordered class="info-card card-stagger card-stagger--d2 full-height">
+            <q-card-section>
+              <div class="section-title q-mb-md">{{ t('customer.main.customerInfo') }}</div>
+              <div class="row q-col-gutter-md">
+                <div
+                  :class="field.full ? 'col-12' : 'col-6'"
+                  v-for="field in customerFields"
+                  :key="field.label"
+                >
+                  <div class="field-label">{{ field.label }}</div>
+                  <div class="field-value" :class="field.empty ? 'text-grey-4' : ''">
+                    {{ field.value }}
+                  </div>
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
 
       <div class="row q-col-gutter-sm q-mb-md">
-        <div class="col-4">
+        <div class="col-4 stat-card-stagger">
           <q-card flat bordered class="stat-card text-center">
             <q-card-section class="q-pa-sm">
               <div class="stat-label">{{ t('customer.main.totalDefects') }}</div>
-              <div class="stat-number text-dark">{{ totalDefects }}</div>
+              <div class="stat-number text-dark tabular-nums">{{ totalDefects }}</div>
             </q-card-section>
           </q-card>
         </div>
-        <div class="col-4">
+        <div class="col-4 stat-card-stagger">
           <q-card flat bordered class="stat-card text-center">
             <q-card-section class="q-pa-sm">
               <div class="stat-label">{{ t('customer.main.inProgress') }}</div>
-              <div class="stat-number text-orange">{{ inProgress }}</div>
+              <div class="stat-number text-orange tabular-nums">{{ inProgress }}</div>
             </q-card-section>
           </q-card>
         </div>
-        <div class="col-4">
+        <div class="col-4 stat-card-stagger">
           <q-card flat bordered class="stat-card text-center">
             <q-card-section class="q-pa-sm">
               <div class="stat-label">{{ t('customer.main.passed') }}</div>
-              <div class="stat-number text-primary">{{ passed }}</div>
+              <div class="stat-number text-primary tabular-nums">{{ passed }}</div>
             </q-card-section>
           </q-card>
         </div>
       </div>
 
       <!-- Progress Card -->
-      <q-card flat bordered class="info-card q-mb-md">
+      <q-card flat bordered class="info-card q-mb-md card-stagger card-stagger--d4">
         <q-card-section>
           <div class="row items-center justify-between q-mb-sm">
             <div class="section-title">{{ t('customer.main.overallProgress') }}</div>
-            <div class="text-primary text-h6 text-weight-bold">{{ progressPercent }}%</div>
+            <div class="text-primary text-h6 text-weight-bold tabular-nums">{{ progressPercent }}%</div>
           </div>
           <q-linear-progress
             :value="progressValue"
@@ -126,7 +151,7 @@
       </q-card>
 
       <!-- Workflow Stepper -->
-      <q-card flat bordered class="info-card q-mb-md">
+      <q-card flat bordered class="info-card q-mb-md card-stagger card-stagger--d5">
         <q-card-section>
           <div class="workflow-row">
             <template v-for="(step, i) in workflowSteps" :key="i">
@@ -147,7 +172,7 @@
       </q-card>
 
       <!-- Defect by Type Card -->
-      <q-card flat bordered class="info-card q-mb-md">
+      <q-card flat bordered class="info-card q-mb-md card-stagger card-stagger--d6">
         <q-card-section>
           <div class="section-title q-mb-md">{{ t('customer.main.defectByType') }}</div>
           <div class="row items-center">
@@ -230,14 +255,11 @@
       </q-card>
 
       <!-- Latest Updates Card -->
-      <q-card flat bordered class="info-card q-mb-xl">
+      <q-card flat bordered class="info-card q-mb-xl card-stagger card-stagger--d6">
         <q-card-section>
           <div class="section-title q-mb-md">{{ t('customer.main.latestUpdates') }}</div>
           <q-list v-if="updates.length" dense>
             <q-item v-for="(item, i) in updates" :key="i" class="q-px-none q-py-sm">
-              <q-item-section avatar style="min-width: 20px">
-                <q-icon name="circle" :color="item.color" size="10px" />
-              </q-item-section>
               <q-item-section>
                 <q-item-label class="text-body2">{{ item.title }}</q-item-label>
                 <q-item-label caption class="text-grey-6">{{ item.sub }}</q-item-label>
@@ -251,16 +273,6 @@
         </q-card-section>
       </q-card>
     </div>
-    <q-btn
-      v-if="hasLinkAccess && isCustomerViewOnly"
-      color="primary"
-      icon="star"
-      :label="t('customer.main.reviewAndRate')"
-      class="full-width q-mb-md download-btn"
-      unelevated
-      size="md"
-      @click="review"
-    />
     <ReviewDialog
       v-model="dialog"
       :job-id="currentJobId"
@@ -268,9 +280,17 @@
     />
 
     <!-- Export by Category Dialog -->
-    <q-dialog v-model="showCategoryDialog" position="bottom">
-      <q-card style="width: 100%; border-radius: 16px 16px 0 0; max-height: 85vh;">
-        <q-card-section class="row items-center q-pb-none">
+    <q-dialog
+      v-model="showCategoryDialog"
+      position="bottom"
+      transition-show="sheet-in"
+      transition-hide="sheet-out"
+    >
+      <q-card style="width: 100%; border-radius: 24px 24px 0 0; max-height: 85vh;" class="filter-sheet">
+        <q-card-section class="q-pb-none">
+          <div class="sheet-handle" />
+        </q-card-section>
+        <q-card-section class="row items-center q-pt-none q-pb-none">
           <div class="section-title">{{ t('customer.main.selectCategoryToExport') }}</div>
           <q-space />
           <q-btn icon="close" flat round dense v-close-popup />
@@ -298,7 +318,7 @@
           <q-btn
             unelevated
             icon="download"
-            label="Export"
+            :label="t('customer.main.export')"
             color="primary"
             rounded
             :disable="!selectedCategoryIds.length"
@@ -364,6 +384,7 @@ import { useLinkAccess } from 'src/stores/useLinkAccess';
 import { api } from 'src/boot/axios';
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
+import { localizedName, useLocalizedField } from 'src/composables/useLocalizedField';
 
 const overviewSpinner = createIconSpinner('home');
 
@@ -373,6 +394,7 @@ const linkParams = computed(() =>
 );
 const $q = useQuasar();
 const { t, locale } = useI18n();
+const { pickLocalized } = useLocalizedField();
 
 // ── Defect summary จาก stores ──────────────────────────────────────────
 const {
@@ -415,11 +437,12 @@ interface CustomerResponse {
 interface JobResponse {
   jobId: number;
   projectName: string;
+  projectNameEn?: string | null;
   usableArea: number;
   status: string;
   customer?: CustomerResponse;
   address?: AddressResponse;
-  houseType?: { name?: string };
+  houseType?: { name?: string; nameEn?: string | null };
 }
 
 interface RoundResponse {
@@ -432,6 +455,10 @@ interface RoundResponse {
 
 const jobData = ref<JobResponse | null>(null);
 const rounds = ref<RoundResponse[]>([]);
+
+const canReview = computed(
+  () => hasLinkAccess.value && isCustomerViewOnly.value && jobData.value?.status === 'Completed',
+);
 
 interface FieldRow {
   label: string;
@@ -457,22 +484,26 @@ const projectFields = computed<FieldRow[]>(() => {
   const address = job?.address;
   const location = [
     address?.houseNumber,
-    address?.subDistrict ? `ต.${address.subDistrict}` : '',
-    address?.district ? `อ.${address.district}` : '',
-    address?.province ? `จ.${address.province}` : '',
+    address?.subDistrict ? t('common.address.subDistrict', { value: address.subDistrict }) : '',
+    address?.district ? t('common.address.district', { value: address.district }) : '',
+    address?.province ? t('common.address.province', { value: address.province }) : '',
   ]
     .filter(Boolean)
     .join(' ');
 
   return [
     { label: t('customer.main.fieldProjectNameTh'), value: job?.projectName || '-' },
-    { label: t('customer.main.fieldProjectNameEn'), value: '–', empty: true },
+    {
+      label: t('customer.main.fieldProjectNameEn'),
+      value: job?.projectNameEn || '–',
+      empty: !job?.projectNameEn,
+    },
     { label: t('customer.main.fieldLocation'), value: location || '-', full: true },
     {
       label: t('customer.main.fieldTypeFloor'),
       value:
         [
-          job?.houseType?.name,
+          pickLocalized(job?.houseType?.name, job?.houseType?.nameEn),
           address?.floor ? t('customer.main.floorUnit', { n: address.floor }) : '',
         ]
           .filter(Boolean)
@@ -522,7 +553,7 @@ const availableCategories = computed(() => {
   const map = new Map<number, string>();
   pdfDefects.value.forEach((d) =>
     d.subCategories?.forEach((sc) => {
-      if (sc.category) map.set(sc.category.categoryId, sc.category.name);
+      if (sc.category) map.set(sc.category.categoryId, localizedName(sc.category));
     }),
   );
   return [...map.entries()].map(([categoryId, name]) => ({ categoryId, name }));
@@ -697,20 +728,124 @@ async function loadOverview(jobId: number) {
 
 <style scoped>
 .overview-page {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   max-width: 480px;
   margin: 0 auto;
+  width: 100%;
+}
+@media (min-width: 768px) {
+  .overview-page {
+    max-width: 720px;
+  }
+}
+@media (min-width: 1024px) {
+  .overview-page {
+    max-width: 1100px;
+  }
+}
+@media (min-width: 1440px) {
+  .overview-page {
+    max-width: 1280px;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 .download-btn {
   border-radius: 12px;
   font-size: 15px;
   font-weight: 600;
+  transition: box-shadow 150ms var(--ease-out);
+}
+.download-btn:hover {
+  box-shadow: 0 4px 14px rgba(25, 118, 210, 0.25);
+}
+
+.download-action {
+  border-radius: 14px;
+  padding: 14px 6px;
+  min-height: 76px;
+  transition: transform 100ms var(--ease-out), background-color 150ms var(--ease-out);
+}
+.download-action:active {
+  transform: scale(0.97);
+}
+.download-action-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: normal;
+  text-align: center;
+}
+.download-action--solid {
+  background: var(--q-primary) !important;
+  color: #ffffff !important;
+}
+.download-action--solid:hover {
+  background: #1565c0 !important;
+}
+.download-action--outline {
+  background: #ffffff !important;
+  color: var(--q-primary) !important;
+  border: 1.5px solid #d6e4f5;
+}
+.download-action--outline:hover {
+  background: #f5f9ff !important;
 }
 
 .info-card {
   border-radius: 14px !important;
   background: #ffffff !important;
   border-color: #ebebeb !important;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 4px 10px rgba(0, 0, 0, 0.04) !important;
+}
+
+.card-stagger {
+  animation: card-in 320ms var(--ease-out) both;
+}
+.card-stagger--d2 { animation-delay: 40ms; }
+.card-stagger--d4 { animation-delay: 120ms; }
+.card-stagger--d5 { animation-delay: 150ms; }
+.card-stagger--d6 { animation-delay: 180ms; }
+
+.stat-card-stagger {
+  animation: card-in 320ms var(--ease-out) both;
+}
+.stat-card-stagger:nth-child(1) { animation-delay: 80ms; }
+.stat-card-stagger:nth-child(2) { animation-delay: 100ms; }
+.stat-card-stagger:nth-child(3) { animation-delay: 120ms; }
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-stagger,
+  .stat-card-stagger {
+    animation-duration: 0.01ms !important;
+  }
+}
+
+.filter-sheet {
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
+}
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: #e0e0e0;
+  margin: 0 auto;
 }
 
 .section-title {
@@ -735,6 +870,9 @@ async function loadOverview(jobId: number) {
   border-radius: 12px !important;
   background: #ffffff !important;
   border-color: #ebebeb !important;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 4px 10px rgba(0, 0, 0, 0.04) !important;
 }
 
 .stat-label {
@@ -808,5 +946,35 @@ async function loadOverview(jobId: number) {
 }
 .wf-line.grey {
   background: #e0e0e0;
+}
+</style>
+
+<style>
+/* Frosted-glass backdrop + spring-eased bottom sheet for the export dialog */
+.q-dialog__backdrop {
+  backdrop-filter: blur(6px) saturate(180%);
+  -webkit-backdrop-filter: blur(6px) saturate(180%);
+}
+
+.q-transition--sheet-in-enter-active {
+  transition: all 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.q-transition--sheet-in-enter-from {
+  transform: translateY(100%);
+  opacity: 0.6;
+}
+.q-transition--sheet-out-leave-active {
+  transition: all 200ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.q-transition--sheet-out-leave-to {
+  transform: translateY(100%);
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .q-transition--sheet-in-enter-active,
+  .q-transition--sheet-out-leave-active {
+    transition-duration: 0.01ms !important;
+  }
 }
 </style>

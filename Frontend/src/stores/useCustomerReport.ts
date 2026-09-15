@@ -40,8 +40,10 @@ interface SummaryItemResponse {
   itemId: number
   detailValue?: string
   template: { templateId: number }
-  option: { optionId: number; value: string; group?: string }
+  option: { optionId: number; value: string; group?: string; type: string } | null
 }
+
+type AnswerItemResponse = SummaryItemResponse & { option: NonNullable<SummaryItemResponse['option']> }
 
 interface RoundResponse {
   roundId: number
@@ -86,7 +88,10 @@ export function useReport() {
           groups.get(groupName)!.push(opt)
         }
 
-        const templateItems = items.filter((i) => i.template.templateId === template.templateId)
+        // แถวรูปหลักฐานไม่มี option จึงถูกกรองออกตรงนี้
+        const templateItems = items.filter(
+          (i): i is AnswerItemResponse => i.template.templateId === template.templateId && i.option !== null,
+        )
         const showLabel = groups.size > 1
 
         const fields: ReportField[] = []

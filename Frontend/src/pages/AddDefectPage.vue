@@ -1,5 +1,6 @@
 <template>
-  <q-page class="column no-wrap" style="height: 100dvh; overflow: hidden">
+  <q-page class="row justify-center bg-grey-1" style="height: 100dvh; overflow: hidden">
+    <div class="detail-content column no-wrap" style="height: 100%">
     <div class="relative-position flex flex-center col-auto bg-grey-3" style="height: 40vh">
       <q-btn
         flat
@@ -276,7 +277,7 @@
                 <div class="row items-center justify-between no-wrap">
                   <div class="column q-gutter-y-xs">
                     <div class="text-caption text-weight-bold text-dark row items-center q-gutter-x-xs">
-                      <span>ตำแหน่งในแปลนบ้าน</span>
+                      <span>{{ t('inspection.addDefect.planPositionLabel') }}</span>
                       <q-icon name="open_in_new" size="14px" color="grey-6" />
                     </div>
 
@@ -284,7 +285,7 @@
                     <div class="row items-center q-gutter-x-xs">
                       <template v-if="form.planId && form.planX !== null">
                         <q-badge color="positive" class="text-caption q-px-xs">
-                          📍 ระบุในแปลนแล้ว (คลิกเพื่อดู/แก้ไข)
+                          {{ t('inspection.addDefect.planPositionSet') }}
                         </q-badge>
                         <span v-if="form.locationZone" class="text-caption text-grey-7">
                           • {{ form.locationZone }}
@@ -297,7 +298,7 @@
                       </template>
                       <template v-else>
                         <span class="text-caption text-grey-6">
-                          ยังไม่ระบุตำแหน่ง (ไม่บังคับ)
+                          {{ t('inspection.addDefect.planPositionNotSet') }}
                         </span>
                       </template>
                     </div>
@@ -391,7 +392,8 @@
         />
       </div>
     </div>
-    
+    </div>
+
     <ImageAnnotatorDialog
       v-if="imagePreview"
       v-model="showAnnotator"
@@ -414,6 +416,7 @@ import { useI18n } from 'vue-i18n';
 import imageCompression from 'browser-image-compression';
 import PlanPositionDialog from 'src/components/PlanPositionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
+import { localizedName } from 'src/composables/useLocalizedField';
 
 const addDefectSpinner = createIconSpinner('note_add');
 
@@ -566,13 +569,13 @@ const onFloorChange = () => {
 // ── Category / SubCategory ────────────────────────────────────
 
 const categoryOptions = computed(() =>
-  inspectionStore.categories.map((c) => ({ label: c.name, value: c.categoryId })),
+  inspectionStore.categories.map((c) => ({ label: localizedName(c), value: c.categoryId })),
 );
 
 const subCategoryOptions = computed(() => {
   if (!form.value.jobType) return [];
   return inspectionStore.getSubByCategoryId(form.value.jobType).map((s) => ({
-    label: s.name,
+    label: localizedName(s),
     value: s.subCategoryId,
   }));
 });
@@ -716,7 +719,10 @@ const buildLocalSubCategories = () =>
     .map((s) => ({
       subCategoryId: s.subCategoryId,
       name: s.name,
-      ...(s.categoryId ? { category: { name: s.categoryId.name, categoryId: s.categoryId.categoryId } } : {}),
+      nameEn: s.nameEn ?? null,
+      ...(s.categoryId
+        ? { category: { name: s.categoryId.name, nameEn: s.categoryId.nameEn ?? null, categoryId: s.categoryId.categoryId } }
+        : {}),
     }));
 
 const patchDefectLocally = (defectId: number) => {
@@ -1024,6 +1030,26 @@ async function loadAddDefectData() {
 </script>
 
 <style scoped>
+.detail-content {
+  width: 100%;
+  max-width: 480px;
+}
+@media (min-width: 768px) {
+  .detail-content {
+    max-width: 720px;
+  }
+}
+@media (min-width: 1024px) {
+  .detail-content {
+    max-width: 1100px;
+  }
+}
+@media (min-width: 1440px) {
+  .detail-content {
+    max-width: 1280px;
+  }
+}
+
 :deep(.q-field--dense .q-field__control) {
   height: 40px;
 }

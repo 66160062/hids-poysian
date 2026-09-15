@@ -8,8 +8,8 @@
     </q-header>
 
     <q-page-container>
-      <q-page class="q-pa-md bg-grey-1 modern-font" style="padding-bottom: 80px">
-        
+      <q-page class="q-pa-md bg-grey-1 modern-font row justify-center" style="padding-bottom: 80px">
+        <div class="detail-content">
         <!-- 1. ข้อมูลทั่วไป -->
         <q-card flat bordered class="q-mb-md ui-card">
           <q-card-section class="q-pa-sm bg-grey-2 text-primary text-weight-bold row items-center">
@@ -71,7 +71,7 @@
             <q-item v-for="work in workDetails" :key="work.id" class="bg-white">
               <q-item-section>
                 <q-item-label class="text-weight-bold text-primary">{{ work.name }}</q-item-label>
-                <q-item-label caption>{{ t('construction.inspect.locationLabel') }}: {{ work.location || '-' }} | {{ t('construction.inspect.unitLabel') }}: {{ work.unit || '-' }}</q-item-label>
+                <q-item-label caption>{{ t('construction.inspect.locationLabel') }}: {{ work.location ? roomLabel(work.location) : '-' }} | {{ t('construction.inspect.unitLabel') }}: {{ work.unit ? unitLabel(work.unit) : '-' }}</q-item-label>
                 <q-item-label caption>{{ t('construction.inspect.actualLabel') }}: {{ work.actual }}%</q-item-label>
               </q-item-section>
               <q-item-section side class="row items-center q-pa-none">
@@ -106,7 +106,7 @@
               <q-list separator>
                 <q-item v-for="p in personnelList" :key="p.id" class="bg-white q-pa-sm">
                   <q-item-section>
-                    <q-item-label class="text-weight-bold" style="font-size: 12px;">{{ p.name }}</q-item-label>
+                    <q-item-label class="text-weight-bold" style="font-size: 12px;">{{ translatePersonnelType(p.name) }}</q-item-label>
                     <q-item-label caption v-if="p.hours" style="font-size: 11px;">{{ t('construction.inspect.timeHoursLabel', { hours: p.hours }) }}</q-item-label>
                   </q-item-section>
                   <q-item-section side class="row items-center q-pa-none">
@@ -136,7 +136,7 @@
               <q-list separator>
                 <q-item v-for="w in workerList" :key="w.id" class="bg-white q-pa-sm">
                   <q-item-section>
-                    <q-item-label class="text-weight-bold" style="font-size: 12px;">{{ w.name }}</q-item-label>
+                    <q-item-label class="text-weight-bold" style="font-size: 12px;">{{ translatePersonnelType(w.name) }}</q-item-label>
                     <q-item-label caption v-if="w.hours" style="font-size: 11px;">{{ t('construction.inspect.timeHoursLabel', { hours: w.hours }) }}</q-item-label>
                   </q-item-section>
                   <q-item-section side class="row items-center q-pa-none">
@@ -274,7 +274,7 @@
         <!-- PROJECT PHOTOS: Single 6-slot (or more) Grid -->
         <!-- PROJECT PHOTOS: Single 6-slot (or more) Grid -->
         <div class="q-mb-lg">
-          <div class="text-subtitle2 text-weight-bold q-mb-sm text-dark text-uppercase">PROJECT PHOTOS</div>
+          <div class="text-subtitle2 text-weight-bold q-mb-sm text-dark text-uppercase">{{ t('construction.inspect.projectPhotos') }}</div>
           <div class="row q-col-gutter-sm">
             <div class="col-6" v-for="(item, index) in gridItems" :key="index">
               
@@ -320,14 +320,15 @@
 
         <input type="file" ref="fileInput" accept="image/*" style="display: none" @change="handleFileChange" />
 
+        </div>
       </q-page>
     </q-page-container>
 
-    <q-footer class="bg-transparent q-px-md q-pb-lg">
+    <q-footer class="bg-transparent q-px-md q-pb-lg row justify-center">
       <q-btn
         color="primary"
         :label="route.path.includes('/admin') ? t('construction.inspect.submitEdit') : t('construction.inspect.submitDaily')"
-        class="full-width text-weight-bold shadow-3"
+        class="full-width text-weight-bold shadow-3 footer-btn"
         style="border-radius: 8px; height: 48px; font-size: 16px;"
         :loading="store.isSubmitting"
         :disable="store.isSubmitting"
@@ -358,10 +359,10 @@
 
           <div class="row q-col-gutter-sm">
             <div class="col-12 col-sm-6">
-              <q-select outlined v-model="newWork.location" :options="roomOptions" :label="t('construction.inspect.locationSelectLabel')" bg-color="white" />
+              <q-select outlined v-model="newWork.location" :options="roomOptions" emit-value map-options :label="t('construction.inspect.locationSelectLabel')" bg-color="white" />
             </div>
             <div class="col-12 col-sm-6">
-              <q-select outlined v-model="newWork.unit" :options="unitOptions" :label="t('construction.inspect.unitSelectLabel')" bg-color="white" />
+              <q-select outlined v-model="newWork.unit" :options="unitOptions" emit-value map-options :label="t('construction.inspect.unitSelectLabel')" bg-color="white" />
             </div>
           </div>
 
@@ -399,6 +400,8 @@
             outlined
             v-model="newPerson.name"
             :options="isWorker ? workerOptions : personnelOptions"
+            emit-value
+            map-options
             :label="isWorker ? t('construction.inspect.workerTypeLabel') : t('construction.inspect.personnelPositionLabel')"
             autofocus
           />
@@ -535,6 +538,7 @@ import { ref, computed, onUnmounted, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
+import { usePersonnelLabel } from 'src/composables/usePersonnelLabel';
 import imageCompression from 'browser-image-compression';
 import { useConstructionDailyReportStore } from 'src/stores/useConstructionDailyReport';
 import type { ConstructionDailyReportPayload, MachinePayload, PersonnelPayload } from 'src/stores/useConstructionDailyReport';
@@ -546,6 +550,7 @@ const $q = useQuasar();
 const router = useRouter();
 const route = useRoute();
 const { t } = useI18n();
+const { translatePersonnelType } = usePersonnelLabel();
 const store = useConstructionDailyReportStore();
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
@@ -715,8 +720,45 @@ const setCurrentTime = (field: 'startTime' | 'endTime') => {
 };
 
 // 2. Work Details
-const roomOptions = ['ห้องรับแขก', 'ห้องนอน', 'ห้องน้ำ', 'ห้องครัว', 'ระเบียง', 'รอบตัวบ้าน', 'หลังคา', 'ส่วนกลาง'];
-const unitOptions = ['ตร.ม.', 'เมตร', 'ชิ้น', 'จุด', 'ชุด'];
+// value เป็นข้อความไทยตามที่บันทึกลงฐานข้อมูลอยู่เดิม (รายงาน PDF อ่านค่านี้) — แปลเฉพาะ label ที่แสดง
+const ROOM_OPTION_KEYS: Record<string, string> = {
+  ห้องรับแขก: 'livingRoom',
+  ห้องนอน: 'bedroom',
+  ห้องน้ำ: 'bathroom',
+  ห้องครัว: 'kitchen',
+  ระเบียง: 'balcony',
+  รอบตัวบ้าน: 'exterior',
+  หลังคา: 'roof',
+  ส่วนกลาง: 'commonArea',
+};
+const UNIT_OPTION_KEYS: Record<string, string> = {
+  'ตร.ม.': 'sqm',
+  เมตร: 'meter',
+  ชิ้น: 'piece',
+  จุด: 'point',
+  ชุด: 'set',
+};
+const roomOptions = computed(() =>
+  Object.entries(ROOM_OPTION_KEYS).map(([value, key]) => ({
+    value,
+    label: t(`construction.inspect.roomOptions.${key}`),
+  })),
+);
+const unitOptions = computed(() =>
+  Object.entries(UNIT_OPTION_KEYS).map(([value, key]) => ({
+    value,
+    label: t(`construction.inspect.unitOptions.${key}`),
+  })),
+);
+// ค่าที่ไม่อยู่ในรายการ (เช่นข้อมูลเก่า) แสดงค่าดิบตามเดิม
+function roomLabel(value: string): string {
+  const key = ROOM_OPTION_KEYS[value];
+  return key ? t(`construction.inspect.roomOptions.${key}`) : value;
+}
+function unitLabel(value: string): string {
+  const key = UNIT_OPTION_KEYS[value];
+  return key ? t(`construction.inspect.unitOptions.${key}`) : value;
+}
 const workDetails = ref<{id: number, name: string, location: string, unit: string, actual: number}[]>([]);
 const workDialog = ref(false);
 const newWork = ref({ name: '', location: '', unit: '', actual: 0 });
@@ -858,17 +900,25 @@ const personDialog = ref(false);
 const isWorker = ref(false);
 const newPerson = ref({ name: '', count: 1, hours: null as number | null });
 
-const personnelOptions = [
-  'ผู้จัดการโครงการ', 'วิศวกรโครงการ', 'ประสานงานโครงการ', 'วิศวกรสนาม', 'สถาปนิก', 
-  'โฟร์แมนโครงสร้าง', 'โฟร์แมนสถาปัตย์', 'จนท.ความปลอดภัย', 'ช่างสำรวจ', 'เสมียน', 
+const PERSONNEL_TYPES = [
+  'ผู้จัดการโครงการ', 'วิศวกรโครงการ', 'ประสานงานโครงการ', 'วิศวกรสนาม', 'สถาปนิก',
+  'โฟร์แมนโครงสร้าง', 'โฟร์แมนสถาปัตย์', 'จนท.ความปลอดภัย', 'ช่างสำรวจ', 'เสมียน',
   'พนักงานคุมสโตร์', 'พนักงานควบคุมเครื่องจักร', 'พนักงานขับรถ'
 ];
 
-const workerOptions = [
-  'หัวหน้าชุด', 'ช่างไม้', 'ช่างปูนก่อ, เท Topping', 'ช่างปูนฉาบ', 'ช่างกระเบื้อง', 
-  'ช่างฝ้าเพดาน', 'ช่างติดตั้ง, สุขภัณฑ์', 'ช่างทาสี', 'กรรมกร (ชาย/หญิง)', 
+const WORKER_TYPES = [
+  'หัวหน้าชุด', 'ช่างไม้', 'ช่างปูนก่อ, เท Topping', 'ช่างปูนฉาบ', 'ช่างกระเบื้อง',
+  'ช่างฝ้าเพดาน', 'ช่างติดตั้ง, สุขภัณฑ์', 'ช่างทาสี', 'กรรมกร (ชาย/หญิง)',
   'ช่างเฟอร์นิเจอร์', 'ช่างไฟ', 'ช่างเหล็ก, ช่างเชื่อม', 'ช่างแอร์'
 ];
+
+const personnelOptions = computed(() =>
+  PERSONNEL_TYPES.map((type) => ({ label: translatePersonnelType(type), value: type })),
+);
+
+const workerOptions = computed(() =>
+  WORKER_TYPES.map((type) => ({ label: translatePersonnelType(type), value: type })),
+);
 
 const addPersonnel = () => {
   isWorker.value = false;
@@ -1098,6 +1148,45 @@ const submitReport = async () => {
 <style scoped>
 .modern-font {
   font-family: 'Inter', 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.detail-content {
+  width: 100%;
+  max-width: 480px;
+}
+@media (min-width: 768px) {
+  .detail-content {
+    max-width: 720px;
+  }
+}
+@media (min-width: 1024px) {
+  .detail-content {
+    max-width: 1100px;
+  }
+}
+@media (min-width: 1440px) {
+  .detail-content {
+    max-width: 1280px;
+  }
+}
+
+.footer-btn {
+  max-width: 480px;
+}
+@media (min-width: 768px) {
+  .footer-btn {
+    max-width: 720px;
+  }
+}
+@media (min-width: 1024px) {
+  .footer-btn {
+    max-width: 1100px;
+  }
+}
+@media (min-width: 1440px) {
+  .footer-btn {
+    max-width: 1280px;
+  }
 }
 
 .ui-card {

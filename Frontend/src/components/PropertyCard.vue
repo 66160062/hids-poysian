@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useLocalizedField } from 'src/composables/useLocalizedField';
 
 interface PropertyItem {
   roundId: number;
@@ -8,6 +9,7 @@ interface PropertyItem {
   roundNumber: string;
   job: {
     projectName: string;
+    projectNameEn?: string | null;
     projectImageUrl?: string;
     inspectionType?: string;
     address?: {
@@ -21,6 +23,7 @@ interface PropertyItem {
     };
     houseType?: {
       name: string;
+      nameEn?: string | null;
     };
     customer?: {
       fullName?: string;
@@ -37,6 +40,7 @@ const props = defineProps<{
 
 const router = useRouter();
 const { t } = useI18n();
+const { pickLocalized } = useLocalizedField();
 
 const goToInspectionInfo = (roundId: number) => {
   void router.push(`/inspector/job/${roundId}`);
@@ -95,16 +99,17 @@ const getImageUrl = (url?: string) => {
 const isDefect = (type?: string) => type === 'DEFECT_INSPECTION' || type === 'Defect' || type === 'ตรวจ Defect';
 const isConstruction = (type?: string) => type === 'CONSTRUCTION_INSPECTION' || type === 'Construction' || type === 'ตรวจก่อสร้าง';
 
-const statusBadgeColor = (status: string) => {
-  if (status === 'APPROVED' || status === 'COMPLETED') return 'positive';
-  if (status === 'CANCELLED') return 'grey-6';
-  return 'warning';
+// pastel bg + saturated text style — เหมือน status badge ในการ์ดหน้า AdminWorkListPage
+const statusBadgeStyles: Record<string, { bgClass: string; textColor: string }> = {
+  SCHEDULED: { bgClass: 'bg-blue-1', textColor: 'blue-9' },
+  INSPECTED: { bgClass: 'bg-orange-1', textColor: 'orange-8' },
+  SUBMITTED: { bgClass: 'bg-deep-orange-1', textColor: 'deep-orange-9' },
+  APPROVED: { bgClass: 'bg-green-1', textColor: 'green-9' },
+  COMPLETED: { bgClass: 'bg-green-1', textColor: 'green-9' },
+  CANCELLED: { bgClass: 'bg-red-1', textColor: 'red-9' },
 };
 
-const statusBadgeTextColor = (status: string) => {
-  if (status === 'APPROVED' || status === 'COMPLETED' || status === 'CANCELLED') return 'white';
-  return 'black';
-};
+const statusBadgeStyle = (status: string) => statusBadgeStyles[status] ?? { bgClass: 'bg-grey-3', textColor: 'grey-8' };
 </script>
 
 <template>
@@ -134,7 +139,7 @@ const statusBadgeTextColor = (status: string) => {
                 line-height: 1.2;
               "
             >
-              {{ item.job.projectName }}
+              {{ pickLocalized(item.job.projectName, item.job.projectNameEn) }}
             </div>
             <!-- Inspection Type Badge -->
             <div class="q-mt-xs">
@@ -158,20 +163,8 @@ const statusBadgeTextColor = (status: string) => {
           </div>
 
           <q-badge
-            :color="statusBadgeColor(item.status)"
-            :text-color="statusBadgeTextColor(item.status)"
-            style="
-              width: 53px;
-              height: 15px;
-              min-height: 15px;
-              padding: 0;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              border-radius: 99px;
-              font-weight: 500;
-              font-size: 8px;
-            "
+            class="status-badge"
+            :class="[statusBadgeStyle(item.status).bgClass, `text-${statusBadgeStyle(item.status).textColor}`]"
           >
             <div v-if="item.status == 'SCHEDULED'">{{ t('components.propertyCard.statusScheduled') }}</div>
             <div v-else-if="item.status === 'INSPECTED'">{{ t('components.propertyCard.statusInspected') }}</div>
@@ -209,7 +202,7 @@ const statusBadgeTextColor = (status: string) => {
         >
           <span class="text-primary">{{ t('components.propertyCard.houseTypeLabel') }}</span>
           <span>
-            {{ item.job.houseType?.name }}
+            {{ pickLocalized(item.job.houseType?.name, item.job.houseType?.nameEn) }}
             {{ item.job.address?.floor ? item.job.address.floor + ' ' + t('components.propertyCard.floorSuffix') : '' }}</span
           >
         </div>
@@ -268,6 +261,16 @@ const statusBadgeTextColor = (status: string) => {
   border-radius: 16px;
   border: 1px solid #f0f0f0;
   margin: 0 auto;
+}
+
+.status-badge {
+  font-weight: 700;
+  font-size: 9px;
+  padding: 3px 10px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
 }
 
 .nav-button {

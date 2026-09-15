@@ -181,26 +181,26 @@
               />
               <q-btn
                 v-for="cat in availableCategories"
-                :key="cat"
-                :label="cat"
-                :color="filter.categories.includes(cat) ? 'primary' : 'grey-3'"
-                :text-color="filter.categories.includes(cat) ? 'white' : 'grey-8'"
+                :key="cat.categoryId"
+                :label="localizedName(cat)"
+                :color="filter.categories.includes(cat.categoryId) ? 'primary' : 'grey-3'"
+                :text-color="filter.categories.includes(cat.categoryId) ? 'white' : 'grey-8'"
                 unelevated
                 rounded
                 no-caps
                 dense
                 class="q-px-md"
-                @click="toggle(filter.categories, cat)"
+                @click="toggle(filter.categories, cat.categoryId)"
               />
             </div>
           </div>
 
           <!-- สถานะพิกัดแปลน -->
           <div>
-            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">สถานะพิกัดแปลน</div>
+            <div class="text-caption text-grey-6 q-mb-sm text-weight-medium">{{ t('inspection.roomDefect.planStatus') }}</div>
             <div class="row q-gutter-sm">
               <q-btn
-                label="ทั้งหมด"
+                :label="t('inspection.roomDefect.all')"
                 :color="filter.planStatus === 'all' ? 'primary' : 'grey-3'"
                 :text-color="filter.planStatus === 'all' ? 'white' : 'grey-8'"
                 unelevated
@@ -211,7 +211,7 @@
                 @click="filter.planStatus = 'all'"
               />
               <q-btn
-                label="ระบุพิกัดแล้ว"
+                :label="t('inspection.roomDefect.planStatusPinned')"
                 :color="filter.planStatus === 'pinned' ? 'primary' : 'grey-3'"
                 :text-color="filter.planStatus === 'pinned' ? 'white' : 'grey-8'"
                 unelevated
@@ -222,7 +222,7 @@
                 @click="filter.planStatus = 'pinned'"
               />
               <q-btn
-                label="ยังไม่ระบุพิกัด"
+                :label="t('inspection.roomDefect.planStatusUnpinned')"
                 :color="filter.planStatus === 'unpinned' ? 'warning' : 'grey-3'"
                 :text-color="filter.planStatus === 'unpinned' ? 'white' : 'grey-8'"
                 unelevated
@@ -260,6 +260,7 @@ import DefectDetailCard from '../components/DefectDetailCard.vue';
 import { useInspectionStore } from 'src/stores/useInspection';
 import { useRoundLock } from 'src/composables/useRoundLock';
 import { useInspectionRoutes } from 'src/composables/useInspectionRoutes';
+import { localizedName } from 'src/composables/useLocalizedField';
 import type { Defect } from 'src/models';
 
 // ── Route ─────────────────────────────────────────────────────
@@ -307,7 +308,7 @@ const sortOrder = ref<'desc' | 'asc'>('desc'); // desc = ล่าสุด-ช�
 const filter = ref({
   statuses: [] as string[], // [] = ทั้งหมด
   severities: [] as string[], // [] = ทั้งหมด
-  categories: [] as string[], // [] = ทั้งหมด
+  categories: [] as number[], // categoryId, [] = ทั้งหมด (ใช้ id แทนชื่อ กันตัวกรองหลุดตอนสลับภาษา)
   planStatus: 'all',
 });
 
@@ -321,13 +322,15 @@ const statusOptions = computed(() => [
 
 const availableSeverities = computed(() => [...new Set(roomDefects.value.map((d) => d.severity))]);
 
-const availableCategories = computed(() => [
-  ...new Set(
-    roomDefects.value
-      .flatMap((d) => d.subCategories.map((s) => s.category?.name ?? ''))
-      .filter(Boolean),
-  ),
-]);
+const availableCategories = computed(() => {
+  const map = new Map<number, NonNullable<Defect['subCategories'][number]['category']>>();
+  roomDefects.value.forEach((d) =>
+    d.subCategories.forEach((s) => {
+      if (s.category) map.set(s.category.categoryId, s.category);
+    }),
+  );
+  return [...map.values()];
+});
 
 // ── Active filter count ───────────────────────────────────────
 
@@ -362,7 +365,7 @@ const filteredDefects = computed(() => {
   // filter category
   if (filter.value.categories.length > 0) {
     list = list.filter((d) =>
-      d.subCategories.some((s) => filter.value.categories.includes(s.category?.name ?? '')),
+      d.subCategories.some((s) => s.category && filter.value.categories.includes(s.category.categoryId)),
     );
   }
 
@@ -431,9 +434,9 @@ function toCardData(d: Defect) {
     defectId: d.defectId,
     imageUrl: d.imageUrl,
     locationLabel: `${room}, ${subRoom}, ${floor}`,
-    category: d.subCategories[0]?.category?.name ?? '-',
+    category: localizedName(d.subCategories[0]?.category) || '-',
     severity: d.severity,
-    tags: d.subCategories.map((s) => s.name),
+    tags: d.subCategories.map((s) => localizedName(s)),
     status: d.status,
     description: d.description ?? '--',
     plan: d.plan,
