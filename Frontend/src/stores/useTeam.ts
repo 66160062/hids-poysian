@@ -33,6 +33,7 @@ export const useTeamStore = defineStore('team', () => {
     form: {
       team_name: string;
       contact_info?: string;
+      branchId?: number | null;
     };
     file: File | null;
   }) => {
@@ -40,6 +41,7 @@ export const useTeamStore = defineStore('team', () => {
       const requestData = new FormData();
       if (payload.form.team_name) requestData.append('team_name', payload.form.team_name);
       if (payload.form.contact_info) requestData.append('contact_info', payload.form.contact_info);
+      if (payload.form.branchId) requestData.append('branchId', String(payload.form.branchId));
 
       if (payload.file) {
         requestData.append('logo_url', payload.file);
@@ -62,6 +64,7 @@ export const useTeamStore = defineStore('team', () => {
       form: {
         team_name?: string;
         contact_info?: string;
+        branchId?: number | null;
       };
       file: File | null;
     },
@@ -70,6 +73,11 @@ export const useTeamStore = defineStore('team', () => {
       const requestData = new FormData();
       if (payload.form.team_name) requestData.append('team_name', payload.form.team_name);
       if (payload.form.contact_info) requestData.append('contact_info', payload.form.contact_info);
+      if (payload.form.branchId !== undefined) {
+        // null หมายถึง "ถอดออกจากสาขา" — ใช้ 0 เป็น sentinel ตามที่ backend รองรับ
+        // (multipart/form-data ส่ง null จริงๆ ไม่ได้)
+        requestData.append('branchId', String(payload.form.branchId ?? 0));
+      }
 
       if (payload.file) {
         requestData.append('logo_url', payload.file);
