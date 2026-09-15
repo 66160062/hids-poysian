@@ -1,45 +1,70 @@
 <template>
-  <q-card class="login-card">
+  <q-card class="login-card" flat>
     <q-card-section class="text-center">
-      <div class="title">เข้าสู่ระบบ</div>
+      <div class="title">{{ t('login.title') }}</div>
     </q-card-section>
 
     <q-card-section>
-      <q-input v-model="email" placeholder="อีเมล" outlined dense class="q-mb-md" />
+      <q-input
+        v-model="email"
+        :placeholder="t('login.email')"
+        outlined
+        dense
+        class="q-mb-md"
+        @keyup.enter="handleLogin"
+      />
 
       <q-input
         v-model="password"
         :type="showPassword ? 'text' : 'password'"
-        placeholder="รหัสผ่าน"
+        :placeholder="t('login.password')"
         outlined
         dense
+        @keyup.enter="handleLogin"
       >
         <template v-slot:append>
-          <q-icon
-            :name="showPassword ? 'visibility_off' : 'visibility'"
-            class="cursor-pointer"
+          <q-btn
+            round
+            flat
+            dense
+            class="eye-toggle"
+            :class="{ 'eye-toggle--active': showPassword }"
             @click="showPassword = !showPassword"
-          />
+          >
+            <transition name="eye-fade" mode="out-in">
+              <q-icon
+                :key="showPassword ? 'off' : 'on'"
+                :name="showPassword ? 'visibility_off' : 'visibility'"
+                class="eye-icon"
+              />
+            </transition>
+          </q-btn>
         </template>
       </q-input>
 
       <div class="text-right q-mt-xs">
-        <a class="forgot">ลืมรหัสผ่าน?</a>
+        <a class="forgot">{{ t('login.forgotPassword') }}</a>
       </div>
 
-      <div v-if="errorMessage" class="error q-mt-sm">
-        {{ errorMessage }}
+      <div v-if="loginFailed" class="error q-mt-sm">
+        {{ t('login.invalidCredentials') }}
       </div>
     </q-card-section>
 
     <q-card-section class="flex flex-center">
       <q-btn
-        label="เข้าสู่ระบบ"
+        :label="t('login.submit')"
         class="login-btn"
+        :class="{ 'login-btn--loading': loading }"
         :loading="loading"
         :disable="!email || !password"
         @click="handleLogin"
-      />
+        flat
+      >
+        <template v-slot:loading>
+          <span class="login-spinner" />
+        </template>
+      </q-btn>
     </q-card-section>
   </q-card>
 </template>
@@ -47,20 +72,24 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from 'src/stores/useAuth';
 
 const router = useRouter();
 const auth = useAuthStore();
+const { t } = useI18n();
 
 const email = ref('');
 const password = ref('');
 const loading = ref(false);
 const showPassword = ref(false);
-const errorMessage = ref('');
+const loginFailed = ref(false);
 
 const handleLogin = async () => {
+  if (!email.value || !password.value || loading.value) return;
+
   loading.value = true;
-  errorMessage.value = '';
+  loginFailed.value = false;
 
   const success = await auth.login(email.value, password.value);
 
@@ -77,7 +106,7 @@ const handleLogin = async () => {
       await router.push('/dashboard');
     }
   } else {
-    errorMessage.value = 'Email หรือ Password ไม่ถูกต้อง';
+    loginFailed.value = true;
   }
 
   loading.value = false;
@@ -108,10 +137,53 @@ const handleLogin = async () => {
   color: white;
   font-weight: 600;
 }
+.login-btn--loading {
+  pointer-events: none;
+}
+.login-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  animation: login-spin 0.6s linear infinite;
+  display: inline-block;
+}
+@keyframes login-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .error {
   color: red;
   font-size: 13px;
   text-align: center;
+}
+.eye-toggle {
+  color: #9aa5b1;
+  transition: color 0.25s ease, background-color 0.25s ease;
+}
+/* .eye-toggle:hover {
+  color: #2d6fb7;
+  background: rgba(45, 111, 183, 0.08);
+} */
+.eye-toggle--active {
+  color: #2d6fb7;
+}
+.eye-icon {
+  font-size: 20px;
+}
+.eye-fade-enter-active,
+.eye-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.eye-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.8);
+}
+.eye-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
 }
 @media (max-width: 600px) {
   .title {

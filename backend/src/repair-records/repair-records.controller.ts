@@ -13,31 +13,23 @@ import { RepairRecordsService } from './repair-records.service';
 import { CreateRepairRecordDto } from './dto/create-repair-record.dto';
 import { UpdateRepairRecordDto } from './dto/update-repair-record.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { v4 as uuidv4 } from 'uuid';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
 import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { StorageService } from 'src/storage/storage.service';
 
 @ApiTags('Repair Records') // จัดกลุ่มใน Swagger
 @Controller('repair-records')
 export class RepairRecordsController {
-  constructor(private readonly repairRecordsService: RepairRecordsService) {}
+  constructor(
+    private readonly repairRecordsService: RepairRecordsService,
+    private readonly storageService: StorageService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'บันทึกการซ่อมใหม่' })
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination: './uploads/repair_records',
-        filename: (req, file, cb) => {
-          const uniqueFileName = uuidv4() + extname(file.originalname);
-          cb(null, uniqueFileName);
-        },
-      }),
-    }),
-  )
-  create(
+  @UseInterceptors(FileInterceptor('image', { storage: memoryStorage() }))
+  async create(
     @UploadedFile() file: Express.Multer.File,
     @Body() createRepairRecordDto: CreateRepairRecordDto,
   ) {
@@ -45,7 +37,7 @@ export class RepairRecordsController {
     return this.repairRecordsService.create({
       ...createRepairRecordDto,
       imageUrl: file
-        ? '/uploads/repair_records/' + file.filename
+        ? await this.storageService.uploadImage(file.buffer, 'repair_records')
         : '/uploads/repair_records/default.jpg',
       fileSize: file ? file.size : 0,
     });
@@ -66,25 +58,17 @@ export class RepairRecordsController {
   @Patch(':id')
   @ApiOperation({ summary: 'อัปเดตบันทึกการซ่อม' })
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination: './uploads/repair_records',
-        filename: (req, file, cb) => {
-          const uniqueFileName = uuidv4() + extname(file.originalname);
-          cb(null, uniqueFileName);
-        },
-      }),
-    }),
-  )
-  update(
+  @UseInterceptors(FileInterceptor('image', { storage: memoryStorage() }))
+  async update(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
     @Body() updateRepairRecordDto: UpdateRepairRecordDto,
   ) {
     return this.repairRecordsService.update(+id, {
       ...updateRepairRecordDto,
-      imageUrl: file ? '/uploads/repair_records/' + file.filename : undefined,
+      imageUrl: file
+        ? await this.storageService.uploadImage(file.buffer, 'repair_records')
+        : undefined,
       fileSize: file ? file.size : undefined,
     });
   }

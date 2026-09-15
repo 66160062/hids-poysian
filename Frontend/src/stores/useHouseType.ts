@@ -5,6 +5,7 @@ import { api } from 'src/boot/axios';
 export interface HouseType {
   house_type_id: number;
   name: string;
+  nameEn?: string | null;
 }
 
 export const useHouseTypeStore = defineStore('houseType', () => {

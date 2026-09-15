@@ -1,7 +1,8 @@
 <template>
   <q-layout view="lHh Lpr lFf">
     <q-page-container>
-      <q-page class="q-pa-md bg-white" style="padding-bottom: 80px">
+      <q-page class="q-pa-md bg-white row justify-center" style="padding-bottom: 80px">
+        <div class="detail-content">
         <SearchBar v-model="store.searchQuery" @filter="showFilter = true">
           <template #filter-btn>
             <q-btn flat round @click="showFilter = true">
@@ -13,19 +14,41 @@
           </template>
         </SearchBar>
 
-        <div class="row q-mt-sm q-gutter-xs">
-          <q-chip
-            v-for="opt in GROUP_BY_OPTIONS"
-            :key="opt.value"
-            :selected="store.filter.groupBy === opt.value"
-            :color="store.filter.groupBy === opt.value ? 'primary' : 'grey-3'"
-            :text-color="store.filter.groupBy === opt.value ? 'white' : 'grey-8'"
+        <div class="row items-center justify-between q-mt-sm q-gutter-xs">
+          <div class="row q-gutter-xs">
+            <q-chip
+              v-for="opt in GROUP_BY_OPTIONS"
+              :key="opt.value"
+              :selected="store.filter.groupBy === opt.value"
+              :color="store.filter.groupBy === opt.value ? 'primary' : 'grey-3'"
+              :text-color="store.filter.groupBy === opt.value ? 'white' : 'grey-8'"
+              dense
+              clickable
+              @click="store.filter.groupBy = opt.value"
+            >
+              {{ opt.label }}
+            </q-chip>
+          </div>
+
+          <q-btn-dropdown
+            outline
+            rounded
             dense
-            clickable
-            @click="store.filter.groupBy = opt.value"
+            color="primary"
+            :icon="store.sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward'"
+            :label="store.sortOrder === 'desc' ? t('inspection.inspect.sortNewest') : t('inspection.inspect.sortOldest')"
+            size="sm"
+            class="q-px-md text-weight-bold bg-white"
           >
-            {{ opt.label }}
-          </q-chip>
+            <q-list>
+              <q-item clickable v-close-popup @click="store.sortOrder = 'desc'">
+                <q-item-section>{{ t('inspection.inspect.sortNewest') }}</q-item-section>
+              </q-item>
+              <q-item clickable v-close-popup @click="store.sortOrder = 'asc'">
+                <q-item-section>{{ t('inspection.inspect.sortOldest') }}</q-item-section>
+              </q-item>
+            </q-list>
+          </q-btn-dropdown>
         </div>
 
         <InspectionSummaryCard class="q-mt-md" :data="store.summaryData" />
@@ -47,13 +70,13 @@
             <q-btn
               flat
               color="primary"
-              label="ลองใหม่"
+              :label="t('inspection.inspect.retry')"
               class="q-mt-sm"
               @click="store.fetchDefects(roundId)"
             />
           </div>
 
-          <EmptyState v-else-if="store.groupedDefects.length === 0" message="ไม่พบรายการตรวจ" />
+          <EmptyState v-else-if="store.groupedDefects.length === 0" :message="t('inspection.inspect.noInspectionItems')" />
 
           <div v-else class="column q-gutter-y-md">
             <InspectionItemCard
@@ -64,16 +87,17 @@
             />
           </div>
         </div>
+        </div>
 
-        <ActionFab @add="onAddDefectClick" />
+        <ActionFab v-if="!isLocked" @add="onAddDefectClick" />
       </q-page>
     </q-page-container>
 
-    <q-footer class="bg-transparent q-px-md q-pb-lg">
+    <q-footer v-if="!isLocked" class="bg-transparent q-px-md q-pb-lg row justify-center">
       <q-btn
         color="primary"
-        :label="isAlreadyInspected ? 'ยืนยันการตรวจเสร็จสิ้น' : 'บันทึกการแก้ไขการตรวจ'"
-        class="full-width text-weight-bold shadow-3"
+        :label="isAlreadyInspected ? t('inspection.inspect.confirmInspectionComplete') : t('inspection.inspect.saveInspectionEdit')"
+        class="full-width text-weight-bold shadow-3 footer-btn"
         style="border-radius: 8px; height: 48px"
         :loading="isSubmitting"
         @click="confirmInspectionDialog"
@@ -93,8 +117,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar'; // นำเข้า Quasar สำหรับ Dialog และ Notify
 
 import SearchBar from '../components/SearchBar.vue';
@@ -103,11 +128,19 @@ import EmptyState from '../components/EmptyState.vue';
 import InspectionItemCard from '../components/InspectionItemCard.vue';
 import ActionFab from '../components/ActionFab.vue';
 import FilterBottomSheet from '../components/FilterBottomSheet.vue';
+import ConfirmActionDialog from '../components/ConfirmActionDialog.vue';
 import { useInspectionStore } from 'src/stores/useInspection';
+import { useRoundLock } from 'src/composables/useRoundLock';
+import { useInspectionRoutes } from 'src/composables/useInspectionRoutes';
 import { api } from 'src/boot/axios'; // ปลดคอมเมนต์
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+
+const inspectionSpinner = createIconSpinner('checklist');
+const saveInspectionSpinner = createIconSpinner('cloud_upload');
 
 // ── Route & Plugins ───────────────────────────────────────────
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const $q = useQuasar(); // ใช้สร้าง Dialog
@@ -116,62 +149,88 @@ const roundId = route.params.roundId as string;
 // ── Store ─────────────────────────────────────────────────────
 
 const store = useInspectionStore();
+const { isLocked, fetchLockState } = useRoundLock(roundId);
+const { isAdminScope, roomDefectRoute, addDefectRoute } = useInspectionRoutes();
 
 // ── UI state ──────────────────────────────────────────────────
 
 const showFilter = ref(false);
 const isSubmitting = ref(false); // ปลดคอมเมนต์
 
-const GROUP_BY_OPTIONS = [
-  { value: 'room_type' as const, label: 'ประเภทห้อง' },
-  { value: 'floor' as const, label: 'ชั้น' },
-  { value: 'severity' as const, label: 'ความรุนแรง' },
-];
+const GROUP_BY_OPTIONS = computed(() => [
+  { value: 'room_type' as const, label: t('inspection.inspect.groupByRoomType') },
+  { value: 'floor' as const, label: t('inspection.inspect.groupByFloor') },
+  { value: 'severity' as const, label: t('inspection.inspect.groupBySeverity') },
+]);
 
 // ── Lifecycle ─────────────────────────────────────────────────
 
-onMounted(() => {
-  void store.fetchDefects(roundId);
+onMounted(async () => {
+  $q.loading.show({
+    spinner: inspectionSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
+  try {
+    await Promise.all([store.fetchDefects(roundId), fetchLockState()]);
+  } finally {
+    $q.loading.hide();
+  }
 });
 
 // ── Navigation ────────────────────────────────────────────────
 
 const goToRoomDetail = async (roomData: { roomId: number; roomName: string; groupKey: number }) => {
   await router.push({
-    name: 'roomDefect',
+    name: roomDefectRoute,
     params: { roundId },
     query: { roomName: roomData.roomName, groupKey: roomData.groupKey },
   });
 };
 
 const onAddDefectClick = () => {
-  void router.push({ name: 'addDefect', params: { roundId } });
+  void router.push({ name: addDefectRoute, params: { roundId } });
 };
 
 // ── Confirm Inspection (แทนที่ onSubmit เดิม) ───────────────────
 async function executeConfirmInspection() {
   isSubmitting.value = true;
+  $q.loading.show({
+    spinner: saveInspectionSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     // ยิงไปเส้น confirm-inspection ตามที่คุณสร้างไว้
     await api.patch(`/inspection-rounds/${roundId}/confirm-inspection`);
+    // ปิด loading ก่อนเปลี่ยนหน้า ไม่งั้นจะไปปิด loading ของหน้าปลายทางที่เพิ่ง show ใน onMounted
+    $q.loading.hide();
 
     $q.notify({
       color: 'positive',
       position: 'top',
-      message: 'ยืนยันการตรวจสำเร็จ',
+      message: t('inspection.inspect.confirmInspectionSuccess'),
       icon: 'check_circle',
     });
 
-    // ยืนยันเสร็จ เด้งกลับไปหน้า Detail หลัก
-    await router.push(`/inspector/job/${roundId}/`);
+    // ยืนยันเสร็จ เด้งกลับไปหน้า Detail หลัก — ฝั่งแอดมินย้อนกลับหน้าเดิมแทน
+    // เพราะหน้า detail ของแอดมินอ้างด้วย jobId ซึ่งหน้านี้ไม่รู้จัก (รู้แค่ roundId)
+    if (isAdminScope) {
+      router.back();
+    } else {
+      await router.push(`/inspector/job/${roundId}/`);
+    }
   } catch (error) {
+    $q.loading.hide();
     const axiosError = error as { response?: { data?: { message?: string } } };
     console.error('Confirm Inspection Error:', axiosError);
 
     $q.notify({
       color: 'negative',
       position: 'top',
-      message: axiosError.response?.data?.message || 'เกิดข้อผิดพลาดในการยืนยันการตรวจ',
+      message: axiosError.response?.data?.message || t('inspection.inspect.confirmInspectionError'),
     });
   } finally {
     isSubmitting.value = false;
@@ -181,18 +240,15 @@ async function executeConfirmInspection() {
 // ผูกกับปุ่มในหน้า UI มี Dialog คอนเฟิร์มกันลั่นด้วย
 const confirmInspectionDialog = () => {
   $q.dialog({
-    title: 'ยืนยันการตรวจ',
-    message: 'ยืนยันการตรวจสอบและบันทึก Defect ?',
-    ok: {
-      label: 'ยืนยัน',
+    component: ConfirmActionDialog,
+    componentProps: {
+      title: t('inspection.inspect.confirmInspectionDialogTitle'),
+      message: t('inspection.inspect.confirmInspectionDialogMessage'),
+      icon: '',
       color: 'primary',
+      confirmLabel: t('inspection.inspect.confirm'),
+      cancelLabel: t('inspection.inspect.cancel'),
     },
-    cancel: {
-      label: 'ยกเลิก',
-      color: 'grey-7',
-      flat: true, // ทำให้ปุ่มยกเลิกไม่มีพื้นหลัง ดูเป็นปุ่มรอง
-    },
-    persistent: true,
   }).onOk(() => {
     void executeConfirmInspection();
   });
@@ -200,3 +256,44 @@ const confirmInspectionDialog = () => {
 
 const isAlreadyInspected = ref(false);
 </script>
+
+<style scoped>
+.detail-content {
+  width: 100%;
+  max-width: 480px;
+}
+@media (min-width: 768px) {
+  .detail-content {
+    max-width: 720px;
+  }
+}
+@media (min-width: 1024px) {
+  .detail-content {
+    max-width: 1100px;
+  }
+}
+@media (min-width: 1440px) {
+  .detail-content {
+    max-width: 1280px;
+  }
+}
+
+.footer-btn {
+  max-width: 480px;
+}
+@media (min-width: 768px) {
+  .footer-btn {
+    max-width: 720px;
+  }
+}
+@media (min-width: 1024px) {
+  .footer-btn {
+    max-width: 1100px;
+  }
+}
+@media (min-width: 1440px) {
+  .footer-btn {
+    max-width: 1280px;
+  }
+}
+</style>

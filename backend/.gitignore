@@ -2,6 +2,7 @@
 /dist
 /node_modules
 /build
+*.tsbuildinfo
 
 # Logs
 logs
@@ -18,6 +19,10 @@ lerna-debug.log*
 # Tests
 /coverage
 /.nyc_output
+
+# Generated output from scripts/ai-summary-eval.ts (regenerate anytime with `npm run eval:ai-summary`)
+/scripts/ai-summary-eval-results.json
+/scripts/ai-summary-eval-report.html
 
 # IDEs and editors
 /.idea

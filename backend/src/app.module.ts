@@ -11,8 +11,6 @@ import { CustomersModule } from './customers/customers.module';
 import { Customer } from './customers/entities/customer.entity';
 import { AddressesModule } from './addresses/addresses.module';
 import { Address } from './addresses/entities/address.entity';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 import { HouseTypesModule } from './house-types/house-types.module';
 import { HouseType } from './house-types/entities/house-type.entity';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
@@ -64,7 +62,14 @@ import { Notification } from './notifications/entities/notification.entity';
 import { Branch } from './branches/entities/branch.entity';
 import { BranchesModule } from './branches/branches.module';
 import { MailModule } from './mail/mail.module';
-import { PdfModule } from './pdf/pdf.module';
+import { StorageModule } from './storage/storage.module';
+import { ReportsModule } from './reports/reports.module';
+import { ActivityLogsModule } from './activity-logs/activity-logs.module';
+import { ActivityLog } from './activity-logs/entities/activity-log.entity';
+import { Assignment } from './assignments/entities/assignment.entity';
+import { AiSummaryModule } from './ai-summary/ai-summary.module';
+import { HousePlan } from './house-plans/entities/house-plan.entity';
+import { HousePlansModule } from './house-plans/house-plans.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -114,19 +119,23 @@ import { PdfModule } from './pdf/pdf.module';
           Rating,
           Notification,
           Branch,
+          ActivityLog,
+          Assignment,
+          HousePlan,
         ],
         synchronize: true,
         namingStrategy: new SnakeNamingStrategy(),
       }),
       inject: [ConfigService],
     }),
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'uploads'),
-      serveRoot: '/uploads',
-    }),
+    StorageModule,
+    AiSummaryModule,
+    ReportsModule,
+    ActivityLogsModule,
     AuthModule,
     UsersModule,
     InspectionJobsModule,
+    HousePlansModule,
     CustomersModule,
     AddressesModule,
     HouseTypesModule,
@@ -151,7 +160,6 @@ import { PdfModule } from './pdf/pdf.module';
     NotificationsModule,
     BranchesModule,
     MailModule,
-    PdfModule,
   ],
   controllers: [AppController],
   providers: [AppService],

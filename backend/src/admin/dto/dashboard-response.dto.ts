@@ -3,6 +3,17 @@
  * กำหนด Interface สำหรับ Type Safety ทั้ง Backend และ Frontend
  */
 
+/**
+ * รหัสสถานะงานที่ Frontend ใช้แปลเป็นข้อความตามภาษาที่ผู้ใช้เลือก
+ * (`status` เป็นข้อความไทยตายตัว เก็บไว้เพื่อความเข้ากันได้กับของเดิมเท่านั้น)
+ */
+export type DashboardStatusCode =
+  | 'IN_PROGRESS'
+  | 'PENDING_APPROVAL'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'DRAFT';
+
 /** โครงสร้างของ Task Item ที่ส่งไปให้ Frontend แสดงผล */
 export interface DashboardTaskItem {
   id: number;
@@ -10,7 +21,12 @@ export interface DashboardTaskItem {
   inspectionType: string;
   title: string;
   meta: string;
+  /** วันที่อ้างอิงแบบ ISO ให้ Frontend จัดรูปแบบตามภาษาเอง — null ถ้าวันที่ไม่ถูกต้อง */
+  referenceDate: string | null;
   status: string;
+  statusCode: DashboardStatusCode;
+  /** เลขรอบล่าสุด ใช้ต่อท้ายสถานะ "เสร็จสิ้น" */
+  roundNumber: number | null;
   statusBgClass: string;
   statusTextColor: string;
   icon: string;
@@ -28,6 +44,13 @@ export interface DashboardBranchOption {
   name: string;
 }
 
+/** จำนวนงานแยกตามสถานะ ใช้แสดงใต้ตัวเลขรวมในการ์ดสรุป */
+export interface DashboardStatusCount {
+  status: string;
+  statusCode: DashboardStatusCode;
+  count: number;
+}
+
 /** โครงสร้าง Response ของ GET /admin/dashboard */
 export interface DashboardResponse {
   totalProjects: number;
@@ -36,6 +59,8 @@ export interface DashboardResponse {
   townhouse: number;
   condo: number;
   construction: number;
+  homeStatusBreakdown: DashboardStatusCount[];
+  constructionStatusBreakdown: DashboardStatusCount[];
   branches: DashboardBranchOption[];
   calendarEvents: number[];
   tasks: DashboardTaskItem[];

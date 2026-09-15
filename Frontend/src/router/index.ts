@@ -42,11 +42,28 @@ export default defineRouter(function (/* { store, ssrContext } */) {
       return;
     }
 
-    if (to.meta.requiresAuth && !auth.token) {
+    const isAdminRoute = to.path.startsWith('/admin');
+    const isInspectorRoute = to.path.startsWith('/inspector');
+    const requiresAuth = to.meta.requiresAuth || isAdminRoute || isInspectorRoute;
+
+    if (requiresAuth && !auth.token) {
       next('/login');
-    } else {
-      next();
+      return;
     }
+
+    const role = auth.user?.role;
+
+    if (isAdminRoute && role !== 'admin') {
+      next(role === 'inspector' ? '/inspector/Inspectsdashboard' : '/login');
+      return;
+    }
+
+    if (isInspectorRoute && role !== 'inspector') {
+      next(role === 'admin' ? '/admin' : '/login');
+      return;
+    }
+
+    next();
   });
 
   return Router;

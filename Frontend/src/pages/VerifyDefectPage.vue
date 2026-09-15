@@ -2,29 +2,28 @@
   <q-page class="bg-white q-pa-md" style="max-width: 480px; margin: 0 auto; padding-bottom: 80px;">
     <div class="row items-center q-mb-md">
       <q-btn flat round dense icon="arrow_back_ios" color="primary" @click="handleBack" />
-      <div class="text-h6 text-weight-bold text-primary q-ml-sm">ตรวจสอบงานซ่อม</div>
+      <div class="text-h6 text-weight-bold text-primary q-ml-sm">{{ t('inspection.verify.title') }}</div>
     </div>
 
+    <!-- Loading State: แสดงผ่าน $q.loading แบบเต็มจอ (ดู onMounted) เว้นพื้นที่ไว้กันเลย์เอาต์กระโดด -->
     <template v-if="!defect">
-      <div class="flex flex-center q-pa-xl">
-        <q-spinner color="primary" size="3em" />
-      </div>
+      <div style="min-height: 60vh"></div>
     </template>
 
     <template v-else>
       <div class="text-caption text-grey-5 q-mb-xs">#{{ defect.defectId }}</div>
       <q-card flat bordered class="q-mb-md">
         <q-card-section class="q-pa-sm">
-          <div class="text-caption text-grey-6">สถานะ</div>
-          <div class="text-body2 text-weight-bold text-orange">ส่งซ่อมแล้ว (รอตรวจ)</div>
-          <div class="text-caption text-grey-6 q-mt-xs">สถานที่</div>
+          <div class="text-caption text-grey-6">{{ t('inspection.verify.status') }}</div>
+          <div class="text-body2 text-weight-bold text-orange">{{ t('inspection.verify.statusRepairedPendingReview') }}</div>
+          <div class="text-caption text-grey-6 q-mt-xs">{{ t('inspection.verify.location') }}</div>
           <div class="text-body2">{{ locationLabel }}</div>
         </q-card-section>
       </q-card>
 
       <!-- Before Image -->
       <div class="q-mb-sm">
-        <div class="text-subtitle2 text-weight-bold text-primary">รูปอ้างอิงก่อนซ่อม</div>
+        <div class="text-subtitle2 text-weight-bold text-primary">{{ t('inspection.verify.beforeImageLabel') }}</div>
       </div>
       <div class="q-mb-lg" style="position: relative;">
         <img
@@ -32,13 +31,13 @@
           style="width:100%; border-radius:14px; border:2px solid #1976D2; display:block; aspect-ratio:16/9; object-fit:cover;"
         />
         <div style="position:absolute; top:8px; left:8px;">
-          <q-badge color="red" label="BEFORE" style="font-size:11px; font-weight:700;" />
+          <q-badge color="red" :label="t('common.photo.before')" style="font-size:11px; font-weight:700;" />
         </div>
       </div>
 
       <!-- After Image -->
       <div class="q-mb-sm">
-        <div class="text-subtitle2 text-weight-bold text-primary">รูปหลังแก้ไข (โดยผู้รับเหมา)</div>
+        <div class="text-subtitle2 text-weight-bold text-primary">{{ t('inspection.verify.afterImageLabel') }}</div>
       </div>
       <div class="q-mb-lg" style="position: relative;">
         <img
@@ -46,11 +45,11 @@
           style="width:100%; border-radius:14px; border:2px solid #4CAF50; display:block; aspect-ratio:16/9; object-fit:cover;"
         />
         <div style="position:absolute; top:8px; left:8px;">
-          <q-badge color="green" label="AFTER" style="font-size:11px; font-weight:700;" />
+          <q-badge color="green" :label="t('common.photo.after')" style="font-size:11px; font-weight:700;" />
         </div>
       </div>
 
-      <div class="text-subtitle2 text-weight-bold q-mb-sm">บันทึกเพิ่มเติมจากผู้รับเหมา</div>
+      <div class="text-subtitle2 text-weight-bold q-mb-sm">{{ t('inspection.verify.contractorNoteLabel') }}</div>
       <q-card flat bordered class="q-mb-xl">
         <q-card-section>
           <div class="text-body2 text-grey-8">{{ defect.contractorNote || '-' }}</div>
@@ -58,13 +57,13 @@
       </q-card>
 
       <!-- Bottom Actions -->
-      <div class="fixed-bottom q-pa-md bg-white shadow-up-2 row q-gutter-x-sm">
+      <div v-if="!isLocked" class="fixed-bottom q-pa-md bg-white shadow-up-2 row q-gutter-x-sm">
         <q-btn
           unelevated
           outline
           color="negative"
           icon="close"
-          label="ไม่ผ่าน"
+          :label="t('inspection.verify.fail')"
           class="col"
           size="md"
           @click="handleFail"
@@ -73,7 +72,7 @@
           unelevated
           color="positive"
           icon="check"
-          label="ผ่าน"
+          :label="t('inspection.verify.pass')"
           class="col"
           size="md"
           :loading="isSubmitting"
@@ -87,11 +86,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useInspectionStore } from 'src/stores/useInspection';
+import { useRoundLock } from 'src/composables/useRoundLock';
 import { api } from 'src/boot/axios';
 import { useQuasar } from 'quasar';
 import type { Defect } from 'src/models';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
 
+const verifySpinner = createIconSpinner('verified');
+
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const inspectionStore = useInspectionStore();
@@ -99,6 +104,8 @@ const $q = useQuasar();
 
 const roundId = route.params.roundId as string;
 const defectId = Number(route.query.defectId);
+const { isLocked, fetchLockState } = useRoundLock(roundId);
+void fetchLockState();
 
 const defect = ref<Defect | null>(null);
 const isSubmitting = ref(false);
@@ -126,7 +133,7 @@ const loadDefect = async () => {
       found = data;
     } catch (err) {
       console.error(err);
-      $q.notify({ message: 'ไม่พบข้อมูล Defect', color: 'negative' });
+      $q.notify({ message: t('inspection.verify.defectNotFound'), color: 'negative' });
       router.back();
       return;
     }
@@ -159,14 +166,14 @@ const handlePass = async () => {
     await inspectionStore.fetchDefects(roundId);
     
     $q.notify({
-      message: 'ยืนยันงานซ่อมเรียบร้อย',
+      message: t('inspection.verify.verifySuccess'),
       color: 'positive',
       icon: 'check_circle',
     });
     router.back();
   } catch {
     $q.notify({
-      message: 'เกิดข้อผิดพลาดในการบันทึก',
+      message: t('inspection.verify.saveError'),
       color: 'negative',
       icon: 'error',
     });
@@ -175,8 +182,18 @@ const handlePass = async () => {
   }
 };
 
-onMounted(() => {
-  void loadDefect();
+onMounted(async () => {
+  $q.loading.show({
+    spinner: verifySpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
+  try {
+    await loadDefect();
+  } finally {
+    $q.loading.hide();
+  }
 });
 </script>
 

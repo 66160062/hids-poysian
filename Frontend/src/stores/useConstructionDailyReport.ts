@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { api } from 'src/boot/axios';
+import { t } from 'src/boot/i18n';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -70,7 +71,7 @@ export interface ConstructionDailyReportResponse {
 export interface ExtendedConstructionReport extends ConstructionDailyReportResponse {
   round?: {
     roundNumber: number;
-    job?: { projectName: string; [key: string]: unknown } | null;
+    job?: { projectName: string; projectNameEn?: string | null; [key: string]: unknown } | null;
   };
   contractorName?: string;
   reporterName?: string;
@@ -99,7 +100,7 @@ export const useConstructionDailyReportStore = defineStore('constructionDailyRep
       return data;
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
-      submitError.value = error.response?.data?.message ?? 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+      submitError.value = error.response?.data?.message ?? t('stores.constructionDailyReport.submitError');
       throw err;
     } finally {
       isSubmitting.value = false;

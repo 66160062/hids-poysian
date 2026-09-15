@@ -2,45 +2,48 @@
   <q-page class="bg-grey-1">
     <!-- Header -->
     <div
-      class="header-container bg-white q-px-md q-py-sm row items-center justify-between shadow-1 sticky-top"
+      class="header-container bg-white q-px-md q-py-sm row items-center justify-between sticky-top"
     >
       <q-btn
         flat
         no-caps
-        label="ย้อนกลับ"
         color="primary"
         icon="arrow_back_ios_new"
         @click="handleBack"
       />
       <div class="text-subtitle1 text-weight-bold">
-        {{ isEditMode ? 'แก้ไขงาน' : 'สร้างงานใหม่' }}
+        {{ isEditMode ? t('adminWork.createJob.editTitle') : t('adminWork.createJob.createTitle') }}
       </div>
-      <div style="width: 80px"></div>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="isLoading" class="text-center q-py-xl absolute-center full-width">
-      <q-spinner color="primary" size="3em" />
-      <div class="text-grey-6 q-mt-md">กำลังโหลดข้อมูล...</div>
+      <q-btn
+        v-if="isEditMode"
+        flat
+        no-caps
+        dense
+        :label="t('adminWork.workList.deleteJob')"
+        color="negative"
+        :loading="isCancellingJob"
+        @click="confirmCancelJob"
+      />
+      <div v-else style="width: 80px"></div>
     </div>
 
     <!-- ================================ -->
     <!-- FORM -->
     <!-- ================================ -->
 
-    <div v-else-if="!isLoading" class="form-container q-pa-md q-gutter-y-lg pb-100">
+    <div class="form-container q-pa-md q-gutter-y-lg pb-100">
       <q-card flat bordered class="card-rounded q-pa-md">
-        <div class="row items-center q-mb-sm text-primary"><q-icon name="business" size="20px" class="q-mr-sm" /><div class="text-subtitle2 text-weight-bold">บริษัท / สาขาที่เปิดเล่ม</div></div>
-        <q-select v-model="selectedBranchId" :options="branchOptions" emit-value map-options outlined class="custom-select" label="เลือกบริษัทหรือสาขา" />
-        <div v-if="!branchOptions.length" class="text-negative text-caption q-mt-sm">ยังไม่มีบริษัทหรือสาขา กรุณาเพิ่มที่ /admin/branches</div>
+        <div class="row items-center q-mb-sm text-primary"><q-icon name="business" size="20px" class="q-mr-sm" /><div class="text-subtitle2 text-weight-bold">{{ t('adminWork.createJob.branchSectionTitle') }}</div></div>
+        <q-select v-model="selectedBranchId" :options="branchOptions" emit-value map-options outlined class="custom-select" :label="t('adminWork.createJob.selectBranchLabel')" />
+        <div v-if="!branchOptions.length" class="text-negative text-caption q-mt-sm">{{ t('adminWork.createJob.noBranchesHint') }}</div>
       </q-card>
       <!-- ข้อมูลลูกค้า -->
-      <div class="text-caption text-primary q-mt-sm">ทีมตรวจที่เลือกคือ Branch ของงานนี้</div>
+      <div class="text-caption text-primary q-mt-sm">{{ t('adminWork.createJob.branchTeamHint') }}</div>
       <div class="section">
         <div class="row items-center q-mb-sm text-primary justify-between">
           <div class="row items-center">
             <q-icon name="person_outline" size="20px" class="q-mr-sm" />
-            <div class="text-subtitle2 text-weight-bold">ข้อมูลลูกค้า</div>
+            <div class="text-subtitle2 text-weight-bold">{{ t('adminWork.createJob.customerInfo') }}</div>
           </div>
           <q-btn
             v-if="!isEditMode && selectedCustomer"
@@ -49,7 +52,7 @@
             color="negative"
             size="sm"
             icon="close"
-            label="ยกเลิกการเลือก"
+            :label="t('adminWork.createJob.deselect')"
             @click="clearSelectedCustomer"
           />
         </div>
@@ -60,7 +63,7 @@
             v-model="customerSearch"
             dense
             filled
-            placeholder="ค้นหาชื่อหรือเบอร์โทรลูกค้าที่มีในระบบ..."
+            :placeholder="t('adminWork.createJob.searchCustomerPlaceholder')"
             class="custom-input"
             clearable
             @clear="customerSearch = ''"
@@ -114,10 +117,10 @@
               width: 100%;
             "
           >
-            ไม่พบลูกค้าที่ค้นหา
+            {{ t('adminWork.createJob.customerNotFound') }}
           </div>
           <div class="row items-center justify-center q-my-sm">
-            <span class="text-grey-5 text-caption">หรือ กรอกข้อมูลลูกค้าใหม่ด้านล่าง</span>
+            <span class="text-grey-5 text-caption">{{ t('adminWork.createJob.orEnterNewCustomer') }}</span>
           </div>
         </div>
 
@@ -133,32 +136,110 @@
               dense
               filled
               clearable
-              placeholder="ชื่อ-นามสกุล"
+              :placeholder="t('adminWork.createJob.fullNamePlaceholder')"
               class="custom-input"
-              :rules="[(val) => !!val || 'กรุณากรอกชื่อลูกค้า']"
+              :rules="[(val) => !!val || t('adminWork.createJob.customerNameRequired')]"
               :readonly="!!selectedCustomer && !isEditMode"
             />
             <q-input
-              v-model="form.customerPhone"
+              v-for="(phone, phoneIdx) in customerPhones"
+              :key="'customer-phone-' + phoneIdx"
+              v-model="customerPhones[phoneIdx]"
               dense
               filled
               clearable
-              placeholder="เบอร์โทรศัพท์"
+              :placeholder="
+                phoneIdx === 0
+                  ? t('adminWork.createJob.phonePlaceholder')
+                  : t('adminWork.createJob.additionalPhonePlaceholder')
+              "
               class="custom-input"
               mask="###-###-####"
-              :rules="[
-                (val) => !!val || 'กรุณากรอกเบอร์โทรศัพท์',
-                (val) => val.length === 12 || 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก',
-              ]"
+              lazy-rules="ondemand"
+              :rules="
+                phoneIdx === 0
+                  ? [
+                      (val) => !!val || t('adminWork.createJob.phoneRequired'),
+                      (val) => val.length === 12 || t('adminWork.createJob.phoneLengthRequired'),
+                    ]
+                  : [(val) => !val || val.length === 12 || t('adminWork.createJob.phoneLengthRequired')]
+              "
               :readonly="!!selectedCustomer && !isEditMode"
-            />
+            >
+              <template #append>
+                <q-btn
+                  v-if="phoneIdx === 0 && customerPhones.length < 3 && canEditCustomerContacts"
+                  round
+                  dense
+                  flat
+                  size="sm"
+                  icon="add"
+                  color="primary"
+                  :aria-label="t('adminWork.createJob.addPhoneNumber')"
+                  @click="addCustomerPhone"
+                />
+                <q-btn
+                  v-else-if="phoneIdx > 0 && canEditCustomerContacts && !customerPhones[phoneIdx]"
+                  round
+                  dense
+                  flat
+                  size="sm"
+                  icon="close"
+                  color="negative"
+                  :aria-label="t('adminWork.createJob.removePhoneNumber')"
+                  @click="removeCustomerPhone(phoneIdx)"
+                />
+              </template>
+            </q-input>
             <q-input
-              v-model="form.customerEmail"
+              v-for="(email, emailIdx) in customerEmails"
+              :key="'customer-email-' + emailIdx"
+              v-model="customerEmails[emailIdx]"
               dense
               filled
               clearable
-              placeholder="อีเมล (ไม่บังคับ)"
+              :placeholder="
+                emailIdx === 0
+                  ? t('adminWork.createJob.emailOptionalPlaceholder')
+                  : t('adminWork.createJob.additionalEmailPlaceholder')
+              "
               class="custom-input"
+              :readonly="!!selectedCustomer && !isEditMode"
+            >
+              <template #append>
+                <q-btn
+                  v-if="emailIdx === 0 && customerEmails.length < 3 && canEditCustomerContacts"
+                  round
+                  dense
+                  flat
+                  size="sm"
+                  icon="add"
+                  color="primary"
+                  :aria-label="t('adminWork.createJob.addEmail')"
+                  @click="addCustomerEmail"
+                />
+                <q-btn
+                  v-else-if="emailIdx > 0 && canEditCustomerContacts && !customerEmails[emailIdx]"
+                  round
+                  dense
+                  flat
+                  size="sm"
+                  icon="close"
+                  color="negative"
+                  :aria-label="t('adminWork.createJob.removeEmail')"
+                  @click="removeCustomerEmail(emailIdx)"
+                />
+              </template>
+            </q-input>
+            <q-select
+              v-model="form.customerPreferredLocale"
+              dense
+              filled
+              :options="customerLocaleOptions"
+              :label="t('adminWork.createJob.customerLanguageLabel')"
+              class="custom-select"
+              emit-value
+              map-options
               :readonly="!!selectedCustomer && !isEditMode"
             />
           </div>
@@ -169,7 +250,7 @@
       <div class="section">
         <div class="row items-center q-mb-sm text-primary">
           <q-icon name="contacts" size="20px" class="q-mr-sm" />
-          <div class="text-subtitle2 text-weight-bold">ข้อมูลผู้รับเหมา</div>
+          <div class="text-subtitle2 text-weight-bold">{{ t('adminWork.createJob.contractorInfo') }}</div>
         </div>
         <q-card flat bordered class="q-pa-md bg-white card-rounded">
           <div class="column input-group">
@@ -178,7 +259,7 @@
               dense
               filled
               clearable
-              placeholder="ชื่อ-นามสกุล"
+              :placeholder="t('adminWork.createJob.fullNamePlaceholder')"
               class="custom-input"
             />
             <q-input
@@ -186,11 +267,11 @@
               dense
               filled
               clearable
-              placeholder="เบอร์โทรศัพท์"
+              :placeholder="t('adminWork.createJob.phonePlaceholder')"
               class="custom-input"
               mask="###-###-####"
               :rules="[
-                (val) => !val || val.length === 12 || 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก',
+                (val) => !val || val.length === 12 || t('adminWork.createJob.phoneLengthRequired'),
               ]"
             />
             <q-input
@@ -198,7 +279,7 @@
               dense
               filled
               clearable
-              placeholder="อีเมล"
+              :placeholder="t('adminWork.createJob.emailPlaceholder')"
               class="custom-input"
             />
             <q-input
@@ -206,7 +287,7 @@
               dense
               filled
               clearable
-              placeholder="ไอดีไลน์ หรือ ชื่อบริษัท"
+              :placeholder="t('adminWork.createJob.lineOrCompanyPlaceholder')"
               class="custom-input"
             />
           </div>
@@ -218,14 +299,14 @@
         <div class="row items-center justify-between q-mb-sm text-primary">
           <div class="row items-center">
             <q-icon name="location_on" size="20px" class="q-mr-sm" />
-            <div class="text-subtitle2 text-weight-bold">ข้อมูลที่อยู่โครงการ</div>
+            <div class="text-subtitle2 text-weight-bold">{{ t('adminWork.createJob.projectAddressInfo') }}</div>
           </div>
           <q-btn
             outline
             color="primary"
             size="sm"
             icon="map"
-            label="ค้นหาด้วย Google Maps"
+            :label="t('adminWork.createJob.searchGoogleMaps')"
             @click="openGoogleMaps"
             class="bg-white"
           />
@@ -237,7 +318,7 @@
               dense
               filled
               clearable
-              placeholder="เลขที่ห้อง/บ้านเลขที่"
+              :placeholder="t('adminWork.createJob.houseNumberPlaceholder')"
               class="custom-input"
             />
             <q-input
@@ -245,7 +326,7 @@
               dense
               filled
               clearable
-              placeholder="ซอย"
+              :placeholder="t('adminWork.createJob.soiPlaceholder')"
               class="custom-input"
             />
             <q-input
@@ -253,7 +334,7 @@
               dense
               filled
               clearable
-              placeholder="ตำบล/แขวง"
+              :placeholder="t('adminWork.createJob.subDistrictPlaceholder')"
               class="custom-input"
               @update:model-value="(val) => handleAddressInput(val, 'subDistrict')"
             >
@@ -281,7 +362,7 @@
               dense
               filled
               clearable
-              placeholder="เขต/อำเภอ"
+              :placeholder="t('adminWork.createJob.districtPlaceholder')"
               class="custom-input"
               @update:model-value="(val) => handleAddressInput(val, 'district')"
             >
@@ -309,7 +390,7 @@
               dense
               filled
               clearable
-              placeholder="จังหวัด"
+              :placeholder="t('adminWork.createJob.provincePlaceholder')"
               class="custom-input"
               @update:model-value="(val) => handleAddressInput(val, 'province')"
             >
@@ -337,7 +418,7 @@
               dense
               filled
               clearable
-              placeholder="รหัสไปรษณีย์"
+              :placeholder="t('adminWork.createJob.postalCodePlaceholder')"
               class="custom-input"
               @update:model-value="(val) => handleAddressInput(val, 'postalCode')"
             >
@@ -368,63 +449,63 @@
       <div class="section">
         <div class="row items-center q-mb-sm text-primary">
           <q-icon name="home" size="20px" class="q-mr-sm" />
-          <div class="text-subtitle2 text-weight-bold">รายละเอียดของโครงการ</div>
+          <div class="text-subtitle2 text-weight-bold">{{ t('adminWork.createJob.projectDetails') }}</div>
         </div>
         <q-card flat bordered class="q-pa-md bg-white card-rounded">
           <div class="column input-group">
-            <div class="row q-col-gutter-sm">
-              <div class="col-6">
-                <q-input
-                  v-model="form.projectName"
-                  dense
-                  filled
-                  clearable
-                  placeholder="ชื่อโครงการ"
-                  class="custom-input"
-                  :rules="[(val) => !!val || 'กรุณากรอกชื่อโครงการ']"
-                />
-              </div>
-              <div class="col-6">
-                <q-input
-                  v-model="form.floor"
-                  dense
-                  filled
-                  clearable
-                  placeholder="จำนวนชั้น"
-                  class="custom-input"
-                  type="number"
-                  :rules="[(val) => !!val || 'กรุณากรอกจำนวนชั้น']"
-                />
-              </div>
-            </div>
-            <div class="row q-col-gutter-sm">
-              <div class="col-6">
-                <q-input
-                  v-model="form.usableArea"
-                  dense
-                  filled
-                  clearable
-                  placeholder="ขนาดพื้นที่(ตารางเมตร)"
-                  class="custom-input"
-                  type="number"
-                  :rules="[(val) => !!val || 'กรุณากรอกขนาดพื้นที่']"
-                />
-              </div>
-              <div class="col-6">
-                <q-select
-                  v-model="form.houseType"
-                  dense
-                  filled
-                  :options="houseTypeOptions"
-                  label="ประเภทบ้าน"
-                  class="custom-select"
-                  emit-value
-                  map-options
-                  dropdown-icon="expand_more"
-                  hide-bottom-space
-                />
-              </div>
-            </div>
+            <q-input
+              v-model="form.projectName"
+              dense
+              filled
+              clearable
+              :placeholder="t('adminWork.createJob.projectNamePlaceholder')"
+              class="custom-input"
+              maxlength="60"
+              counter
+              :rules="[(val) => !!val || t('adminWork.createJob.projectNameRequired')]"
+            />
+            <q-input
+              v-model="form.projectNameEn"
+              dense
+              filled
+              clearable
+              :placeholder="t('adminWork.createJob.projectNameEnPlaceholder')"
+              class="custom-input"
+              maxlength="60"
+              counter
+            />
+            <q-input
+              v-model="form.floor"
+              dense
+              filled
+              clearable
+              :placeholder="t('adminWork.createJob.floorPlaceholder')"
+              class="custom-input"
+              type="number"
+              :rules="[(val) => !!val || t('adminWork.createJob.floorRequired')]"
+            />
+            <q-input
+              v-model="form.usableArea"
+              dense
+              filled
+              clearable
+              :placeholder="t('adminWork.createJob.usableAreaPlaceholder')"
+              class="custom-input"
+              type="number"
+              :rules="[(val) => !!val || t('adminWork.createJob.usableAreaRequired')]"
+            />
+            <q-select
+              v-model="form.houseType"
+              dense
+              filled
+              :options="houseTypeOptions"
+              :label="t('adminWork.createJob.houseTypeLabel')"
+              class="custom-select"
+              emit-value
+              map-options
+              dropdown-icon="expand_more"
+              hide-bottom-space
+            />
           </div>
         </q-card>
       </div>
@@ -433,47 +514,58 @@
       <div class="section">
         <div class="row items-center q-mb-sm text-primary">
           <q-icon name="photo_camera" size="20px" class="q-mr-sm" />
-          <div class="text-subtitle2 text-weight-bold">รูปภาพแปลนบ้าน (House Plan Photo)</div>
+          <div class="text-subtitle2 text-weight-bold">{{ t('adminWork.createJob.housePlanPhoto') }}</div>
         </div>
-        <div class="row q-col-gutter-md">
-          <div class="col-12">
-            <q-card
-              flat
-              bordered
-              class="upload-box flex flex-center cursor-pointer relative-position"
-              @click="triggerUpload('housePlan')"
-            >
-              <div v-if="!form.housePlanImage" class="column items-center">
-                <q-icon name="add_a_photo" size="32px" color="grey-5" />
-                <div class="text-caption text-grey-6 q-mt-xs">คลิกเพื่ออัปโหลดรูปภาพ</div>
-              </div>
-              <template v-else>
-                <q-img :src="form.housePlanImage" class="full-height full-width" fit="cover" />
-                <q-btn
-                  round
-                  dense
-                  color="negative"
-                  icon="close"
-                  class="absolute-top-right q-ma-xs shadow-2"
-                  size="sm"
-                  @click.stop="
-                    () => {
-                      form.housePlanImage = null;
-                      form.housePlanImageFile = null;
-                    }
-                  "
-                />
-              </template>
+        <div v-if="housePlans.length" class="row q-col-gutter-md">
+          <div v-for="(plan, planIdx) in housePlans" :key="plan.planId ?? plan.url" class="col-6 col-sm-4">
+            <q-card flat bordered class="upload-box relative-position">
+              <q-img :src="plan.url" class="full-height full-width" fit="cover" />
+              <q-badge v-if="plan.isUploading" color="primary" floating class="row items-center">
+                <q-spinner size="14px" class="q-mr-xs" />{{ t('adminWork.createJob.uploading') }}
+              </q-badge>
+              <q-btn
+                unelevated
+                round
+                dense
+                color="negative"
+                icon="close"
+                class="plan-delete-btn"
+                size="sm"
+                :disable="plan.isUploading"
+                @click.stop="removeHousePlan(planIdx)"
+              />
             </q-card>
+            <q-input
+              v-model="plan.name"
+              dense
+              filled
+              class="custom-input plan-name-field q-mt-xs"
+              :disable="plan.isUploading"
+              :placeholder="t('adminWork.createJob.planNamePlaceholder')"
+              @blur="renameHousePlan(planIdx)"
+              @keyup.enter="($event.target as HTMLInputElement).blur()"
+            />
           </div>
         </div>
+
+        <!-- ปุ่มเพิ่มรูปแปลน: แยกจากกริดรูปเดิม กันไม่ให้ปุ่มลบของรูปเก่าโดนบัง/ทับ -->
+        <q-btn
+          outline
+          no-caps
+          color="primary"
+          icon="add_a_photo"
+          :label="t('adminWork.createJob.clickToUpload')"
+          class="full-width add-plan-btn"
+          :class="{ 'q-mt-md': housePlans.length }"
+          @click="triggerPlanUpload"
+        />
       </div>
 
       <!-- รูปภาพโครงการ -->
       <div class="section">
         <div class="row items-center q-mb-sm text-primary">
           <q-icon name="photo" size="20px" class="q-mr-sm" />
-          <div class="text-subtitle2 text-weight-bold">รูปภาพโครงการ (Project Photo)</div>
+          <div class="text-subtitle2 text-weight-bold">{{ t('adminWork.createJob.projectPhoto') }}</div>
         </div>
         <div class="row q-col-gutter-md">
           <div class="col-12">
@@ -485,7 +577,7 @@
             >
               <div v-if="!form.projectImage" class="column items-center">
                 <q-icon name="add_a_photo" size="32px" color="grey-5" />
-                <div class="text-caption text-grey-6 q-mt-xs">คลิกเพื่ออัปโหลดรูปภาพ</div>
+                <div class="text-caption text-grey-6 q-mt-xs">{{ t('adminWork.createJob.clickToUpload') }}</div>
               </div>
               <template v-else>
                 <q-img :src="form.projectImage" class="full-height full-width" fit="cover" />
@@ -517,15 +609,23 @@
         accept="image/*"
         @change="handleFileChange"
       />
+      <input
+        type="file"
+        ref="planFileInput"
+        style="display: none"
+        accept="image/*"
+        multiple
+        @change="handlePlanFilesChange"
+      />
     </div>
 
     <!-- ============================= -->
     <!-- FOOTER BUTTONS               -->
     <!-- ============================= -->
-    <div class="submit-footer" v-if="!isLoading">
+    <div class="submit-footer">
       <q-btn
         unelevated
-        :label="isEditMode ? 'บันทึก' : 'สร้างงานใหม่'"
+        :label="isEditMode ? t('adminWork.createJob.save') : t('adminWork.createJob.createNew')"
         color="primary"
         class="full-width text-weight-bold submit-btn custom-button"
         no-caps
@@ -539,13 +639,20 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
-import { useWorkListStore } from '../stores/useWorkList';
+import { useI18n } from 'vue-i18n';
+import { useWorkListStore, type Work } from '../stores/useWorkList';
+import { api } from 'src/boot/axios';
 import { useCustomerStore, type Customer } from '../stores/useCustomer';
 import { useAddressStore } from '../stores/useAddress';
 import { useContractorStore } from '../stores/useContractor';
 import { useHouseTypeStore } from '../stores/useHouseType';
-import { useTeamStore } from '../stores/useTeam';
+import { useBranchStore } from '../stores/useBranch';
 import { useThaiAddress, type ThaiAddress } from '../composables/useThaiAddress';
+import { useLocalizedField } from 'src/composables/useLocalizedField';
+import { defaultPlanNames } from 'src/composables/useDefaultPlanName';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+import type { HousePlan } from 'src/models';
+import ConfirmActionDialog from '../components/ConfirmActionDialog.vue';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 const getImageUrl = (path: string | null | undefined): string | null => {
@@ -557,15 +664,19 @@ const getImageUrl = (path: string | null | undefined): string | null => {
 const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
+const { t } = useI18n();
+const { pickLocalized } = useLocalizedField();
 const workStore = useWorkListStore();
 const customerStore = useCustomerStore();
 const addressStore = useAddressStore();
 const contractorStore = useContractorStore();
 const houseTypeStore = useHouseTypeStore();
-const teamStore = useTeamStore();
+const branchStore = useBranchStore();
 const thaiAddress = useThaiAddress();
 const selectedBranchId = ref<number | undefined>();
-const branchOptions = computed(() => teamStore.teamOptions);
+const branchOptions = computed(() => branchStore.branchOptions);
+const editSpinner = createIconSpinner('edit');
+const saveSpinner = createIconSpinner('cloud_upload');
 
 // ─── Edit mode ────────────────────────────────────────────────────────────
 const editId = computed(() => {
@@ -573,10 +684,50 @@ const editId = computed(() => {
   return val ? Number(val) : null;
 });
 const isEditMode = computed(() => editId.value !== null);
+const editingJob = ref<Work | null>(null);
 
 const handleBack = () => {
   router.back();
 };
+
+const isCancellingJob = ref(false);
+
+// ใช้ dialog ชุดเดียวกับปุ่ม "ยกเลิกงาน" ในหน้ารายการงาน (AdminWorkListPage)
+function confirmCancelJob() {
+  if (!editId.value) return;
+
+  $q.dialog({
+    component: ConfirmActionDialog,
+    componentProps: {
+      title: t('adminWork.workList.deleteConfirmTitle'),
+      message: t('adminWork.workList.deleteConfirmMessage', {
+        title: pickLocalized(form.projectName, form.projectNameEn),
+      }),
+      icon: 'delete',
+      color: 'negative',
+      confirmLabel: t('adminWork.workList.deleteConfirmOk'),
+      cancelLabel: t('adminWork.workList.deleteConfirmCancel'),
+    },
+  }).onOk(() => {
+    void cancelJob();
+  });
+}
+
+async function cancelJob() {
+  if (!editId.value) return;
+
+  isCancellingJob.value = true;
+  try {
+    await workStore.removeJob(editId.value);
+    $q.notify({ type: 'positive', message: t('adminWork.workList.deleteSuccess') });
+    await router.push('/admin/work');
+  } catch (error) {
+    console.error('Failed to cancel job:', error);
+    $q.notify({ type: 'negative', message: t('adminWork.workList.deleteError') });
+  } finally {
+    isCancellingJob.value = false;
+  }
+}
 
 const customerSearch = ref('');
 const selectedCustomer = ref<Customer | null>(null);
@@ -592,32 +743,54 @@ const filteredCustomers = computed(() => {
 const avatarColors = ['primary', 'teal', 'deep-purple', 'orange', 'pink', 'cyan', 'indigo'];
 const getAvatarColor = (id: number) => avatarColors[id % avatarColors.length] ?? 'primary';
 
+// ─── Customer contacts (up to 3 phone numbers / 3 emails) ─────────────────
+const customerPhones = ref<string[]>(['']);
+const customerEmails = ref<string[]>(['']);
+const canEditCustomerContacts = computed(() => !selectedCustomer.value || isEditMode.value);
+
+const addCustomerPhone = () => {
+  if (customerPhones.value.length < 3) customerPhones.value.push('');
+};
+const removeCustomerPhone = (idx: number) => {
+  customerPhones.value.splice(idx, 1);
+};
+const addCustomerEmail = () => {
+  if (customerEmails.value.length < 3) customerEmails.value.push('');
+};
+const removeCustomerEmail = (idx: number) => {
+  customerEmails.value.splice(idx, 1);
+};
+
 const selectCustomer = (c: Customer) => {
   selectedCustomer.value = c;
   form.customerName = c.name;
-  form.customerPhone = c.phone;
-  form.customerEmail = c.email || '';
+  form.customerPreferredLocale = c.preferredLocale || 'th-TH';
+  customerPhones.value = [c.phone, c.phone2, c.phone3].filter((p): p is string => !!p);
+  if (customerPhones.value.length === 0) customerPhones.value = [''];
+  customerEmails.value = [c.email, c.email2, c.email3].filter((e): e is string => !!e);
+  if (customerEmails.value.length === 0) customerEmails.value = [''];
   customerSearch.value = '';
 };
 
 const clearSelectedCustomer = () => {
   selectedCustomer.value = null;
   form.customerName = '';
-  form.customerPhone = '';
-  form.customerEmail = '';
+  form.customerPreferredLocale = 'th-TH';
+  customerPhones.value = [''];
+  customerEmails.value = [''];
 };
 
 // ─── Job Form ─────────────────────────────────────────────────────────────
 const form = reactive({
   inspectionType: 'ตรวจ Defect',
   customerName: '',
-  customerPhone: '',
-  customerEmail: '',
   contractorFullName: '',
   contractorPhoneNumber: '',
   contractorEmail: '',
   contractorCompanyName: '',
   projectName: '',
+  projectNameEn: '',
+  customerPreferredLocale: 'th-TH',
   soi: '',
   houseNumber: '',
   floor: '',
@@ -627,11 +800,107 @@ const form = reactive({
   postalCode: '',
   usableArea: '',
   houseType: 1,
-  housePlanImage: null as string | null,
   projectImage: null as string | null,
-  housePlanImageFile: null as File | null,
   projectImageFile: null as File | null,
 });
+
+// ─── House plan photos (multi-image, backed by house_plans) ───────────────
+interface HousePlanItem {
+  planId?: number;
+  url: string;
+  file?: File;
+  name: string;
+  nameEn?: string;
+  isUploading?: boolean;
+}
+const housePlans = ref<HousePlanItem[]>([]);
+const planFileInput = ref<HTMLInputElement | null>(null);
+
+const triggerPlanUpload = () => {
+  planFileInput.value?.click();
+};
+
+const uploadHousePlan = async (jobId: number, file: File, name: string, nameEn?: string) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('name', name);
+  if (nameEn) formData.append('nameEn', nameEn);
+  formData.append('orderIndex', String(housePlans.value.length));
+  const { data } = await api.post<HousePlan>(`/inspection-jobs/${jobId}/house-plans`, formData);
+  return data;
+};
+
+const handlePlanFilesChange = async (e: Event) => {
+  const target = e.target as HTMLInputElement;
+  const files = target.files ? Array.from(target.files) : [];
+  target.value = '';
+  if (!files.length) return;
+
+  if (isEditMode.value && editId.value) {
+    const jobId = editId.value;
+    for (const file of files) {
+      const { th: name, en: nameEn } = defaultPlanNames(housePlans.value.length + 1);
+      const item: HousePlanItem = { url: URL.createObjectURL(file), name, nameEn, isUploading: true };
+      housePlans.value.push(item);
+      try {
+        const created = await uploadHousePlan(jobId, file, name, nameEn);
+        item.planId = created.planId;
+        item.url = getImageUrl(created.imageUrl) || item.url;
+      } catch (error) {
+        console.error('Failed to upload house plan', error);
+        housePlans.value.splice(housePlans.value.indexOf(item), 1);
+        $q.notify({ message: t('adminWork.createJob.saveError'), color: 'negative', position: 'top' });
+      } finally {
+        item.isUploading = false;
+      }
+    }
+  } else {
+    files.forEach((file) => {
+      const { th: name, en: nameEn } = defaultPlanNames(housePlans.value.length + 1);
+      housePlans.value.push({
+        url: URL.createObjectURL(file),
+        file,
+        name,
+        nameEn,
+      });
+    });
+  }
+};
+
+const renameHousePlan = async (index: number) => {
+  const plan = housePlans.value[index];
+  if (!plan) return;
+
+  const trimmed = plan.name.trim();
+  if (!trimmed) {
+    const defaults = defaultPlanNames(index + 1);
+    plan.name = defaults.th;
+    plan.nameEn = defaults.en;
+  }
+  if (!plan.planId) return;
+
+  try {
+    await api.patch(`/house-plans/${plan.planId}`, { name: plan.name, nameEn: plan.nameEn });
+  } catch (error) {
+    console.error('Failed to rename house plan', error);
+    $q.notify({ message: t('adminWork.createJob.saveError'), color: 'negative', position: 'top' });
+  }
+};
+
+const removeHousePlan = async (index: number) => {
+  const plan = housePlans.value[index];
+  if (!plan) return;
+  if (plan.planId) {
+    try {
+      await api.delete(`/house-plans/${plan.planId}`);
+    } catch (error) {
+      console.error('Failed to delete house plan', error);
+      $q.notify({ message: t('adminWork.createJob.saveError'), color: 'negative', position: 'top' });
+      return;
+    }
+  }
+  housePlans.value.splice(index, 1);
+};
 
 // ─── Thai Address Auto-fill ────────────────────────────────────────────────
 const addressOptions = ref<ThaiAddress[]>([]);
@@ -670,8 +939,8 @@ const onAddressSelected = (address: ThaiAddress) => {
 const openGoogleMaps = () => {
   const addressParts = [
     form.projectName,
-    form.houseNumber ? `เลขที่ ${form.houseNumber}` : '',
-    form.soi && form.soi !== '-' ? `ซอย ${form.soi}` : '',
+    form.houseNumber ? `${t('adminWork.createJob.houseNumberLabel')} ${form.houseNumber}` : '',
+    form.soi && form.soi !== '-' ? `${t('adminWork.createJob.soiLabel')} ${form.soi}` : '',
     form.subDistrict ? `ต.${form.subDistrict}` : '',
     form.district ? `อ.${form.district}` : '',
     form.province ? `จ.${form.province}` : '',
@@ -686,7 +955,7 @@ const openGoogleMaps = () => {
     window.open(mapsUrl, '_blank');
   } else {
     $q.notify({
-      message: 'กรุณากรอกชื่อโครงการหรือข้อมูลที่อยู่ก่อนค้นหาในแผนที่',
+      message: t('adminWork.createJob.enterProjectOrAddressFirst'),
       color: 'warning',
       position: 'top',
       icon: 'warning',
@@ -696,18 +965,27 @@ const openGoogleMaps = () => {
 
 const houseTypeOptions = computed(() =>
   houseTypeStore.houseTypes.map((ht) => ({
-    label: ht.name,
+    label: pickLocalized(ht.name, ht.nameEn),
     value: ht.house_type_id,
   })),
 );
 
-const fileInput = ref<HTMLInputElement | null>(null);
-const currentUploadType = ref<'housePlan' | 'projectPhoto' | null>(null);
+const customerLocaleOptions = computed(() => [
+  { label: t('adminWork.createJob.customerLanguageThai'), value: 'th-TH' },
+  { label: t('adminWork.createJob.customerLanguageEnglish'), value: 'en-US' },
+]);
 
-const isLoading = ref(false);
+const fileInput = ref<HTMLInputElement | null>(null);
+const currentUploadType = ref<'projectPhoto' | null>(null);
 
 onMounted(async () => {
-  await Promise.all([customerStore.fetchCustomers(), teamStore.fetchTeams()]);
+  $q.loading.show({
+    spinner: editSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
+  await Promise.all([customerStore.fetchCustomers(), branchStore.fetchBranches()]);
   await houseTypeStore.fetchHouseTypes();
 
   // Pre-select job type from route query if available
@@ -715,17 +993,22 @@ onMounted(async () => {
     form.inspectionType = route.query.type === 'construction' ? 'ตรวจก่อสร้าง' : 'ตรวจ Defect';
   }
 
-  if (!editId.value) return;
+  if (!editId.value) {
+    $q.loading.hide();
+    return;
+  }
 
-  isLoading.value = true;
+  
   try {
     await new Promise((resolve) => setTimeout(resolve, 600));
 
-    const existing = workStore.works.find((w) => w.jobId === editId.value);
+    const { data: existing } = await api.get<Work>(`/inspection-jobs/${editId.value}`);
     if (!existing) return;
-    selectedBranchId.value = existing.branch?.teamId ?? undefined;
+    editingJob.value = existing;
+    selectedBranchId.value = existing.branch?.branchId ?? undefined;
 
     form.projectName = existing.projectName || '';
+    form.projectNameEn = existing.projectNameEn || '';
     form.inspectionType =
       existing.inspectionType === 'CONSTRUCTION_INSPECTION' ||
       existing.inspectionType === 'Construction' ||
@@ -742,20 +1025,50 @@ onMounted(async () => {
     form.subDistrict = existing.address?.subDistrict || '';
     form.postalCode = existing.address?.postalCode || '';
     form.customerName = existing.customer?.fullName || '';
-    form.customerPhone = existing.customer?.phoneNumber || '';
-    form.customerEmail = existing.customer?.email || '';
+    customerPhones.value = [
+      existing.customer?.phoneNumber,
+      existing.customer?.phoneNumber2,
+      existing.customer?.phoneNumber3,
+    ].filter((p): p is string => !!p);
+    if (customerPhones.value.length === 0) customerPhones.value = [''];
+    customerEmails.value = [
+      existing.customer?.email,
+      existing.customer?.email2,
+      existing.customer?.email3,
+    ].filter((e): e is string => !!e);
+    if (customerEmails.value.length === 0) customerEmails.value = [''];
+    form.customerPreferredLocale = existing.customer?.preferredLocale || 'th-TH';
     form.contractorFullName = existing.contractor?.fullName || '';
     form.contractorPhoneNumber = existing.contractor?.phoneNumber || '';
     form.contractorEmail = existing.contractor?.email || '';
     form.contractorCompanyName = existing.contractor?.companyName || '';
-    form.housePlanImage = getImageUrl(existing.housePlanUrl);
     form.projectImage = getImageUrl(existing.projectImageUrl);
+
+    try {
+      const { data: plans } = await api.get<HousePlan[]>(`/inspection-jobs/${editId.value}/house-plans`);
+      housePlans.value = plans.map((p) => ({
+        planId: p.planId,
+        url: getImageUrl(p.imageUrl) || p.imageUrl,
+        name: p.name,
+      }));
+    } catch (planError) {
+      console.error('Failed to load house plans', planError);
+    }
+  } catch (error) {
+    console.error('Failed to load job for edit', error);
+    $q.notify({
+      message: t('adminWork.createJob.jobNotFound'),
+      color: 'negative',
+      position: 'top',
+      icon: 'warning',
+    });
+    $q.loading.hide();
   } finally {
-    isLoading.value = false;
+    $q.loading.hide();
   }
 });
 
-const triggerUpload = (type: 'housePlan' | 'projectPhoto') => {
+const triggerUpload = (type: 'projectPhoto') => {
   currentUploadType.value = type;
   fileInput.value?.click();
 };
@@ -764,14 +1077,8 @@ const handleFileChange = (e: Event) => {
   const target = e.target as HTMLInputElement;
   if (target.files && target.files[0]) {
     const file = target.files[0];
-    const url = URL.createObjectURL(file);
-    if (currentUploadType.value === 'housePlan') {
-      form.housePlanImage = url;
-      form.housePlanImageFile = file;
-    } else {
-      form.projectImage = url;
-      form.projectImageFile = file;
-    }
+    form.projectImage = URL.createObjectURL(file);
+    form.projectImageFile = file;
   }
   target.value = '';
 };
@@ -781,13 +1088,13 @@ const isSubmitting = ref(false);
 
 const onSubmit = async () => {
   if (!selectedBranchId.value) {
-    $q.notify({ message: 'กรุณาเลือกบริษัทหรือสาขาก่อนเปิดเล่ม', color: 'negative', position: 'top' });
+    $q.notify({ message: t('adminWork.createJob.selectBranchRequired'), color: 'negative', position: 'top' });
     return;
   }
   // Validate project name always required
   if (!form.projectName) {
     $q.notify({
-      message: 'กรุณากรอกชื่อโครงการ',
+      message: t('adminWork.createJob.projectNameRequired'),
       color: 'negative',
       position: 'top',
       icon: 'warning',
@@ -795,9 +1102,9 @@ const onSubmit = async () => {
     return;
   }
 
-  if (!form.customerName || !form.customerPhone) {
+  if (!form.customerName || !customerPhones.value[0]) {
     $q.notify({
-      message: 'กรุณากรอกชื่อลูกค้าและเบอร์โทรศัพท์',
+      message: t('adminWork.createJob.customerNameAndPhoneRequired'),
       color: 'negative',
       position: 'top',
       icon: 'warning',
@@ -813,7 +1120,7 @@ const onSubmit = async () => {
   ) {
     if (!form.contractorFullName || !form.contractorPhoneNumber) {
       $q.notify({
-        message: 'กรุณากรอกชื่อและเบอร์โทรศัพท์ของผู้รับเหมา',
+        message: t('adminWork.createJob.contractorNameAndPhoneRequired'),
         color: 'negative',
         position: 'top',
         icon: 'warning',
@@ -823,26 +1130,36 @@ const onSubmit = async () => {
   }
 
   isSubmitting.value = true;
-  $q.loading.show({ message: 'กำลังบันทึกข้อมูล...' });
+  $q.loading.show({
+    spinner: saveSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
 
   try {
     const addressParts: string[] = [];
-    if (form.houseNumber) addressParts.push(`เลขที่ ${form.houseNumber}`);
-    if (form.soi && form.soi !== '-') addressParts.push(`ซอย ${form.soi}`);
+    if (form.houseNumber) addressParts.push(`${t('adminWork.createJob.houseNumberLabel')} ${form.houseNumber}`);
+    if (form.soi && form.soi !== '-') addressParts.push(`${t('adminWork.createJob.soiLabel')} ${form.soi}`);
     if (form.subDistrict) addressParts.push(`ต.${form.subDistrict}`);
     if (form.district) addressParts.push(`อ.${form.district}`);
     if (form.province) addressParts.push(`จ.${form.province}`);
     if (form.postalCode) addressParts.push(`${form.postalCode}`);
 
     if (isEditMode.value && editId.value) {
-      const existingJob = workStore.works.find((w) => w.jobId === editId.value);
+      const existingJob = editingJob.value;
 
       if (existingJob) {
         if (existingJob.customer) {
           await customerStore.updateCustomer(existingJob.customer.customerId, {
             name: form.customerName,
-            phone: form.customerPhone,
-            email: form.customerEmail,
+            phone: customerPhones.value[0] || '',
+            phone2: customerPhones.value[1] || '',
+            phone3: customerPhones.value[2] || '',
+            email: customerEmails.value[0] || '',
+            email2: customerEmails.value[1] || '',
+            email3: customerEmails.value[2] || '',
+            preferredLocale: form.customerPreferredLocale,
           });
         }
 
@@ -884,22 +1201,28 @@ const onSubmit = async () => {
         jobFormData.append('inspectionType', inspectionTypeStr);
         jobFormData.append('houseTypeId', String(form.houseType));
         jobFormData.append('projectName', form.projectName);
+        jobFormData.append('projectNameEn', form.projectNameEn);
         jobFormData.append('locationCoordinate', '');
         jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
-        if (selectedBranchId.value) jobFormData.append('teamId', String(selectedBranchId.value));
+        if (selectedBranchId.value) jobFormData.append('branchId', String(selectedBranchId.value));
         if (finalContractorId) jobFormData.append('contractorId', String(finalContractorId));
         if (form.projectImageFile) jobFormData.append('projectImageUrl', form.projectImageFile);
         else if (form.projectImage === null) jobFormData.append('projectImageUrl', '');
 
-        if (form.housePlanImageFile) jobFormData.append('housePlanUrl', form.housePlanImageFile);
-        else if (form.housePlanImage === null) jobFormData.append('housePlanUrl', '');
-
         await workStore.updateJob(editId.value, jobFormData);
+      } else {
+        $q.notify({
+          message: t('adminWork.createJob.jobNotFound'),
+          color: 'negative',
+          position: 'top',
+          icon: 'warning',
+        });
+        return;
       }
       await workStore.fetchJobs();
 
       $q.notify({
-        message: `แก้ไขงาน "${form.projectName}" สำเร็จ!`,
+        message: t('adminWork.createJob.editSuccess', { name: form.projectName }),
         color: 'positive',
         position: 'top',
         icon: 'check_circle',
@@ -917,9 +1240,14 @@ const onSubmit = async () => {
       } else {
         const newCust = await customerStore.createCustomer({
           name: form.customerName,
-          phone: form.customerPhone,
-          email: form.customerEmail,
+          phone: customerPhones.value[0] || '',
+          phone2: customerPhones.value[1],
+          phone3: customerPhones.value[2],
+          email: customerEmails.value[0] || '',
+          email2: customerEmails.value[1],
+          email3: customerEmails.value[2],
           lineId: '',
+          preferredLocale: form.customerPreferredLocale,
         });
         customerId = newCust.id;
       }
@@ -956,23 +1284,31 @@ const onSubmit = async () => {
       jobFormData.append('inspectionType', inspectionTypeStr);
       jobFormData.append('houseTypeId', String(form.houseType));
       jobFormData.append('projectName', form.projectName);
+      if (form.projectNameEn) jobFormData.append('projectNameEn', form.projectNameEn);
       jobFormData.append('locationCoordinate', '');
       jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
       jobFormData.append('status', 'Draft');
-      if (selectedBranchId.value) jobFormData.append('teamId', String(selectedBranchId.value));
+      if (selectedBranchId.value) jobFormData.append('branchId', String(selectedBranchId.value));
 
       if (form.projectImageFile) {
         jobFormData.append('projectImageUrl', form.projectImageFile);
       }
-      if (form.housePlanImageFile) {
-        jobFormData.append('housePlanUrl', form.housePlanImageFile);
+
+      const createdJob = await workStore.createJob(jobFormData);
+
+      const pendingPlans = housePlans.value.filter((p): p is HousePlanItem & { file: File } => !!p.file);
+      for (const plan of pendingPlans) {
+        try {
+          await uploadHousePlan(createdJob.jobId, plan.file, plan.name, plan.nameEn);
+        } catch (planError) {
+          console.error('Failed to upload house plan', planError);
+        }
       }
 
-      await workStore.createJob(jobFormData);
       await workStore.fetchJobs();
 
       $q.notify({
-        message: `สร้างงาน "${form.projectName}" สำเร็จ!`,
+        message: t('adminWork.createJob.createSuccess', { name: form.projectName }),
         color: 'positive',
         position: 'top',
         icon: 'check_circle',
@@ -984,7 +1320,7 @@ const onSubmit = async () => {
     }
   } catch (error) {
     console.error('Submit Failed', error);
-    $q.notify({ message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', color: 'negative', position: 'top' });
+    $q.notify({ message: t('adminWork.createJob.saveError'), color: 'negative', position: 'top' });
   } finally {
     $q.loading.hide();
     isSubmitting.value = false;
@@ -1084,7 +1420,7 @@ const onSubmit = async () => {
 .selected-customer-banner {
   background: linear-gradient(135deg, #e8f4fd 0%, #f3e5f5 100%);
   border-radius: 16px;
-  border: 1.5px solid #90caf9;
+  border: 1px solid #90caf9;
 }
 
 /* ─── Form Cards ─────────────────────────────────────────── */
@@ -1122,6 +1458,21 @@ const onSubmit = async () => {
 .upload-box:hover {
   border-color: var(--q-primary);
   background-color: #f0f7ff;
+}
+
+/* ปุ่มลบรูปแปลน: มินิมอล ไม่มีเงา วางไว้มุมขวาบนของการ์ดรูปเดิม */
+.plan-delete-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  box-shadow: none;
+}
+
+.add-plan-btn {
+  border-radius: 12px;
+  border-style: dashed;
+  height: 44px;
 }
 
 /* ─── Layout ─────────────────────────────────────────────── */

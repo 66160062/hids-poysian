@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { api } from 'src/boot/axios'
+import { localizedName } from 'src/composables/useLocalizedField'
 
 // circumference ของ circle r=36 → 2π×36 ≈ 226.2
 const CIRCUMFERENCE = 226.2
@@ -7,7 +8,8 @@ const CIRCUMFERENCE = 226.2
 interface DefectSubCategoryResponse {
   subCategoryId: number
   name: string
-  category?: { categoryId: number; name: string }
+  nameEn?: string | null
+  category?: { categoryId: number; name: string; nameEn?: string | null }
 }
 
 interface DefectResponse {
@@ -27,19 +29,19 @@ export function useDefectSummary() {
   const jobTypes = ref<{ label: string; count: number }[]>([])
   const isLoading = ref(false)
 
-  async function fetchSummary(jobId: number) {
+  async function fetchSummary(jobId: number, linkToken?: string | null) {
     isLoading.value = true
+    const params = linkToken ? { token: linkToken } : {}
     try {
-      const { data: rounds } = await api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`)
+      const { data: rounds } = await api.get<RoundResponse[]>(`/daily-reports/${jobId}/rounds`, {
+        params,
+      })
 
-      const defectLists = await Promise.all(
-        rounds.map((round) =>
-          api
-            .get<DefectResponse[]>(`/defects/round/${round.roundId}`)
-            .then((res) => res.data),
-        ),
-      )
-      const defects = defectLists.flat()
+      // rounds มาเรียงตาม roundNumber ASC — เอาเฉพาะรอบล่าสุด ไม่รวมรอบก่อนหน้า
+      const latestRound = rounds[rounds.length - 1]
+      const { data: defects } = latestRound
+        ? await api.get<DefectResponse[]>(`/defects/round/${latestRound.roundId}`, { params })
+        : { data: [] as DefectResponse[] }
 
       totalDefects.value = defects.length
       passed.value = defects.filter((d) => d.status === 'verified').length
@@ -49,7 +51,7 @@ export function useDefectSummary() {
       for (const defect of defects) {
         const categoryNames = new Set(
           (defect.subCategories ?? [])
-            .map((sub) => sub.category?.name)
+            .map((sub) => localizedName(sub.category))
             .filter((name): name is string => !!name),
         )
         for (const name of categoryNames) {

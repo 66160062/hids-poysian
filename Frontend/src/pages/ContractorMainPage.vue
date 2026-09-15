@@ -7,7 +7,7 @@
       <q-banner v-if="error" class="text-white bg-negative q-mb-md" rounded dense>
         {{ error }}
         <template #action>
-          <q-btn flat label="ลองใหม่" @click="loadData" />
+          <q-btn flat :label="t('contractor.main.retry')" @click="loadData" />
         </template>
       </q-banner>
 
@@ -16,7 +16,7 @@
         v-model="search"
         outlined
         dense
-        placeholder="ค้นหาประเภทห้อง, ประเภทห้องซ่อม"
+        :placeholder="t('contractor.main.searchPlaceholder')"
         bg-color="white"
         class="q-mb-md search-input"
       >
@@ -32,18 +32,18 @@
           <div class="row q-col-gutter-xs">
             <div class="col-4 text-center stat-box">
               <q-icon name="meeting_room" color="grey-6" size="18px" />
-              <div class="stat-label">ประเภทห้องทั้งหมด</div>
-              <div class="stat-num">{{ stats.totalRoomTypes }}</div>
+              <div class="stat-label">{{ t('contractor.main.totalRoomTypes') }}</div>
+              <div class="stat-num tabular-nums">{{ stats.totalRoomTypes }}</div>
             </div>
             <div class="col-4 text-center stat-box border-lr">
               <q-icon name="build" color="grey-6" size="18px" />
-              <div class="stat-label">ประเภทงานทั้งหมด</div>
-              <div class="stat-num">{{ stats.totalJobTypes }}</div>
+              <div class="stat-label">{{ t('contractor.main.totalJobTypes') }}</div>
+              <div class="stat-num tabular-nums">{{ stats.totalJobTypes }}</div>
             </div>
             <div class="col-4 text-center stat-box">
               <q-icon name="list_alt" color="grey-6" size="18px" />
-              <div class="stat-label">จำนวนรายการทั้งหมด</div>
-              <div class="stat-num">{{ stats.totalItems }}</div>
+              <div class="stat-label">{{ t('contractor.main.totalItems') }}</div>
+              <div class="stat-num tabular-nums">{{ stats.totalItems }}</div>
             </div>
           </div>
 
@@ -53,16 +53,16 @@
             <div class="col-6 text-center">
               <div class="row items-center justify-center q-gutter-xs">
                 <q-icon name="check_circle" color="green" size="20px" />
-                <span class="text-caption text-grey-7">ซ่อมแล้ว</span>
+                <span class="text-caption text-grey-7">{{ t('contractor.main.repaired') }}</span>
               </div>
-              <div class="text-h6 text-green text-weight-bold">{{ stats.passed }}</div>
+              <div class="text-h6 text-green text-weight-bold tabular-nums">{{ stats.passed }}</div>
             </div>
             <div class="col-6 text-center">
               <div class="row items-center justify-center q-gutter-xs">
                 <q-icon name="cancel" color="red" size="20px" />
-                <span class="text-caption text-grey-7">ยังไม่ซ่อม</span>
+                <span class="text-caption text-grey-7">{{ t('contractor.main.notRepaired') }}</span>
               </div>
-              <div class="text-h6 text-red text-weight-bold">{{ stats.failed }}</div>
+              <div class="text-h6 text-red text-weight-bold tabular-nums">{{ stats.failed }}</div>
             </div>
           </div>
         </q-card-section>
@@ -72,9 +72,18 @@
       <div
         v-for="room in filteredRooms"
         :key="room.id"
-        class="q-mb-sm"
+        class="q-mb-sm card-stagger"
       >
-        <q-card flat bordered class="room-card" @click="goToDefectList(room)">
+        <q-card
+          flat
+          bordered
+          tabindex="0"
+          role="button"
+          class="room-card"
+          v-ripple
+          @click="goToDefectList(room)"
+          @keyup.enter="goToDefectList(room)"
+        >
           <q-card-section class="q-pa-md">
 
             <!-- Room Header -->
@@ -90,7 +99,9 @@
                     outline
                     class="text-caption"
                   />
-                  <span class="text-caption text-grey-6">({{ room.count }} รายการ)</span>
+                  <span class="text-caption text-grey-6">{{
+                    t('contractor.main.itemsCount', { count: room.count })
+                  }}</span>
                 </div>
               </div>
               <q-badge color="primary" outline :label="room.floor" class="floor-badge" />
@@ -129,7 +140,7 @@
         unelevated
         color="primary"
         icon="warning_amber"
-        label="View Defects"
+        :label="t('contractor.main.viewDefects')"
         class="full-width view-btn"
         size="md"
         @click="goToAllDefects"
@@ -143,14 +154,23 @@
 
 import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useContractorRepair } from 'src/stores/useContractormain'
 import { useLinkAccess } from 'src/stores/useLinkAccess'
+import { useQuasar } from 'quasar'
+import { createIconSpinner } from 'src/composables/useIconSpinner'
+
+const $q = useQuasar()
+const repairSpinner = createIconSpinner('construction')
 
 const route = useRoute()
-const { projectId } = useLinkAccess()
+const { t } = useI18n()
+const { hasLinkAccess, projectId, linkToken } = useLinkAccess()
 const { search, stats, error, filteredRooms, tagColor, fetchRepairData, goToDefectList, goToAllDefects } = useContractorRepair()
 
 function getJobId(): number | null {
+  // ลิงก์ผู้รับเหมาที่ verify แล้วต้องยึด jobId จาก token เสมอ ห้ามให้ query string ทับ
+  if (hasLinkAccess.value) return projectId.value
   const queryJobId = route.query.jobId
   if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId)
   return projectId.value
@@ -159,28 +179,76 @@ function getJobId(): number | null {
 async function loadData() {
   const jobId = getJobId()
   if (!jobId) return
-  await fetchRepairData(jobId)
+  await fetchRepairData(jobId, linkToken.value)
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  $q.loading.show({
+    spinner: repairSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  })
+  try {
+    await loadData()
+  } finally {
+    $q.loading.hide()
+  }
+})
 
 </script>
 
 <style scoped>
-.repair-overview { max-width: 480px; margin: 0 auto; }
+.repair-overview { --ease-out: cubic-bezier(0.23, 1, 0.32, 1); max-width: 480px; margin: 0 auto; width: 100%; }
+@media (min-width: 768px) {
+  .repair-overview { max-width: 720px; }
+}
+@media (min-width: 1024px) {
+  .repair-overview { max-width: 1100px; }
+}
+@media (min-width: 1440px) {
+  .repair-overview { max-width: 1280px; }
+}
 
-.search-input :deep(.q-field__control) { border-radius: 12px; }
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
+.search-input :deep(.q-field__control) {
+  border-radius: 12px;
+  transition: box-shadow 150ms var(--ease-out), border-color 150ms var(--ease-out);
+}
+.search-input.q-field--focused :deep(.q-field__control) {
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.12);
+}
 
 .summary-card {
   border-radius: 14px !important;
   background: #fff !important;
   border-color: #ebebeb !important;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 4px 10px rgba(0, 0, 0, 0.04);
 }
 
 .stat-box { padding: 6px 4px; }
 .stat-label { font-size: 10px; color: #9e9e9e; margin: 2px 0; line-height: 1.3; }
 .stat-num { font-size: 22px; font-weight: 700; color: #212121; }
 .border-lr { border-left: 1px solid #eee; border-right: 1px solid #eee; }
+
+.card-stagger {
+  animation: card-in 300ms var(--ease-out) both;
+}
+.card-stagger:nth-child(1) { animation-delay: 0ms; }
+.card-stagger:nth-child(2) { animation-delay: 40ms; }
+.card-stagger:nth-child(3) { animation-delay: 80ms; }
+.card-stagger:nth-child(4) { animation-delay: 120ms; }
+.card-stagger:nth-child(n + 5) { animation-delay: 150ms; }
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-stagger { animation-duration: 0.01ms !important; }
+}
 
 .room-card {
   border-radius: 14px !important;
@@ -190,6 +258,10 @@ onMounted(loadData)
   transition: box-shadow 0.2s;
 }
 .room-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.room-card:focus-visible {
+  outline: 2px solid var(--q-primary, #1976d2);
+  outline-offset: 2px;
+}
 
 .room-name { font-size: 15px; font-weight: 700; color: #212121; }
 .floor-badge { font-size: 11px; border-radius: 8px; }
@@ -216,5 +288,13 @@ onMounted(loadData)
   transition: width 0.4s;
 }
 
-.view-btn { border-radius: 14px; font-weight: 600; font-size: 15px; }
+.view-btn {
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 15px;
+  transition: box-shadow 150ms var(--ease-out);
+}
+.view-btn:hover {
+  box-shadow: 0 4px 14px rgba(25, 118, 210, 0.3);
+}
 </style>

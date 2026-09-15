@@ -3,9 +3,8 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
-  ManyToOne,
-  JoinColumn,
 } from 'typeorm';
 import { Team } from 'src/teams/entities/team.entity';
 
@@ -17,15 +16,20 @@ export class Branch {
   @Column({ type: 'varchar', length: 255, nullable: true })
   branchName!: string | null;
 
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  phoneNumber!: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  mailAddress!: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  facebook!: string | null;
+
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  line!: string | null;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   logoUrl!: string | null;
-
-  @Column({ name: 'team_id', type: 'int', nullable: true, unique: true })
-  teamId!: number | null;
-
-  @ManyToOne(() => Team, { nullable: true })
-  @JoinColumn({ name: 'team_id' })
-  team!: Team | null;
 
   @Column({ type: 'varchar', length: 50, default: 'active' })
   status!: string;
@@ -34,5 +38,8 @@ export class Branch {
   createdAt!: Date;
 
   @DeleteDateColumn()
-  deletedAt!: Date;
+  deletedAt!: Date | null;
+
+  @OneToMany(() => Team, (team) => team.branch)
+  teams!: Team[];
 }

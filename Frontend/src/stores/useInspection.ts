@@ -1,7 +1,22 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import { isAxiosError } from 'axios';
 import type { Category, DefectSubCategory, RoomTemplate, SubCategory, Defect } from 'src/models.ts';
 import { api } from 'src/boot/axios';
+import { t } from 'src/boot/i18n';
+
+// ── Optimistic save/edit sync tracking ──────────────────────
+// key: real defectId (edit) or a negative temp id (create, until fetchDefects pulls in the real row)
+
+export type DefectSyncStatus = 'pending' | 'error';
+
+export interface DefectSyncEntry {
+  status: DefectSyncStatus;
+  isCreate: boolean;
+  roundId: string | number;
+  error: string;
+  previewDefect?: Defect; // create only — placeholder card data until the real defect exists in `defects`
+}
 
 // ── Types เพิ่มเติมสำหรับ filter/group ───────────────────────
 
@@ -28,18 +43,26 @@ export interface GroupedDefectItem {
   passPercentage: number;
   failPercentage: number;
   defects: Defect[]; // raw defects ในกลุ่มนี้ (ส่งต่อไปหน้า detail)
+  lastActivityAt: number; // เวลาแก้ไข/เพิ่ม defect ล่าสุดในกลุ่มนี้ (epoch ms) — ใช้เรียงตาม sortOrder
 }
 
 // ── Helpers: ดึงค่าจาก nested Defect object ─────────────────
 
-const getFloorLabel = (d: Defect) => d.floor?.label ?? 'ไม่ระบุชั้น';
+const getFloorLabel = (d: Defect) => d.floor?.label ?? t('common.unspecified.floor');
 
 const getRoomName = (d: Defect) =>
   d.subRoom?.roomName ?? // ห้องย่อย (ละเอียดกว่า)
   d.room?.roomName ?? // fallback ประเภทห้อง
-  'ไม่ระบุห้อง';
+  t('common.unspecified.room');
 
-const getRoomType = (d: Defect) => d.room?.roomName ?? 'ไม่ระบุประเภท';
+const getRoomType = (d: Defect) => d.room?.roomName ?? t('common.unspecified.roomType');
+
+// เวลาที่ defect ตัวนี้ถูกแก้ไข/เพิ่มล่าสุด — ใช้ updatedAt ก่อน (ครอบคลุมทั้งแก้ไขและเพิ่มใหม่) fallback เป็น createdAt
+const getLastActivity = (d: Defect) => {
+  const updated = d.updatedAt ? new Date(d.updatedAt).getTime() : 0;
+  const created = d.createdAt ? new Date(d.createdAt).getTime() : 0;
+  return Math.max(updated, created);
+};
 
 const SEVERITY_LABEL: Record<string, string> = {
   Major: 'Major',
@@ -67,6 +90,13 @@ export const useInspectionStore = defineStore('inspection', () => {
     roomTypes: [],
     severityLevels: [],
   });
+
+  // เรียงกลุ่ม defect ตามเวลาแก้ไข/เพิ่มล่าสุด: desc = ใหม่สุดก่อน, asc = เก่าสุดก่อน
+  const sortOrder = ref<'desc' | 'asc'>('desc');
+
+  const defectSyncState = ref<Record<number, DefectSyncEntry>>({});
+  // ไม่ต้อง reactive เพราะเก็บ closure (FormData/File อยู่ข้างใน) ไว้ให้ retry เรียกซ้ำได้
+  const syncTasks = new Map<number, () => Promise<void>>();
 
   // ── computed เดิม (ไม่แตะ) ────────────────────────────────
   const allRooms = computed(() => rooms.value);
@@ -151,12 +181,14 @@ export const useInspectionStore = defineStore('inspection', () => {
           passPercentage: 0,
           failPercentage: 0,
           defects: [],
+          lastActivityAt: 0,
         });
       }
 
       const group = map.get(key)!;
       group.totalItems++;
       group.defects.push(defect);
+      group.lastActivityAt = Math.max(group.lastActivityAt, getLastActivity(defect));
       if (defect.status === 'verified') group.passCount++;
       else group.failCount++;
     }
@@ -166,7 +198,12 @@ export const useInspectionStore = defineStore('inspection', () => {
       g.failPercentage = 100 - g.passPercentage;
     }
 
-    return [...map.values()];
+    const groups = [...map.values()];
+    groups.sort((a, b) =>
+      sortOrder.value === 'desc' ? b.lastActivityAt - a.lastActivityAt : a.lastActivityAt - b.lastActivityAt,
+    );
+
+    return groups;
   });
 
   // ── computed ใหม่: summary card ────────────────────────────
@@ -277,6 +314,68 @@ export const useInspectionStore = defineStore('inspection', () => {
     subCategories.value = [];
   }
 
+  // ── Optimistic save/edit sync ─────────────────────────────
+
+  function extractErrorMessage(err: unknown, fallback: string): string {
+    if (isAxiosError(err) && err.response?.status === 409) {
+      return (
+        (err.response.data as { message?: string } | undefined)?.message ??
+        t('inspection.addDefect.duplicateDefect')
+      );
+    }
+    return fallback;
+  }
+
+  async function runDefectSync(
+    id: number,
+    isCreate: boolean,
+    roundId: string | number,
+    task: () => Promise<void>,
+    previewDefect?: Defect,
+  ) {
+    syncTasks.set(id, task);
+    defectSyncState.value[id] = {
+      status: 'pending',
+      isCreate,
+      roundId,
+      error: '',
+      ...(previewDefect ? { previewDefect } : {}),
+    };
+    try {
+      await task();
+      delete defectSyncState.value[id];
+      syncTasks.delete(id);
+      if (isCreate) {
+        await fetchDefects(roundId);
+      }
+    } catch (err) {
+      const existing = defectSyncState.value[id];
+      defectSyncState.value[id] = {
+        status: 'error',
+        isCreate,
+        roundId,
+        error: extractErrorMessage(err, t('inspection.addDefect.saveError')),
+        ...(existing?.previewDefect ? { previewDefect: existing.previewDefect } : {}),
+      };
+    }
+  }
+
+  function retryDefectSync(id: number) {
+    const entry = defectSyncState.value[id];
+    const task = syncTasks.get(id);
+    if (!entry || !task || entry.status === 'pending') return;
+    void runDefectSync(id, entry.isCreate, entry.roundId, task, entry.previewDefect);
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('online', () => {
+      for (const key of Object.keys(defectSyncState.value)) {
+        const id = Number(key);
+        if (defectSyncState.value[id]?.status === 'error') retryDefectSync(id);
+      }
+    });
+  }
+
   // ── actions ใหม่ ───────────────────────────────────────────
 
   async function fetchDefects(roundId: string | number) {
@@ -286,7 +385,7 @@ export const useInspectionStore = defineStore('inspection', () => {
       const { data } = await api.get<Defect[]>(`/defects/round/${roundId}`);
       defects.value = data;
     } catch (err) {
-      defectsError.value = 'โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+      defectsError.value = t('stores.inspection.fetchDefectsError');
       console.error('Fetch Defects Error:', err);
     } finally {
       isLoadingDefects.value = false;
@@ -323,6 +422,7 @@ export const useInspectionStore = defineStore('inspection', () => {
     defectsError,
     searchQuery,
     filter,
+    sortOrder,
     groupedDefects,
     summaryData,
     activeFilterCount,
@@ -332,5 +432,8 @@ export const useInspectionStore = defineStore('inspection', () => {
     fetchDefects,
     applyFilter,
     resetFilter,
+    defectSyncState,
+    runDefectSync,
+    retryDefectSync,
   };
 });

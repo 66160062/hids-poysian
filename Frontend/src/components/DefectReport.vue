@@ -1,5 +1,11 @@
 <template>
   <div style="overflow: hidden; width: 100%">
+    <div v-if="checkFreshness && isReportStale" class="row items-center q-pa-sm q-mb-sm freshness-banner">
+      <q-icon name="autorenew" color="warning" size="18px" class="q-mr-sm" />
+      <div class="text-caption text-grey-8">
+        {{ t('reports.defect.freshnessBanner') }}
+      </div>
+    </div>
     <div
       ref="reportRef"
       class="pdf-wrapper"
@@ -9,101 +15,95 @@
       <div class="pdf-page">
         <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
           <div class="text-caption text-grey-7">
-            {{ round.job.projectName }}, ครั้งที่ {{ round.roundNumber }},
+            {{ pickLocalized(round.job.projectName, round.job.projectNameEn) }}, {{ t('reports.defect.roundOf', { n: round.roundNumber }) }},
             {{ formatDate(round.scheduledDate) }}
           </div>
-          <div class="text-caption text-grey-7">หน้า | 1 / {{ totalPages }}</div>
+          <div class="text-caption text-grey-7">{{ t('reports.defect.page') }} | 1 / {{ totalPages }}</div>
+        </div>
+        <div v-if="generatedAtLabel" class="row justify-end q-px-md">
+          <div class="text-caption text-grey-6" style="font-size: 9px">
+            {{ t('reports.defect.asOf', { date: generatedAtLabel }) }}
+          </div>
         </div>
 
         <div class="row justify-center q-py-sm">
           <img loading="eager" :src="reportLogo" style="height: 100px; object-fit: contain" />
         </div>
 
-        <div class="row justify-center q-mb-md">
+        <div class="row justify-center q-mb-sm">
           <img
             loading="eager"
             :src="
-              round.job.projectImageUrl
-                ? `${apiUrl}${round.job.projectImageUrl}`
-                : 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600'
+              resolveImageUrl(
+                round.job.projectImageUrl,
+                'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600',
+              )
             "
-            style="
-              width: 95%;
-              max-height: 200px;
-              object-fit: cover;
-              border-radius: 8px;
-              margin-bottom: 16px;
-            "
+            style="width: 95%; max-height: 150px; object-fit: cover; border-radius: 8px"
           />
         </div>
 
-        <div class="row q-col-gutter-md q-px-md q-mb-md">
+        <div class="row q-col-gutter-md q-px-md q-mb-sm">
           <div class="col-6">
-            <div class="section-title q-mb-xs">ข้อมูลโครงการ</div>
+            <div class="section-title q-mb-xs">{{ t('reports.defect.projectInfo') }}</div>
             <div class="info-box q-pa-sm">
               <div class="row q-mb-xs">
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">ชื่อโครงการ TH</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.projectNameTh') }}</div>
                   <div class="text-caption text-bold">{{ round.job.projectName }}</div>
                 </div>
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">จังหวัด</div>
-                  <div class="text-caption text-bold">{{ round.job.address?.province }}</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.projectNameEnLabel') }}</div>
+                  <div class="text-caption text-bold">{{ round.job.projectNameEn }}</div>
                 </div>
               </div>
-              <div class="row q-mb-xs">
-                <div class="col-6">
-                  <div class="text-caption text-grey-7">เขต/อำเภอ</div>
-                  <div class="text-caption text-bold">{{ round.job.address?.district }}</div>
-                </div>
-                <div class="col-6">
-                  <div class="text-caption text-grey-7">แขวง/ตำบล</div>
-                  <div class="text-caption text-bold">{{ round.job.address?.subDistrict }}</div>
-                </div>
+              <div class="q-mb-xs">
+                <div class="text-caption text-grey-7">{{ t('reports.defect.location') }}</div>
+                <div class="text-caption text-bold">{{ addressLocation }}</div>
               </div>
               <div class="row">
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">ประเภท</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.type') }}</div>
                   <div class="text-caption text-bold">
-                    {{ round.job.houseType?.name }} {{ round.job.address?.floor }} ชั้น
+                    {{ pickLocalized(round.job.houseType?.name, round.job.houseType?.nameEn) }} {{ round.job.address?.floor }} {{ t('reports.defect.floorSuffix') }}
                   </div>
                 </div>
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">พื้นที่</div>
-                  <div class="text-caption text-bold">{{ round.job.usableArea }} ตร.ม.</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.area') }}</div>
+                  <div class="text-caption text-bold">{{ round.job.usableArea }} {{ t('reports.defect.areaUnit') }}</div>
                 </div>
               </div>
             </div>
           </div>
 
           <div class="col-6">
-            <div class="section-title q-mb-xs">ข้อมูลลูกค้า</div>
+            <div class="section-title q-mb-xs">{{ t('reports.defect.customerInfo') }}</div>
             <div class="info-box q-pa-sm">
               <div class="row q-mb-xs">
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">ชื่อลูกค้า</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.customerName') }}</div>
                   <div class="text-caption text-bold">{{ round.job.customer?.fullName }}</div>
                 </div>
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">เบอร์โทรศัพท์</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.phoneNumber') }}</div>
                   <div class="text-caption text-bold">{{ round.job.customer?.phoneNumber }}</div>
                 </div>
               </div>
-              <div class="text-caption text-grey-7">อีเมล</div>
+              <div class="text-caption text-grey-7">{{ t('reports.defect.email') }}</div>
               <div class="text-caption text-description-header text-bold">
                 {{ round.job.customer.email }}
               </div>
               <div class="row q-mt-xs">
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">ผู้ประสานงาน</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.coordinator') }}</div>
                   <div class="text-caption text-bold">
-                    {{ round.teamMember?.inspector?.team?.teamName || '-' }}
+                    {{ round.job.createdBy?.fullName || '-' }}
                   </div>
                 </div>
                 <div class="col-6">
-                  <div class="text-caption text-grey-7">เบอร์ผู้ประสานงาน</div>
+                  <div class="text-caption text-grey-7">{{ t('reports.defect.coordinatorPhone') }}</div>
                   <div class="text-caption text-bold">
-                    {{ round.teamMember?.inspector?.team?.contactInfo || '-' }}
+                    {{ round.job.createdBy?.phoneNumber || '-' }}
                   </div>
                 </div>
               </div>
@@ -111,21 +111,21 @@
           </div>
         </div>
 
-        <div class="row q-col-gutter-sm q-px-md q-mb-md">
+        <div class="row q-col-gutter-sm q-px-md q-mb-sm">
           <div v-for="stat in summaryStats" :key="stat.label" class="col-2">
             <div class="text-center q-pa-sm stat-card">
               <div class="text-caption" style="font-size: 10px">
                 {{ stat.label }}
               </div>
               <div class="text-h6 text-bold" :style="`color: ${stat.color}`">{{ stat.value }}</div>
-              <div class="text-caption" style="font-size: 10px">รายการ</div>
+              <div class="text-caption" style="font-size: 10px">{{ t('reports.defect.itemsSuffix') }}</div>
             </div>
           </div>
         </div>
 
-        <div class="q-px-md q-mb-md">
+        <div class="q-px-md q-mb-sm">
           <div class="row items-center justify-between q-mb-xs">
-            <div class="section-title" style="margin-bottom: 0">จำนวน Defect ตามประเภทงาน</div>
+            <div class="section-title" style="margin-bottom: 0">{{ t('reports.defect.defectsByCategory') }}</div>
             <div class="mini-legend">
               <span class="mini-legend-item"
                 ><span class="mini-legend-swatch" style="background: #ef4444" />Major</span
@@ -133,31 +133,30 @@
               <span class="mini-legend-item"
                 ><span class="mini-legend-swatch" style="background: #fb8c00" />Minor</span
               >
+              <span class="mini-legend-item"
+                ><span class="mini-legend-swatch" style="background: #1976d2" />{{ t('reports.defect.total') }}</span
+              >
             </div>
           </div>
-          <div class="mini-chart">
-            <div v-for="cat in categoryCounts" :key="cat.name" class="mini-bar-col">
-              <div class="mini-bar-count">{{ cat.count }}</div>
-              <div v-if="cat.major > 0 && cat.minor > 0" class="mini-bar-split">
-                <span style="color: #ef4444">{{ cat.major }}</span>
-                <span>/</span>
-                <span style="color: #fb8c00">{{ cat.minor }}</span>
-              </div>
-              <div
-                class="mini-bar-stack"
-                :style="`height: ${Math.max((cat.count / maxCategoryCount) * 100, 8)}%`"
-              >
-                <div :style="`height: ${cat.minorPct}%; background: #fb8c00`" />
-                <div :style="`height: ${cat.majorPct}%; background: #ef4444`" />
-              </div>
-              <div class="mini-bar-label">{{ cat.name }}</div>
+          <div class="category-table">
+            <div
+              v-for="row in categoryTableRows"
+              :key="row.name"
+              class="category-table-row"
+              :class="{ 'category-table-row-other': row.isOther }"
+            >
+              <span class="category-table-rank">{{ row.rank }}</span>
+              <span class="category-table-name">{{ row.name }}</span>
+              <span class="category-table-count" style="color: #ef4444">{{ row.major }}</span>
+              <span class="category-table-count" style="color: #fb8c00">{{ row.minor }}</span>
+              <span class="category-table-total">{{ row.count }}</span>
             </div>
           </div>
         </div>
 
-        <div class="row q-col-gutter-sm q-px-md q-mb-md">
+        <div class="row q-col-gutter-sm q-px-md q-mb-sm">
           <div class="col-6">
-            <div class="section-title q-mb-xs">จำนวน Defect ตามชั้น</div>
+            <div class="section-title q-mb-xs">{{ t('reports.defect.defectsByFloor') }}</div>
             <div class="mini-chart">
               <div v-for="f in floorCounts" :key="f.name" class="mini-bar-col">
                 <div class="mini-bar-count">{{ f.count }}</div>
@@ -170,9 +169,9 @@
             </div>
           </div>
           <div class="col-6">
-            <div class="section-title q-mb-xs">สถานะการซ่อม</div>
+            <div class="section-title q-mb-xs">{{ t('reports.defect.repairStatus') }}</div>
             <div class="mini-chart donut-panel">
-              <svg viewBox="0 0 42 42" width="100" height="100" class="donut-svg">
+              <svg viewBox="0 0 42 42" width="80" height="80" class="donut-svg">
                 <circle
                   v-for="seg in statusDonutSegments"
                   :key="seg.key"
@@ -199,101 +198,61 @@
         </div>
 
         <div class="pdf-footer">
-          <span>© 2026, POYSIAN</span>
+          <span>© 2026, {{ branch?.branchName }}</span>
           <div class="footer-contacts">
             <img loading="eager" :src="LineLogo" style="height: 16px" />
-            <span>@poysian,</span>
+            <span>{{ branch?.line }},</span>
             <img loading="eager" :src="FacebookLogo" style="height: 16px" />
-            <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
+            <span>{{ branch?.facebook }},</span>
             <img loading="eager" :src="CallLogo" style="height: 16px" />
-            <span>098-765-4321,</span>
+            <span>{{ branch?.phoneNumber }},</span>
             <img loading="eager" :src="GmailLogo" style="height: 12px" />
-            <span>poysian@gmail.com</span>
+            <span> {{ branch?.mailAddress }} </span>
           </div>
         </div>
       </div>
 
-      <!-- หน้า Major Defects -->
-      <div v-for="(chunk, pageIndex) in majorChunks" :key="`major-${pageIndex}`" class="pdf-page">
+      <!-- หน้า 2: สารบัญ + คำอธิบายสีสติกเกอร์ที่ติดหน้างาน -->
+      <div :id="reportPageId(TOC_PAGE)" class="pdf-page">
         <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
           <div class="text-caption text-grey-7">
-            {{ round.job.projectName }}, ครั้งที่ {{ round.roundNumber }},
+            {{ pickLocalized(round.job.projectName, round.job.projectNameEn) }}, {{ t('reports.defect.roundOf', { n: round.roundNumber }) }},
             {{ formatDate(round.scheduledDate) }}
           </div>
-          <div class="text-caption text-grey-7">หน้า | {{ pageIndex + 2 }} / {{ totalPages }}</div>
-        </div>
-
-        <div class="text-center text-bold q-py-sm" style="font-size: 16px; color: #ef4444">
-          Main Defects
-        </div>
-
-        <div class="defects-grid">
-          <div v-for="defect in chunk" :key="defect.defectId" class="defect-card">
-            <div class="badge-id">#{{ defect.defectId }}</div>
-            <div class="badge-main" style="background: #ef4444">{{ defect.severity }}</div>
-            <img loading="eager" :src="defect.imageUrl ? `${apiUrl}${defect.imageUrl}` : 'https://via.placeholder.com/400x300?text=No+Image'" class="defect-img" />
-            <div class="card-body">
-              <div class="room-title">{{ getRoomShortName(defect) }}</div>
-              <div class="info-row">
-                <span class="label">ประเภทงาน:</span>
-                {{ defect.subCategories?.[0]?.category?.name }}
-              </div>
-              <div class="info-row">
-                <span class="label">รายการ:</span>
-                {{ defect.subCategories?.map((s) => s.name).join(', ') }}
-              </div>
-              <div class="info-row">
-                <span class="label">หมายเหตุ:</span> {{ defect.description }}
-              </div>
-              <div class="info-row">
-                <span class="label">สถานะ:</span>
-                {{
-                  defect.status === 'pending_repair'
-                    ? 'กำลังรอซ่อม'
-                    : defect.status === 'rejected'
-                      ? 'ซ่อมไม่ผ่าน'
-                      : defect.status === 'verified'
-                        ? 'ซ่อมผ่านแล้ว'
-                        : defect.status
-                }}
-              </div>
-              <img loading="eager" :src="reportLogo" class="card-logo-watermark-img" />
-            </div>
-          </div>
-        </div>
-        <div class="pdf-footer">
-          <span>© 2026, POYSIAN</span>
-          <div class="footer-contacts">
-            <img loading="eager" :src="LineLogo" style="height: 16px" />
-            <span>@poysian,</span>
-            <img loading="eager" :src="FacebookLogo" style="height: 16px" />
-            <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
-            <img loading="eager" :src="CallLogo" style="height: 16px" />
-            <span>098-765-4321,</span>
-            <img loading="eager" :src="GmailLogo" style="height: 12px" />
-            <span>poysian@gmail.com</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- หน้า All Defects -->
-      <div v-for="(page, pageIndex) in allDefectChunks" :key="`all-${pageIndex}`" class="pdf-page">
-        <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
-          <div class="text-caption text-grey-7">
-            {{ round.job.projectName }}, ครั้งที่ {{ round.roundNumber }},
-            {{ formatDate(round.scheduledDate) }}
-          </div>
-          <div class="text-caption text-grey-7">
-            หน้า | {{ 1 + majorChunks.length + pageIndex + 1 }} / {{ totalPages }}
-          </div>
+          <div class="text-caption text-grey-7">{{ t('reports.defect.page') }} | {{ TOC_PAGE }} / {{ totalPages }}</div>
         </div>
 
         <div class="text-center text-bold q-py-sm" style="font-size: 16px; color: #1976d2">
-          Defect List
+          {{ t('reports.defect.tocTitle') }}
         </div>
 
-        <div v-if="pageIndex === 0" class="sticker-legend q-mb-sm">
-          <div class="text-caption text-weight-bold">คำอธิบายสีสติกเกอร์</div>
+        <div class="toc q-mx-md">
+          <div v-for="entry in tocEntries" :key="entry.key" class="toc-entry">
+            <a
+              class="toc-row toc-row--section"
+              :href="`#${reportPageId(entry.page)}`"
+              @click.prevent="scrollToReportPage(entry.page)"
+            >
+              <span class="toc-label">{{ entry.label }}</span>
+              <span class="toc-leader" />
+              <span class="toc-page">{{ entry.page }}</span>
+            </a>
+            <a
+              v-for="child in entry.children"
+              :key="child.key"
+              class="toc-row toc-row--child"
+              :href="`#${reportPageId(child.page)}`"
+              @click.prevent="scrollToReportPage(child.page)"
+            >
+              <span class="toc-label">{{ child.label }}</span>
+              <span class="toc-leader" />
+              <span class="toc-page">{{ child.page }}</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="sticker-legend q-mx-md q-mt-lg">
+          <div class="text-caption text-weight-bold">{{ t('reports.defect.stickerLegendTitle') }}</div>
           <div class="sticker-legend-items">
             <div v-for="legend in stickerLegend" :key="legend.label" class="sticker-legend-item">
               <span class="sticker-dot" :style="`background: ${legend.color}`" />
@@ -303,6 +262,107 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <div class="pdf-footer">
+          <span>© 2026, {{ branch?.branchName }}</span>
+          <div class="footer-contacts">
+            <img loading="eager" :src="LineLogo" style="height: 16px" />
+            <span>{{ branch?.line }},</span>
+            <img loading="eager" :src="FacebookLogo" style="height: 16px" />
+            <span>{{ branch?.facebook }},</span>
+            <img loading="eager" :src="CallLogo" style="height: 16px" />
+            <span>{{ branch?.phoneNumber }},</span>
+            <img loading="eager" :src="GmailLogo" style="height: 12px" />
+            <span> {{ branch?.mailAddress }} </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- หน้า Major Defects -->
+      <div
+        v-for="(chunk, pageIndex) in majorChunks"
+        :id="reportPageId(pageStarts.major + pageIndex)"
+        :key="`major-${pageIndex}`"
+        class="pdf-page"
+      >
+        <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
+          <div class="text-caption text-grey-7">
+            {{ pickLocalized(round.job.projectName, round.job.projectNameEn) }}, {{ t('reports.defect.roundOf', { n: round.roundNumber }) }},
+            {{ formatDate(round.scheduledDate) }}
+          </div>
+          <div class="text-caption text-grey-7">{{ t('reports.defect.page') }} | {{ pageStarts.major + pageIndex }} / {{ totalPages }}</div>
+        </div>
+
+        <div class="text-center text-bold q-py-sm" style="font-size: 16px; color: #ef4444">
+          {{ t('reports.defect.mainDefectsTitle') }}
+        </div>
+
+        <div class="defects-grid">
+          <div v-for="defect in chunk" :key="defect.defectId" class="defect-card">
+            <div class="badge-id">#{{ defect.defectId }}</div>
+            <div class="badge-main" style="background: #ef4444">{{ defect.severity }}</div>
+            <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image')" class="defect-img" />
+            <div class="card-body">
+              <div class="room-title">{{ getRoomShortName(defect) }}</div>
+              <div class="info-grid">
+                <span class="label">{{ t('reports.defect.jobTypeLabel') }}</span>
+                <span>{{ localizedName(defect.subCategories?.[0]?.category) }}</span>
+                <span class="label">{{ t('reports.defect.itemsLabel') }}</span>
+                <span>{{ defect.subCategories?.map((s) => localizedName(s)).join(', ') }}</span>
+                <span class="label">{{ t('reports.defect.noteLabel') }}</span>
+                <span>{{ defect.description }}</span>
+                <span class="label">{{ t('reports.defect.statusLabel') }}</span>
+                <span>
+                  {{
+                    defect.status === 'pending_repair'
+                      ? t('reports.defect.statusPendingRepair')
+                      : defect.status === 'rejected'
+                        ? t('reports.defect.statusRejected')
+                        : defect.status === 'verified'
+                          ? t('reports.defect.statusVerified')
+                          : defect.status
+                  }}
+                </span>
+              </div>
+              <img loading="eager" :src="reportLogo" class="card-logo-watermark-img" />
+            </div>
+          </div>
+        </div>
+        <div class="pdf-footer">
+          <span>© 2026, {{ branch?.branchName }}</span>
+          <div class="footer-contacts">
+            <img loading="eager" :src="LineLogo" style="height: 16px" />
+            <span>{{ branch?.line }},</span>
+            <img loading="eager" :src="FacebookLogo" style="height: 16px" />
+            <span>{{ branch?.facebook }},</span>
+            <img loading="eager" :src="CallLogo" style="height: 16px" />
+            <span>{{ branch?.phoneNumber }},</span>
+            <img loading="eager" :src="GmailLogo" style="height: 12px" />
+            <span> {{ branch?.mailAddress }} </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- หน้า All Defects -->
+      <div
+        v-for="(page, pageIndex) in allDefectChunks"
+        :id="reportPageId(pageStarts.defectList + pageIndex)"
+        :key="`all-${pageIndex}`"
+        class="pdf-page"
+      >
+        <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
+          <div class="text-caption text-grey-7">
+            {{ pickLocalized(round.job.projectName, round.job.projectNameEn) }}, {{ t('reports.defect.roundOf', { n: round.roundNumber }) }},
+            {{ formatDate(round.scheduledDate) }}
+          </div>
+          <div class="text-caption text-grey-7">
+            {{ t('reports.defect.page') }} | {{ pageStarts.defectList + pageIndex }} / {{ totalPages }}
+          </div>
+        </div>
+
+        <div class="text-center text-bold q-py-sm" style="font-size: 16px; color: #1976d2">
+          {{ t('reports.defect.defectListTitle') }}
         </div>
 
         <div v-for="group in page" :key="group.roomName" class="q-mb-sm">
@@ -317,26 +377,21 @@
               <div class="badge-id">#{{ defect.defectId }}</div>
               <div
                 class="badge-main"
-                :style="defect.severity === 'MAJOR' ? 'background: #ef4444' : 'background: #fb8c00'"
+                :style="defect.severity === 'Major' ? 'background: #ef4444' : 'background: #fb8c00'"
               >
                 {{ defect.severity }}
               </div>
-              <img loading="eager" :src="defect.imageUrl ? `${apiUrl}${defect.imageUrl}` : 'https://via.placeholder.com/400x300?text=No+Image'" class="defect-img" />
+              <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image')" class="defect-img" />
               <div class="card-body">
-                <div class="info-row">
-                  <span class="label">ประเภทงาน:</span>
-                  {{ defect.subCategories?.[0]?.category?.name }}
-                </div>
-                <div class="info-row">
-                  <span class="label">รายการ:</span>
-                  {{ defect.subCategories?.map((s) => s.name).join(', ') }}
-                </div>
-                <div class="info-row">
-                  <span class="label">หมายเหตุ:</span> {{ defect.description }}
-                </div>
-                <div class="info-row">
-                  <span class="label">สถานะ:</span>
-                  {{ defect.status === 'pending_repair' ? 'กำลังรอซ่อม' : defect.status }}
+                <div class="info-grid">
+                  <span class="label">{{ t('reports.defect.jobTypeLabel') }}</span>
+                  <span>{{ localizedName(defect.subCategories?.[0]?.category) }}</span>
+                  <span class="label">{{ t('reports.defect.itemsLabel') }}</span>
+                  <span>{{ defect.subCategories?.map((s) => localizedName(s)).join(', ') }}</span>
+                  <span class="label">{{ t('reports.defect.noteLabel') }}</span>
+                  <span>{{ defect.description }}</span>
+                  <span class="label">{{ t('reports.defect.statusLabel') }}</span>
+                  <span>{{ defect.status === 'pending_repair' ? t('reports.defect.statusPendingRepair') : defect.status }}</span>
                 </div>
                 <img loading="eager" :src="reportLogo" class="card-logo-watermark-img" />
               </div>
@@ -362,173 +417,316 @@
           </div>
         </div> -->
         <div class="pdf-footer">
-          <span>© 2026, POYSIAN</span>
+          <span>© 2026, {{ branch?.branchName }}</span>
           <div class="footer-contacts">
             <img loading="eager" :src="LineLogo" style="height: 16px" />
-            <span>@poysian,</span>
+            <span>{{ branch?.line }},</span>
             <img loading="eager" :src="FacebookLogo" style="height: 16px" />
-            <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
+            <span>{{ branch?.facebook }},</span>
             <img loading="eager" :src="CallLogo" style="height: 16px" />
-            <span>098-765-4321,</span>
+            <span>{{ branch?.phoneNumber }},</span>
             <img loading="eager" :src="GmailLogo" style="height: 12px" />
-            <span>poysian@gmail.com</span>
+            <span> {{ branch?.mailAddress }} </span>
           </div>
         </div>
       </div>
       <!-- หน้า Summary -->
       <div
-        v-for="(categoryGroup, pageIndex) in summaryChunks"
+        v-for="(sections, pageIndex) in summaryPages"
+        :id="reportPageId(pageStarts.summary + pageIndex)"
         :key="`summary-${pageIndex}`"
         class="pdf-page"
       >
         <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
           <div class="text-caption text-grey-7">
-            {{ round.job.projectName }}, ครั้งที่ {{ round.roundNumber }},
+            {{ pickLocalized(round.job.projectName, round.job.projectNameEn) }}, {{ t('reports.defect.roundOf', { n: round.roundNumber }) }},
             {{ formatDate(round.scheduledDate) }}
           </div>
           <div class="text-caption text-grey-7">
-            หน้า | {{ 1 + majorChunks.length + allDefectChunks.length + pageIndex + 1 }} /
+            {{ t('reports.defect.page') }} | {{ pageStarts.summary + pageIndex }} /
             {{ totalPages }}
           </div>
         </div>
 
         <div class="text-center text-bold q-py-sm" style="font-size: 16px; color: #1976d2">
-          สรุปผลการตรวจ
+          {{ t('reports.defect.summaryTitle') }}
         </div>
 
         <div
-          v-for="categorySummary in categoryGroup"
-          :key="categorySummary.category"
-          class="summary-system-card"
+          v-for="section in sections"
+          :key="`${section.category.category}-${section.isContinuation}`"
+          class="summary-section"
         >
-          <div class="summary-system-header">
-            <div>
-              <div class="summary-system-title">{{ categorySummary.category }}</div>
-              <div class="summary-system-meta">
-                ตรวจแล้ว {{ categorySummary.labels.length }} รายการ,
-                พบ Defect {{ categorySummary.defects.length }} จุด
-              </div>
+          <div class="summary-section-header">
+            <div class="summary-section-title">
+              {{ pickLocalized(section.category.category, section.category.categoryEn) }}
+              <span v-if="section.isContinuation" class="summary-section-continued">{{ t('reports.defect.continued') }}</span>
             </div>
-            <div class="summary-system-result">
-              <div
-                class="summary-result-pill"
-                :style="`background: ${categorySummary.outcomeColor}`"
-              >
-                {{ categorySummary.outcomeLabel }}
-              </div>
-              <div class="summary-system-count">{{ categorySummary.defects.length }}</div>
+            <div class="summary-section-meta">
+              {{ t('reports.defect.summaryTopicsCount', { n: section.category.topics.length }) }}
             </div>
           </div>
 
-          <div class="summary-system-body">
-            <div class="summary-checklist">
-              <div class="summary-overview">
-                <div class="summary-overview-item">
-                  <span class="summary-overview-label">ผลการตรวจ</span>
-                  <span class="summary-overview-value">{{ categorySummary.outcomeLabel }}</span>
-                </div>
-                <div class="summary-overview-item">
-                  <span class="summary-overview-label">รูปประกอบ</span>
-                  <span class="summary-overview-value">{{ categorySummary.photoCount }} รูป</span>
-                </div>
-                <div class="summary-overview-item">
-                  <span class="summary-overview-label">คอมเมนต์</span>
-                  <span class="summary-overview-value">
-                    {{ categorySummary.defectComments.length }} รายการ
-                  </span>
-                </div>
+          <div v-for="topic in section.topics" :key="topic.templateId" class="summary-topic">
+            <div class="summary-topic-text">
+              <div class="summary-topic-label">{{ pickLocalized(topic.label, topic.labelEn) }}</div>
+              <div v-for="answer in topic.answers" :key="answer.group" class="summary-answer">
+                <span v-if="answer.group" class="summary-answer-group">{{ pickLocalized(answer.group, answer.groupEn) }}:</span>
+                {{ answer.values.map((v) => pickLocalized(v.th, v.en)).join(', ') }}
               </div>
-
-              <div v-if="categorySummary.labels.length === 0" class="summary-empty-check">
-                ไม่มีรายการตรวจในหมวดนี้ แต่พบ Defect ที่ถูกจัดอยู่ในระบบนี้
-              </div>
-
-              <div
-                v-for="labelGroup in categorySummary.labels"
-                :key="labelGroup.label"
-                class="summary-check-row"
-              >
-                <div class="summary-check-title">{{ labelGroup.label }}</div>
-                <div class="summary-option-list">
-                  <span
-                    v-for="item in labelGroup.items"
-                    :key="item.itemId"
-                    class="summary-option-chip"
-                    :style="`border-color: ${getStickerMeta(item).color}; color: ${getStickerMeta(item).color}`"
-                  >
-                    {{ item.option?.value ?? '-' }}
-                  </span>
-                </div>
-                <div
-                  v-for="item in labelGroup.items.filter((summaryItem) => summaryItem.detailValue)"
-                  :key="`detail-${item.itemId}`"
-                  class="summary-comment"
-                >
-                  <span class="label">คอมเมนต์:</span> {{ item.detailValue }}
-                </div>
-              </div>
-
-              <div v-if="categorySummary.defectComments.length" class="summary-comment-box">
-                <div class="summary-comment-title">คอมเมนต์จากรูป Defect</div>
-                <div
-                  v-for="comment in categorySummary.defectComments.slice(0, 3)"
-                  :key="comment"
-                  class="summary-comment-line"
-                >
-                  {{ comment }}
-                </div>
+              <div v-if="topic.note" class="summary-answer">
+                <span class="summary-answer-group">{{ t('reports.defect.noteLabel') }}</span>
+                {{ topic.note }}
               </div>
             </div>
-
-            <div class="summary-photo-grid">
-              <div
-                v-for="defect in categorySummary.defects.slice(0, 4)"
-                :key="defect.defectId"
-                class="summary-photo-card"
-              >
-                <img
-                  loading="eager"
-                  :src="
-                    defect.imageUrl
-                      ? resolveImageUrl(defect.imageUrl)
-                      : 'https://via.placeholder.com/320x220?text=No+Image'
-                  "
-                  class="summary-photo"
-                />
-                <div
-                  class="summary-sticker"
-                  :style="`background: ${getStickerMeta(defect).color}`"
-                >
-                  {{ getStickerMeta(defect).shortLabel }}
-                </div>
-                <div class="summary-photo-caption">
-                  <div class="text-weight-bold">{{ getRoomShortName(defect) }}</div>
-                  <div>{{ defect.subCategories?.map((s) => s.name).join(', ') || '-' }}</div>
-                  <div v-if="defect.description">
-                    <span class="label">คอมเมนต์:</span> {{ defect.description }}
-                  </div>
-                </div>
-              </div>
-              <div v-if="categorySummary.defects.length > 4" class="summary-more-photo">
-                +{{ categorySummary.defects.length - 4 }} รูปในระบบนี้
-              </div>
-              <div v-if="categorySummary.defects.length === 0" class="summary-empty-photo">
-                ไม่มีรูป Defect ในหมวดนี้
-              </div>
+            <div class="summary-topic-photos">
+              <img
+                v-for="url in topic.photos"
+                :key="url"
+                loading="eager"
+                :src="resolveImageUrl(url)"
+                class="summary-evidence-photo"
+              />
+              <span v-if="!topic.photos.length" class="summary-muted">{{ t('reports.defect.noEvidencePhotos') }}</span>
             </div>
           </div>
         </div>
         <div class="pdf-footer">
-          <span>© 2026, POYSIAN</span>
+          <span>© 2026, {{ branch?.branchName }}</span>
           <div class="footer-contacts">
             <img loading="eager" :src="LineLogo" style="height: 16px" />
-            <span>@poysian,</span>
+            <span>{{ branch?.line }},</span>
             <img loading="eager" :src="FacebookLogo" style="height: 16px" />
-            <span>Poysian รับตรวจบ้าน ตรวจคอนโด,</span>
+            <span>{{ branch?.facebook }},</span>
             <img loading="eager" :src="CallLogo" style="height: 16px" />
-            <span>098-765-4321,</span>
+            <span>{{ branch?.phoneNumber }},</span>
             <img loading="eager" :src="GmailLogo" style="height: 12px" />
-            <span>poysian@gmail.com</span>
+            <span> {{ branch?.mailAddress }} </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- หน้าแผนผังแสดงตำแหน่งข้อบกพร่อง (ก่อนหน้า AI Summary) -->
+      <div
+        v-for="(planPage, pageIdx) in planReportPages"
+        :id="reportPageId(pageStarts.plans + pageIdx)"
+        :key="`${planPage.plan.planId}-${planPage.items[0]?.displayIndex}`"
+        class="pdf-page"
+      >
+        <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
+          <div class="text-caption text-grey-7">
+            {{ pickLocalized(round.job.projectName, round.job.projectNameEn) }}, {{ t('reports.defect.roundOf', { n: round.roundNumber }) }},
+            {{ formatDate(round.scheduledDate) }}
+          </div>
+          <div class="text-caption text-grey-7">
+            {{ t('reports.defect.page') }} | {{ pageStarts.plans + pageIdx }} / {{ totalPages }}
+          </div>
+        </div>
+        <div v-if="generatedAtLabel" class="row justify-end q-px-md">
+          <div class="text-caption text-grey-6" style="font-size: 9px">
+            {{ t('reports.defect.asOf', { date: generatedAtLabel }) }}
+          </div>
+        </div>
+
+        <div class="page-content q-px-md q-py-sm column">
+          <!-- Title -->
+          <div class="row items-center justify-between q-mb-xs">
+            <div class="text-subtitle1 text-weight-bold text-primary">
+              {{ t('reports.defect.planTitlePrefix') }} — {{ planPage.plan.planName }}
+              <span v-if="planPage.plan.floorLabel" class="text-caption text-grey-7">({{ planPage.plan.floorLabel }})</span>
+              <span v-if="planPage.isContinuation" class="text-caption text-grey-7">{{ t('reports.defect.continued') }}</span>
+            </div>
+            <div class="text-caption text-grey-7">
+              {{ t('reports.defect.foundDefectsCount', { n: planPage.plan.defects.length }) }}
+            </div>
+          </div>
+
+          <!-- Floor Plan Image with Pin Overlays -->
+          <div v-if="!planPage.isContinuation" class="report-plan-container shadow-1 rounded-borders q-mb-sm">
+            <!-- canvas หดตามขนาดรูปพอดี: planX/planY เป็น % ของตัวรูป (PlanPositionDialog) หมุดต้องอ้างกรอบเดียวกัน -->
+            <div class="report-plan-canvas">
+              <img
+                loading="eager"
+                :src="resolveImageUrl(planPage.plan.imageUrl, 'https://via.placeholder.com/800x600?text=No+Plan+Image')"
+                class="report-plan-image"
+                @load="onPlanImageLoad(planPage.plan.planId, $event)"
+              />
+              <div
+                v-for="pin in planPinsByPlan.get(planPage.plan.planId)"
+                :key="pin.key"
+                class="report-plan-pin flex flex-center"
+                :style="{
+                  left: `${pin.x}%`,
+                  top: `${pin.y}%`,
+                  backgroundColor: pin.isMajor ? '#e53935' : '#fb8c00',
+                }"
+              >
+                {{ pin.label }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Legend Table -->
+          <div class="report-plan-legend">
+            <div class="text-caption text-weight-bold text-grey-8 q-mb-xs">
+              {{ t('reports.defect.legendTitle') }}
+            </div>
+            <table class="report-legend-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px;">{{ t('reports.defect.colRank') }}</th>
+                  <th style="width: 55px;">{{ t('reports.defect.colDefectId') }}</th>
+                  <th style="width: 140px;">{{ t('reports.defect.colRoomArea') }}</th>
+                  <th>{{ t('reports.defect.colDefectList') }}</th>
+                  <th style="width: 80px;">{{ t('reports.defect.colSeverity') }}</th>
+                  <th style="width: 70px;">{{ t('reports.defect.colStatus') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in planPage.items" :key="item.defect.defectId">
+                  <td class="text-center">
+                    <span
+                      class="legend-index-badge"
+                      :style="{
+                        backgroundColor: item.defect.severity === 'Major' ? '#e53935' : '#fb8c00',
+                      }"
+                    >
+                      {{ item.displayIndex }}
+                    </span>
+                  </td>
+                  <td class="text-center text-grey-8">#{{ item.defect.defectId }}</td>
+                  <td>{{ getRoomShortName(item.defect) }}</td>
+                  <td>
+                    <span v-if="item.defect.subCategories && item.defect.subCategories.length">
+                      {{ item.defect.subCategories.map((s) => localizedName(s)).join(', ') }}
+                    </span>
+                    <span v-else>{{ item.defect.description || '-' }}</span>
+                  </td>
+                  <td class="text-center">
+                    <span
+                      class="legend-severity-tag"
+                      :class="item.defect.severity === 'Major' ? 'text-red text-weight-bold' : 'text-orange text-weight-medium'"
+                    >
+                      {{ item.defect.severity }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <span :class="item.defect.status === 'verified' ? 'text-green text-weight-bold' : 'text-red'">
+                      {{ item.defect.status === 'verified' ? t('reports.defect.passed') : t('reports.defect.failed') }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="pdf-footer">
+          <span>© 2026, {{ branch?.branchName }}</span>
+          <div class="footer-contacts">
+            <img loading="eager" :src="LineLogo" style="height: 16px" />
+            <span>{{ branch?.line }},</span>
+            <img loading="eager" :src="FacebookLogo" style="height: 16px" />
+            <span>{{ branch?.facebook }},</span>
+            <img loading="eager" :src="CallLogo" style="height: 16px" />
+            <span>{{ branch?.phoneNumber }},</span>
+            <img loading="eager" :src="GmailLogo" style="height: 12px" />
+            <span> {{ branch?.mailAddress }} </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- หน้าท้ายเล่ม: AI Summary -->
+      <div v-if="hasAiSummary" :id="reportPageId(pageStarts.aiSummary)" class="pdf-page">
+        <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
+          <div class="text-caption text-grey-7">
+            {{ pickLocalized(round.job.projectName, round.job.projectNameEn) }}, {{ t('reports.defect.roundOf', { n: round.roundNumber }) }},
+            {{ formatDate(round.scheduledDate) }}
+          </div>
+          <div class="text-caption text-grey-7">{{ t('reports.defect.page') }} | {{ pageStarts.aiSummary }} / {{ totalPages }}</div>
+        </div>
+        <div v-if="generatedAtLabel" class="row justify-end q-px-md">
+          <div class="text-caption text-grey-6" style="font-size: 9px">
+            {{ t('reports.defect.asOf', { date: generatedAtLabel }) }}
+          </div>
+        </div>
+
+        <div class="text-center text-bold q-py-sm" style="font-size: 16px; color: #1976d2">
+          {{ t('reports.defect.overallSummaryTitle') }}
+        </div>
+
+        <div class="row justify-center q-my-md">
+          <div class="completion-gauge">
+            <svg viewBox="0 0 120 120" width="160" height="160">
+              <circle cx="60" cy="60" r="52" fill="none" stroke="#eee" stroke-width="12" />
+              <circle
+                cx="60"
+                cy="60"
+                r="52"
+                fill="none"
+                :stroke="completionColor"
+                stroke-width="12"
+                stroke-linecap="round"
+                :stroke-dasharray="`${completionDash} ${completionGap}`"
+                transform="rotate(-90 60 60)"
+              />
+            </svg>
+            <div class="completion-gauge-label">
+              <div class="text-h4 text-bold" :style="`color: ${completionColor}`">
+                {{ round.completionPercent }}%
+              </div>
+              <div class="text-caption text-grey-7">{{ t('reports.defect.completeness') }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ที่มาของคะแนน — ให้ลูกค้าเห็นว่า % รวมมาจากสองส่วนไหน ไม่ใช่ตัวเลขลอยๆ -->
+        <div v-if="round.completionDefectScore != null" class="row q-col-gutter-sm q-mx-md q-mb-md">
+          <div class="col-6">
+            <div class="score-part">
+              <div class="text-caption text-grey-7">{{ t('reports.defect.defectScoreLabel') }}</div>
+              <div class="text-h6 text-bold" style="color: #1976d2">
+                {{ round.completionDefectScore }}%
+              </div>
+              <div class="text-caption text-grey-6" style="font-size: 9px">
+                {{ t('reports.defect.defectScoreNote') }}
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="score-part">
+              <div class="text-caption text-grey-7">{{ t('reports.defect.systemScoreLabel') }}</div>
+              <div class="text-h6 text-bold" style="color: #1976d2">
+                {{ round.completionSystemScore != null ? round.completionSystemScore + '%' : '-' }}
+              </div>
+              <div class="text-caption text-grey-6" style="font-size: 9px">
+                {{
+                  round.completionSystemScore != null
+                    ? t('reports.defect.systemScoreNoteFilled')
+                    : t('reports.defect.systemScoreNoteEmpty')
+                }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="round.aiSummaryText" class="q-mx-md q-pa-md ai-summary-box">
+          <div class="text-caption text-weight-bold text-grey-8 q-mb-xs">{{ t('reports.defect.aiSummaryTitle') }}</div>
+          <div class="text-body2" style="line-height: 1.6">{{ round.aiSummaryText }}</div>
+        </div>
+
+        <div class="pdf-footer">
+          <span>© 2026, {{ branch?.branchName }}</span>
+          <div class="footer-contacts">
+            <img loading="eager" :src="LineLogo" style="height: 16px" />
+            <span>{{ branch?.line }},</span>
+            <img loading="eager" :src="FacebookLogo" style="height: 16px" />
+            <span>{{ branch?.facebook }},</span>
+            <img loading="eager" :src="CallLogo" style="height: 16px" />
+            <span>{{ branch?.phoneNumber }},</span>
+            <img loading="eager" :src="GmailLogo" style="height: 12px" />
+            <span> {{ branch?.mailAddress }} </span>
           </div>
         </div>
       </div>
@@ -537,8 +735,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { api } from 'src/boot/axios';
+import { useLocalizedField, localizedName } from 'src/composables/useLocalizedField';
+
+const { t, locale } = useI18n();
+const { pickLocalized } = useLocalizedField();
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
+import { clusterPlanPins } from 'src/utils/planPinClusters';
 import PoysianLogo from 'src/assets/Logos/Poysian.png';
 import LineLogo from 'src/assets/Logos/LINE.png';
 import FacebookLogo from 'src/assets/Logos/Facebook.png';
@@ -546,25 +751,76 @@ import CallLogo from 'src/assets/Logos/Call.png';
 import GmailLogo from 'src/assets/Logos/Gmail.png';
 const apiUrl = import.meta.env.VITE_API_URL;
 
-const props = defineProps<{
-  round: InspectionRound;
-  defects: Defect[];
-  summaryItems: InspectionSummaryItem[];
-}>();
+import { useBranchStore } from 'src/stores/useBranch';
+const branchStore = useBranchStore();
+// ใช้ข้อมูลสาขาที่มากับ round ก่อน — หน้า print ของ Puppeteer ไม่ได้โหลด branch store ทำให้ footer ว่าง
+const branch = computed(
+  () => props.round.job.branch ?? branchStore.branches.find((b) => b.branchId === props.round.job.branch?.branchId),
+);
 
-interface SummaryLabelGroup {
-  label: string;
-  items: InspectionSummaryItem[];
+// เรียงตามลำดับที่ตั้งของไทย: ตำบล/แขวง → เขต/อำเภอ → จังหวัด
+const addressLocation = computed(() =>
+  [props.round.job.address?.subDistrict, props.round.job.address?.district, props.round.job.address?.province]
+    .filter(Boolean)
+    .join(' '),
+);
+
+// ค่า default เก่าในฐานข้อมูลที่ไม่เคยมีไฟล์จริงรองรับ (ข้อมูลเสียของระบบเดิม) — แทนที่ด้วยรูปจริงที่อัปโหลดเก็บไว้ใน Supabase Storage แล้ว
+const LEGACY_IMAGE_REPLACEMENTS: Record<string, string> = {
+  '/defect-images/unknown.jpg':
+    'https://wduuxuwwbesgrcmcsnxq.supabase.co/storage/v1/object/public/hids-uploads/defects/unknown2.jpg',
+};
+
+const resolveImageUrl = (url: string | null | undefined, placeholder = ''): string => {
+  if (!url) return placeholder;
+  const replacement = LEGACY_IMAGE_REPLACEMENTS[url];
+  if (replacement) return replacement;
+  return /^(https?:|data:|blob:)/.test(url) ? url : `${apiUrl}${url}`;
+};
+
+const props = withDefaults(
+  defineProps<{
+    round: InspectionRound;
+    defects: Defect[];
+    summaryItems: InspectionSummaryItem[];
+    // เปิดเช็ค+โชว์ banner ว่ารายงานนี้เก่ากว่าข้อมูล defect ปัจจุบันไหม — ใช้เฉพาะหน้าที่คนเปิดดูจริง
+    // (Admin/Customer/Inspector) ห้ามเปิดใน PrintDefectReportPage.vue เพราะ Puppeteer จะ screenshot
+    // banner นี้ติดไปในตัว PDF ด้วย
+    checkFreshness?: boolean;
+  }>(),
+  { checkFreshness: false },
+);
+
+interface SummaryAnswerValue {
+  th: string;
+  en?: string | null;
 }
 
-interface SummaryCategoryGroup {
+interface SummaryAnswerGroup {
+  group: string;
+  groupEn?: string | null;
+  values: SummaryAnswerValue[];
+}
+
+interface SummaryTopic {
+  templateId: number;
+  label: string;
+  labelEn?: string | null;
+  answers: SummaryAnswerGroup[];
+  note: string;
+  photos: string[];
+}
+
+interface SummaryCategory {
   category: string;
-  labels: SummaryLabelGroup[];
-  defects: Defect[];
-  outcomeLabel: string;
-  outcomeColor: string;
-  defectComments: string[];
-  photoCount: number;
+  categoryEn?: string | null;
+  topics: SummaryTopic[];
+}
+
+interface SummaryPageSection {
+  category: SummaryCategory;
+  topics: SummaryTopic[];
+  isContinuation: boolean;
 }
 
 interface StickerMeta {
@@ -574,38 +830,38 @@ interface StickerMeta {
   description: string;
 }
 
-const stickerLegend: StickerMeta[] = [
+const stickerLegend = computed<StickerMeta[]>(() => [
   {
-    label: 'รอยร้าว',
-    shortLabel: 'ร้าว',
+    label: t('reports.defect.categories.crack.label'),
+    shortLabel: t('reports.defect.categories.crack.shortLabel'),
     color: '#ef4444',
-    description: 'จุดที่พบการแตกร้าวหรือรอยแยก',
+    description: t('reports.defect.categories.crack.description'),
   },
   {
-    label: 'ผิวไม่เรียบ',
-    shortLabel: 'ผิว',
+    label: t('reports.defect.categories.roughSurface.label'),
+    shortLabel: t('reports.defect.categories.roughSurface.shortLabel'),
     color: '#1976d2',
-    description: 'พื้นผิวไม่เรียบ นูน ยุบ หรือขรุขระ',
+    description: t('reports.defect.categories.roughSurface.description'),
   },
   {
-    label: 'คราบ/รั่วซึม',
-    shortLabel: 'ซึม',
+    label: t('reports.defect.categories.stainLeak.label'),
+    shortLabel: t('reports.defect.categories.stainLeak.shortLabel'),
     color: '#16a34a',
-    description: 'มีคราบน้ำ ความชื้น หรือร่องรอยรั่วซึม',
+    description: t('reports.defect.categories.stainLeak.description'),
   },
   {
-    label: 'งานเก็บรายละเอียด',
-    shortLabel: 'เก็บ',
+    label: t('reports.defect.categories.finishing.label'),
+    shortLabel: t('reports.defect.categories.finishing.shortLabel'),
     color: '#f59e0b',
-    description: 'งานสี รอยต่อ ยาแนว ช่องว่าง หรือรายละเอียดที่ต้องเก็บเพิ่ม',
+    description: t('reports.defect.categories.finishing.description'),
   },
   {
-    label: 'อื่นๆ',
-    shortLabel: 'อื่น',
+    label: t('reports.defect.categories.other.label'),
+    shortLabel: t('reports.defect.categories.other.shortLabel'),
     color: '#64748b',
-    description: 'รายการอื่นที่ไม่เข้ากลุ่มหลัก',
+    description: t('reports.defect.categories.other.description'),
   },
-];
+]);
 const reportLogo = computed(() => {
   const logoUrl = props.round.job.branch?.logoUrl;
   if (!logoUrl) return PoysianLogo;
@@ -619,10 +875,42 @@ onMounted(() => {
   pageScale.value = Math.min(1, screenWidth / pageWidthPx);
 });
 
+const isReportStale = ref(false);
+let freshnessTimer: ReturnType<typeof setInterval> | null = null;
+
+// เทียบ hash ข้อมูล defect สดกับ hash ตอน generate PDF/AI summary ครั้งล่าสุด (backend คำนวณให้
+// ผ่าน isStale — ดู ReportsService.getCachedReportUrl) ระหว่างรอ debounce 30 วิ + เวลา render จริง
+// คนที่กดเข้ามาดูจะเห็นสรุป/PDF เก่าอยู่ เลย poll เตือนไว้กันงงว่าทำไมข้อมูลไม่ตรงกับที่เพิ่งแก้
+async function checkReportFreshness() {
+  try {
+    const { data } = await api.get<{ isStale: boolean }>(
+      `/inspection-rounds/${props.round.roundId}/report`,
+    );
+    isReportStale.value = data.isStale;
+    if (!data.isStale && freshnessTimer) {
+      clearInterval(freshnessTimer);
+      freshnessTimer = null;
+    }
+  } catch {
+    // เช็คไม่สำเร็จ ไม่โชว์ banner ผิดๆ ปล่อยผ่านเงียบๆ
+  }
+}
+
+onMounted(() => {
+  if (!props.checkFreshness) return;
+  void checkReportFreshness();
+  freshnessTimer = setInterval(() => void checkReportFreshness(), 8000);
+  void useBranchStore().fetchBranches()
+});
+
+onUnmounted(() => {
+  if (freshnessTimer) clearInterval(freshnessTimer);
+});
+
 const reportRef = ref<HTMLElement | null>(null);
 
 const summaryStats = computed(() => [
-  { label: 'Total Defects', value: props.defects.length, color: '#1976d2' },
+  { label: t('reports.defect.totalDefects'), value: props.defects.length, color: '#1976d2' },
   {
     label: 'Major',
     value: props.defects.filter((d) => d.severity === 'Major').length,
@@ -634,17 +922,17 @@ const summaryStats = computed(() => [
     color: '#fb8c00',
   },
   {
-    label: 'กำลังรอซ่อม',
+    label: t('reports.defect.statusPendingRepair'),
     value: props.defects.filter((d) => d.status === 'pending_repair').length,
     color: '#fb8c00',
   },
   {
-    label: 'ซ่อมไม่ผ่าน',
+    label: t('reports.defect.statusRejected'),
     value: props.defects.filter((d) => d.status === 'rejected').length,
     color: '#ef4444',
   },
   {
-    label: 'ซ่อมผ่านแล้ว',
+    label: t('reports.defect.statusVerified'),
     value: props.defects.filter((d) => d.status === 'verified').length,
     color: '#4CAF50',
   },
@@ -653,7 +941,7 @@ const summaryStats = computed(() => [
 const categoryCounts = computed(() => {
   const counts = new Map<string, { major: number; minor: number }>();
   props.defects.forEach((d) => {
-    const name = d.subCategories?.[0]?.category?.name ?? 'ไม่ระบุประเภท';
+    const name = localizedName(d.subCategories?.[0]?.category) || t('reports.defect.unnamedCategory');
     const entry = counts.get(name) ?? { major: 0, minor: 0 };
     if (d.severity === 'Major') entry.major += 1;
     else entry.minor += 1;
@@ -674,7 +962,36 @@ const categoryCounts = computed(() => {
     .sort((a, b) => b.count - a.count);
 });
 
-const maxCategoryCount = computed(() => Math.max(1, ...categoryCounts.value.map((c) => c.count)));
+const CATEGORY_TABLE_LIMIT = 24;
+
+const categoryTableRows = computed(() => {
+  const rows = categoryCounts.value.map((cat, index) => ({
+    rank: index + 1,
+    name: cat.name,
+    major: cat.major,
+    minor: cat.minor,
+    count: cat.count,
+    isOther: false,
+  }));
+
+  if (rows.length <= CATEGORY_TABLE_LIMIT) return rows;
+
+  const shown = rows.slice(0, CATEGORY_TABLE_LIMIT);
+  const rest = categoryCounts.value.slice(CATEGORY_TABLE_LIMIT);
+  const otherMajor = rest.reduce((sum, c) => sum + c.major, 0);
+  const otherMinor = rest.reduce((sum, c) => sum + c.minor, 0);
+
+  shown.push({
+    rank: CATEGORY_TABLE_LIMIT + 1,
+    name: t('reports.defect.otherCategoriesFallback', { n: rest.length }),
+    major: otherMajor,
+    minor: otherMinor,
+    count: otherMajor + otherMinor,
+    isOther: true,
+  });
+
+  return shown;
+});
 
 const CHART_GRADIENT = ['#0b3d68', '#1462a8', '#1976d2', '#5b9de0', '#a9cdec'];
 
@@ -694,7 +1011,7 @@ function barColor(count: number, max: number) {
 const floorCounts = computed(() => {
   const byFloor = new Map<string, { count: number; order: number }>();
   props.defects.forEach((d) => {
-    const name = d.floor?.label ?? 'ไม่ระบุชั้น';
+    const name = pickLocalized(d.floor?.label, d.floor?.labelEn) || t('reports.defect.unnamedFloor');
     const order = d.floor?.floorOrder ?? Number.MAX_SAFE_INTEGER;
     const existing = byFloor.get(name);
     byFloor.set(name, { count: (existing?.count ?? 0) + 1, order });
@@ -706,18 +1023,18 @@ const floorCounts = computed(() => {
 
 const maxFloorCount = computed(() => Math.max(1, ...floorCounts.value.map((f) => f.count)));
 
-const STATUS_META: { key: string; label: string; color: string }[] = [
-  { key: 'pending_repair', label: 'กำลังรอซ่อม', color: '#fb8c00' },
-  { key: 'repaired', label: 'ซ่อมแล้ว', color: '#1976d2' },
-  { key: 'rejected', label: 'ซ่อมไม่ผ่าน', color: '#ef4444' },
-  { key: 'verified', label: 'ซ่อมผ่านแล้ว', color: '#4CAF50' },
-];
+const STATUS_META = computed<{ key: string; label: string; color: string }[]>(() => [
+  { key: 'pending_repair', label: t('reports.defect.statusPendingRepair'), color: '#fb8c00' },
+  { key: 'repaired', label: t('reports.defect.statusRepaired'), color: '#1976d2' },
+  { key: 'rejected', label: t('reports.defect.statusRejected'), color: '#ef4444' },
+  { key: 'verified', label: t('reports.defect.statusVerified'), color: '#4CAF50' },
+]);
 
 const statusDonutSegments = computed(() => {
   const circumference = 2 * Math.PI * 15;
   const total = props.defects.length;
   let offset = 0;
-  return STATUS_META.map((meta) => {
+  return STATUS_META.value.map((meta) => {
     const count = props.defects.filter((d) => d.status === meta.key).length;
     const dash = total > 0 ? (count / total) * circumference : 0;
     const seg = { ...meta, count, dash, gap: circumference - dash, offset };
@@ -739,7 +1056,7 @@ const majorChunks = computed(() => {
 const allDefectGroups = computed(() => {
   const groups: Record<string, Defect[]> = {};
   props.defects.forEach((defect) => {
-    const key = `${defect.room?.roomName ?? '-'}, ${defect.subRoom?.roomName ?? '-'}, ${defect.floor?.label}`;
+    const key = `${pickLocalized(defect.room?.roomName, defect.room?.roomNameEn) || '-'}, ${pickLocalized(defect.subRoom?.roomName, defect.subRoom?.roomNameEn) || '-'}, ${pickLocalized(defect.floor?.label, defect.floor?.labelEn)}`;
     if (!groups[key]) groups[key] = [];
     groups[key].push(defect);
   });
@@ -767,25 +1084,279 @@ const allDefectChunks = computed(() => {
   return pages;
 });
 
-// const totalPages = computed(() => 1 + majorChunks.value.length + allDefectChunks.value.length);
-const totalPages = computed(
-  () => 1 + majorChunks.value.length + allDefectChunks.value.length + summaryChunks.value.length,
+const hasAiSummary = computed(
+  () => props.round.completionPercent != null || !!props.round.aiSummaryText,
 );
 
+// Compute plan pages for PDF - groups defects by planId, only plans with pinned defects
+const planPages = computed(() => {
+  const planMap = new Map<
+    number,
+    {
+      planId: number;
+      planName: string;
+      imageUrl: string;
+      floorLabel: string | null;
+      defects: { defect: Defect; planX: number; planY: number; displayIndex: number }[];
+    }
+  >();
+
+  let globalIndex = 1;
+  props.defects.forEach((defect) => {
+    const planId = defect.plan?.planId ?? defect.planId;
+    const planX = defect.planX;
+    const planY = defect.planY;
+    if (!planId || planX == null || planY == null) return;
+
+    if (!planMap.has(planId)) {
+      const planData = defect.plan;
+      planMap.set(planId, {
+        planId,
+        planName: planData?.name ? pickLocalized(planData.name, planData.nameEn) : t('reports.defect.planNameFallback', { id: planId }),
+        imageUrl: planData?.imageUrl ?? '',
+        floorLabel: pickLocalized(planData?.floor?.label, planData?.floor?.labelEn) || null,
+        defects: [],
+      });
+    }
+    planMap.get(planId)!.defects.push({
+      defect,
+      planX: Number(planX),
+      planY: Number(planY),
+      displayIndex: globalIndex++,
+    });
+  });
+
+  return Array.from(planMap.values());
+});
+
+// หน้าแรกของแปลนมีรูปกินไปถึง 160mm เหลือที่ให้ตารางราว 10 แถว; หน้าต่อไม่มีรูปจึงใส่ได้มากกว่า
+// เผื่อแถวที่ข้อความยาวจนขึ้นบรรทัดใหม่ไว้แล้ว — หน้า PDF สูงตายตัว เนื้อหาเกินจะล้นหน้า ไม่ไหลไปหน้าถัดไปเอง
+const PLAN_LEGEND_ROWS_FIRST_PAGE = 10;
+const PLAN_LEGEND_ROWS_CONTINUATION_PAGE = 25;
+
+const planReportPages = computed(() =>
+  planPages.value.flatMap((plan) => {
+    const pages = [
+      { plan, isContinuation: false, items: plan.defects.slice(0, PLAN_LEGEND_ROWS_FIRST_PAGE) },
+    ];
+    for (
+      let start = PLAN_LEGEND_ROWS_FIRST_PAGE;
+      start < plan.defects.length;
+      start += PLAN_LEGEND_ROWS_CONTINUATION_PAGE
+    ) {
+      pages.push({
+        plan,
+        isContinuation: true,
+        items: plan.defects.slice(start, start + PLAN_LEGEND_ROWS_CONTINUATION_PAGE),
+      });
+    }
+    return pages;
+  }),
+);
+
+// ต้องตรงกับขนาด .report-plan-pin — ห่างน้อยกว่านี้ (+ช่องไฟ) หมุดจะทับจนอ่านเลขไม่ออก
+const PLAN_PIN_SIZE_PX = 24;
+const PLAN_PIN_MIN_GAP_PX = 4;
+
+// ขนาดรูปแปลนที่ render จริง (layout px ไม่รวม transform) ใช้แปลง % เป็นระยะจริงตอนตัดสินว่าหมุดทับกัน
+const planImageSize = ref<Record<number, { width: number; height: number }>>({});
+
+function onPlanImageLoad(planId: number, event: Event) {
+  const img = event.target as HTMLImageElement;
+  planImageSize.value[planId] = { width: img.offsetWidth, height: img.offsetHeight };
+}
+
+const planPinsByPlan = computed(
+  () =>
+    new Map(
+      planPages.value.map((page) => [
+        page.planId,
+        clusterPlanPins(
+          page.defects.map((item) => ({
+            id: item.defect.defectId,
+            x: item.planX,
+            y: item.planY,
+            displayIndex: item.displayIndex,
+            isMajor: item.defect.severity === 'Major',
+          })),
+          planImageSize.value[page.planId],
+          PLAN_PIN_SIZE_PX + PLAN_PIN_MIN_GAP_PX,
+        ),
+      ]),
+    ),
+);
+
+// เลขหน้าเริ่มของแต่ละส่วนคำนวณที่นี่ที่เดียว — header ทุกหน้า สารบัญ และลิงก์ในสารบัญอ่านจากตรงนี้ จะได้ไม่คลาดกัน
+// ลำดับต้องตรงกับลำดับ .pdf-page ใน template: ข้อมูล → สารบัญ → Main Defects → Defect List → สรุปผลการตรวจ → แปลน → AI Summary
+const TOC_PAGE = 2;
+
+const pageStarts = computed(() => {
+  const major = TOC_PAGE + 1;
+  const defectList = major + majorChunks.value.length;
+  const summary = defectList + allDefectChunks.value.length;
+  const plans = summary + summaryPages.value.length;
+  const aiSummary = plans + planReportPages.value.length;
+  return { major, defectList, summary, plans, aiSummary };
+});
+
+const totalPages = computed(() => pageStarts.value.aiSummary - 1 + (hasAiSummary.value ? 1 : 0));
+
+function reportPageId(page: number) {
+  return `report-page-${page}`;
+}
+
+// ในแอปใช้ scroll แทน — href="#..." จะไปชน hash router; ส่วนใน PDF (Puppeteer) Chrome แปลง href เป็นลิงก์ภายในเล่มให้เอง
+function scrollToReportPage(page: number) {
+  reportRef.value?.querySelector(`#${reportPageId(page)}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+interface TocItem {
+  key: string;
+  label: string;
+  page: number;
+}
+
+interface TocEntry extends TocItem {
+  children: TocItem[];
+}
+
+// Defect List แยกตามชั้น ไม่ใช่ตามห้อง — บางรอบมีกลุ่มห้องเป็นร้อย สารบัญจะล้นหน้าเดียว
+const tocEntries = computed<TocEntry[]>(() => {
+  const entries: TocEntry[] = [];
+  const starts = pageStarts.value;
+
+  if (majorChunks.value.length) {
+    entries.push({ key: 'major', label: t('reports.defect.mainDefectsTitle'), page: starts.major, children: [] });
+  }
+
+  if (allDefectChunks.value.length) {
+    const floors: TocItem[] = [];
+    allDefectChunks.value.forEach((groups, index) => {
+      const label = pickLocalized(groups[0]?.defects[0]?.floor?.label, groups[0]?.defects[0]?.floor?.labelEn) || t('reports.defect.unnamedFloor');
+      if (!floors.some((floor) => floor.label === label)) {
+        floors.push({ key: `floor-${label}`, label, page: starts.defectList + index });
+      }
+    });
+    entries.push({
+      key: 'defect-list',
+      label: t('reports.defect.defectListTitle'),
+      page: starts.defectList,
+      children: floors,
+    });
+  }
+
+  if (summaryPages.value.length) {
+    const categories: TocItem[] = [];
+    summaryPages.value.forEach((sections, index) => {
+      sections
+        .filter((section) => !section.isContinuation)
+        .forEach((section) => {
+          categories.push({
+            key: `category-${section.category.category}`,
+            label: pickLocalized(section.category.category, section.category.categoryEn),
+            page: starts.summary + index,
+          });
+        });
+    });
+    entries.push({
+      key: 'summary',
+      label: t('reports.defect.summaryTitle'),
+      page: starts.summary,
+      children: categories,
+    });
+  }
+
+  if (planReportPages.value.length) {
+    entries.push({
+      key: 'plans',
+      label: t('reports.defect.planTitlePrefix'),
+      page: starts.plans,
+      children: planReportPages.value
+        .map((planPage, index) => ({ planPage, index }))
+        .filter(({ planPage }) => !planPage.isContinuation)
+        .map(({ planPage, index }) => ({
+          key: `plan-${planPage.plan.planId}`,
+          label: planPage.plan.floorLabel
+            ? `${planPage.plan.planName} (${planPage.plan.floorLabel})`
+            : planPage.plan.planName,
+          page: starts.plans + index,
+        })),
+    });
+  }
+
+  if (hasAiSummary.value) {
+    entries.push({ key: 'ai', label: t('reports.defect.overallSummaryTitle'), page: starts.aiSummary, children: [] });
+  }
+
+  return entries;
+});
+
+const completionColor = computed(() => {
+  const pct = props.round.completionPercent ?? 0;
+  if (pct >= 80) return '#4CAF50';
+  if (pct >= 50) return '#fb8c00';
+  return '#ef4444';
+});
+
+const completionDash = computed(() => {
+  const circumference = 2 * Math.PI * 52;
+  const pct = props.round.completionPercent ?? 0;
+  return (pct / 100) * circumference;
+});
+
+const completionGap = computed(() => {
+  const circumference = 2 * Math.PI * 52;
+  return circumference - completionDash.value;
+});
+
 function getRoomShortName(defect: Defect) {
-  return `${defect.room?.roomName ?? '-'}, ${defect.subRoom?.roomName ?? '-'}, ${defect.floor?.label ?? '-'}`;
+  const parts = [pickLocalized(defect.room?.roomName, defect.room?.roomNameEn), pickLocalized(defect.subRoom?.roomName, defect.subRoom?.roomNameEn), pickLocalized(defect.floor?.label, defect.floor?.labelEn)].filter(Boolean);
+  return parts.length ? parts.join(', ') : '-';
 }
 
 function formatDate(dateStr: string) {
   if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('th-TH', {
+  return new Date(dateStr).toLocaleDateString(locale.value, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
 }
 
-function exportPdf() {
+// เวลาที่ PDF ไฟล์นี้ถูก render จริง (backend/src/reports/reports.service.ts) — โชว์ในตัวรายงาน
+// เพื่อให้เช็คได้ว่าไฟล์ที่กำลังดู/ดาวน์โหลดเป็นข้อมูล ณ เวลาไหน เพราะ PDF อาจ regenerate ช้ากว่าการแก้ defect ล่าสุดได้ (debounce 30 วิ + เวลา render)
+const generatedAtLabel = computed(() => {
+  if (!props.round.lastPdfGeneratedAt) return '';
+  return new Date(props.round.lastPdfGeneratedAt).toLocaleString(locale.value, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+});
+
+// เช็ค cache PDF ที่ backend generate ไว้ล่วงหน้าก่อนเสมอ (backend/src/reports/reports.service.ts) —
+// มีแล้วเปิดโหลดทันที ไม่ต้อง render ฝั่ง client เลย ถ้ายังไม่มี (เช่นรอบแรกที่ debounce ยังไม่ settle)
+// ค่อย fallback ไปสร้างแบบเดิมผ่าน window.print()
+async function exportPdf() {
+  try {
+    const { data } = await api.get<{ url: string | null; generatedAt: string | null }>(
+      `/inspection-rounds/${props.round.roundId}/report`,
+      { params: { lang: locale.value } },
+    );
+    if (data.url) {
+      window.open(data.url, '_blank');
+      return;
+    }
+  } catch {
+    // เช็ค cache ไม่สำเร็จ ปล่อยผ่านไป fallback ด้านล่าง
+  }
+
+  exportPdfClientSide();
+}
+
+function exportPdfClientSide() {
   if (!reportRef.value) return;
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
@@ -853,7 +1424,7 @@ function exportPdf() {
           .section-title { border-left: 4px solid #1976d2; padding-left: 8px; font-weight: bold; font-size: 12px; }
           .info-box { border: 1px solid #e0e0e0; border-radius: 4px; background: #fafafa; min-height: 85px; padding: 8px; }
           .label { font-weight: bold; }
-          .info-row { margin-bottom: 2px; font-size: 10px; }
+          .info-grid { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 4px; row-gap: 2px; font-size: 10px; overflow-wrap: anywhere; }
           .card-logo-watermark-img { position: absolute; bottom: 0px; right: 10px; opacity: 0.3; width: 60px; object-fit: contain; }
           .pdf-footer { border-top: 1px solid #ccc; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #555; margin-top: auto; }
           .footer-contacts { display: flex; align-items: center; gap: 6px; font-size: 10px; }
@@ -864,17 +1435,6 @@ function exportPdf() {
           .sticker-legend-text { min-width: 0; }
           .sticker-legend-label { font-weight: 700; color: #1f2937; white-space: nowrap; margin-right: 3px; }
           .sticker-legend-description { color: #475569; overflow-wrap: anywhere; }
-          .summary-system-result { display: flex; align-items: center; gap: 8px; }
-          .summary-result-pill { color: white; border-radius: 999px; padding: 2px 8px; font-size: 9px; font-weight: 700; white-space: nowrap; }
-          .summary-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-bottom: 7px; }
-          .summary-overview-item { border: 1px solid #e2e8f0; border-radius: 5px; background: #f8fafc; padding: 5px; min-width: 0; }
-          .summary-overview-label { display: block; color: #64748b; font-size: 8px; line-height: 1.2; }
-          .summary-overview-value { display: block; color: #1f2937; font-size: 9px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
-          .summary-empty-check { border: 1px dashed #cbd5e1; border-radius: 5px; color: #64748b; background: #f8fafc; padding: 7px; font-size: 9px; line-height: 1.35; }
-          .summary-comment-box { border-left: 3px solid #1976d2; background: #f8fafc; padding: 6px 8px; margin-top: 2px; }
-          .summary-comment-title { color: #0f4c81; font-size: 9px; font-weight: 700; margin-bottom: 3px; }
-          .summary-comment-line { color: #475569; font-size: 8.5px; line-height: 1.35; margin-top: 2px; overflow-wrap: anywhere; }
-          .summary-more-photo { min-height: 108px; border: 1px dashed #cbd5e1; border-radius: 5px; color: #475569; background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; text-align: center; padding: 8px; }
         </style>
       </head>
       <body>
@@ -893,97 +1453,110 @@ function exportPdf() {
 
 defineExpose({ exportPdf });
 
-function normalizeText(value?: string | null) {
-  return (value ?? '').trim().toLowerCase();
+// รวมคำตอบเป็น 1 แถวต่อหัวข้อ (template) — API ส่งมาเป็น 1 แถวต่อตัวเลือกที่ติ้ก + 1 แถวต่อรูปหลักฐาน
+// เรียงตาม templateId ให้ลำดับหมวด/หัวข้อตรงกับแบบฟอร์มที่ช่างกรอก ไม่ใช่ตามลำดับที่บันทึก
+const summaryCategories = computed<SummaryCategory[]>(() => {
+  const topicsByCategory = new Map<string, { categoryEn: string | null; topics: Map<number, SummaryTopic> }>();
+
+  [...props.summaryItems]
+    .sort((a, b) => a.template.templateId - b.template.templateId || a.itemId - b.itemId)
+    .forEach((item) => {
+      const { category, templateId, label } = item.template;
+      const categoryEn = item.template.categoryEn ?? null;
+      const labelEn = item.template.labelEn ?? null;
+      if (!topicsByCategory.has(category)) topicsByCategory.set(category, { categoryEn, topics: new Map() });
+      const topics = topicsByCategory.get(category)!.topics;
+      if (!topics.has(templateId)) {
+        topics.set(templateId, { templateId, label, labelEn, answers: [], note: '', photos: [] });
+      }
+      const topic = topics.get(templateId)!;
+
+      if (item.photoUrl) {
+        topic.photos.push(item.photoUrl);
+        return;
+      }
+      if (!item.option) return;
+
+      const group = item.option.group ?? '';
+      let answer = topic.answers.find((a) => a.group === group);
+      if (!answer) {
+        answer = { group, groupEn: item.option.groupEn ?? null, values: [] };
+        topic.answers.push(answer);
+      }
+      answer.values.push({ th: item.option.value, en: item.option.valueEn ?? null });
+      // หน้ากรอกบันทึกหมายเหตุเดียวกันซ้ำลงทุกตัวเลือกที่ติ้ก เก็บค่าเดียวพอ ไม่งั้นพิมพ์ซ้ำหลายรอบ
+      if (!topic.note && item.detailValue?.trim()) topic.note = item.detailValue.trim();
+    });
+
+  return [...topicsByCategory.entries()].map(([category, { categoryEn, topics }]) => ({
+    category,
+    categoryEn,
+    topics: [...topics.values()],
+  }));
+});
+
+// หน้า PDF สูงตายตัว เนื้อหาเกินจะล้นหน้าแทนที่จะไหลไปหน้าถัดไป จึงต้องประมาณความสูง (mm) เองแล้วตัดหน้าก่อน render
+// ค่าเหล่านี้ผูกกับ CSS .summary-* ด้านล่าง (ขนาดตัวอักษร ความกว้างคอลัมน์ ขนาดรูป) — แก้ CSS แล้วต้องปรับตาม
+const SUMMARY_PAGE_BUDGET_MM = 232;
+const SUMMARY_SECTION_HEADER_MM = 11.2;
+const SUMMARY_TOPIC_LABEL_MM = 3.5;
+const SUMMARY_TEXT_LINE_MM = 3.5;
+const SUMMARY_TEXT_CHARS_PER_LINE = 50;
+const SUMMARY_PHOTO_MM = 22.5;
+const SUMMARY_TOPIC_PADDING_MM = 2.5;
+
+function estimateLines(text: string) {
+  return Math.max(1, Math.ceil(text.length / SUMMARY_TEXT_CHARS_PER_LINE));
 }
 
-function getDefectCategoryNames(defect: Defect) {
-  const categoryNames = [
-    ...new Set(
-      (defect.subCategories ?? [])
-        .map((subCategory) => subCategory.category?.name)
-        .filter((name): name is string => !!name),
-    ),
-  ];
-  return categoryNames.length ? categoryNames : ['ไม่ระบุระบบ'];
+function estimateTopicMm(topic: SummaryTopic) {
+  const lines =
+    topic.answers.reduce((sum, a) => sum + estimateLines(`${a.group}: ${a.values.map((v) => pickLocalized(v.th, v.en)).join(', ')}`), 0) +
+    (topic.note ? estimateLines(`${t('reports.defect.noteLabel')} ${topic.note}`) : 0);
+  const textMm = SUMMARY_TOPIC_LABEL_MM + lines * SUMMARY_TEXT_LINE_MM;
+  const photoMm = topic.photos.length ? SUMMARY_PHOTO_MM : SUMMARY_TEXT_LINE_MM;
+  return Math.max(textMm, photoMm) + SUMMARY_TOPIC_PADDING_MM;
 }
 
-function resolveImageUrl(imageUrl: string) {
-  if (imageUrl.startsWith('http') || imageUrl.startsWith('data:') || imageUrl.startsWith('blob:')) {
-    return imageUrl;
-  }
-  return `${apiUrl}${imageUrl}`;
-}
+// วางทีละหัวข้อ ถ้าไม่พอก็ขึ้นหน้าใหม่ หมวดที่ยาวข้ามหน้าจะมีหัวหมวด "(ต่อ)" ซ้ำให้
+const summaryPages = computed(() => {
+  const pages: SummaryPageSection[][] = [];
+  let currentPage: SummaryPageSection[] = [];
+  let usedMm = 0;
 
-function getStickerMeta(source: InspectionSummaryItem | Defect): StickerMeta {
-  const text =
-    'option' in source
-      ? `${source.option?.value ?? ''} ${source.detailValue ?? ''}`
-      : `${source.description ?? ''} ${source.subCategories?.map((sub) => sub.name).join(' ') ?? ''}`;
-  const normalized = normalizeText(text);
+  const startNewPage = () => {
+    pages.push(currentPage);
+    currentPage = [];
+    usedMm = 0;
+  };
 
-  if (['ร้าว', 'แตกร้าว', 'crack'].some((keyword) => normalized.includes(keyword))) {
-    return stickerLegend[0]!;
-  }
-  if (['ผิว', 'ไม่เรียบ', 'ขรุขระ', 'ปูด', 'นูน', 'ยุบ'].some((keyword) => normalized.includes(keyword))) {
-    return stickerLegend[1]!;
-  }
-  if (['คราบ', 'เปื้อน', 'ซึม', 'รั่ว', 'ชื้น', 'leak'].some((keyword) => normalized.includes(keyword))) {
-    return stickerLegend[2]!;
-  }
-  if (['เก็บ', 'รอยต่อ', 'ช่อง', 'ยาแนว', 'ห่าง', 'สี'].some((keyword) => normalized.includes(keyword))) {
-    return stickerLegend[3]!;
-  }
-  return stickerLegend[4]!;
-}
+  summaryCategories.value.forEach((category) => {
+    let section: SummaryPageSection | null = null;
 
-const summaryGroups = computed<SummaryCategoryGroup[]>(() => {
-  const groups = new Map<string, Map<string, InspectionSummaryItem[]>>();
+    category.topics.forEach((topic, index) => {
+      const topicMm = estimateTopicMm(topic);
 
-  props.summaryItems.forEach((item) => {
-    const category = item.template.category;
-    const label = item.template.label;
-    if (!groups.has(category)) groups.set(category, new Map());
-    const labelMap = groups.get(category)!;
-    if (!labelMap.has(label)) labelMap.set(label, []);
-    labelMap.get(label)!.push(item);
-  });
+      if (section && usedMm + topicMm > SUMMARY_PAGE_BUDGET_MM) {
+        startNewPage();
+        section = null;
+      }
+      if (!section) {
+        // หัวหมวดต้องมีหัวข้อแรกติดไปด้วย ไม่งั้นหัวหมวดค้างอยู่ท้ายหน้าเปล่าๆ
+        if (currentPage.length && usedMm + SUMMARY_SECTION_HEADER_MM + topicMm > SUMMARY_PAGE_BUDGET_MM) {
+          startNewPage();
+        }
+        section = { category, topics: [], isContinuation: index > 0 };
+        currentPage.push(section);
+        usedMm += SUMMARY_SECTION_HEADER_MM;
+      }
 
-  props.defects.forEach((defect) => {
-    getDefectCategoryNames(defect).forEach((category) => {
-      if (!groups.has(category)) groups.set(category, new Map());
+      section.topics.push(topic);
+      usedMm += topicMm;
     });
   });
 
-  return [...groups.entries()].map(([category, labelMap]) => {
-    const defects = props.defects.filter((defect) =>
-      getDefectCategoryNames(defect).some((defectCategory) => defectCategory === category),
-    );
-    const defectComments = defects
-      .map((defect) => defect.description?.trim())
-      .filter((description): description is string => !!description);
-    const majorCount = defects.filter((defect) => defect.severity === 'Major').length;
-    const outcomeLabel =
-      defects.length === 0 ? 'ผ่าน' : majorCount > 0 ? `พบ Major ${majorCount} จุด` : 'พบ Minor';
-
-    return {
-      category,
-      labels: [...labelMap.entries()].map(([label, items]) => ({ label, items })),
-      defects,
-      outcomeLabel,
-      outcomeColor: defects.length === 0 ? '#16a34a' : majorCount > 0 ? '#ef4444' : '#f59e0b',
-      defectComments,
-      photoCount: defects.filter((defect) => defect.imageUrl).length,
-    };
-  });
-});
-
-const summaryChunks = computed(() => {
-  const chunks: SummaryCategoryGroup[][] = [];
-  for (let i = 0; i < summaryGroups.value.length; i += 2) {
-    chunks.push(summaryGroups.value.slice(i, i + 2));
-  }
-  return chunks;
+  if (currentPage.length) pages.push(currentPage);
+  return pages;
 });
 </script>
 
@@ -991,7 +1564,8 @@ const summaryChunks = computed(() => {
 .pdf-wrapper {
   background: #eee;
   padding: 20px 0;
-  transform-origin: top left;
+  margin: 0 auto;
+  transform-origin: top center;
 }
 .pdf-page {
   width: 210mm;
@@ -1017,14 +1591,14 @@ const summaryChunks = computed(() => {
   border: 1px solid #e0e0e0;
   border-radius: 4px;
   background: #fafafa;
-  min-height: 85px;
+  min-height: 65px;
 }
 .stat-card {
   border: 1px solid #e0e0e0;
   border-radius: 8px;
 }
 .mini-chart {
-  height: 150px;
+  height: 115px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1032,13 +1606,70 @@ const summaryChunks = computed(() => {
   border: 1px solid #e2e6ea;
   border-radius: 4px;
   background: #fafbfc;
-  padding: 10px 6px 6px;
+  padding: 8px 6px 6px;
+  overflow: hidden;
+}
+.category-table {
+  column-count: 3;
+  column-gap: 14px;
+  border: 1px solid #e2e6ea;
+  border-radius: 4px;
+  background: #fafbfc;
+  padding: 6px 8px;
+}
+.category-table-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 0;
+  border-bottom: 1px solid #edf0f2;
+  break-inside: avoid;
+  font-size: 8px;
+}
+.category-table-row:last-child {
+  border-bottom: none;
+}
+.category-table-rank {
+  min-width: 12px;
+  color: #9e9e9e;
+  font-variant-numeric: tabular-nums;
+}
+.category-table-name {
+  flex: 1;
+  min-width: 0;
+  color: #212121;
+  word-break: break-word;
+}
+.category-table-count {
+  min-width: 12px;
+  text-align: right;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+}
+.category-table-total {
+  min-width: 14px;
+  text-align: right;
+  font-weight: bold;
+  color: #1976d2;
+  font-variant-numeric: tabular-nums;
+}
+.category-table-row-other .category-table-name {
+  color: #757575;
+  font-style: italic;
 }
 .mini-bar-col {
   flex: 1;
   min-width: 0;
   max-width: 34px;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+.mini-bar-track {
+  width: 100%;
+  height: 95px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1073,14 +1704,6 @@ const summaryChunks = computed(() => {
   color: #45505b;
   word-break: break-word;
   max-height: 24px;
-  overflow: hidden;
-}
-.mini-bar-stack {
-  width: 100%;
-  max-width: 20px;
-  display: flex;
-  flex-direction: column-reverse;
-  border-radius: 2px 2px 0 0;
   overflow: hidden;
 }
 .mini-legend {
@@ -1124,6 +1747,35 @@ const summaryChunks = computed(() => {
   color: #212121;
   font-variant-numeric: tabular-nums;
   margin-left: 2px;
+}
+.completion-gauge {
+  position: relative;
+  width: 160px;
+  height: 160px;
+}
+.completion-gauge-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+.ai-summary-box {
+  background: #f5f7fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+.freshness-banner {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 8px;
+}
+.score-part {
+  background: #f5f7fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-align: center;
 }
 .defects-grid {
   display: grid;
@@ -1196,9 +1848,14 @@ const summaryChunks = computed(() => {
   font-size: 14px;
   color: #1976d2;
 }
-.info-row {
-  margin-bottom: 2px;
+/* label เป็นคอลัมน์ของตัวเอง ข้อความยาวที่ขึ้นบรรทัดใหม่จะเยื้องตรงกับค่า ไม่ย้อนไปใต้ label */
+.info-grid {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 4px;
+  row-gap: 2px;
   font-size: 10px;
+  overflow-wrap: anywhere;
 }
 .label {
   font-weight: bold;
@@ -1237,6 +1894,47 @@ const summaryChunks = computed(() => {
   align-items: center;
   gap: 6px;
   font-size: 10px;
+}
+
+.toc-entry {
+  padding: 6px 0;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.toc-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.toc-row--section {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f4c81;
+}
+
+.toc-row--child {
+  font-size: 10.5px;
+  color: #334155;
+  padding: 2px 0 0 16px;
+}
+
+.toc-label {
+  min-width: 0;
+}
+
+.toc-leader {
+  flex: 1;
+  border-bottom: 1px dotted #cbd5e1;
+  transform: translateY(-3px);
+}
+
+.toc-page {
+  min-width: 24px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .sticker-legend {
@@ -1287,245 +1985,171 @@ const summaryChunks = computed(() => {
   color: #475569;
   overflow-wrap: anywhere;
 }
-
-.summary-system-card {
+.summary-section {
   border: 1px solid #d7e0ea;
   border-radius: 6px;
   overflow: hidden;
-  margin-bottom: 10px;
+  margin: 0 16px 10px;
   background: #fff;
 }
 
-.summary-system-header {
+.summary-section-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: baseline;
+  gap: 10px;
   background: #eef6ff;
   border-bottom: 1px solid #d7e0ea;
-  padding: 8px 10px;
+  padding: 6px 10px;
 }
 
-.summary-system-result {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.summary-result-pill {
-  color: white;
-  border-radius: 999px;
-  padding: 2px 8px;
-  font-size: 9px;
+.summary-section-title {
+  color: #0f4c81;
   font-weight: 700;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.summary-section-continued {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.summary-section-meta {
+  color: #64748b;
+  font-size: 9.5px;
   white-space: nowrap;
 }
 
-.summary-system-title {
-  color: #0f4c81;
-  font-weight: 700;
-  font-size: 13px;
-}
-
-.summary-system-meta {
-  color: #64748b;
-  font-size: 9.5px;
-  margin-top: 2px;
-}
-
-.summary-system-count {
-  min-width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #1976d2;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.summary-system-body {
+/* ความกว้างรูป/ช่องข้อความผูกกับ SUMMARY_PHOTO_MM และ SUMMARY_TEXT_CHARS_PER_LINE ใน script */
+.summary-topic {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 10px;
-  padding: 10px;
+  grid-template-columns: minmax(0, 1fr) 94mm;
+  gap: 8px;
+  padding: 5px 10px;
+  break-inside: avoid;
 }
 
-.summary-checklist {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
+.summary-topic + .summary-topic {
+  border-top: 1px solid #eef2f6;
 }
 
-.summary-overview {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 5px;
-  margin-bottom: 7px;
-}
-
-.summary-overview-item {
-  border: 1px solid #e2e8f0;
-  border-radius: 5px;
-  background: #f8fafc;
-  padding: 5px;
+.summary-topic-text {
   min-width: 0;
-}
-
-.summary-overview-label {
-  display: block;
-  color: #64748b;
-  font-size: 8px;
-  line-height: 1.2;
-}
-
-.summary-overview-value {
-  display: block;
-  color: #1f2937;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-
-.summary-empty-check {
-  border: 1px dashed #cbd5e1;
-  border-radius: 5px;
-  color: #64748b;
-  background: #f8fafc;
-  padding: 7px;
-  font-size: 9px;
-  line-height: 1.35;
-}
-
-.summary-check-row {
-  border-bottom: 1px solid #eef2f6;
-  padding-bottom: 6px;
-}
-
-.summary-check-title {
-  font-size: 10.5px;
-  font-weight: 700;
-  color: #1f2937;
-  line-height: 1.25;
-}
-
-.summary-option-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.summary-option-chip {
-  border: 1px solid;
-  border-radius: 999px;
-  padding: 1px 6px;
   font-size: 9px;
   line-height: 1.4;
-  background: #fff;
-}
-
-.summary-comment {
-  color: #475569;
-  font-size: 9.5px;
-  line-height: 1.35;
-  margin-top: 3px;
-}
-
-.summary-comment-box {
-  border-left: 3px solid #1976d2;
-  background: #f8fafc;
-  padding: 6px 8px;
-  margin-top: 2px;
-}
-
-.summary-comment-title {
-  color: #0f4c81;
-  font-size: 9px;
-  font-weight: 700;
-  margin-bottom: 3px;
-}
-
-.summary-comment-line {
-  color: #475569;
-  font-size: 8.5px;
-  line-height: 1.35;
-  margin-top: 2px;
+  color: #1f2937;
   overflow-wrap: anywhere;
 }
 
-.summary-photo-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 7px;
+.summary-topic-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 1px;
 }
 
-.summary-photo-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 5px;
-  overflow: hidden;
-  min-height: 108px;
-  position: relative;
-  background: #f8fafc;
+.summary-answer-group {
+  color: #64748b;
 }
 
-.summary-photo {
-  width: 100%;
-  height: 58px;
+.summary-topic-photos {
+  display: flex;
+  align-items: flex-start;
+  gap: 2mm;
+}
+
+.summary-evidence-photo {
+  width: 30mm;
+  height: 22.5mm;
   object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
   display: block;
 }
 
-.summary-sticker {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  color: white;
-  border-radius: 999px;
-  padding: 1px 6px;
-  font-size: 8px;
-  font-weight: 700;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
-}
-
-.summary-photo-caption {
-  padding: 5px 6px;
-  font-size: 8.5px;
-  line-height: 1.25;
-  color: #334155;
-}
-
-.summary-empty-photo {
-  grid-column: 1 / -1;
-  min-height: 96px;
-  border: 1px dashed #cbd5e1;
-  border-radius: 5px;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  background: #f8fafc;
-}
-
-.summary-more-photo {
-  min-height: 108px;
-  border: 1px dashed #cbd5e1;
-  border-radius: 5px;
-  color: #475569;
-  background: #f8fafc;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.summary-muted {
+  color: #94a3b8;
   font-size: 9px;
-  font-weight: 700;
-  text-align: center;
-  padding: 8px;
 }
 
 .page-content {
   flex: 1;
+}
+
+.report-plan-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  border: 1px solid #e0e0e0;
+}
+
+.report-plan-canvas {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+/* ย่อทั้งรูปให้อยู่ใน 160mm แทนการตัดทิ้ง — รูปแนวตั้งเคยโดน overflow ตัดจนหมุดเลื่อนขึ้น */
+.report-plan-image {
+  display: block;
+  max-width: 100%;
+  max-height: 160mm;
+}
+
+.report-plan-pin {
+  position: absolute;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border-radius: 12px;
+  white-space: nowrap;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.report-plan-legend {
+  width: 100%;
+}
+
+.report-legend-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.report-legend-table th,
+.report-legend-table td {
+  border: 1px solid #e0e0e0;
+  padding: 3px 6px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.report-legend-table th {
+  background: #f5f5f5;
+  font-weight: bold;
+}
+
+.legend-index-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: white;
+  font-size: 9px;
+  font-weight: bold;
 }
 </style>

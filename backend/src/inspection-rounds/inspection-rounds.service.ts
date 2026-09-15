@@ -3,18 +3,23 @@ import { CreateInspectionRoundDto } from './dto/create-inspection-round.dto';
 import { UpdateInspectionRoundDto } from './dto/update-inspection-round.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InspectionRound } from './entities/inspection-round.entity';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, Not } from 'typeorm';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Defect, DefectStatus } from 'src/defects/entities/defect.entity';
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
+import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
+import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity';
+import { MailService } from 'src/mail/mail.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { NotificationType } from 'src/notifications/entities/notification.entity';
-import { MailService } from 'src/mail/mail.service';
-import { PdfService } from 'src/pdf/pdf.service';
+import { Assignment } from 'src/assignments/entities/assignment.entity';
 import { AuthService } from 'src/auth/auth.service';
-
+import { ContractorService } from 'src/contractor/contractor.service';
+import { StorageService } from 'src/storage/storage.service';
+import { ReportsService, ReportLocale } from 'src/reports/reports.service';
+import { UpdateJobInfoDto } from './dto/update-job-info.dto';
 @Injectable()
 export class InspectionRoundsService {
   private readonly logger = new Logger(InspectionRoundsService.name);
@@ -31,11 +36,37 @@ export class InspectionRoundsService {
     @InjectRepository(Defect)
     private readonly defectsRepo: Repository<Defect>,
     private readonly dataSource: DataSource,
-    private readonly notificationsService: NotificationsService,
+    private readonly activityLogsService: ActivityLogsService,
     private readonly mailService: MailService,
-    private readonly pdfService: PdfService,
+    private readonly notificationsService: NotificationsService,
     private readonly authService: AuthService,
+    private readonly contractorService: ContractorService,
+    private readonly storageService: StorageService,
+    private readonly reportsService: ReportsService,
   ) {}
+
+  private isConstructionJob(job?: InspectionJob | null): boolean {
+    return (
+      job?.inspectionType === 'CONSTRUCTION_INSPECTION' ||
+      job?.inspectionType === 'Construction' ||
+      job?.inspectionType === 'ตรวจก่อสร้าง'
+    );
+  }
+
+  // defect ที่ยังไม่ผ่านการตรวจ (รอซ่อม/ซ่อมแล้วแต่ยังไม่ verify/ถูกตีกลับ) ในรอบนี้
+  private countOpenDefects(roundId: number): Promise<number> {
+    return this.defectsRepo.count({
+      where: { round: { roundId }, status: Not(DefectStatus.VERIFIED) },
+    });
+  }
+
+  private formatThaiDate(date: Date): string {
+    return date.toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
 
   async create(
     createInspectionRoundDto: CreateInspectionRoundDto,
@@ -55,6 +86,12 @@ export class InspectionRoundsService {
     const job = await this.inspectionJobsRepo.findOneByOrFail({
       jobId: createInspectionRoundDto.jobId,
     });
+
+    if (job.status === 'Completed') {
+      throw new BadRequestException(
+        'ไม่สามารถสร้างรอบใหม่ได้ เนื่องจากงานนี้ปิดงานแล้ว',
+      );
+    }
 
     const latestRound = await this.inspectionRoundsRepo.findOne({
       where: { job: { jobId: job.jobId } },
@@ -118,13 +155,17 @@ export class InspectionRoundsService {
               option: item.option,
               refItem: item.refItem,
               detailValue: item.detailValue,
+              photoUrl: item.photoUrl,
             }),
           );
           await queryRunner.manager.save(clonedItems);
         }
 
         const latestDefects = await queryRunner.manager.find(Defect, {
-          where: { round: { roundId: latestRound.roundId } },
+          where: {
+            round: { roundId: latestRound.roundId },
+            status: Not(DefectStatus.VERIFIED),
+          },
           relations: ['room', 'subRoom', 'floor', 'subCategories', 'inspector'],
         });
 
@@ -143,6 +184,20 @@ export class InspectionRoundsService {
       }
 
       await queryRunner.commitTransaction();
+
+      void this.activityLogsService.log(
+        job.jobId,
+        {
+          type: ActivityLogType.ROUND_SCHEDULED,
+          color: 'blue',
+          title: `นัดหมายตรวจรอบที่ ${savedRound.roundNumber}`,
+          sub: savedRound.scheduledDate
+            ? `วันที่ตรวจ: ${this.formatThaiDate(new Date(savedRound.scheduledDate))}`
+            : undefined,
+        },
+        savedRound.roundId,
+      );
+
       return savedRound;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -193,6 +248,7 @@ export class InspectionRoundsService {
                   option: item.option,
                   refItem: item.refItem,
                   detailValue: item.detailValue,
+                  photoUrl: item.photoUrl,
                 }),
               );
               await this.dataSource.manager.save(clonedItems);
@@ -203,41 +259,6 @@ export class InspectionRoundsService {
       }
     }
     return backfilledCount;
-  }
-
-  async fixJobStatuses() {
-    const jobs = await this.inspectionJobsRepo.find();
-    let fixedCount = 0;
-
-    for (const job of jobs) {
-      const latestRound = await this.inspectionRoundsRepo.findOne({
-        where: { job: { jobId: job.jobId } },
-        order: { roundNumber: 'DESC' },
-      });
-
-      if (latestRound) {
-        let expectedStatus = job.status;
-
-        if (latestRound.status === 'APPROVED') {
-          if (latestRound.roundNumber >= 2) {
-            expectedStatus = 'Completed';
-          } else {
-            expectedStatus = 'Active';
-          }
-        } else if (latestRound.status === 'SUBMITTED') {
-          expectedStatus = 'Pending';
-        } else {
-          expectedStatus = 'Active';
-        }
-
-        if (job.status !== expectedStatus) {
-          job.status = expectedStatus;
-          await this.inspectionJobsRepo.save(job);
-          fixedCount++;
-        }
-      }
-    }
-    return fixedCount;
   }
 
   findAll() {
@@ -253,11 +274,66 @@ export class InspectionRoundsService {
         'job.customer',
         'job.houseType',
         'job.branch',
+        'job.contractor',
+        'job.housePlans',
+        'job.housePlans.floor',
+        'job.createdBy',
         'teamMembers',
         'teamMembers.inspector',
         'teamMembers.inspector.team',
         'teamMembers.team',
       ],
+    });
+  }
+
+  // อัปเดต "ข้อมูลผู้รับเหมา + รูปหน้าโครงการ" ของ job ที่รอบตรวจนี้สังกัดอยู่ —
+  // ขอบเขตจำกัดเฉพาะ 2 อย่างนี้เท่านั้น (ตั้งใจไม่ใช้ endpoint แก้ไข job แบบเต็มของ admin เพื่อไม่ให้
+  // inspector แก้ field อื่น เช่น ชื่อโครงการ/ลูกค้า/สถานะงาน ได้) — คนเรียกถูกเช็คสิทธิ์มาแล้วที่
+  // RoundAccessGuard (admin หรือ inspector ที่ถูก assign เข้ารอบนี้)
+  async updateJobInfo(
+    roundId: number,
+    dto: UpdateJobInfoDto,
+    files: {
+      projectImageUrl?: Express.Multer.File[];
+    },
+  ): Promise<InspectionJob> {
+    const round = await this.inspectionRoundsRepo.findOneOrFail({
+      where: { roundId },
+      relations: ['job', 'job.contractor'],
+    });
+    const job = round.job;
+
+    // สร้าง/แก้ไขผู้รับเหมา เฉพาะตอนกรอกชื่อ+เบอร์โทรมาครบ (ทั้งคู่บังคับตาม Contractor entity)
+    if (dto.contractorFullName && dto.contractorPhoneNumber) {
+      const contractorPayload = {
+        fullName: dto.contractorFullName,
+        phoneNumber: dto.contractorPhoneNumber,
+        email: dto.contractorEmail,
+        companyName: dto.contractorCompanyName,
+      };
+      if (job.contractor) {
+        await this.contractorService.update(
+          job.contractor.contractorId,
+          contractorPayload,
+        );
+      } else {
+        job.contractor = await this.contractorService.create(contractorPayload);
+      }
+    }
+
+    const projectImage = files?.projectImageUrl?.[0];
+    if (projectImage) {
+      job.projectImageUrl = await this.storageService.uploadImage(
+        projectImage.buffer,
+        'inspection_jobs',
+      );
+    }
+
+    await this.inspectionJobsRepo.save(job);
+
+    return this.inspectionJobsRepo.findOneOrFail({
+      where: { jobId: job.jobId },
+      relations: ['contractor'],
     });
   }
 
@@ -318,9 +394,24 @@ export class InspectionRoundsService {
       .leftJoin('round.teamMembers', 'teamMembers')
       .leftJoin('teamMembers.inspector', 'roundInspector')
       .leftJoin('teamMembers.team', 'roundTeam')
+      .leftJoin(
+        Assignment,
+        'directAssignment',
+        '"directAssignment"."round_id" = "round"."round_id" AND "directAssignment"."inspector_id" = :inspectorId AND "directAssignment"."deleted_at" IS NULL',
+        { inspectorId },
+      )
+      .leftJoin(
+        Assignment,
+        'jobAssignment',
+        '"jobAssignment"."job_id" = "job"."job_id" AND "jobAssignment"."inspector_id" = :inspectorId AND "jobAssignment"."round_id" IS NULL AND "jobAssignment"."deleted_at" IS NULL',
+        { inspectorId },
+      )
       .where('round.scheduledDate BETWEEN :start AND :end', { start, end })
       .andWhere(
-        '(roundInspector.id = :inspectorId OR (roundTeam.team_Id = :teamId AND :teamId IS NOT NULL))',
+        `(roundInspector.id = :inspectorId
+          OR (roundTeam.team_Id = :teamId AND :teamId IS NOT NULL)
+          OR "directAssignment"."id" IS NOT NULL
+          OR "jobAssignment"."id" IS NOT NULL)`,
         { inspectorId, teamId },
       )
       .andWhere('round.deleted_at IS NULL')
@@ -359,14 +450,34 @@ export class InspectionRoundsService {
     const round = await this.inspectionRoundsRepo.findOneByOrFail({
       roundId: id,
     });
+
+    // เรียกซ้ำได้ตอนแก้ไขรอบที่ตรวจไปแล้ว (ดูปุ่ม "บันทึกการแก้ไขการตรวจ" ฝั่ง frontend)
+    // แต่ห้ามหลังอนุมัติ ไม่งั้นจะ regenerate PDF/AI summary ทับรายงานที่ส่งลูกค้าไปแล้ว
+    if (round.status === 'APPROVED') {
+      throw new BadRequestException('ไม่สามารถแก้ไขรอบตรวจที่อนุมัติแล้วได้');
+    }
+
     round.inspectedAt = new Date();
-    return this.inspectionRoundsRepo.save(round);
+    const saved = await this.inspectionRoundsRepo.save(round);
+
+    void this.activityLogsService.logForRound(id, {
+      type: ActivityLogType.ROUND_INSPECTED,
+      color: 'blue',
+      title: `วิศวกรเข้าตรวจรอบที่ ${saved.roundNumber} เสร็จสิ้น`,
+    });
+
+    return saved;
   }
 
   async confirmSummary(id: number) {
     const round = await this.inspectionRoundsRepo.findOneByOrFail({
       roundId: id,
     });
+
+    if (round.status === 'APPROVED') {
+      throw new BadRequestException('ไม่สามารถแก้ไขรอบตรวจที่อนุมัติแล้วได้');
+    }
+
     round.summaryCompletedAt = new Date();
     return this.inspectionRoundsRepo.save(round);
   }
@@ -377,10 +488,7 @@ export class InspectionRoundsService {
       relations: ['job'],
     });
 
-    const isConstruction =
-      round.job?.inspectionType === 'CONSTRUCTION_INSPECTION' ||
-      round.job?.inspectionType === 'Construction' ||
-      round.job?.inspectionType === 'ตรวจก่อสร้าง';
+    const isConstruction = this.isConstructionJob(round.job);
 
     if (!round.inspectedAt) {
       throw new BadRequestException(
@@ -410,13 +518,29 @@ export class InspectionRoundsService {
       const savedRound = await queryRunner.manager.save(round);
       await queryRunner.commitTransaction();
 
-      void this.notificationsService.create({
-        type: NotificationType.ALERT,
-        recipientRole: 'admin',
-        message: `${savedRound.job?.projectName ?? ''}: ตรวจงวดที่ ${savedRound.roundNumber} รออนุมัติ`,
-        jobId: savedRound.job?.jobId,
-        roundId: savedRound.roundId,
-      });
+      if (savedRound.job) {
+        const defectCount = await this.defectsRepo.count({
+          where: { round: { roundId: id } },
+        });
+        void this.activityLogsService.log(
+          savedRound.job.jobId,
+          {
+            type: ActivityLogType.ROUND_SUBMITTED,
+            color: 'orange',
+            title: `ส่งรายงานรอบที่ ${savedRound.roundNumber} ให้ลูกค้าตรวจสอบแล้ว`,
+            sub: `${defectCount} รายการ`,
+          },
+          savedRound.roundId,
+        );
+
+        void this.notificationsService.create({
+          type: NotificationType.ALERT,
+          recipientRole: 'admin',
+          message: `${savedRound.job.projectName}: ตรวจงวดที่ ${savedRound.roundNumber} รออนุมัติ`,
+          jobId: savedRound.job.jobId,
+          roundId: savedRound.roundId,
+        });
+      }
 
       return savedRound;
     } catch (error) {
@@ -432,12 +556,23 @@ export class InspectionRoundsService {
   ): Promise<{ data: InspectionRound; notification: any }> {
     const round = await this.inspectionRoundsRepo.findOneOrFail({
       where: { roundId: id },
-      relations: ['job', 'job.customer', 'teamMembers', 'teamMembers.inspector'],
+      relations: [
+        'job',
+        'job.customer',
+        'teamMembers',
+        'teamMembers.inspector',
+      ],
     });
 
     if (round.status !== 'SUBMITTED') {
       throw new BadRequestException('Report must be submitted before approval');
     }
+
+    // งานตรวจบ้าน: ปิดงานได้เมื่อ defect ทุกรายการในรอบนี้ตรวจผ่านแล้ว (ไม่ดูเลขรอบ)
+    // งานก่อสร้างยังไม่มีเกณฑ์ปิดงานจาก defect จึงคงกฎเดิม (รอบที่ 2 ขึ้นไป)
+    const shouldCloseJob = this.isConstructionJob(round.job)
+      ? round.roundNumber >= 2
+      : (await this.countOpenDefects(round.roundId)) === 0;
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -448,16 +583,26 @@ export class InspectionRoundsService {
       round.approvedAt = new Date();
 
       if (round.job) {
-        if (round.roundNumber >= 2) {
-          round.job.status = 'Completed';
-        } else {
-          round.job.status = 'Active';
-        }
+        round.job.status = shouldCloseJob ? 'Completed' : 'Active';
+        round.job.completedAt = shouldCloseJob ? round.approvedAt : null;
         await queryRunner.manager.save(round.job);
       }
 
       const approvedRound = await queryRunner.manager.save(round);
       await queryRunner.commitTransaction();
+
+      if (approvedRound.job) {
+        void this.activityLogsService.log(
+          approvedRound.job.jobId,
+          {
+            type: ActivityLogType.ROUND_APPROVED,
+            color: 'green',
+            title: `ลูกค้าอนุมัติรายงานรอบที่ ${approvedRound.roundNumber} แล้ว`,
+            sub: shouldCloseJob ? 'ปิดงานเรียบร้อย' : undefined,
+          },
+          approvedRound.roundId,
+        );
+      }
 
       const notification = this.buildApprovalNotification(approvedRound);
 
@@ -502,8 +647,14 @@ export class InspectionRoundsService {
         'customer',
       );
 
-      // 2. สร้าง PDF รายงาน
-      const pdfBuffer = await this.pdfService.generateReport(round.roundId);
+      // 2. แนบ PDF ไฟล์เดียวกับที่เปิดดูในแอป (render ทันที ไม่รอ debounce)
+      // ภาษาตาม customer.preferredLocale ที่แอดมินตั้งไว้ — ไม่มี "locale ปัจจุบัน" ให้อ้างอิงเพราะ flow นี้ทำงานฝั่ง server ล้วน
+      const customerLocale: ReportLocale =
+        round.job?.customer?.preferredLocale === 'en-US' ? 'en-US' : 'th-TH';
+      const pdfBuffer = await this.reportsService.getLatestReportPdf(
+        round.roundId,
+        customerLocale,
+      );
 
       // 3. ส่ง Email
       await this.mailService.sendApprovalEmail({

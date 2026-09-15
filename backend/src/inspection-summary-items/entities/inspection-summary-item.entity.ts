@@ -23,9 +23,10 @@ export class InspectionSummaryItem {
   @JoinColumn({ name: 'template_id' })
   template!: SummaryTemplate;
 
-  @ManyToOne(() => SummaryTemplateOption)
+  // แถวรูปหลักฐานไม่ผูก option (null) — แยกแถวรูปด้วย photoUrl แทน
+  @ManyToOne(() => SummaryTemplateOption, { nullable: true })
   @JoinColumn({ name: 'option_id' })
-  option!: SummaryTemplateOption;
+  option?: SummaryTemplateOption | null;
 
   @ManyToOne(() => InspectionSummaryItem, {
     nullable: true,
@@ -39,4 +40,8 @@ export class InspectionSummaryItem {
 
   @Column({ type: 'text', nullable: true })
   detailValue!: string;
+
+  // มีค่า = แถวนี้คือรูปหลักฐาน 1 รูป
+  @Column({ type: 'text', nullable: true })
+  photoUrl?: string | null;
 }

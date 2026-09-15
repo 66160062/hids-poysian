@@ -1,0 +1,314 @@
+{
+  "generatedAt": "2026-09-05T11:25:42.941Z",
+  "scenarios": [
+    {
+      "id": "good",
+      "label": "บ้านสภาพดี",
+      "stats": {
+        "completionPercent": 100,
+        "defectScore": 99,
+        "systemScore": 100,
+        "systemAssessedCount": 4,
+        "systemPassedCount": 4,
+        "failedSystems": [],
+        "totalDefects": 3,
+        "majorCount": 0,
+        "minorCount": 3,
+        "statusCounts": {
+          "verified": 2,
+          "repaired": 1
+        },
+        "topCategories": [
+          {
+            "name": "สี",
+            "count": 2
+          },
+          {
+            "name": "ประตู",
+            "count": 1
+          }
+        ],
+        "topFloors": [
+          {
+            "name": "ชั้น 1",
+            "count": 2
+          },
+          {
+            "name": "ชั้น 2",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "medium",
+      "label": "บ้านสภาพปานกลาง",
+      "stats": {
+        "completionPercent": 77,
+        "defectScore": 81,
+        "systemScore": 72,
+        "systemAssessedCount": 4,
+        "systemPassedCount": 3,
+        "failedSystems": [
+          {
+            "category": "งานประปาและสุขาภิบาล",
+            "label": "ตรวจสอบสโลปห้องน้ำ",
+            "value": "พบปัญหาน้ำขัง"
+          }
+        ],
+        "totalDefects": 9,
+        "majorCount": 3,
+        "minorCount": 6,
+        "statusCounts": {
+          "pending_repair": 7,
+          "verified": 2
+        },
+        "topCategories": [
+          {
+            "name": "สี",
+            "count": 4
+          },
+          {
+            "name": "งานโครงสร้าง",
+            "count": 3
+          },
+          {
+            "name": "งานระบบไฟฟ้า",
+            "count": 2
+          }
+        ],
+        "topFloors": [
+          {
+            "name": "ชั้น 1",
+            "count": 7
+          },
+          {
+            "name": "ชั้น 2",
+            "count": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "bad",
+      "label": "บ้านมีปัญหาเยอะ",
+      "stats": {
+        "completionPercent": 25,
+        "defectScore": 42,
+        "systemScore": 0,
+        "systemAssessedCount": 4,
+        "systemPassedCount": 0,
+        "failedSystems": [
+          {
+            "category": "งานโครงสร้าง",
+            "label": "ฐานราก",
+            "value": "พบปัญหาการทรุดตัว"
+          },
+          {
+            "category": "งานระบบไฟฟ้า",
+            "label": "เครื่องป้องกันไฟรั่ว",
+            "value": "พบปัญหา"
+          },
+          {
+            "category": "งานประปาและสุขาภิบาล",
+            "label": "ตรวจสอบการรั่วซึมจากพื้นห้องน้ำ",
+            "value": "พบปัญหาการรั่วซึม"
+          },
+          {
+            "category": "ความสะอาดและความเรียบร้อย",
+            "label": "การเข้าอยู่อาศัย",
+            "value": "ยังไม่พร้อมเข้าอยู่อาศัย"
+          }
+        ],
+        "totalDefects": 15,
+        "majorCount": 10,
+        "minorCount": 5,
+        "statusCounts": {
+          "pending_repair": 11,
+          "rejected": 4
+        },
+        "topCategories": [
+          {
+            "name": "งานโครงสร้าง",
+            "count": 6
+          },
+          {
+            "name": "สุขาภิบาล",
+            "count": 5
+          },
+          {
+            "name": "หลังคา",
+            "count": 4
+          }
+        ],
+        "topFloors": [
+          {
+            "name": "ชั้น 1",
+            "count": 6
+          },
+          {
+            "name": "ชั้น 2",
+            "count": 5
+          },
+          {
+            "name": "ชั้นดาดฟ้า",
+            "count": 4
+          }
+        ]
+      }
+    }
+  ],
+  "runs": [
+    {
+      "providerId": "gemini",
+      "providerLabel": "Gemini (Google)",
+      "isFree": true,
+      "scenarioId": "good",
+      "scenarioLabel": "บ้านสภาพดี",
+      "latencyMs": 0,
+      "promptTokens": null,
+      "completionTokens": null,
+      "costUsd": null,
+      "rubric": {
+        "score": 0,
+        "maxScore": 5,
+        "details": [
+          "เรียก API ไม่สำเร็จ"
+        ]
+      },
+      "text": "",
+      "error": "Gemini API error 429"
+    },
+    {
+      "providerId": "groq",
+      "providerLabel": "Groq (open models)",
+      "isFree": true,
+      "scenarioId": "good",
+      "scenarioLabel": "บ้านสภาพดี",
+      "latencyMs": 716,
+      "promptTokens": 663,
+      "completionTokens": 167,
+      "costUsd": 0,
+      "rubric": {
+        "score": 5,
+        "maxScore": 5,
+        "details": [
+          "✓ ใช้ % ตามที่คำนวณไว้เป๊ะๆ",
+          "✓ พูดถึงหมวดงานที่พบ defect หลัก",
+          "✓ เป็นย่อหน้าเดียว ไม่มี bullet",
+          "✓ ความยาวเหมาะสม (364 ตัวอักษร)"
+        ]
+      },
+      "text": "บ้านหลังนี้มีความสมบูรณ์โดยรวมอยู่ที่ 100% จุดที่ควรให้ความสำคัญเป็นพิเศษคือหมวดงานสีบริเวณชั้น 1 ซึ่งพบข้อบกพร่อง 2 จุด และหมวดงานประตู 1 จุด อีกทั้งยังพบข้อบกพร่องที่ชั้น 2 หนึ่งจุด จากการตรวจพบ defect ทั้งหมด 3 จุดโดยไม่มีการพบ defect แบบ Major และไม่พบรายการตรวจระบบที่ไม่ผ่าน การติดตามการซ่อมที่หมวดสีบนชั้น 1 ก่อนเป็นลำดับแรกเพื่อรักษาความสมบูรณ์ของบ้านต่อไป",
+      "error": null
+    },
+    {
+      "providerId": "gemini",
+      "providerLabel": "Gemini (Google)",
+      "isFree": true,
+      "scenarioId": "medium",
+      "scenarioLabel": "บ้านสภาพปานกลาง",
+      "latencyMs": 0,
+      "promptTokens": null,
+      "completionTokens": null,
+      "costUsd": null,
+      "rubric": {
+        "score": 0,
+        "maxScore": 5,
+        "details": [
+          "เรียก API ไม่สำเร็จ"
+        ]
+      },
+      "text": "",
+      "error": "Gemini API error 429"
+    },
+    {
+      "providerId": "groq",
+      "providerLabel": "Groq (open models)",
+      "isFree": true,
+      "scenarioId": "medium",
+      "scenarioLabel": "บ้านสภาพปานกลาง",
+      "latencyMs": 703,
+      "promptTokens": 683,
+      "completionTokens": 168,
+      "costUsd": 0,
+      "rubric": {
+        "score": 5,
+        "maxScore": 5,
+        "details": [
+          "✓ ใช้ % ตามที่คำนวณไว้เป๊ะๆ",
+          "✓ พูดถึงหมวดงานที่พบ defect หลัก",
+          "✓ เป็นย่อหน้าเดียว ไม่มี bullet",
+          "✓ ความยาวเหมาะสม (385 ตัวอักษร)"
+        ]
+      },
+      "text": "บ้านหลังนี้มีความสมบูรณ์โดยรวมอยู่ที่ 77% จุดที่ควรให้ความสำคัญเป็นพิเศษคือหมวดงานสี โดยพบ defect 4 จุด เป็นจำนวนมากที่สุด จากนั้นงานโครงสร้างและระบบไฟฟ้าก็พบ defect 3 จุดและ 2 จุดตามลำดับ ชั้นที่พบ defect มากที่สุดคือชั้น 1 ซึ่งมี 7 จุด การตรวจระบบที่ไม่ผ่านคือ “ตรวจสอบสโลปห้องน้ำ” พบปัญหาน้ำขัง จึงควรติดตามการซ่อมในจุดนี้ก่อนเป็นลำดับแรกเพื่อความปลอดภัยและความเรียบร้อยของบ้านต่อไป",
+      "error": null
+    },
+    {
+      "providerId": "gemini",
+      "providerLabel": "Gemini (Google)",
+      "isFree": true,
+      "scenarioId": "bad",
+      "scenarioLabel": "บ้านมีปัญหาเยอะ",
+      "latencyMs": 0,
+      "promptTokens": null,
+      "completionTokens": null,
+      "costUsd": null,
+      "rubric": {
+        "score": 0,
+        "maxScore": 5,
+        "details": [
+          "เรียก API ไม่สำเร็จ"
+        ]
+      },
+      "text": "",
+      "error": "Gemini API error 429"
+    },
+    {
+      "providerId": "groq",
+      "providerLabel": "Groq (open models)",
+      "isFree": true,
+      "scenarioId": "bad",
+      "scenarioLabel": "บ้านมีปัญหาเยอะ",
+      "latencyMs": 575,
+      "promptTokens": 748,
+      "completionTokens": 186,
+      "costUsd": 0,
+      "rubric": {
+        "score": 5,
+        "maxScore": 5,
+        "details": [
+          "✓ ใช้ % ตามที่คำนวณไว้เป๊ะๆ",
+          "✓ พูดถึงหมวดงานที่พบ defect หลัก",
+          "✓ เป็นย่อหน้าเดียว ไม่มี bullet",
+          "✓ ความยาวเหมาะสม (391 ตัวอักษร)"
+        ]
+      },
+      "text": "บ้านหลังนี้ความสมบูรณ์โดยรวมอยู่ที่ 25% จุดที่ควรให้ความสำคัญเป็นพิเศษคือหมวดงานโครงสร้างและสุขาภิบาล ซึ่งพบข้อบกพร่องมากที่สุดในชั้น 1 และชั้น 2 นอกจากนี้ รายการตรวจระบบไม่ผ่านยังรวมถึงฐานราก การป้องกันไฟรั่ว ตรวจสอบรั่วซึมจากพื้นห้องน้ำ และการเข้าอยู่อาศัย จึงควรติดตามการแก้ไขในจุดเหล่านี้ก่อนเป็นลำดับแรก และค่อยทำการซ่อมในหมวดงานหลังคาและชั้นดาดฟ้า ตามลำดับความสำคัญที่มีอยู่ในรายงานนี้",
+      "error": null
+    }
+  ],
+  "summary": [
+    {
+      "providerId": "gemini",
+      "providerLabel": "Gemini (Google)",
+      "isFree": true,
+      "successCount": 0,
+      "totalRuns": 3,
+      "avgLatencyMs": null,
+      "avgCostUsd": null,
+      "avgRubricScore": null
+    },
+    {
+      "providerId": "groq",
+      "providerLabel": "Groq (open models)",
+      "isFree": true,
+      "successCount": 3,
+      "totalRuns": 3,
+      "avgLatencyMs": 664.6666666666666,
+      "avgCostUsd": 0,
+      "avgRubricScore": 5
+    }
+  ]
+}

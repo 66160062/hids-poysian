@@ -1,10 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsString, IsOptional, IsNumber } from 'class-validator';
 
 export class CreateTeamDto {
   @ApiProperty({ description: 'ชื่อทีม', example: 'WENAT Team A' })
   @IsString()
   team_name!: string;
+
+  @ApiProperty({ description: 'ไอดีสาขา', example: '1', required: false })
+  @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  branchId?: number;
 
   @ApiProperty({
     description: 'ลิงก์โลโก้',

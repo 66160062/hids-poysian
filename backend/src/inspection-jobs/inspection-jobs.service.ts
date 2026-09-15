@@ -14,7 +14,6 @@ import { HouseType } from 'src/house-types/entities/house-type.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
 import { InspectionJobStatus } from './enums/inspection-job-status.enum';
 import { Branch } from 'src/branches/entities/branch.entity';
-import { BranchesService } from 'src/branches/branches.service';
 
 @Injectable()
 export class InspectionJobsService {
@@ -31,11 +30,13 @@ export class InspectionJobsService {
     private readonly contractorsRepo: Repository<Contractor>,
     @InjectRepository(Branch)
     private readonly branchesRepo: Repository<Branch>,
-    private readonly branchesService: BranchesService,
     private readonly dataSource: DataSource,
   ) {}
 
-  async create(createInspectionJobDto: CreateInspectionJobDto) {
+  async create(
+    createInspectionJobDto: CreateInspectionJobDto,
+    userId?: number,
+  ) {
     const customer = await this.customersRepo.findOneBy({
       customerId: createInspectionJobDto.customerId,
     });
@@ -72,11 +73,14 @@ export class InspectionJobsService {
     }
 
     let branch: Branch | null = null;
-    if (createInspectionJobDto.teamId) {
-      branch = await this.branchesService.findOrCreateForTeam(createInspectionJobDto.teamId);
-    } else if (createInspectionJobDto.branchId) {
-      branch = await this.branchesRepo.findOneBy({ branchId: createInspectionJobDto.branchId });
-      if (!branch || branch.status !== 'active') throw new NotFoundException(`ไม่พบบริษัท/สาขา ID ${createInspectionJobDto.branchId}`);
+    if (createInspectionJobDto.branchId) {
+      branch = await this.branchesRepo.findOneBy({
+        branchId: createInspectionJobDto.branchId,
+      });
+      if (!branch || branch.status !== 'active')
+        throw new NotFoundException(
+          `ไม่พบบริษัท/สาขา ID ${createInspectionJobDto.branchId}`,
+        );
     }
 
     const inspectionJob = this.inspectionsRepo.create({
@@ -93,6 +97,7 @@ export class InspectionJobsService {
       houseType,
       contractor: contractor ?? undefined,
       branch: branch ?? undefined,
+      createdBy: userId ? { id: userId } : undefined,
     });
     return this.inspectionsRepo.save(inspectionJob);
   }
@@ -126,7 +131,9 @@ export class InspectionJobsService {
     }
 
     if (selectedBranchId) {
-      query.andWhere('job.branchId = :branchId', { branchId: selectedBranchId });
+      query.andWhere('job.branchId = :branchId', {
+        branchId: selectedBranchId,
+      });
     }
 
     if (type && type !== 'ทั้งหมด') {
@@ -227,7 +234,15 @@ export class InspectionJobsService {
   async findOne(id: number) {
     const job = await this.inspectionsRepo.findOne({
       where: { jobId: id },
-      relations: ['customer', 'address', 'houseType', 'contractor', 'branch', 'rounds'],
+      relations: [
+        'customer',
+        'address',
+        'houseType',
+        'contractor',
+        'branch',
+        'createdBy',
+        'rounds',
+      ],
     });
     if (!job) throw new NotFoundException(`ไม่พบงานตรวจ ID ${id}`);
 
@@ -322,26 +337,29 @@ export class InspectionJobsService {
       inspectionJob.inspectionType = updateInspectionJobDto.inspectionType;
     if (updateInspectionJobDto.projectName !== undefined)
       inspectionJob.projectName = updateInspectionJobDto.projectName;
+    if (updateInspectionJobDto.projectNameEn !== undefined)
+      inspectionJob.projectNameEn =
+        updateInspectionJobDto.projectNameEn || null;
     if (updateInspectionJobDto.locationCoordinate !== undefined)
       inspectionJob.locationCoordinate =
         updateInspectionJobDto.locationCoordinate;
-    if (updateInspectionJobDto.housePlanUrl !== undefined)
-      inspectionJob.housePlanUrl = updateInspectionJobDto.housePlanUrl;
     if (updateInspectionJobDto.usableArea !== undefined)
       inspectionJob.usableArea = updateInspectionJobDto.usableArea;
     if (updateInspectionJobDto.projectImageUrl !== undefined)
       inspectionJob.projectImageUrl = updateInspectionJobDto.projectImageUrl;
     if (updateInspectionJobDto.status !== undefined)
       inspectionJob.status = updateInspectionJobDto.status;
-    if (updateInspectionJobDto.teamId !== undefined || updateInspectionJobDto.branchId !== undefined) {
-      if (updateInspectionJobDto.teamId) {
-        const branch = await this.branchesService.findOrCreateForTeam(updateInspectionJobDto.teamId);
-        inspectionJob.branchId = branch.branchId;
-      } else if (updateInspectionJobDto.branchId) {
-        const branch = await this.branchesRepo.findOneBy({ branchId: updateInspectionJobDto.branchId });
-        if (!branch || branch.status !== 'active') throw new NotFoundException(`ไม่พบบริษัท/สาขา ID ${updateInspectionJobDto.branchId}`);
+    if (updateInspectionJobDto.branchId !== undefined) {
+      if (updateInspectionJobDto.branchId) {
+        const branch = await this.branchesRepo.findOneBy({
+          branchId: updateInspectionJobDto.branchId,
+        });
+        if (!branch || branch.status !== 'active')
+          throw new NotFoundException(
+            `ไม่พบบริษัท/สาขา ID ${updateInspectionJobDto.branchId}`,
+          );
       }
-      if (updateInspectionJobDto.teamId === undefined) inspectionJob.branchId =
+      inspectionJob.branchId =
         typeof updateInspectionJobDto.branchId === 'number' &&
         Number.isInteger(updateInspectionJobDto.branchId) &&
         updateInspectionJobDto.branchId > 0
@@ -414,7 +432,9 @@ export class InspectionJobsService {
     }
 
     if (selectedBranchId) {
-      query.andWhere('job.branchId = :branchId', { branchId: selectedBranchId });
+      query.andWhere('job.branchId = :branchId', {
+        branchId: selectedBranchId,
+      });
     }
 
     if (inspectionType && inspectionType !== 'ทั้งหมด') {

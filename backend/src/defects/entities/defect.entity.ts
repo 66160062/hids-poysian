@@ -5,6 +5,7 @@ import { SubRoom } from 'src/sub-rooms/entities/sub-room.entity';
 import { Floor } from 'src/floor/entities/floor.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
+import { HousePlan } from 'src/house-plans/entities/house-plan.entity';
 import {
   Column,
   Entity,
@@ -94,4 +95,17 @@ export class Defect {
   @ManyToOne(() => Contractor, { nullable: true })
   @JoinColumn({ name: 'updated_by' })
   updatedBy!: Contractor;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  planX!: number | null;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  planY!: number | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  locationZone!: string | null;
+
+  @ManyToOne(() => HousePlan, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'plan_id' })
+  plan!: HousePlan | null;
 }

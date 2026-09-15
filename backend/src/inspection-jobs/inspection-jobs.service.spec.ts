@@ -7,6 +7,7 @@ import { Customer } from 'src/customers/entities/customer.entity';
 import { Address } from 'src/addresses/entities/address.entity';
 import { HouseType } from 'src/house-types/entities/house-type.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
+import { Branch } from 'src/branches/entities/branch.entity';
 import { DataSource } from 'typeorm';
 
 describe('InspectionJobsService', () => {
@@ -36,6 +37,7 @@ describe('InspectionJobsService', () => {
         { provide: getRepositoryToken(Address), useValue: repoMock },
         { provide: getRepositoryToken(HouseType), useValue: repoMock },
         { provide: getRepositoryToken(Contractor), useValue: repoMock },
+        { provide: getRepositoryToken(Branch), useValue: repoMock },
         { provide: DataSource, useValue: { query: jest.fn() } },
       ],
     }).compile();

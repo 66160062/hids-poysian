@@ -2,12 +2,12 @@
   <q-page class="bg-grey-1 column items-center justify-center q-pa-md">
     <div v-if="isVerifying" class="column items-center">
       <q-spinner color="primary" size="3em" />
-      <div class="text-grey-6 q-mt-md">กำลังตรวจสอบลิงก์...</div>
+      <div class="text-grey-6 q-mt-md">{{ t('common.linkEntry.verifying') }}</div>
     </div>
 
     <q-card v-else-if="errorMessage" flat bordered class="card-round q-pa-lg text-center" style="max-width: 360px">
       <q-icon name="link_off" size="48px" color="negative" class="q-mb-md" />
-      <div class="text-subtitle1 text-weight-bold q-mb-sm">ลิงก์ไม่ถูกต้องหรือหมดอายุ</div>
+      <div class="text-subtitle1 text-weight-bold q-mb-sm">{{ t('common.linkEntry.invalidTitle') }}</div>
       <div class="text-body2 text-grey-7">{{ errorMessage }}</div>
     </q-card>
   </q-page>
@@ -16,6 +16,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import axios from 'axios';
 import { useLinkAccess, type LinkAccessPayload, type LinkAccessRole } from 'src/stores/useLinkAccess';
 
@@ -26,6 +27,7 @@ const props = defineProps<{
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const { setAccess } = useLinkAccess();
 const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(
   /\/+$/,
@@ -49,7 +51,7 @@ onMounted(async () => {
 
   if (typeof token !== 'string' || !token || !projectId) {
     isVerifying.value = false;
-    errorMessage.value = 'ลิงก์ไม่ครบถ้วน กรุณาขอลิงก์ใหม่จากผู้ดูแลระบบ';
+    errorMessage.value = t('common.linkEntry.incompleteLink');
     return;
   }
 
@@ -79,10 +81,9 @@ onMounted(async () => {
 
     setAccess(accessPayload, token);
 
-    await router.replace({
-      path: props.redirectPath,
-      query: { jobId: String(projectId) },
-    });
+    // ไม่ใส่ jobId ลง query อีกต่อไป — หน้าปลายทางอ่าน jobId จาก token ที่ verify แล้วใน
+    // useLinkAccess เท่านั้น ป้องกันไม่ให้แก้ URL แล้วสลับไปดูข้อมูลงานอื่นได้
+    await router.replace({ path: props.redirectPath });
   } catch (err) {
     isVerifying.value = false;
     const message =
@@ -90,7 +91,7 @@ onMounted(async () => {
         ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
         : undefined;
     errorMessage.value =
-      message || 'ลิงก์หมดอายุหรือไม่ถูกต้อง กรุณาขอลิงก์ใหม่จากผู้ดูแลระบบ';
+      message || t('common.linkEntry.expiredOrInvalid');
   }
 });
 </script>

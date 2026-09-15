@@ -3,40 +3,40 @@
     <q-header v-if="route.path.includes('/admin')" class="bg-white" flat bordered>
       <div class="row items-center q-pt-md q-pb-sm q-px-md relative-position">
         <q-btn flat round dense icon="arrow_back_ios_new" color="primary" @click="router.back()" />
-        <div class="text-h6 text-weight-bold q-ml-sm text-primary">แก้ไขการตรวจก่อสร้าง</div>
+        <div class="text-h6 text-weight-bold q-ml-sm text-primary">{{ t('construction.inspect.headerTitleEdit') }}</div>
       </div>
     </q-header>
 
     <q-page-container>
-      <q-page class="q-pa-md bg-grey-1 modern-font" style="padding-bottom: 80px">
-        
+      <q-page class="q-pa-md bg-grey-1 modern-font row justify-center" style="padding-bottom: 80px">
+        <div class="detail-content">
         <!-- 1. ข้อมูลทั่วไป -->
         <q-card flat bordered class="q-mb-md ui-card">
           <q-card-section class="q-pa-sm bg-grey-2 text-primary text-weight-bold row items-center">
             <q-icon name="info" size="20px" class="q-mr-xs" />
-            ข้อมูลทั่วไป
+            {{ t('construction.inspect.generalInfoTitle') }}
           </q-card-section>
           <q-card-section class="q-pa-md column q-gutter-y-sm">
             <div class="row q-col-gutter-sm">
               <div class="col-6">
-                <div class="text-caption text-grey-8 q-mb-xs">เวลาเริ่ม</div>
+                <div class="text-caption text-grey-8 q-mb-xs">{{ t('construction.inspect.startTime') }}</div>
                 <q-input type="time" outlined dense v-model="form.startTime" bg-color="white" hide-bottom-space>
                   <template v-slot:append>
-                    <q-btn flat dense color="primary" label="ตอนนี้" size="sm" @click="setCurrentTime('startTime')" />
+                    <q-btn flat dense color="primary" :label="t('construction.inspect.now')" size="sm" @click="setCurrentTime('startTime')" />
                   </template>
                 </q-input>
               </div>
               <div class="col-6">
-                <div class="text-caption text-grey-8 q-mb-xs">เวลาจบ</div>
+                <div class="text-caption text-grey-8 q-mb-xs">{{ t('construction.inspect.endTime') }}</div>
                 <q-input type="time" outlined dense v-model="form.endTime" bg-color="white" hide-bottom-space>
                   <template v-slot:append>
-                    <q-btn flat dense color="primary" label="ตอนนี้" size="sm" @click="setCurrentTime('endTime')" />
+                    <q-btn flat dense color="primary" :label="t('construction.inspect.now')" size="sm" @click="setCurrentTime('endTime')" />
                   </template>
                 </q-input>
               </div>
             </div>
 
-            <div class="text-caption text-grey-8 q-mt-sm">สภาพอากาศ</div>
+            <div class="text-caption text-grey-8 q-mt-sm">{{ t('construction.inspect.weather') }}</div>
             <q-btn-toggle
               v-model="form.weather"
               spread
@@ -47,10 +47,10 @@
               color="white"
               text-color="grey-8"
               :options="[
-                { label: 'แดด', value: 'Sunny' },
-                { label: 'เมฆ', value: 'Cloudy' },
-                { label: 'ฝน', value: 'Rainy' },
-                { label: 'พายุ', value: 'Stormy' },
+                { label: t('construction.inspect.weatherSunny'), value: 'Sunny' },
+                { label: t('construction.inspect.weatherCloudy'), value: 'Cloudy' },
+                { label: t('construction.inspect.weatherRainy'), value: 'Rainy' },
+                { label: t('construction.inspect.weatherStormy'), value: 'Stormy' },
               ]"
               class="q-mt-xs"
               style="border: 1px solid #e0e0e0; border-radius: 8px;"
@@ -62,7 +62,7 @@
         <q-card flat bordered class="q-mb-md ui-card">
           <q-card-section class="q-pa-sm bg-grey-2 text-dark text-weight-bold row items-center">
             <q-icon name="grid_on" size="18px" class="q-mr-xs text-primary" />
-            รายละเอียดงานที่ปฏิบัติ
+            {{ t('construction.inspect.workDetailsTitle') }}
             <q-space />
             <span v-if="workDetails.length > 0" class="text-caption text-primary bg-blue-1 q-px-sm" style="border-radius: 4px;">{{ workSummary }}</span>
           </q-card-section>
@@ -71,8 +71,8 @@
             <q-item v-for="work in workDetails" :key="work.id" class="bg-white">
               <q-item-section>
                 <q-item-label class="text-weight-bold text-primary">{{ work.name }}</q-item-label>
-                <q-item-label caption>พิกัด: {{ work.location || '-' }} | หน่วย: {{ work.unit || '-' }}</q-item-label>
-                <q-item-label caption>ทำได้จริง: {{ work.actual }}%</q-item-label>
+                <q-item-label caption>{{ t('construction.inspect.locationLabel') }}: {{ work.location ? roomLabel(work.location) : '-' }} | {{ t('construction.inspect.unitLabel') }}: {{ work.unit ? unitLabel(work.unit) : '-' }}</q-item-label>
+                <q-item-label caption>{{ t('construction.inspect.actualLabel') }}: {{ work.actual }}%</q-item-label>
               </q-item-section>
               <q-item-section side class="row items-center q-pa-none">
                 <q-btn flat round dense icon="delete" color="negative" size="sm" @click="removeWork(work.id)" />
@@ -81,7 +81,7 @@
 
             <!-- ปุ่มกดเพิ่มข้อมูล -->
             <q-item clickable v-ripple @click="addWorkDetail" class="bg-white">
-              <q-item-section class="text-primary text-weight-medium">เพิ่มรายละเอียดงาน</q-item-section>
+              <q-item-section class="text-primary text-weight-medium">{{ t('construction.inspect.addWorkDetail') }}</q-item-section>
               <q-item-section side>
                 <q-icon name="add_circle_outline" color="primary" size="24px" />
               </q-item-section>
@@ -93,21 +93,21 @@
         <q-card flat bordered class="q-mb-md ui-card">
           <q-card-section class="q-pa-sm bg-grey-2 text-dark text-weight-bold row items-center">
             <q-icon name="people" size="18px" class="q-mr-xs text-primary" />
-            รายละเอียดผู้มีส่วนเกี่ยวข้อง
+            {{ t('construction.inspect.relatedPersonsTitle') }}
           </q-card-section>
           <div class="row">
             <!-- ซ้าย: บุคลากร -->
             <div class="col-6" style="border-right: 1px solid #e0e0e0;">
               <div class="row items-center justify-center q-pa-sm bg-blue-1 text-blue-9 text-weight-bold" style="font-size: 13px;">
-                บุคลากร
+                {{ t('construction.inspect.personnelTitle') }}
                 <q-space />
                 <span v-if="personnelList.length > 0" class="text-caption text-weight-regular">{{ personnelSummary }}</span>
               </div>
               <q-list separator>
                 <q-item v-for="p in personnelList" :key="p.id" class="bg-white q-pa-sm">
                   <q-item-section>
-                    <q-item-label class="text-weight-bold" style="font-size: 12px;">{{ p.name }}</q-item-label>
-                    <q-item-label caption v-if="p.hours" style="font-size: 11px;">เวลา: {{ p.hours }} ชม.</q-item-label>
+                    <q-item-label class="text-weight-bold" style="font-size: 12px;">{{ translatePersonnelType(p.name) }}</q-item-label>
+                    <q-item-label caption v-if="p.hours" style="font-size: 11px;">{{ t('construction.inspect.timeHoursLabel', { hours: p.hours }) }}</q-item-label>
                   </q-item-section>
                   <q-item-section side class="row items-center q-pa-none">
                     <div class="row items-center">
@@ -121,7 +121,7 @@
                   <q-item-section avatar class="min-width-0 q-pr-none">
                     <q-icon name="add_circle_outline" color="blue-8" size="20px" />
                   </q-item-section>
-                  <q-item-section class="text-blue-8 text-weight-medium" style="font-size: 12px;">เพิ่มบุคลากร</q-item-section>
+                  <q-item-section class="text-blue-8 text-weight-medium" style="font-size: 12px;">{{ t('construction.inspect.addPersonnel') }}</q-item-section>
                 </q-item>
               </q-list>
             </div>
@@ -129,15 +129,15 @@
             <!-- ขวา: คนงาน -->
             <div class="col-6">
               <div class="row items-center justify-center q-pa-sm bg-orange-1 text-orange-9 text-weight-bold" style="font-size: 13px;">
-                คนงาน
+                {{ t('construction.inspect.workerTitle') }}
                 <q-space />
                 <span v-if="workerList.length > 0" class="text-caption text-weight-regular">{{ workerSummary }}</span>
               </div>
               <q-list separator>
                 <q-item v-for="w in workerList" :key="w.id" class="bg-white q-pa-sm">
                   <q-item-section>
-                    <q-item-label class="text-weight-bold" style="font-size: 12px;">{{ w.name }}</q-item-label>
-                    <q-item-label caption v-if="w.hours" style="font-size: 11px;">เวลา: {{ w.hours }} ชม.</q-item-label>
+                    <q-item-label class="text-weight-bold" style="font-size: 12px;">{{ translatePersonnelType(w.name) }}</q-item-label>
+                    <q-item-label caption v-if="w.hours" style="font-size: 11px;">{{ t('construction.inspect.timeHoursLabel', { hours: w.hours }) }}</q-item-label>
                   </q-item-section>
                   <q-item-section side class="row items-center q-pa-none">
                     <div class="row items-center">
@@ -151,7 +151,7 @@
                   <q-item-section avatar class="min-width-0 q-pr-none">
                     <q-icon name="add_circle_outline" color="orange-8" size="20px" />
                   </q-item-section>
-                  <q-item-section class="text-orange-8 text-weight-medium" style="font-size: 12px;">เพิ่มคนงาน</q-item-section>
+                  <q-item-section class="text-orange-8 text-weight-medium" style="font-size: 12px;">{{ t('construction.inspect.addWorker') }}</q-item-section>
                 </q-item>
               </q-list>
             </div>
@@ -162,13 +162,13 @@
         <q-card flat bordered class="q-mb-md ui-card">
           <q-card-section class="q-pa-sm bg-grey-2 text-dark text-weight-bold row items-center">
             <q-icon name="construction" size="18px" class="q-mr-xs text-teal-8" />
-            เครื่องจักร/อุปกรณ์
+            {{ t('construction.inspect.machineTitle') }}
           </q-card-section>
           <q-list separator>
             <q-item v-for="m in machineList" :key="m.id" class="bg-white">
               <q-item-section>
                 <q-item-label class="text-weight-bold text-teal-8">{{ m.name }}</q-item-label>
-                <q-item-label caption>ขนาด: {{ m.size || '-' }} | จำนวน: {{ m.quantity }} | ชม.: {{ m.hours ?? '-' }}</q-item-label>
+                <q-item-label caption>{{ t('construction.inspect.machineDetail', { size: m.size || '-', quantity: m.quantity, hours: m.hours ?? '-' }) }}</q-item-label>
               </q-item-section>
               <q-item-section side>
                 <q-btn flat round dense icon="delete" color="negative" size="sm" @click="removeMachine(m.id)" />
@@ -176,7 +176,7 @@
             </q-item>
 
             <q-item clickable v-ripple @click="addMachine" class="bg-white">
-              <q-item-section class="text-teal-8 text-weight-medium">เพิ่มเครื่องจักร/อุปกรณ์</q-item-section>
+              <q-item-section class="text-teal-8 text-weight-medium">{{ t('construction.inspect.addMachine') }}</q-item-section>
               <q-item-section side>
                 <q-icon name="add_circle_outline" color="teal-8" size="24px" />
               </q-item-section>
@@ -188,15 +188,15 @@
         <q-card flat bordered class="q-mb-md ui-card">
           <q-card-section class="q-pa-sm bg-grey-2 text-dark text-weight-bold row items-center">
             <q-icon name="health_and_safety" size="18px" class="q-mr-xs text-red-8" />
-            รายงานอุบัติเหตุ
+            {{ t('construction.inspect.accidentTitle') }}
             <q-space />
             <span v-if="accidentList.length > 0" class="text-caption text-red-8 bg-red-1 q-px-sm" style="border-radius: 4px;">{{ accidentSummary }}</span>
           </q-card-section>
           <q-list separator>
             <q-item v-for="a in accidentList" :key="a.id" class="bg-white">
               <q-item-section>
-                <q-item-label class="text-weight-bold text-red-8">เกิดอุบัติเหตุหรือมีผู้บาดเจ็บ</q-item-label>
-                <q-item-label caption>จำนวน: {{ a.count }} ราย</q-item-label>
+                <q-item-label class="text-weight-bold text-red-8">{{ t('construction.inspect.accidentOccurred') }}</q-item-label>
+                <q-item-label caption>{{ t('construction.inspect.accidentCountLine', { count: a.count }) }}</q-item-label>
               </q-item-section>
               <q-item-section side>
                 <q-btn flat round dense icon="delete" color="negative" size="sm" @click="removeAccident(a.id)" />
@@ -204,7 +204,7 @@
             </q-item>
 
             <q-item clickable v-ripple @click="addAccident" class="bg-white">
-              <q-item-section class="text-red-8 text-weight-medium">เพิ่มรายงานอุบัติเหตุ</q-item-section>
+              <q-item-section class="text-red-8 text-weight-medium">{{ t('construction.inspect.addAccident') }}</q-item-section>
               <q-item-section side>
                 <q-icon name="add_circle_outline" color="red-8" size="24px" />
               </q-item-section>
@@ -216,13 +216,13 @@
         <q-card flat bordered class="q-mb-md ui-card">
           <q-card-section class="q-pa-sm bg-grey-2 text-dark text-weight-bold row items-center">
             <q-icon name="report_problem" size="18px" class="q-mr-xs text-primary" />
-            รายงานเพิ่มเติมหรือปัญหาในการทำงาน
+            {{ t('construction.inspect.notesTitle') }}
           </q-card-section>
           <q-list separator>
             <q-item v-for="note in notesList" :key="note.id" class="bg-white">
               <q-item-section>
                 <q-item-label>{{ note.text }}</q-item-label>
-                <q-item-label caption class="text-orange-8 text-weight-bold">หมายเหตุ: {{ note.status }}</q-item-label>
+                <q-item-label caption class="text-orange-8 text-weight-bold">{{ t('construction.inspect.noteStatusLabel', { status: note.status }) }}</q-item-label>
               </q-item-section>
               <q-item-section side>
                 <q-btn flat round dense icon="delete" color="negative" size="sm" @click="removeNote(note.id)" />
@@ -230,7 +230,7 @@
             </q-item>
 
             <q-item clickable v-ripple @click="addAdditionalNote" class="bg-white">
-              <q-item-section class="text-primary text-weight-medium">เพิ่มรายละเอียดรายงานเพิ่มเติม</q-item-section>
+              <q-item-section class="text-primary text-weight-medium">{{ t('construction.inspect.addNote') }}</q-item-section>
               <q-item-section side>
                 <q-icon name="add_circle_outline" color="primary" size="24px" />
               </q-item-section>
@@ -246,7 +246,7 @@
 
         <!-- กล่องอัปโหลด Panorama -->
         <div class="q-mb-md">
-          <div class="text-caption text-weight-bold q-mb-xs text-grey-8">รูปภาพพาโนรามา (บังคับ)</div>
+          <div class="text-caption text-weight-bold q-mb-xs text-grey-8">{{ t('construction.inspect.panoramaLabel') }}</div>
           <q-card flat bordered class="upload-box flex flex-center relative-position" style="min-height: 120px; overflow: hidden;" clickable v-ripple @click="triggerPanoramaInput">
             <template v-if="panoramaPreview">
               <q-img :src="panoramaPreview" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;" />
@@ -274,7 +274,7 @@
         <!-- PROJECT PHOTOS: Single 6-slot (or more) Grid -->
         <!-- PROJECT PHOTOS: Single 6-slot (or more) Grid -->
         <div class="q-mb-lg">
-          <div class="text-subtitle2 text-weight-bold q-mb-sm text-dark text-uppercase">PROJECT PHOTOS</div>
+          <div class="text-subtitle2 text-weight-bold q-mb-sm text-dark text-uppercase">{{ t('construction.inspect.projectPhotos') }}</div>
           <div class="row q-col-gutter-sm">
             <div class="col-6" v-for="(item, index) in gridItems" :key="index">
               
@@ -301,7 +301,7 @@
                   <div class="column items-center text-center q-pa-sm">
                     <q-icon name="add_a_photo" size="28px" color="primary" />
                     <div class="text-caption text-weight-bold q-mt-xs text-primary" style="font-size: 12px; line-height: 1.2;">
-                      เพิ่มรูป: {{ item.workName }}
+                      {{ t('construction.inspect.addPhotoFor', { name: item.workName }) }}
                     </div>
                   </div>
                 </q-card>
@@ -320,14 +320,15 @@
 
         <input type="file" ref="fileInput" accept="image/*" style="display: none" @change="handleFileChange" />
 
+        </div>
       </q-page>
     </q-page-container>
 
-    <q-footer class="bg-transparent q-px-md q-pb-lg">
+    <q-footer class="bg-transparent q-px-md q-pb-lg row justify-center">
       <q-btn
         color="primary"
-        :label="route.path.includes('/admin') ? 'บันทึกการแก้ไข' : 'ส่งรายงานประจำวัน'"
-        class="full-width text-weight-bold shadow-3"
+        :label="route.path.includes('/admin') ? t('construction.inspect.submitEdit') : t('construction.inspect.submitDaily')"
+        class="full-width text-weight-bold shadow-3 footer-btn"
         style="border-radius: 8px; height: 48px; font-size: 16px;"
         :loading="store.isSubmitting"
         :disable="store.isSubmitting"
@@ -340,46 +341,46 @@
       <q-card style="width: 100vw; border-radius: 20px 20px 0 0; padding-bottom: 20px;">
         <q-card-section class="bg-primary text-white row items-center q-pb-sm">
           <q-icon name="assignment" size="24px" class="q-mr-sm" />
-          <div class="text-h6 text-weight-bold" style="font-size: 18px;">เพิ่มรายละเอียดงาน</div>
+          <div class="text-h6 text-weight-bold" style="font-size: 18px;">{{ t('construction.inspect.addWorkDetail') }}</div>
           <q-space />
           <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
-        
+
         <q-card-section class="q-pt-md column q-gutter-y-md">
-          <q-input 
-            outlined 
-            v-model="newWork.name" 
-            autofocus 
-            label="รายละเอียดงานที่ปฏิบัติ" 
-            placeholder="เช่น เทปูน, ทาสี" 
-            bg-color="white" 
-            hide-bottom-space 
+          <q-input
+            outlined
+            v-model="newWork.name"
+            autofocus
+            :label="t('construction.inspect.workNameLabel')"
+            :placeholder="t('construction.inspect.workNamePlaceholder')"
+            bg-color="white"
+            hide-bottom-space
           />
-          
+
           <div class="row q-col-gutter-sm">
             <div class="col-12 col-sm-6">
-              <q-select outlined v-model="newWork.location" :options="roomOptions" label="พิกัด / ห้อง" bg-color="white" />
+              <q-select outlined v-model="newWork.location" :options="roomOptions" emit-value map-options :label="t('construction.inspect.locationSelectLabel')" bg-color="white" />
             </div>
             <div class="col-12 col-sm-6">
-              <q-select outlined v-model="newWork.unit" :options="unitOptions" label="หน่วยของงาน" bg-color="white" />
+              <q-select outlined v-model="newWork.unit" :options="unitOptions" emit-value map-options :label="t('construction.inspect.unitSelectLabel')" bg-color="white" />
             </div>
           </div>
-          
-          <q-input 
-            outlined 
-            type="number" 
-            v-model.number="newWork.actual" 
-            label="ทำได้จริง (%)" 
+
+          <q-input
+            outlined
+            type="number"
+            v-model.number="newWork.actual"
+            :label="t('construction.inspect.actualPercentLabel')"
             placeholder="0 - 100"
             bg-color="white"
             suffix="%"
             hide-bottom-space
           />
         </q-card-section>
-        
+
         <q-card-actions class="bg-white q-px-md q-pt-none column">
-          <q-btn unelevated label="บันทึกข้อมูล" color="primary" @click="saveWork" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-          <q-btn flat label="ยกเลิก" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
+          <q-btn unelevated :label="t('construction.inspect.save')" color="primary" @click="saveWork" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
+          <q-btn flat :label="t('construction.inspect.cancel')" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -389,21 +390,23 @@
       <q-card style="width: 100vw; border-radius: 20px 20px 0 0; padding-bottom: 20px;">
         <q-card-section :class="isWorker ? 'bg-orange-8 text-white' : 'bg-blue-8 text-white'">
           <div class="row items-center">
-            <div class="text-h6">{{ isWorker ? 'เพิ่มคนงาน' : 'เพิ่มบุคลากร' }}</div>
+            <div class="text-h6">{{ isWorker ? t('construction.inspect.addWorker') : t('construction.inspect.addPersonnel') }}</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </div>
         </q-card-section>
         <q-card-section class="q-pt-md column q-gutter-y-md">
-          <q-select 
-            outlined 
-            v-model="newPerson.name" 
-            :options="isWorker ? workerOptions : personnelOptions" 
-            :label="isWorker ? 'ประเภทคนงาน / ทีม' : 'ตำแหน่งบุคลากร'" 
-            autofocus 
+          <q-select
+            outlined
+            v-model="newPerson.name"
+            :options="isWorker ? workerOptions : personnelOptions"
+            emit-value
+            map-options
+            :label="isWorker ? t('construction.inspect.workerTypeLabel') : t('construction.inspect.personnelPositionLabel')"
+            autofocus
           />
           <div class="row items-center justify-between q-mt-sm">
-            <span class="text-subtitle1 text-grey-8 text-weight-bold">จำนวนคน</span>
+            <span class="text-subtitle1 text-grey-8 text-weight-bold">{{ t('construction.inspect.peopleCountLabel') }}</span>
             <div class="row items-center q-gutter-x-sm">
               <q-btn round flat color="negative" icon="remove_circle" size="lg" @click="newPerson.count > 1 ? newPerson.count-- : 1" />
               <q-input outlined type="number" v-model.number="newPerson.count" input-class="text-center text-weight-bold text-h6" style="width: 80px;" />
@@ -411,7 +414,7 @@
             </div>
           </div>
           <div class="row items-center justify-between q-mt-sm">
-            <span class="text-subtitle1 text-grey-8 text-weight-bold">เวลาทำงาน (ชม./คน)</span>
+            <span class="text-subtitle1 text-grey-8 text-weight-bold">{{ t('construction.inspect.workingHoursPerPersonLabel') }}</span>
             <div class="row items-center q-gutter-x-sm">
               <q-btn round flat color="negative" icon="remove_circle" size="lg" @click="newPerson.hours = Math.max(0, (newPerson.hours || 0) - 1)" />
               <q-input outlined type="number" v-model.number="newPerson.hours" input-class="text-center text-weight-bold text-h6" style="width: 80px;" />
@@ -420,8 +423,8 @@
           </div>
         </q-card-section>
         <q-card-actions class="bg-white q-px-md q-pt-none column">
-          <q-btn unelevated label="บันทึกข้อมูล" :color="isWorker ? 'orange-8' : 'blue-8'" @click="savePerson" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-          <q-btn flat label="ยกเลิก" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
+          <q-btn unelevated :label="t('construction.inspect.save')" :color="isWorker ? 'orange-8' : 'blue-8'" @click="savePerson" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
+          <q-btn flat :label="t('construction.inspect.cancel')" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -431,14 +434,14 @@
       <q-card style="width: 100vw; border-radius: 20px 20px 0 0; padding-bottom: 20px;">
         <q-card-section class="bg-negative text-white">
           <div class="row items-center">
-            <div class="text-h6">รายงานเพิ่มเติม / ปัญหา</div>
+            <div class="text-h6">{{ t('construction.inspect.noteDialogTitle') }}</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </div>
         </q-card-section>
         <q-card-section class="q-pt-md column q-gutter-y-md">
-          <q-input outlined v-model="newNote.text" type="textarea" rows="3" label="รายละเอียดปัญหา หรือข้อเสนอแนะ" autofocus />
-          <div class="text-caption text-grey-8 q-mb-xs">สถานะ/หมวดหมู่</div>
+          <q-input outlined v-model="newNote.text" type="textarea" rows="3" :label="t('construction.inspect.noteTextLabel')" autofocus />
+          <div class="text-caption text-grey-8 q-mb-xs">{{ t('construction.inspect.noteStatusCategoryLabel') }}</div>
           <q-btn-toggle
             v-model="newNote.status"
             spread
@@ -449,16 +452,16 @@
             color="white"
             text-color="grey-8"
             :options="[
-              { label: 'ติดตามผล', value: 'ติดตามผล' },
-              { label: 'รอดำเนินการ', value: 'รอดำเนินการ' },
-              { label: 'รับทราบแล้ว', value: 'รับทราบแล้ว' },
+              { label: t('construction.inspect.noteStatusFollowUp'), value: 'ติดตามผล' },
+              { label: t('construction.inspect.noteStatusPending'), value: 'รอดำเนินการ' },
+              { label: t('construction.inspect.noteStatusAcknowledged'), value: 'รับทราบแล้ว' },
             ]"
             style="border: 1px solid #e0e0e0; border-radius: 8px;"
           />
         </q-card-section>
         <q-card-actions class="bg-white q-px-md q-pt-none column">
-          <q-btn unelevated label="บันทึกข้อมูล" color="negative" @click="saveNote" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-          <q-btn flat label="ยกเลิก" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
+          <q-btn unelevated :label="t('construction.inspect.save')" color="negative" @click="saveNote" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
+          <q-btn flat :label="t('construction.inspect.cancel')" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -468,16 +471,16 @@
       <q-card style="width: 100vw; border-radius: 20px 20px 0 0; padding-bottom: 20px;">
         <q-card-section class="bg-teal-8 text-white">
           <div class="row items-center">
-            <div class="text-h6">เพิ่มเครื่องจักร/อุปกรณ์</div>
+            <div class="text-h6">{{ t('construction.inspect.addMachine') }}</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </div>
         </q-card-section>
         <q-card-section class="q-pt-md column q-gutter-y-md">
-          <q-input outlined v-model="newMachine.name" label="ชื่อ/ประเภทเครื่องจักร" placeholder="เช่น รถแบ็คโฮ, รถเครน" autofocus />
-          <q-input outlined v-model="newMachine.size" label="ขนาดเครื่องจักร" placeholder="เช่น PC200, 50T" />
+          <q-input outlined v-model="newMachine.name" :label="t('construction.inspect.machineNameLabel')" :placeholder="t('construction.inspect.machineNamePlaceholder')" autofocus />
+          <q-input outlined v-model="newMachine.size" :label="t('construction.inspect.machineSizeLabel')" :placeholder="t('construction.inspect.machineSizePlaceholder')" />
           <div class="row items-center justify-between q-mt-sm">
-            <span class="text-subtitle1 text-grey-8 text-weight-bold">จำนวน (คัน)</span>
+            <span class="text-subtitle1 text-grey-8 text-weight-bold">{{ t('construction.inspect.machineQuantityLabel') }}</span>
             <div class="row items-center q-gutter-x-sm">
               <q-btn round flat color="negative" icon="remove_circle" size="lg" @click="newMachine.quantity > 1 ? newMachine.quantity-- : 1" />
               <q-input outlined type="number" v-model.number="newMachine.quantity" input-class="text-center text-weight-bold text-h6" style="width: 80px;" />
@@ -485,7 +488,7 @@
             </div>
           </div>
           <div class="row items-center justify-between q-mt-sm">
-            <span class="text-subtitle1 text-grey-8 text-weight-bold">เวลาทำงาน (ชม.)</span>
+            <span class="text-subtitle1 text-grey-8 text-weight-bold">{{ t('construction.inspect.machineHoursLabel') }}</span>
             <div class="row items-center q-gutter-x-sm">
               <q-btn round flat color="negative" icon="remove_circle" size="lg" @click="newMachine.hours = Math.max(0, (newMachine.hours || 0) - 1)" />
               <q-input outlined type="number" v-model.number="newMachine.hours" input-class="text-center text-weight-bold text-h6" style="width: 80px;" />
@@ -494,8 +497,8 @@
           </div>
         </q-card-section>
         <q-card-actions class="bg-white q-px-md q-pt-none column">
-          <q-btn unelevated label="บันทึกข้อมูล" color="teal-8" @click="saveMachine" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-          <q-btn flat label="ยกเลิก" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
+          <q-btn unelevated :label="t('construction.inspect.save')" color="teal-8" @click="saveMachine" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
+          <q-btn flat :label="t('construction.inspect.cancel')" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -505,14 +508,14 @@
       <q-card style="width: 100vw; border-radius: 20px 20px 0 0; padding-bottom: 20px;">
         <q-card-section class="bg-red-8 text-white">
           <div class="row items-center">
-            <div class="text-h6">รายงานผู้บาดเจ็บ/อุบัติเหตุ</div>
+            <div class="text-h6">{{ t('construction.inspect.accidentDialogTitle') }}</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </div>
         </q-card-section>
         <q-card-section class="q-pt-md column q-gutter-y-md">
           <div class="row items-center justify-between">
-            <span class="text-subtitle1 text-grey-8 text-weight-bold">จำนวนคนบาดเจ็บ/อุบัติเหตุ</span>
+            <span class="text-subtitle1 text-grey-8 text-weight-bold">{{ t('construction.inspect.accidentCountLabel') }}</span>
             <div class="row items-center q-gutter-x-sm">
               <q-btn round flat color="negative" icon="remove_circle" size="lg" @click="newAccident.count > 1 ? newAccident.count-- : 1" />
               <q-input outlined type="number" v-model.number="newAccident.count" input-class="text-center text-weight-bold text-h6" style="width: 80px;" />
@@ -521,8 +524,8 @@
           </div>
         </q-card-section>
         <q-card-actions class="bg-white q-px-md q-pt-none column">
-          <q-btn unelevated label="บันทึกข้อมูล" color="red-8" @click="saveAccident" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-          <q-btn flat label="ยกเลิก" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
+          <q-btn unelevated :label="t('construction.inspect.save')" color="red-8" @click="saveAccident" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
+          <q-btn flat :label="t('construction.inspect.cancel')" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -534,12 +537,20 @@
 import { ref, computed, onUnmounted, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
+import { usePersonnelLabel } from 'src/composables/usePersonnelLabel';
+import imageCompression from 'browser-image-compression';
 import { useConstructionDailyReportStore } from 'src/stores/useConstructionDailyReport';
 import type { ConstructionDailyReportPayload, MachinePayload, PersonnelPayload } from 'src/stores/useConstructionDailyReport';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+
+const consInspectSpinner = createIconSpinner('construction');
 
 const $q = useQuasar();
 const router = useRouter();
 const route = useRoute();
+const { t } = useI18n();
+const { translatePersonnelType } = usePersonnelLabel();
 const store = useConstructionDailyReportStore();
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
@@ -561,6 +572,20 @@ const roundId = Number(route.params.roundId);
 
 onMounted(async () => {
   if (!roundId) return;
+  $q.loading.show({
+    spinner: consInspectSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
+  try {
+    await loadExistingReport();
+  } finally {
+    $q.loading.hide();
+  }
+});
+
+async function loadExistingReport() {
   const existingReport = await store.fetchReportByRound(roundId);
   if (existingReport) {
     if (existingReport.workingPeriod) {
@@ -648,7 +673,7 @@ onMounted(async () => {
       }
     }
   }
-});
+}
 
 // สำหรับ Panorama View
 const panoramaInput = ref<HTMLInputElement | null>(null);
@@ -695,8 +720,45 @@ const setCurrentTime = (field: 'startTime' | 'endTime') => {
 };
 
 // 2. Work Details
-const roomOptions = ['ห้องรับแขก', 'ห้องนอน', 'ห้องน้ำ', 'ห้องครัว', 'ระเบียง', 'รอบตัวบ้าน', 'หลังคา', 'ส่วนกลาง'];
-const unitOptions = ['ตร.ม.', 'เมตร', 'ชิ้น', 'จุด', 'ชุด'];
+// value เป็นข้อความไทยตามที่บันทึกลงฐานข้อมูลอยู่เดิม (รายงาน PDF อ่านค่านี้) — แปลเฉพาะ label ที่แสดง
+const ROOM_OPTION_KEYS: Record<string, string> = {
+  ห้องรับแขก: 'livingRoom',
+  ห้องนอน: 'bedroom',
+  ห้องน้ำ: 'bathroom',
+  ห้องครัว: 'kitchen',
+  ระเบียง: 'balcony',
+  รอบตัวบ้าน: 'exterior',
+  หลังคา: 'roof',
+  ส่วนกลาง: 'commonArea',
+};
+const UNIT_OPTION_KEYS: Record<string, string> = {
+  'ตร.ม.': 'sqm',
+  เมตร: 'meter',
+  ชิ้น: 'piece',
+  จุด: 'point',
+  ชุด: 'set',
+};
+const roomOptions = computed(() =>
+  Object.entries(ROOM_OPTION_KEYS).map(([value, key]) => ({
+    value,
+    label: t(`construction.inspect.roomOptions.${key}`),
+  })),
+);
+const unitOptions = computed(() =>
+  Object.entries(UNIT_OPTION_KEYS).map(([value, key]) => ({
+    value,
+    label: t(`construction.inspect.unitOptions.${key}`),
+  })),
+);
+// ค่าที่ไม่อยู่ในรายการ (เช่นข้อมูลเก่า) แสดงค่าดิบตามเดิม
+function roomLabel(value: string): string {
+  const key = ROOM_OPTION_KEYS[value];
+  return key ? t(`construction.inspect.roomOptions.${key}`) : value;
+}
+function unitLabel(value: string): string {
+  const key = UNIT_OPTION_KEYS[value];
+  return key ? t(`construction.inspect.unitOptions.${key}`) : value;
+}
 const workDetails = ref<{id: number, name: string, location: string, unit: string, actual: number}[]>([]);
 const workDialog = ref(false);
 const newWork = ref({ name: '', location: '', unit: '', actual: 0 });
@@ -796,20 +858,20 @@ onUnmounted(() => {
 });
 
 // Summaries
-const workSummary = computed(() => `รวม ${workDetails.value.length} รายการ`);
+const workSummary = computed(() => t('construction.inspect.workSummary', { count: workDetails.value.length }));
 const personnelSummary = computed(() => {
   const count = personnelList.value.reduce((sum, p) => sum + p.count, 0);
   const hours = personnelList.value.reduce((sum, p) => sum + (p.hours || 0) * p.count, 0);
-  return `รวม ${count} คน (${hours} ชม.)`;
+  return t('construction.inspect.personnelSummary', { count, hours });
 });
 const workerSummary = computed(() => {
   const count = workerList.value.reduce((sum, w) => sum + w.count, 0);
   const hours = workerList.value.reduce((sum, w) => sum + (w.hours || 0) * w.count, 0);
-  return `รวม ${count} คน (${hours} ชม.)`;
+  return t('construction.inspect.workerSummary', { count, hours });
 });
 const accidentSummary = computed(() => {
   const count = accidentList.value.reduce((sum, a) => sum + a.count, 0);
-  return `รวม ${count} ราย`;
+  return t('construction.inspect.accidentSummary', { count });
 });
 
 const addWorkDetail = () => {
@@ -817,12 +879,12 @@ const addWorkDetail = () => {
   workDialog.value = true;
 };
 const saveWork = () => {
-  if (!newWork.value.name) return $q.notify({ message: 'กรุณากรอกรายละเอียดงาน', color: 'warning' });
+  if (!newWork.value.name) return $q.notify({ message: t('construction.inspect.workNameRequired'), color: 'warning' });
   if (newWork.value.actual === null || newWork.value.actual === undefined || newWork.value.actual.toString() === '') {
-    return $q.notify({ message: 'กรุณากรอกเปอร์เซ็นต์ (ทำได้จริง)', color: 'warning' });
+    return $q.notify({ message: t('construction.inspect.workPercentRequired'), color: 'warning' });
   }
   if (newWork.value.actual < 0 || newWork.value.actual > 100) {
-    return $q.notify({ message: 'เปอร์เซ็นต์ต้องอยู่ระหว่าง 0 - 100', color: 'warning' });
+    return $q.notify({ message: t('construction.inspect.workPercentRange'), color: 'warning' });
   }
   workDetails.value.push({ id: Date.now(), ...newWork.value });
   workDialog.value = false;
@@ -838,17 +900,25 @@ const personDialog = ref(false);
 const isWorker = ref(false);
 const newPerson = ref({ name: '', count: 1, hours: null as number | null });
 
-const personnelOptions = [
-  'ผู้จัดการโครงการ', 'วิศวกรโครงการ', 'ประสานงานโครงการ', 'วิศวกรสนาม', 'สถาปนิก', 
-  'โฟร์แมนโครงสร้าง', 'โฟร์แมนสถาปัตย์', 'จนท.ความปลอดภัย', 'ช่างสำรวจ', 'เสมียน', 
+const PERSONNEL_TYPES = [
+  'ผู้จัดการโครงการ', 'วิศวกรโครงการ', 'ประสานงานโครงการ', 'วิศวกรสนาม', 'สถาปนิก',
+  'โฟร์แมนโครงสร้าง', 'โฟร์แมนสถาปัตย์', 'จนท.ความปลอดภัย', 'ช่างสำรวจ', 'เสมียน',
   'พนักงานคุมสโตร์', 'พนักงานควบคุมเครื่องจักร', 'พนักงานขับรถ'
 ];
 
-const workerOptions = [
-  'หัวหน้าชุด', 'ช่างไม้', 'ช่างปูนก่อ, เท Topping', 'ช่างปูนฉาบ', 'ช่างกระเบื้อง', 
-  'ช่างฝ้าเพดาน', 'ช่างติดตั้ง, สุขภัณฑ์', 'ช่างทาสี', 'กรรมกร (ชาย/หญิง)', 
+const WORKER_TYPES = [
+  'หัวหน้าชุด', 'ช่างไม้', 'ช่างปูนก่อ, เท Topping', 'ช่างปูนฉาบ', 'ช่างกระเบื้อง',
+  'ช่างฝ้าเพดาน', 'ช่างติดตั้ง, สุขภัณฑ์', 'ช่างทาสี', 'กรรมกร (ชาย/หญิง)',
   'ช่างเฟอร์นิเจอร์', 'ช่างไฟ', 'ช่างเหล็ก, ช่างเชื่อม', 'ช่างแอร์'
 ];
+
+const personnelOptions = computed(() =>
+  PERSONNEL_TYPES.map((type) => ({ label: translatePersonnelType(type), value: type })),
+);
+
+const workerOptions = computed(() =>
+  WORKER_TYPES.map((type) => ({ label: translatePersonnelType(type), value: type })),
+);
 
 const addPersonnel = () => {
   isWorker.value = false;
@@ -861,7 +931,7 @@ const addWorker = () => {
   personDialog.value = true;
 };
 const savePerson = () => {
-  if (!newPerson.value.name) return $q.notify({ message: 'กรุณากรอกชื่อหรือตำแหน่ง', color: 'warning' });
+  if (!newPerson.value.name) return $q.notify({ message: t('construction.inspect.personNameRequired'), color: 'warning' });
   if (newPerson.value.count < 1) newPerson.value.count = 1;
   if (newPerson.value.hours !== null && newPerson.value.hours < 0) newPerson.value.hours = 0;
   
@@ -889,7 +959,7 @@ const addMachine = () => {
   machineDialog.value = true;
 };
 const saveMachine = () => {
-  if (!newMachine.value.name) return $q.notify({ message: 'กรุณากรอกชื่อ/ประเภทเครื่องจักร', color: 'warning' });
+  if (!newMachine.value.name) return $q.notify({ message: t('construction.inspect.machineNameRequired'), color: 'warning' });
   if (newMachine.value.quantity < 1) newMachine.value.quantity = 1;
   machineList.value.push({ id: Date.now(), ...newMachine.value });
   machineDialog.value = false;
@@ -926,7 +996,7 @@ const addAdditionalNote = () => {
   noteDialog.value = true;
 };
 const saveNote = () => {
-  if (!newNote.value.text) return $q.notify({ message: 'กรุณากรอกรายละเอียดปัญหา', color: 'warning' });
+  if (!newNote.value.text) return $q.notify({ message: t('construction.inspect.noteTextRequired'), color: 'warning' });
   notesList.value.push({ id: Date.now(), ...newNote.value });
   noteDialog.value = false;
 };
@@ -934,12 +1004,21 @@ const removeNote = (id: number) => {
   notesList.value = notesList.value.filter(n => n.id !== id);
 };
 
+// บีบอัดรูปก่อนส่ง — endpoint นี้ส่งได้ถึง 20 รูป/panorama ใน request เดียว ถ้าไม่บีบอัดก่อนเสี่ยง timeout บนเน็ตหน้างาน
+const compressImage = async (file: File): Promise<File> => {
+  try {
+    return await imageCompression(file, { maxSizeMB: 1, maxWidthOrHeight: 1024, useWebWorker: true });
+  } catch {
+    return file;
+  }
+};
+
 // 7. Submit — แปลง form data เป็น API payload แล้วส่ง POST
 const submitReport = async () => {
   // Validation
   if (!form.value.startTime || !form.value.endTime) {
     return $q.notify({
-      message: 'กรุณาระบุเวลาเริ่มและเวลาจบให้ครบถ้วน',
+      message: t('construction.inspect.timeRequired'),
       color: 'warning',
       icon: 'warning',
     });
@@ -947,21 +1026,21 @@ const submitReport = async () => {
   const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
   if (!timeRegex.test(form.value.startTime) || !timeRegex.test(form.value.endTime)) {
     return $q.notify({
-      message: 'รูปแบบเวลาไม่ถูกต้อง (00:00 - 23:59)',
+      message: t('construction.inspect.timeFormatInvalid'),
       color: 'warning',
       icon: 'warning',
     });
   }
   if (!form.value.weather) {
     return $q.notify({
-      message: 'กรุณาระบุสภาพอากาศ',
+      message: t('construction.inspect.weatherRequired'),
       color: 'warning',
       icon: 'warning',
     });
   }
   if (workDetails.value.length === 0) {
     return $q.notify({
-      message: 'กรุณาเพิ่มรายละเอียดงานอย่างน้อย 1 งาน',
+      message: t('construction.inspect.workDetailRequired'),
       color: 'warning',
       icon: 'warning',
     });
@@ -1039,26 +1118,26 @@ const submitReport = async () => {
     formData.append('payload', JSON.stringify(payload));
 
     if (panoramaFile.value) {
-      formData.append('panoramaFile', panoramaFile.value);
+      formData.append('panoramaFile', await compressImage(panoramaFile.value));
     }
 
     if (photos.value && photos.value.length > 0) {
-      photos.value.forEach((photo) => {
-        formData.append('photos', photo.file);
+      for (const photo of photos.value) {
+        formData.append('photos', await compressImage(photo.file));
         formData.append('photoWorkDetailNames', photo.workDetailName || '');
-      });
+      }
     }
 
     await store.submitReport(formData);
     $q.notify({
-      message: route.path.includes('/admin') ? 'บันทึกการแก้ไขเรียบร้อยแล้ว' : 'ส่งรายงานประจำวันเรียบร้อยแล้ว',
+      message: route.path.includes('/admin') ? t('construction.inspect.submitEditSuccess') : t('construction.inspect.submitDailySuccess'),
       color: 'positive',
       icon: 'check_circle',
     });
     router.back();
   } catch {
     $q.notify({
-      message: store.submitError ?? 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
+      message: store.submitError ?? t('construction.inspect.submitError'),
       color: 'negative',
       icon: 'error',
     });
@@ -1069,6 +1148,45 @@ const submitReport = async () => {
 <style scoped>
 .modern-font {
   font-family: 'Inter', 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.detail-content {
+  width: 100%;
+  max-width: 480px;
+}
+@media (min-width: 768px) {
+  .detail-content {
+    max-width: 720px;
+  }
+}
+@media (min-width: 1024px) {
+  .detail-content {
+    max-width: 1100px;
+  }
+}
+@media (min-width: 1440px) {
+  .detail-content {
+    max-width: 1280px;
+  }
+}
+
+.footer-btn {
+  max-width: 480px;
+}
+@media (min-width: 768px) {
+  .footer-btn {
+    max-width: 720px;
+  }
+}
+@media (min-width: 1024px) {
+  .footer-btn {
+    max-width: 1100px;
+  }
+}
+@media (min-width: 1440px) {
+  .footer-btn {
+    max-width: 1280px;
+  }
 }
 
 .ui-card {

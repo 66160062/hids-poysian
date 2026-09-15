@@ -7,13 +7,30 @@
           <q-icon name="image_not_supported" size="48px" color="grey-5" />
         </div>
         <div class="location-badge">{{ defect.locationLabel }}</div>
+
+        <!-- Optimistic sync status: spinner while saving, ⚠️ badge to expand retry on failure -->
+        <q-spinner
+          v-if="syncStatus === 'pending'"
+          color="white"
+          size="20px"
+          class="sync-badge"
+        />
+        <q-badge
+          v-else-if="syncStatus === 'error'"
+          color="orange"
+          text-color="white"
+          class="sync-badge cursor-pointer"
+          @click.stop="expanded = !expanded"
+        >
+          ⚠️
+        </q-badge>
       </div>
 
       <div class="col column q-gutter-y-xs">
         <div>
           <div class="row justify-between items-start no-wrap">
             <div>
-              <div class="text-caption text-grey-7" style="font-size: 10px">ประเภทงาน</div>
+              <div class="text-caption text-grey-7" style="font-size: 10px">{{ t('components.defectDetailCard.jobType') }}</div>
               <div class="text-subtitle2 text-weight-bold text-black">{{ defect.category }}</div>
             </div>
 
@@ -29,7 +46,7 @@
         </div>
 
         <div>
-          <div class="text-caption text-grey-7 q-mb-xs" style="font-size: 10px">รายการ</div>
+          <div class="text-caption text-grey-7 q-mb-xs" style="font-size: 10px">{{ t('components.defectDetailCard.items') }}</div>
           <div class="row q-gutter-xs wrap">
             <q-chip
               v-for="(tag, index) in defect.tags"
@@ -44,11 +61,11 @@
           </div>
         </div>
 
-        <div class="text-caption text-grey-7 q-mb-xs" style="font-size: 10px">หมายเหตุ</div>
+        <div class="text-caption text-grey-7 q-mb-xs" style="font-size: 10px">{{ t('components.defectDetailCard.note') }}</div>
         <div class="text-caption text-grey-8 line-clamp-2">{{ defect.description }}</div>
 
         <div class="row items-center q-gutter-x-sm">
-          <div class="text-caption text-grey-7" style="font-size: 10px">ความรุนแรง:</div>
+          <div class="text-caption text-grey-7" style="font-size: 10px">{{ t('components.defectDetailCard.severity') }}</div>
           <q-badge
             :color="severityColor(defect.severity)"
             rounded
@@ -56,12 +73,48 @@
           />
           <div class="text-caption text-weight-medium">{{ defect.severity }}</div>
         </div>
+
+        <!-- Badge สถานะตำแหน่ง (Anti-forget) -->
+        <div class="row items-center q-mt-xs">
+          <div v-if="defect.planId || defect.plan" class="status-pill status-pill--pinned">
+            <q-icon name="place" size="12px" />
+            <span>{{ t('components.defectDetailCard.planPinned') }}</span>
+          </div>
+          <div v-else-if="defect.locationZone" class="status-pill status-pill--zone">
+            <q-icon name="label" size="12px" />
+            <span>{{ defect.locationZone }}</span>
+          </div>
+          <div v-else class="status-pill status-pill--missing">
+            <q-icon name="location_off" size="12px" />
+            <span>{{ t('components.defectDetailCard.planMissing') }}</span>
+          </div>
+        </div>
       </div>
+    </div>
+
+    <!-- Inline retry row, expands when the ⚠️ badge is tapped -->
+    <div v-if="syncStatus === 'error' && expanded" class="sync-error-row q-mt-sm q-pa-sm" @click.stop>
+      <div class="text-caption text-negative q-mb-xs">{{ syncError || t('components.defectDetailCard.syncError') }}</div>
+      <q-btn
+        dense
+        no-caps
+        outline
+        color="negative"
+        :label="t('components.defectDetailCard.retry')"
+        size="sm"
+        @click.stop="$emit('retry')"
+      />
     </div>
   </q-card>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+const expanded = ref(false);
+
 const getImageUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -70,9 +123,9 @@ const getImageUrl = (path: string | null | undefined): string | null => {
 // เพิ่มฟังก์ชันสำหรับจัดการข้อมูลสถานะ
 function statusInfo(status: string) {
   if (status === 'verified') {
-    return { label: 'ผ่าน', color: 'green-1', textColor: 'green-9' };
+    return { label: t('components.defectDetailCard.passed'), color: 'green-1', textColor: 'green-9' };
   }
-  return { label: 'ไม่ผ่าน', color: 'red-1', textColor: 'red-9' };
+  return { label: t('components.defectDetailCard.failed'), color: 'red-1', textColor: 'red-9' };
 }
 
 // severityColor (เหมือนเดิม)
@@ -90,9 +143,17 @@ defineProps({
     type: Object,
     required: true,
   },
+  syncStatus: {
+    type: String as () => 'pending' | 'error' | undefined,
+    default: undefined,
+  },
+  syncError: {
+    type: String,
+    default: '',
+  },
 });
 
-defineEmits(['click']);
+defineEmits(['click', 'retry']);
 </script>
 
 <style scoped>
@@ -124,5 +185,43 @@ defineEmits(['click']);
   font-size: 10px;
   padding: 16px 6px 4px; /* ← padding บนเพื่อให้ gradient สวย */
   border-radius: 0 0 8px 8px;
+}
+
+.sync-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.sync-error-row {
+  background: #fff4f4;
+  border: 1px solid #ffcdd2;
+  border-radius: 8px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.status-pill--pinned {
+  background: #e3f6ea;
+  color: #1b7a43;
+}
+
+.status-pill--zone {
+  background: #e8f1fd;
+  color: #1257a8;
+}
+
+.status-pill--missing {
+  background: #fdeee8;
+  color: #b9490a;
 }
 </style>

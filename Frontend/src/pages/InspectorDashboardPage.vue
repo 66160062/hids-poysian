@@ -1,16 +1,7 @@
 <template>
-  <q-page class="bg-grey-3 row justify-center">
-    <div
-      class="bg-white relative-position"
-      :style="{
-        width: '100%',
-        maxWidth: isMobile ? '430px' : '800px',
-        minHeight: '100vh',
-        paddingBottom: '90px',
-        boxShadow: '0 0 20px rgba(0, 0, 0, 0.1)',
-      }"
-    >
-      <div class="q-pa-lg" style="max-width: 600px; margin: 20px auto 0">
+  <q-page class="inspector-dashboard-page bg-grey-1">
+    <div class="q-pa-md">
+      <div class="bg-white q-pa-md calendar-card">
         <InspectorCalendar
           :rounds="rounds"
           :selectedDate="selectedDate"
@@ -20,60 +11,59 @@
           @monthChanged="onMonthChanged"
         />
       </div>
+    </div>
 
-      <q-separator color="primary" class="q-mx-lg q-mb-lg" style="height: 2px" />
-
-      <div class="q-px-lg q-mb-md">
-        <div class="row justify-between items-end">
-          <div class="text-weight-bold" style="font-size: 16px">รายการงานตรวจ</div>
-          <div class="text-weight-bold" style="font-size: 15px">วันที่ {{ selectedDateLabel }}</div>
+    <div class="q-px-md q-mb-md">
+      <div class="row justify-between items-center">
+        <div class="text-weight-bold" style="font-size: 16px">{{ t('inspector.dashboard.title') }}</div>
+        <div class="date-chip">
+          <q-icon name="event" size="14px" />
+          <span>{{ t('inspector.dashboard.dateLabel', { date: selectedDateLabel }) }}</span>
         </div>
-        <div class="text-grey-6 q-mt-xs" style="font-size: 12px">
-          สรุป: ตรวจบ้าน {{ filteredDayRounds.length }} งาน
+      </div>
+      <div class="text-grey-6 q-mt-xs" style="font-size: 12px">
+        {{ t('inspector.dashboard.summary', { count: filteredDayRounds.length }) }}
+      </div>
+    </div>
+
+    <!-- Loading State: แสดงผ่าน $q.loading แบบเต็มจอ (ดู onMounted) เว้นพื้นที่ไว้กันเลย์เอาต์กระโดด -->
+    <div v-if="loading" style="min-height: 60vh"></div>
+
+    <div v-else class="q-px-md q-mb-xl">
+      <div v-if="filteredDayRounds.length === 0" class="text-center text-grey q-pa-xl">
+        <div class="text-h6 text-weight-medium">{{ t('inspector.dashboard.noJobsToday') }}</div>
+        <div v-if="selectedDayRounds.length > 0" class="text-body2 q-mt-sm text-warning" style="font-family: 'Inter', 'Noto Sans Thai', sans-serif;">
+          {{ t('inspector.dashboard.constructionHintPrefix') }} <span class="text-weight-bold">{{ t('inspector.dashboard.constructionHintBold') }}</span>
+          <br />
+          {{ t('inspector.dashboard.constructionHintSuffix') }}
         </div>
       </div>
 
-      <div v-if="loading" class="flex flex-center q-pa-xl">
-        <q-spinner color="blue" size="40px" />
-      </div>
-
-      <div v-else class="q-px-lg q-mb-xl">
-        <div v-if="filteredDayRounds.length === 0" class="text-center text-grey q-pa-xl">
-          <div class="text-h6 text-weight-medium">ไม่มีงานตรวจบ้านในวันนี้</div>
-          <div v-if="selectedDayRounds.length > 0" class="text-body2 q-mt-sm text-warning" style="font-family: 'Inter', 'Noto Sans Thai', sans-serif;">
-            วันนี้มี <span class="text-weight-bold">งานตรวจก่อสร้าง</span>
-            <br />
-            กดที่เมนูด้านล่างเพื่อสลับโหมด
+      <template v-else>
+        <div v-if="morningRounds.length > 0">
+          <div class="text-primary text-weight-bold q-mb-sm" style="font-size: 12px">
+            {{ t('inspector.dashboard.morningSlot') }}
           </div>
+          <PropertyCard
+            v-for="round in morningRounds"
+            :key="'m' + round.roundId"
+            :item="round"
+            :isMobile="isMobile"
+          />
         </div>
 
-        <template v-else>
-          <div v-if="morningRounds.length > 0">
-            <div class="text-primary text-weight-bold q-mb-sm" style="font-size: 12px">
-              รอบเช้า 9:00-12:00
-            </div>
-            <PropertyCard
-              v-for="round in morningRounds"
-              :key="'m' + round.roundId"
-              :item="round"
-              :isMobile="isMobile"
-            />
+        <div v-if="afternoonRounds.length > 0" class="q-mt-lg">
+          <div class="text-primary text-weight-bold q-mb-sm" style="font-size: 12px">
+            {{ t('inspector.dashboard.afternoonSlot') }}
           </div>
-
-          <div v-if="afternoonRounds.length > 0" class="q-mt-lg">
-            <div class="text-primary text-weight-bold q-mb-sm" style="font-size: 12px">
-              รอบบ่าย 13:00-16:00
-            </div>
-            <PropertyCard
-              v-for="round in afternoonRounds"
-              :key="'a' + round.roundId"
-              :item="round"
-              :isMobile="isMobile"
-            />
-          </div>
-        </template>
-      </div>
-
+          <PropertyCard
+            v-for="round in afternoonRounds"
+            :key="'a' + round.roundId"
+            :item="round"
+            :isMobile="isMobile"
+          />
+        </div>
+      </template>
     </div>
   </q-page>
 </template>
@@ -81,14 +71,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onActivated } from 'vue';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
 import { useAuthStore } from 'src/stores/useAuth';
 import type { InspectionRound } from 'src/models';
 import PropertyCard from '../components/PropertyCard.vue';
 import InspectorCalendar from '../components/InspectorCalendar.vue';
+import { createIconSpinner } from 'src/composables/useIconSpinner';
+
+const inspectDashboardSpinner = createIconSpinner('search');
 
 // ── Plugins & State ───────────────────────────────────────────
 const $q = useQuasar();
+const { t, locale } = useI18n();
 const authStore = useAuthStore();
 const isMobile = computed(() => $q.screen.lt.md);
 
@@ -120,7 +115,7 @@ const afternoonRounds = computed(() => {
 });
 
 const selectedDateLabel = computed(() => {
-  return selectedDate.value.toLocaleDateString('th-TH', {
+  return selectedDate.value.toLocaleDateString(locale.value, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -130,22 +125,47 @@ const selectedDateLabel = computed(() => {
 // ── Calendar Event Handlers ───────────────────────────────────
 function onMonthlyViewChange(value: boolean): void {
   isMonthlyView.value = value;
-  void fetchRounds();
+  void fetchRounds(false);
 }
 
 function onMonthChanged(date: Date): void {
   currentMonth.value = date;
-  void fetchRounds();
+  void fetchRounds(false);
 }
 
 // ── Data Fetching ─────────────────────────────────────────────
-async function fetchRounds(): Promise<void> {
+// รอบเดือนที่เคยโหลดแล้วจะถูกแคชไว้ + พรีเฟตช์เดือนก่อน/หลังล่วงหน้าเงียบ ๆ
+// เพื่อให้กดเปลี่ยนเดือนแล้วเห็นผลทันทีโดยไม่ต้องรอ fetch ทุกครั้ง
+const monthCache = new Map<string, InspectionRound[]>();
+
+function monthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+async function fetchRounds(showLoading = true): Promise<void> {
   if (!inspectorId.value) {
     rounds.value = [];
     return;
   }
 
-  loading.value = true;
+  if (isMonthlyView.value) {
+    const cached = monthCache.get(monthKey(currentMonth.value));
+    if (cached) {
+      rounds.value = cached;
+      void prefetchAdjacentMonths(currentMonth.value);
+      return;
+    }
+  }
+
+  if (showLoading) {
+    loading.value = true;
+    $q.loading.show({
+      spinner: inspectDashboardSpinner,
+      spinnerColor: 'primary',
+      spinnerSize: 70,
+      backgroundColor: 'white',
+    });
+  }
   try {
     const dateParam = isMonthlyView.value
       ? toLocalDateStr(currentMonth.value)
@@ -155,15 +175,48 @@ async function fetchRounds(): Promise<void> {
       : `/inspection-rounds/week/${inspectorId.value}?date=${dateParam}`;
 
     const res = await api.get(endpoint);
-    rounds.value = Array.isArray(res.data) ? res.data : [];
+    const data = Array.isArray(res.data) ? res.data : [];
+    rounds.value = data;
+
+    if (isMonthlyView.value) {
+      monthCache.set(monthKey(currentMonth.value), data);
+      void prefetchAdjacentMonths(currentMonth.value);
+    }
   } catch (e: unknown) {
     if (e instanceof Error) {
       console.error('fetchRounds error:', e.message);
     }
     rounds.value = [];
   } finally {
-    loading.value = false;
+    if (showLoading) {
+      loading.value = false;
+      $q.loading.hide();
+    }
   }
+}
+
+async function prefetchAdjacentMonths(base: Date): Promise<void> {
+  if (!inspectorId.value) return;
+
+  const prev = new Date(base);
+  prev.setMonth(prev.getMonth() - 1);
+  const next = new Date(base);
+  next.setMonth(next.getMonth() + 1);
+
+  await Promise.all(
+    [prev, next].map(async (monthDate) => {
+      const key = monthKey(monthDate);
+      if (monthCache.has(key)) return;
+      try {
+        const res = await api.get(
+          `/inspection-rounds/month/${inspectorId.value}?date=${toLocalDateStr(monthDate)}`,
+        );
+        monthCache.set(key, Array.isArray(res.data) ? res.data : []);
+      } catch {
+        // เงียบไว้ — ถ้าพลาดก็แค่ไปโหลดใหม่ตอนผู้ใช้เลื่อนไปเดือนนั้นจริง ๆ
+      }
+    }),
+  );
 }
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -207,3 +260,49 @@ onActivated(() => {
   void fetchRounds();
 });
 </script>
+
+<style scoped>
+.inspector-dashboard-page {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+  min-height: 100vh;
+  padding-bottom: 90px;
+}
+
+.calendar-card {
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+}
+
+.date-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #F5F5F5;
+  color: #424242;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+@media (min-width: 768px) {
+  .inspector-dashboard-page {
+    max-width: 720px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .inspector-dashboard-page {
+    max-width: 1100px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .inspector-dashboard-page {
+    max-width: 1280px;
+  }
+}
+</style>

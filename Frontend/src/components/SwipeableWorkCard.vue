@@ -6,7 +6,7 @@
         class="full-height full-width delete-btn"
         color="white"
         icon="delete"
-        label="ลบ"
+        :label="t('components.swipeableWorkCard.delete')"
         @click.stop="$emit('delete', work)"
       />
     </div>
@@ -25,14 +25,14 @@
       @pointercancel="onPointerUp"
     >
       <q-card-section>
-        <div class="row items-start justify-between">
-          <div class="text-weight-bold text-subtitle1" style="font-size: 18px">
+        <div class="row items-start justify-between no-wrap">
+          <div class="col min-w-0 ellipsis text-weight-bold text-subtitle1" style="font-size: 18px">
             {{ work.title }}
           </div>
           <q-chip
             :color="getStatusColor(work.status)"
             :text-color="getStatusTextColor(work.status)"
-            class="status-chip"
+            class="status-chip q-ml-sm"
           >
             {{ work.status }}
           </q-chip>
@@ -53,7 +53,7 @@
           <div class="row items-center text-grey-7">
             <q-icon name="person" size="24px" class="q-mr-sm" />
             <span class="text-weight-medium" style="font-size: 14px">{{
-              work.customerName || 'ไม่ระบุชื่อลูกค้า'
+              work.customerName || t('components.swipeableWorkCard.unnamedCustomer')
             }}</span>
           </div>
           <q-btn flat round dense icon="edit" color="grey-7" @click.stop="$emit('edit', work)" />
@@ -65,6 +65,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 export interface Work {
   id: number;
@@ -279,7 +282,7 @@ function getStatusTextColor(status: string) {
   font-weight: 600;
   border-radius: 100px !important;
   padding: 4px 12px;
-  border: 1.5px solid #c5cae9;
+  border: 1px solid #c5cae9;
 }
 
 .area-chip {
@@ -287,7 +290,7 @@ function getStatusTextColor(status: string) {
   font-weight: 600;
   border-radius: 100px !important;
   padding: 4px 12px;
-  border: 1.5px solid #b2dfdb;
+  border: 1px solid #b2dfdb;
 }
 
 :deep(.type-chip .q-chip__icon),

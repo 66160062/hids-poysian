@@ -1,6 +1,11 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { Defect } from './entities/defect.entity';
 import { CreateDefectDto } from './dto/create-defect.dto';
 import { UpdateDefectDto } from './dto/update-defect.dto';
@@ -8,17 +13,38 @@ import { ContractorUpdateDefectDto } from './dto/contractor-update-defect.dto';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub-category.entity';
 import { User } from 'src/users/entities/user.entity';
+import { Room } from 'src/rooms/entities/room.entity';
+import { SubRoom } from 'src/sub-rooms/entities/sub-room.entity';
 import { DefectStatus } from './entities/defect.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
 import { InspectionJobStatus } from 'src/inspection-jobs/enums/inspection-job-status.enum';
+import {
+  ActivityLogsService,
+  LogEntryInput,
+} from 'src/activity-logs/activity-logs.service';
+import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity';
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { NotificationType } from 'src/notifications/entities/notification.entity';
 
 type LinkTokenPayload = {
   project_id: number;
   role: string;
 };
 
+// รอบตรวจที่ยื่นอนุมัติ (หรืออนุมัติแล้ว) ห้ามแก้ไข/ลบ defect — ต้องตรงกับ LOCKED_STATUSES ฝั่ง frontend (useRoundLock.ts)
+const LOCKED_ROUND_STATUSES = ['SUBMITTED', 'APPROVED'];
+
+// แอดมินคือคนตรวจทานรอบที่ inspector ยื่นมาก่อนกดอนุมัติ จึงยังแก้ตอน SUBMITTED ได้
+// แต่พออนุมัติแล้วล็อกเหมือนกันทุก role เพราะรายงานส่งถึงลูกค้าไปแล้ว
+const ADMIN_LOCKED_ROUND_STATUSES = ['APPROVED'];
+
+// สัดส่วนซ่อมเสร็จที่ยิงแจ้งเตือนแอดมิน (ยิงครั้งเดียวต่อรอบ กันสแปม — ดู repairAlertSentAt บน InspectionRound)
+const REPAIR_ALERT_THRESHOLD = 0.8;
+
 @Injectable()
 export class DefectsService {
+  private readonly logger = new Logger(DefectsService.name);
+
   constructor(
     @InjectRepository(Defect)
     private readonly defectsRepo: Repository<Defect>,
@@ -31,38 +57,133 @@ export class DefectsService {
 
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
+
+    @InjectRepository(Room)
+    private readonly roomsRepo: Repository<Room>,
+
+    @InjectRepository(SubRoom)
+    private readonly subRoomsRepo: Repository<SubRoom>,
+
+    private readonly activityLogsService: ActivityLogsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
+
+  // ประกอบข้อความ "ห้องนั่งเล่น • ห้องนอนชั้น2" จาก room/subRoom ของ defect ที่ผ่านการ save แล้ว
+  private buildLocationSub(defect: Defect): string | undefined {
+    const parts = [defect.room?.roomName, defect.subRoom?.roomName].filter(
+      (part): part is string => !!part,
+    );
+    return parts.length ? parts.join(' • ') : undefined;
+  }
+
+  private logDefectActivity(defect: Defect, entry: LogEntryInput) {
+    const roundId = defect.round?.roundId;
+    if (!roundId) return;
+    void this.activityLogsService.logForRound(roundId, entry);
+  }
+
+  // เช็คซ้ำแบบเดียวกับฝั่ง frontend (isDuplicateDefect ใน AddDefectPage.vue) แต่ query จาก DB สด
+  // กันเคส 2 inspector คนละ session บันทึกจุดเดียวกันพร้อมกัน ซึ่ง local store ฝั่ง frontend มองไม่เห็นกัน
+  private async hasDuplicateDefect(dto: CreateDefectDto): Promise<boolean> {
+    const candidates = await this.defectsRepo.find({
+      where: {
+        round: { roundId: dto.roundId },
+        room: { roomId: dto.roomId },
+        subRoom: dto.subRoomId ? { subRoomId: dto.subRoomId } : IsNull(),
+        floor: { floorId: dto.floorId },
+        severity: dto.severity,
+        description: dto.description ?? '-',
+      },
+      relations: ['subCategories'],
+    });
+
+    const wantedIds = [...dto.subCategoryIds].sort((a, b) => a - b);
+    return candidates.some((candidate) => {
+      const ids = candidate.subCategories
+        .map((s) => s.subCategoryId)
+        .sort((a, b) => a - b);
+      return (
+        ids.length === wantedIds.length &&
+        ids.every((id, i) => id === wantedIds[i])
+      );
+    });
+  }
+
+  private assertRoundEditable(roundStatus: string, role?: string): void {
+    const isAdmin = role === 'admin';
+    const lockedStatuses = isAdmin
+      ? ADMIN_LOCKED_ROUND_STATUSES
+      : LOCKED_ROUND_STATUSES;
+
+    if (lockedStatuses.includes(roundStatus)) {
+      throw new ForbiddenException(
+        isAdmin
+          ? 'Round is approved and cannot be edited'
+          : 'Round is submitted or approved and cannot be edited',
+      );
+    }
+  }
 
   async create(
     createDefectDto: CreateDefectDto & {
       imageUrl?: string;
       imageFileSize?: number;
     },
+    role?: string,
   ) {
-    const round = await this.roundsRepo.findOneByOrFail({
-      roundId: createDefectDto.roundId,
-    });
-    const subCategories = await this.subCategoriesRepo.findBy({
-      subCategoryId: In(createDefectDto.subCategoryIds),
-    });
-    const inspector = await this.usersRepo.findOneByOrFail({
-      id: createDefectDto.inspectorId,
-    });
+    const [round, subCategories, inspector, room, subRoom] = await Promise.all([
+      this.roundsRepo.findOneByOrFail({
+        roundId: createDefectDto.roundId,
+      }),
+      this.subCategoriesRepo.findBy({
+        subCategoryId: In(createDefectDto.subCategoryIds),
+      }),
+      this.usersRepo.findOneByOrFail({
+        id: createDefectDto.inspectorId,
+      }),
+      this.roomsRepo.findOneByOrFail({
+        roomId: createDefectDto.roomId,
+      }),
+      createDefectDto.subRoomId
+        ? this.subRoomsRepo.findOneBy({
+            subRoomId: createDefectDto.subRoomId,
+          })
+        : Promise.resolve(null),
+    ]);
+
+    this.assertRoundEditable(round.status, role);
+
+    if (await this.hasDuplicateDefect(createDefectDto)) {
+      throw new ConflictException(
+        'มีรายการ Defect นี้อยู่แล้วในห้อง/ชั้นเดียวกัน',
+      );
+    }
 
     const defect = this.defectsRepo.create({
       ...createDefectDto,
       round,
-      room: { roomId: createDefectDto.roomId },
+      room,
       floor: { floorId: createDefectDto.floorId },
-      subRoom: createDefectDto.subRoomId
-        ? { subRoomId: createDefectDto.subRoomId }
-        : null,
+      subRoom,
       subCategories,
       inspector,
       imageFileSize: createDefectDto.imageFileSize,
+      plan: createDefectDto.planId ? { planId: createDefectDto.planId } : null,
+      planX: createDefectDto.planX ?? null,
+      planY: createDefectDto.planY ?? null,
+      locationZone: createDefectDto.locationZone ?? null,
     });
 
-    return this.defectsRepo.save(defect);
+    const saved = await this.defectsRepo.save(defect);
+
+    this.logDefectActivity(saved, {
+      type: ActivityLogType.DEFECT_CREATED,
+      color: 'purple',
+      title: 'พบข้อบกพร่องใหม่',
+      sub: this.buildLocationSub(saved),
+    });
+
+    return saved;
   }
 
   findAll() {
@@ -74,6 +195,7 @@ export class DefectsService {
         'floor',
         'subCategories',
         'inspector',
+        'plan',
       ],
     });
   }
@@ -87,7 +209,9 @@ export class DefectsService {
         'subRoom',
         'floor',
         'subCategories',
+        'subCategories.category',
         'inspector',
+        'plan',
       ],
     });
   }
@@ -98,8 +222,16 @@ export class DefectsService {
       imageUrl?: string;
       imageFileSize?: number;
     },
+    role?: string,
   ) {
-    const defect = await this.defectsRepo.findOneByOrFail({ defectId: id });
+    const defect = await this.defectsRepo.findOneOrFail({
+      where: { defectId: id },
+      relations: ['round'],
+    });
+
+    if (defect.round) {
+      this.assertRoundEditable(defect.round.status, role);
+    }
 
     // Assign primitive properties
     defect.description = updateDefectDto.description ?? defect.description;
@@ -120,6 +252,21 @@ export class DefectsService {
       defect.subRoom = updateDefectDto.subRoomId
         ? ({ subRoomId: updateDefectDto.subRoomId } as any)
         : null;
+    }
+
+    if (updateDefectDto.planId !== undefined) {
+      defect.plan = updateDefectDto.planId
+        ? ({ planId: updateDefectDto.planId } as any)
+        : null;
+    }
+    if (updateDefectDto.planX !== undefined) {
+      defect.planX = updateDefectDto.planX;
+    }
+    if (updateDefectDto.planY !== undefined) {
+      defect.planY = updateDefectDto.planY;
+    }
+    if (updateDefectDto.locationZone !== undefined) {
+      defect.locationZone = updateDefectDto.locationZone;
     }
 
     if (updateDefectDto.subCategoryIds) {
@@ -145,7 +292,13 @@ export class DefectsService {
 
     const defect = await this.defectsRepo.findOneOrFail({
       where: { defectId: contractorUpdateDto.defectId },
-      relations: ['round', 'round.job', 'round.job.contractor'],
+      relations: [
+        'round',
+        'round.job',
+        'round.job.contractor',
+        'room',
+        'subRoom',
+      ],
     });
 
     const job = defect.round?.job;
@@ -169,6 +322,8 @@ export class DefectsService {
       throw new ForbiddenException('Contractor cannot update this defect');
     }
 
+    const wasAlreadyRepaired = defect.status === DefectStatus.REPAIRED;
+
     defect.status = DefectStatus.REPAIRED;
     defect.contractorNote = contractorUpdateDto.note ?? defect.contractorNote;
     defect.updatedBy = {
@@ -182,11 +337,76 @@ export class DefectsService {
         defect.contractorImageFileSize;
     }
 
-    return this.defectsRepo.save(defect);
+    const saved = await this.defectsRepo.save(defect);
+
+    void this.activityLogsService.log(
+      job.jobId,
+      {
+        type: ActivityLogType.DEFECT_REPAIRED,
+        color: 'green',
+        title: 'ผู้รับเหมาแก้ไขข้อบกพร่องแล้ว',
+        sub: this.buildLocationSub(saved),
+      },
+      saved.round?.roundId,
+    );
+
+    if (!wasAlreadyRepaired && saved.round?.roundId) {
+      void this.maybeNotifyRepairThreshold(
+        saved.round.roundId,
+        job.jobId,
+        job.projectName,
+      );
+    }
+
+    return saved;
   }
 
-  async remove(id: number) {
-    const defect = await this.defectsRepo.findOneByOrFail({ defectId: id });
+  private async maybeNotifyRepairThreshold(
+    roundId: number,
+    jobId: number,
+    projectName?: string,
+  ) {
+    try {
+      const round = await this.roundsRepo.findOneBy({ roundId });
+      if (!round || round.repairAlertSentAt) return;
+
+      const [total, repaired] = await Promise.all([
+        this.defectsRepo.count({ where: { round: { roundId } } }),
+        this.defectsRepo.count({
+          where: { round: { roundId }, status: DefectStatus.REPAIRED },
+        }),
+      ]);
+      if (total === 0 || repaired / total < REPAIR_ALERT_THRESHOLD) return;
+
+      round.repairAlertSentAt = new Date();
+      await this.roundsRepo.save(round);
+
+      const percent = Math.round((repaired / total) * 100);
+      void this.notificationsService.create({
+        type: NotificationType.ALERT,
+        recipientRole: 'admin',
+        message: `${projectName ?? 'โครงการ'}: ผู้รับเหมาซ่อมแล้ว ${repaired}/${total} รายการ (${percent}%)`,
+        jobId,
+        roundId,
+      });
+    } catch (error) {
+      this.logger.error(
+        `เช็คสัดส่วนซ่อมสำหรับ round ${roundId} ไม่สำเร็จ`,
+        error as Error,
+      );
+    }
+  }
+
+  async remove(id: number, role?: string) {
+    const defect = await this.defectsRepo.findOneOrFail({
+      where: { defectId: id },
+      relations: ['round'],
+    });
+
+    if (defect.round) {
+      this.assertRoundEditable(defect.round.status, role);
+    }
+
     return this.defectsRepo.remove(defect);
   }
 
@@ -201,6 +421,7 @@ export class DefectsService {
         'room',
         'subRoom',
         'floor',
+        'plan',
       ],
     });
   }

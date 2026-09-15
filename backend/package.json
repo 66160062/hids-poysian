@@ -17,7 +17,9 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "eval:ai-summary": "ts-node -r tsconfig-paths/register scripts/ai-summary-eval.ts",
+    "migrate:house-plans": "ts-node -r tsconfig-paths/register scripts/migrate-house-plans.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.16",
@@ -37,10 +39,11 @@
     "nodemailer": "^10.0.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
-    "pdfmake": "^0.3.11",
     "pg": "^8.21.0",
+    "puppeteer": "^25.4.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "sharp": "^0.35.3",
     "typeorm": "^0.3.20",
     "typeorm-naming-strategies": "^4.1.0",
     "uuid": "^14.0.0"
@@ -57,9 +60,9 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^22.19.15",
     "@types/nodemailer": "^8.0.1",
-    "@types/pdfmake": "^0.3.3",
     "@types/supertest": "^6.0.2",
     "@types/uuid": "^10.0.0",
+    "dotenv": "^17.4.1",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
@@ -84,7 +87,11 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "moduleNameMapper": {
-      "^src/(.*)$": "<rootDir>/$1"
+      "^src/(.*)$": "<rootDir>/$1",
+      "^uuid$": "<rootDir>/../__mocks__/uuid.js",
+      "^sharp$": "<rootDir>/../__mocks__/sharp.js",
+      "^puppeteer$": "<rootDir>/../__mocks__/puppeteer.js",
+      "^@supabase/supabase-js$": "<rootDir>/../__mocks__/@supabase/supabase-js.js"
     },
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"

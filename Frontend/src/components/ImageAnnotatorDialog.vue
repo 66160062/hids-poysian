@@ -4,7 +4,7 @@
       <q-bar class="bg-black text-white" style="height: 50px">
         <q-btn dense flat icon="close" v-close-popup @click="handleCancel" />
         <q-space />
-        <div class="text-weight-bold">แก้ไขรูปภาพ</div>
+        <div class="text-weight-bold">{{ t('components.imageAnnotationDialog.title') }}</div>
         <q-space />
         <q-btn dense flat icon="check" color="positive" @click="handleSave" />
       </q-bar>
@@ -30,7 +30,12 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useQuasar } from 'quasar';
 import { useFabricCanvas } from 'src/composables/useFabricCanvas';
+
+const { t } = useI18n();
+const $q = useQuasar();
 
 const props = defineProps<{
   modelValue: boolean;
@@ -78,9 +83,15 @@ const handleCancel = () => {
 
 const handleSave = async () => {
   const blob = await exportAsBlob();
-  if (blob) {
-    emit('save', blob);
+  if (!blob) {
+    $q.notify({
+      color: 'negative',
+      message: t('components.imageAnnotationDialog.saveError'),
+      icon: 'error',
+    });
+    return;
   }
+  emit('save', blob);
   isOpen.value = false;
 };
 </script>

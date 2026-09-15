@@ -17,6 +17,8 @@ import { CreateDailyReportRoundDto } from './dto/create-daily-report-round.dto';
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
 import { Team } from 'src/teams/entities/team.entity';
 import { Defect, DefectStatus } from 'src/defects/entities/defect.entity';
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { NotificationType } from 'src/notifications/entities/notification.entity';
 
 @Injectable()
 export class DailyReportsService {
@@ -30,7 +32,29 @@ export class DailyReportsService {
     private readonly houseTypesRepo: Repository<HouseType>,
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
+    private readonly notificationsService: NotificationsService,
   ) {}
+
+  // แจ้งเตือนผู้ตรวจที่ admin เพิ่งเลือกเข้ารอบนี้โดยตรง (เลือกทีมหรือเลือกรายบุคคลตอนสร้าง/เปิดรอบ)
+  // ไม่แจ้งกรณีที่รอบใหม่แค่สืบทอดผู้ตรวจจากรอบก่อนหน้าอัตโนมัติ (ไม่ใช่การเลือกใหม่ของ admin)
+  private notifyAssignedInspectors(
+    inspectorIds: number[],
+    jobId: number,
+    round: InspectionRound,
+    projectName: string,
+  ) {
+    if (inspectorIds.length === 0) return;
+
+    for (const inspectorId of inspectorIds) {
+      void this.notificationsService.create({
+        type: NotificationType.INFO,
+        recipientUserId: inspectorId,
+        message: `คุณได้รับมอบหมายรอบตรวจใหม่: ${projectName}`,
+        jobId,
+        roundId: round.roundId,
+      });
+    }
+  }
 
   async create(createDailyReportDto: CreateDailyReportDto) {
     if (!createDailyReportDto.inspectorId && !createDailyReportDto.teamId) {
@@ -89,7 +113,6 @@ export class DailyReportsService {
         inspectionType: createDailyReportDto.inspectionType,
         projectName: createDailyReportDto.projectName,
         locationCoordinate: createDailyReportDto.locationCoordinate,
-        housePlanUrl: createDailyReportDto.housePlanUrl,
         usableArea: createDailyReportDto.usableArea,
         projectImageUrl:
           createDailyReportDto.projectImageUrl ??
@@ -136,10 +159,45 @@ export class DailyReportsService {
       throw new NotFoundException(`ไม่พบ daily report ID ${jobId}`);
     }
 
-    return this.dataSource.getRepository(InspectionRound).find({
+    const rounds = await this.dataSource.getRepository(InspectionRound).find({
       where: { job: { jobId } },
       relations: ['teamMembers', 'teamMembers.inspector', 'teamMembers.team'],
       order: { roundNumber: 'ASC' },
+    });
+    if (rounds.length === 0) return [];
+
+    // จำนวน defect ต่อรอบ — หน้า admin ใช้ตัดสินว่าปุ่มอนุมัติรอบนี้จะ "ปิดงาน" ด้วยหรือไม่
+    const counts = await this.dataSource
+      .getRepository(Defect)
+      .createQueryBuilder('defect')
+      .select('defect.round_id', 'roundId')
+      .addSelect('COUNT(*)', 'defectCount')
+      .addSelect(
+        'COUNT(*) FILTER (WHERE defect.status <> :verified)',
+        'openDefectCount',
+      )
+      .where('defect.round_id IN (:...roundIds)', {
+        roundIds: rounds.map((round) => round.roundId),
+      })
+      .setParameter('verified', DefectStatus.VERIFIED)
+      .groupBy('defect.round_id')
+      .getRawMany<{
+        roundId: number;
+        defectCount: string;
+        openDefectCount: string;
+      }>();
+
+    const countsByRound = new Map(
+      counts.map((row) => [Number(row.roundId), row]),
+    );
+
+    return rounds.map((round) => {
+      const row = countsByRound.get(round.roundId);
+      return {
+        ...round,
+        defectCount: Number(row?.defectCount ?? 0),
+        openDefectCount: Number(row?.openDefectCount ?? 0),
+      };
     });
   }
 
@@ -150,8 +208,15 @@ export class DailyReportsService {
     if (!job) {
       throw new NotFoundException(`ไม่พบ daily report ID ${jobId}`);
     }
+    if (job.status === 'Completed') {
+      throw new BadRequestException(
+        'ไม่สามารถสร้างรอบใหม่ได้ เนื่องจากงานนี้ปิดงานแล้ว',
+      );
+    }
 
-    return this.dataSource.transaction(async (manager) => {
+    let notifyInspectorIds: number[] = [];
+
+    const savedRound = await this.dataSource.transaction(async (manager) => {
       const latestRound = await manager.getRepository(InspectionRound).findOne({
         where: { job: { jobId } },
         order: { roundNumber: 'DESC' },
@@ -177,7 +242,13 @@ export class DailyReportsService {
         .getRepository(InspectionRound)
         .save(round);
 
-      await this.resolveTeamMember(manager, job, savedRound, createRoundDto);
+      const resolved = await this.resolveTeamMember(
+        manager,
+        job,
+        savedRound,
+        createRoundDto,
+      );
+      notifyInspectorIds = resolved.notifyInspectorIds;
 
       // --- CLONE SUMMARY ITEMS & DEFECTS FROM LATEST ROUND ---
       if (latestRound) {
@@ -201,6 +272,7 @@ export class DailyReportsService {
               option: item.option,
               refItem: item.refItem ?? null,
               detailValue: item.detailValue,
+              photoUrl: item.photoUrl,
             }),
           );
           await manager.getRepository(InspectionSummaryItem).save(clonedItems);
@@ -247,6 +319,15 @@ export class DailyReportsService {
 
       return savedRound;
     });
+
+    this.notifyAssignedInspectors(
+      notifyInspectorIds,
+      job.jobId,
+      savedRound,
+      job.projectName,
+    );
+
+    return savedRound;
   }
 
   async cloneLatestRound(jobId: number) {
@@ -270,6 +351,7 @@ export class DailyReportsService {
           .save(firstRound);
 
         await this.resolveTeamMember(manager, job, savedFirstRound, {});
+        // {} = ไม่มี inspectorId/teamId ระบุมา จึงเป็นแค่ fallback ไม่ใช่การเลือกใหม่ของ admin — ไม่ต้องแจ้งเตือน
 
         job.status = 'Active';
         await manager.getRepository(InspectionJob).save(job);
@@ -327,6 +409,7 @@ export class DailyReportsService {
               option: item.option,
               refItem: { itemId: item.itemId } as InspectionSummaryItem,
               detailValue: item.detailValue,
+              photoUrl: item.photoUrl,
             }),
           ),
         );
@@ -357,10 +440,14 @@ export class DailyReportsService {
       CreateDailyReportRoundDto,
       'teamMemberId' | 'inspectorId' | 'teamId'
     >,
-  ) {
+  ): Promise<{
+    teamMember: InspectionTeamMember;
+    notifyInspectorIds: number[];
+  }> {
     if (createRoundDto.inspectorId || createRoundDto.teamId) {
       let inspector: User | null = null;
       let teamEntity: Team | null = null;
+      let notifyInspectorIds: number[] = [];
 
       if (createRoundDto.inspectorId) {
         inspector = await manager.getRepository(User).findOneBy({
@@ -371,6 +458,7 @@ export class DailyReportsService {
             `ไม่พบผู้ตรวจ ID ${createRoundDto.inspectorId}`,
           );
         }
+        notifyInspectorIds = [inspector.id];
       }
 
       if (createRoundDto.teamId) {
@@ -380,15 +468,23 @@ export class DailyReportsService {
         if (!teamEntity) {
           throw new NotFoundException(`ไม่พบทีม ID ${createRoundDto.teamId}`);
         }
+        // ทีมนี้ไม่ผูก inspector คนเดียวใน InspectionTeamMember (team: entity, inspector: null)
+        // ต้องแยกไปหาสมาชิกทุกคนในทีมเพื่อแจ้งเตือนแต่ละคน
+        const teamInspectors = await manager.getRepository(User).find({
+          where: { teamId: teamEntity.team_Id, role: 'inspector' },
+        });
+        notifyInspectorIds = teamInspectors.map((u) => u.id);
       }
 
-      return manager.getRepository(InspectionTeamMember).save(
+      const teamMember = await manager.getRepository(InspectionTeamMember).save(
         manager.getRepository(InspectionTeamMember).create({
           round,
           inspector,
           team: teamEntity,
         }),
       );
+
+      return { teamMember, notifyInspectorIds };
     }
 
     const latestRoundWithTeam = await manager
@@ -411,12 +507,15 @@ export class DailyReportsService {
 
     const primaryMember = latestRoundWithTeam.teamMembers[0];
 
-    return manager.getRepository(InspectionTeamMember).save(
+    // สืบทอดผู้ตรวจจากรอบก่อนหน้าอัตโนมัติ ไม่ใช่การเลือกใหม่ของ admin เลยไม่ต้องแจ้งเตือน
+    const teamMember = await manager.getRepository(InspectionTeamMember).save(
       manager.getRepository(InspectionTeamMember).create({
         round,
         inspector: primaryMember.inspector,
         team: primaryMember.team,
       }),
     );
+
+    return { teamMember, notifyInspectorIds: [] };
   }
 }

@@ -1,4 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Request } from 'express';
+import { JwtService } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 
@@ -14,7 +16,10 @@ describe('AuthController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [{ provide: AuthService, useValue: authService }],
+      providers: [
+        { provide: AuthService, useValue: authService },
+        { provide: JwtService, useValue: { verify: jest.fn() } },
+      ],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
@@ -34,7 +39,7 @@ describe('AuthController', () => {
     expect(
       controller.verifyLink({
         user: { project_id: 7, role: 'contractor' },
-      }),
+      } as Request & { user: { project_id: number; role: string } }),
     ).toEqual({
       valid: true,
       payload: { project_id: 7, role: 'contractor' },

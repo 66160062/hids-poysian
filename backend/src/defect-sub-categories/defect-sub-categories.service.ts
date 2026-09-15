@@ -47,6 +47,9 @@ export class DefectSubCategoriesService {
       await this.DefectSubCategoriesRepository.findOneByOrFail({
         subCategoryId: id,
       });
+    const { name, nameEn } = updateDefectSubCategoryDto;
+    if (name !== undefined) subCategory.name = name;
+    if (nameEn !== undefined) subCategory.nameEn = nameEn;
     subCategory.category =
       await this.DefectCategoriesRepository.findOneByOrFail({
         categoryId: updateDefectSubCategoryDto.categoryId,

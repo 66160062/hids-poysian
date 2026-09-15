@@ -1,32 +1,74 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  FileTypeValidator,
+  Get,
+  MaxFileSizeValidator,
+  Param,
+  ParseFilePipe,
+  ParseIntPipe,
+  Patch,
+  Post,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { memoryStorage } from 'multer';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
 import { BranchesService } from './branches.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
+
+const logoFilePipe = new ParseFilePipe({
+  fileIsRequired: false,
+  validators: [
+    new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+    new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/ }),
+  ],
+});
 
 @Controller('branches')
 @UseGuards(AuthGuard)
 export class BranchesController {
   constructor(private readonly branches: BranchesService) {}
 
-  @Get() findAll() { return this.branches.findAll(); }
-  @Get(':id') findOne(@Param('id') id: string) { return this.branches.findOne(+id); }
+  @Get()
+  findAll() {
+    return this.branches.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.branches.findOne(id);
+  }
 
   @Post()
-  @UseInterceptors(FileInterceptor('logo', { storage: diskStorage({ destination: './uploads/branches', filename: (_req, file, cb) => cb(null, `${uuidv4()}${extname(file.originalname)}`) }) }))
-  create(@Body() dto: CreateBranchDto, @UploadedFile() logo?: Express.Multer.File) {
-    return this.branches.create(dto, logo ? `/uploads/branches/${logo.filename}` : undefined);
+  @UseGuards(AdminGuard)
+  @UseInterceptors(FileInterceptor('logo', { storage: memoryStorage() }))
+  create(
+    @Body() dto: CreateBranchDto,
+    @UploadedFile(logoFilePipe) logo?: Express.Multer.File,
+  ) {
+    return this.branches.create(dto, logo);
   }
 
   @Patch(':id')
-  @UseInterceptors(FileInterceptor('logo', { storage: diskStorage({ destination: './uploads/branches', filename: (_req, file, cb) => cb(null, `${uuidv4()}${extname(file.originalname)}`) }) }))
-  update(@Param('id') id: string, @Body() dto: UpdateBranchDto, @UploadedFile() logo?: Express.Multer.File) {
-    return this.branches.update(+id, dto, logo ? `/uploads/branches/${logo.filename}` : undefined);
+  @UseGuards(AdminGuard)
+  @UseInterceptors(FileInterceptor('logo', { storage: memoryStorage() }))
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateBranchDto,
+    @UploadedFile(logoFilePipe) logo?: Express.Multer.File,
+  ) {
+    return this.branches.update(id, dto, logo);
   }
 
-  @Delete(':id') remove(@Param('id') id: string) { return this.branches.remove(+id); }
+  @Delete(':id')
+  @UseGuards(AdminGuard)
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.branches.remove(id);
+  }
 }

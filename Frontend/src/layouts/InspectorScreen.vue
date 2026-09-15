@@ -1,93 +1,111 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header v-if="!hideHeader" class="bg-white text-black" flat bordered>
-      <q-toolbar class="justify-center q-py-md relative-position">
-        <div
-          v-if="route.path.includes('/inspector/job/')"
-          class="absolute-left q-ml-md flex flex-center"
-          style="z-index: 10"
-        >
+    <q-header v-if="!hideHeader" class="bg-white text-dark">
+      <q-toolbar class="relative-position">
+        <template v-if="isJobPage">
           <q-icon
             name="arrow_back_ios_new"
-            size="24px"
             color="primary"
-            class="cursor-pointer text-weight-bold"
+            size="24px"
+            class="cursor-pointer q-mr-xs job-back-icon"
             @click="goBack"
           />
-        </div>
-
-        <!-- <q-toolbar-title class="text-center text-weight-bold" style="font-size: 24px">
-          {{ headerTitle }}
-        </q-toolbar-title> -->
-
-        <div class="absolute-right q-mr-md flex flex-center" style="z-index: 10">
+          <q-toolbar-title class="text-weight-bold job-detail-title">{{ headerTitle }}</q-toolbar-title>
           <q-btn
+            v-if="isJobDetailPage"
             flat
-            round
-            icon="notifications_none"
-            color="dark"
-            aria-label="Notifications"
-            @click="$router.push('/inspector/notifications')"
-          >
-            <q-badge v-if="unreadCount > 0" color="red" floating rounded>{{ unreadCount }}</q-badge>
-          </q-btn>
-          <q-avatar
-            size="34px"
-            class="bg-primary text-white q-ml-sm cursor-pointer"
-            @click="$router.push('/inspector/profile')"
-          >
-            <img v-if="currentUser?.imageUrl && !currentUser.imageUrl.includes('unknown.jpg')" :src="getImageUrl(currentUser.imageUrl) ?? ''" />
-            <span v-else>{{ currentUser?.fullName?.charAt(0).toUpperCase() || 'I' }}</span>
-          </q-avatar>
-        </div>
+            no-caps
+            :label="t('nav.inspector.editJob')"
+            color="primary"
+            class="job-edit-btn"
+            @click="jobEditDialog.isOpen.value = true"
+          />
+        </template>
+        <template v-else>
+          <div class="row items-center">
+            <q-icon
+              v-if="route.meta.icon"
+              :name="route.meta.icon as string"
+              color="primary"
+              size="24px"
+              class="q-mr-xs"
+            />
+            <q-toolbar-title class="text-weight-bold">{{ headerTitle }}</q-toolbar-title>
+          </div>
+          <q-space />
+          <div class="row items-center">
+            <LanguageToggle />
+            <q-btn
+              flat
+              round
+              icon="notifications_none"
+              color="dark"
+              :aria-label="t('nav.admin.titleNotifications')"
+              @click="$router.push('/inspector/notifications')"
+            >
+              <q-badge v-if="unreadCount > 0" color="red" floating rounded>{{ unreadCount }}</q-badge>
+            </q-btn>
+            <q-avatar
+              size="34px"
+              class="bg-primary text-white q-ml-sm cursor-pointer"
+              @click="$router.push('/inspector/profile')"
+            >
+              <img v-if="currentUser?.imageUrl && !currentUser.imageUrl.includes('unknown.jpg')" :src="getImageUrl(currentUser.imageUrl) ?? ''" />
+              <span v-else>{{ currentUser?.fullName?.charAt(0).toUpperCase() || 'I' }}</span>
+            </q-avatar>
+          </div>
+        </template>
       </q-toolbar>
-      <q-separator color="blue" size="2px" class="q-mx-md" />
     </q-header>
 
     <q-page-container class="bg-white">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <transition name="page-fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </q-page-container>
 
-    <q-footer v-if="!hideBottomBar" class="bg-white text-grey-6" bordered>
-      <div class="row no-wrap justify-around q-py-sm">
+    <q-footer v-if="!hideBottomBar" class="bg-white text-grey-6">
+      <div ref="tabsRow" class="row no-wrap justify-around q-py-sm relative-position">
         <div
+          ref="inspectionTabRef"
           class="column items-center cursor-pointer"
           :class="activeTab === 'inspection' ? 'text-blue' : 'text-grey-5'"
           @click="changeTab('inspection', '/inspector/Inspectsdashboard')"
         >
-          <q-icon name="engineering" size="32px" />
-          <div class="text-caption text-weight-bold">การตรวจบ้าน</div>
-          <div
-            v-if="activeTab === 'inspection'"
-            class="bg-blue q-mt-xs"
-            style="height: 4px; width: 100%; border-radius: 2px 2px 0 0"
-          ></div>
+          <q-icon name="search" size="32px" />
+          <div class="text-caption text-weight-bold">{{ t('nav.inspector.footerInspection') }}</div>
         </div>
 
         <div
+          ref="progressTabRef"
           class="column items-center cursor-pointer"
           :class="activeTab === 'progress' ? 'text-blue' : 'text-grey-5'"
           @click="changeTab('progress', '/inspector/Consdashboard')"
         >
-          <q-icon name="assignment_turned_in" size="32px" />
-          <div class="text-caption text-weight-bold">การตรวจก่อสร้าง</div>
-          <div
-            v-if="activeTab === 'progress'"
-            class="bg-blue q-mt-xs"
-            style="height: 4px; width: 100%; border-radius: 2px 2px 0 0"
-          ></div>
+          <q-icon name="construction" size="32px" />
+          <div class="text-caption text-weight-bold">{{ t('nav.inspector.footerConstruction') }}</div>
         </div>
+
+        <div class="bg-blue footer-tab-indicator" :style="indicatorStyle"></div>
       </div>
     </q-footer>
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from 'src/stores/useAuth';
 import { api } from 'src/boot/axios';
+import LanguageToggle from 'src/components/LanguageToggle.vue';
+import { useInspectorJobEditDialog } from 'src/composables/useInspectorJobEditDialog';
 
+const jobEditDialog = useInspectorJobEditDialog();
+
+const { t, locale } = useI18n();
 const router = useRouter();
 const route = useRoute();
 
@@ -121,8 +139,51 @@ const activeTab = computed(() => {
 });
 
 const hideBottomBar = computed(() => route.path.includes('/job/'));
+const isJobPage = computed(() => route.path.includes('/inspector/job/'));
+// เฉพาะหน้ารายละเอียดงาน (ไม่ใช่ inspection/room-defect/report ฯลฯ) เท่านั้นที่แก้ไขได้
+const isJobDetailPage = computed(() => /^\/inspector\/job\/[^/]+$/.test(route.path));
+
+const inspectionTabRef = ref<HTMLElement | null>(null);
+const progressTabRef = ref<HTMLElement | null>(null);
+const tabsRow = ref<HTMLElement | null>(null);
+let tabsRowObserver: ResizeObserver | null = null;
+const indicatorStyle = ref({ left: '0px', width: '0px' });
+
+function updateIndicator() {
+  const el = activeTab.value === 'inspection' ? inspectionTabRef.value : progressTabRef.value;
+  if (!el) return;
+  indicatorStyle.value = { left: `${el.offsetLeft}px`, width: `${el.offsetWidth}px` };
+}
+
+onMounted(() => {
+  void nextTick(() => {
+    updateIndicator();
+    if (tabsRow.value) {
+      tabsRowObserver = new ResizeObserver(() => updateIndicator());
+      tabsRowObserver.observe(tabsRow.value);
+    }
+  });
+  window.addEventListener('resize', updateIndicator);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateIndicator);
+  tabsRowObserver?.disconnect();
+  tabsRowObserver = null;
+});
+
+watch(activeTab, () => {
+  void nextTick(updateIndicator);
+});
+
+// เปลี่ยนภาษาแล้วความกว้างของ label เปลี่ยน ต้องคำนวณตำแหน่งขีดใต้ใหม่
+watch(locale, () => {
+  void nextTick(updateIndicator);
+});
 
 function changeTab(tabName: string, path: string) {
+  const el = tabName === 'inspection' ? inspectionTabRef.value : progressTabRef.value;
+  if (el) indicatorStyle.value = { left: `${el.offsetLeft}px`, width: `${el.offsetWidth}px` };
   void router.push(path);
 }
 
@@ -130,40 +191,71 @@ const goBack = () => {
   router.back();
 };
 
-// const headerTitle = computed(() => {
-//   if (route.path === '/inspector/Inspectsdashboard') {
-//     return 'การตรวจบ้าน';
-//   }
+const headerTitle = computed(() => {
+  if (route.path === '/inspector/Inspectsdashboard') {
+    return t('nav.inspector.headerDashboard');
+  }
 
-//   if (route.path.includes('/inspector/job/')) {
-//     if (route.path.includes('/report')) return 'สรุปรายงาน';
-//     if (route.path.includes('/room-defect')) {
-//       return roomName.value;
-//     }
-//     if (route.path.includes('/inspection')) return 'ดำเนินการตรวจ';
+  if (route.path.includes('/inspector/job/')) {
+    if (route.path.includes('/report')) return t('nav.inspector.headerReport');
+    if (route.path.includes('/room-defect')) {
+      return roomName.value;
+    }
+    if (route.path.includes('/inspection')) return t('nav.inspector.headerInspection');
 
-//     return 'รายละเอียด';
-//   }
+    return t('nav.inspector.headerDetail');
+  }
 
-//   if (route.path === '/inspector/Consdashboard') {
-//     return 'การตรวจก่อสร้าง';
-//   }
+  if (route.path === '/inspector/Consdashboard') {
+    return t('nav.inspector.headerConstruction');
+  }
 
-//   return 'การตรวจบ้าน';
-// });
+  return t('nav.inspector.headerDefault');
+});
 
-// const roomName = computed(() => (route.query.roomName as string) || 'รายการ Defect');
+const roomName = computed(() => (route.query.roomName as string) || t('nav.inspector.roomDefectFallback'));
 
 const hideHeader = computed(() => route.path.includes('/add-defect'));
 </script>
 
 <style scoped>
-.q-footer {
-  border-top: 1px solid #e0e0e0;
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.2s ease;
 }
-/* ทำให้ปุ่ม Back อยู่กลางแนวตั้ง */
-.absolute-left {
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+}
+
+.footer-tab-indicator {
+  position: absolute;
+  bottom: 6px;
+  height: 2px;
+  border-radius: 1px;
+  transition: left 0.25s ease, width 0.25s ease;
+}
+
+.job-back-icon {
+  position: relative;
+  z-index: 2;
+}
+
+.job-edit-btn {
+  position: absolute;
+  right: 4px;
   top: 50%;
   transform: translateY(-50%);
+  z-index: 2;
+}
+
+.job-detail-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  pointer-events: none;
 }
 </style>
