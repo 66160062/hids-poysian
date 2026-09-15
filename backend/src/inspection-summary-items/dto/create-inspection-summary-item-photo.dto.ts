@@ -11,10 +11,6 @@ export class CreateInspectionSummaryItemPhotoDto {
   @IsInt()
   templateId!: number;
 
-  @Type(() => Number)
-  @IsInt()
-  optionId!: number;
-
   @IsOptional()
   @Type(() => Number)
   @IsInt()

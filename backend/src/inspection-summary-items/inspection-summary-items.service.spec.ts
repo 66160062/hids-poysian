@@ -1,8 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException } from '@nestjs/common';
-import { DataSource, EntityManager } from 'typeorm';
-import { InspectionSummaryItemsService } from './inspection-summary-items.service';
+import { DataSource, EntityManager, IsNull, Not } from 'typeorm';
+import {
+  InspectionSummaryItemsService,
+  MAX_PHOTOS_PER_TEMPLATE,
+} from './inspection-summary-items.service';
 import { InspectionSummaryItem } from './entities/inspection-summary-item.entity';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { SummaryTemplate } from 'src/summary-templates/entities/summary-template.entity';
@@ -18,9 +21,12 @@ describe('InspectionSummaryItemsService', () => {
     findOne: jest.Mock;
     findOneOrFail: jest.Mock;
     findOneByOrFail: jest.Mock;
+    findOneBy: jest.Mock;
+    count: jest.Mock;
     remove: jest.Mock;
     delete: jest.Mock;
   };
+  let storageService: { uploadImage: jest.Mock; deleteFile: jest.Mock };
   let roundsRepo: { findOneByOrFail: jest.Mock };
   let templatesRepo: { findOneByOrFail: jest.Mock; findBy: jest.Mock };
   let optionsRepo: { findOneByOrFail: jest.Mock; findBy: jest.Mock };
@@ -40,9 +46,12 @@ describe('InspectionSummaryItemsService', () => {
       findOne: jest.fn(),
       findOneOrFail: jest.fn(),
       findOneByOrFail: jest.fn(),
+      findOneBy: jest.fn(),
+      count: jest.fn(),
       remove: jest.fn(),
       delete: jest.fn(),
     };
+    storageService = { uploadImage: jest.fn(), deleteFile: jest.fn() };
     roundsRepo = { findOneByOrFail: jest.fn() };
     templatesRepo = { findOneByOrFail: jest.fn(), findBy: jest.fn() };
     optionsRepo = { findOneByOrFail: jest.fn(), findBy: jest.fn() };
@@ -81,10 +90,7 @@ describe('InspectionSummaryItemsService', () => {
           useValue: optionsRepo,
         },
         { provide: DataSource, useValue: dataSource },
-        {
-          provide: StorageService,
-          useValue: { uploadImage: jest.fn(), deleteFile: jest.fn() },
-        },
+        { provide: StorageService, useValue: storageService },
       ],
     }).compile();
 
@@ -165,6 +171,67 @@ describe('InspectionSummaryItemsService', () => {
     );
   });
 
+  describe('createPhotoItem', () => {
+    const file = { buffer: Buffer.from('img') } as Express.Multer.File;
+    const dto = { roundId: 1, templateId: 2 };
+
+    beforeEach(() => {
+      roundsRepo.findOneByOrFail.mockResolvedValue({ roundId: 1 });
+      templatesRepo.findOneByOrFail.mockResolvedValue({ templateId: 2 });
+      itemsRepo.create.mockImplementation((value) => value);
+      itemsRepo.save.mockImplementation((value) => value);
+    });
+
+    it('stores the uploaded URL in photoUrl without linking an option', async () => {
+      itemsRepo.count.mockResolvedValue(0);
+      storageService.uploadImage.mockResolvedValue('https://cdn/photo.webp');
+
+      const result = await service.createPhotoItem(file, dto);
+
+      expect(result).toMatchObject({ photoUrl: 'https://cdn/photo.webp' });
+      expect(result).not.toHaveProperty('detailValue');
+      expect(result).not.toHaveProperty('option');
+      expect(optionsRepo.findOneByOrFail).not.toHaveBeenCalled();
+    });
+
+    it('counts existing photos of the template by photoUrl', async () => {
+      itemsRepo.count.mockResolvedValue(0);
+      storageService.uploadImage.mockResolvedValue('https://cdn/photo.webp');
+
+      await service.createPhotoItem(file, dto);
+
+      expect(itemsRepo.count).toHaveBeenCalledWith({
+        where: {
+          round: { roundId: 1 },
+          template: { templateId: 2 },
+          photoUrl: Not(IsNull()),
+        },
+      });
+    });
+
+    it('rejects a photo past the per-template limit without uploading', async () => {
+      itemsRepo.count.mockResolvedValue(MAX_PHOTOS_PER_TEMPLATE);
+
+      await expect(service.createPhotoItem(file, dto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(storageService.uploadImage).not.toHaveBeenCalled();
+      expect(itemsRepo.save).not.toHaveBeenCalled();
+    });
+  });
+
+  it('remove deletes the stored photo file by photoUrl', async () => {
+    const item = { itemId: 5, photoUrl: 'https://cdn/photo.webp' };
+    itemsRepo.findOneByOrFail.mockResolvedValue(item);
+
+    await service.remove(5);
+
+    expect(storageService.deleteFile).toHaveBeenCalledWith(
+      'https://cdn/photo.webp',
+    );
+    expect(itemsRepo.remove).toHaveBeenCalledWith(item);
+  });
+
   it('deletes all items for a round when it has no photo items', async () => {
     itemsRepo.find.mockResolvedValue([]);
 
@@ -218,10 +285,8 @@ describe('InspectionSummaryItemsService', () => {
       expect(deleteQb.where).toHaveBeenCalledWith('round_id = :roundId', {
         roundId: 7,
       });
-      expect(deleteQb.andWhere).toHaveBeenCalledWith(
-        expect.stringContaining('NOT IN'),
-        { photo: 'photo' },
-      );
+      // แถวรูปต้องรอด ไม่งั้น autosave คำตอบทุกครั้งจะลบรูปทิ้ง
+      expect(deleteQb.andWhere).toHaveBeenCalledWith('photo_url IS NULL');
       expect(deleteQb.execute).toHaveBeenCalledTimes(1);
       expect(manager.save).toHaveBeenCalledTimes(1);
       expect(result).toEqual([

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, In, IsNull, Not, Repository } from 'typeorm';
 import { InspectionSummaryItem } from './entities/inspection-summary-item.entity';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { SummaryTemplate } from 'src/summary-templates/entities/summary-template.entity';
@@ -11,7 +11,7 @@ import { CreateInspectionSummaryItemPhotoDto } from './dto/create-inspection-sum
 import { RoundSummaryItemDto } from './dto/replace-round-summary-items.dto';
 import { StorageService } from 'src/storage/storage.service';
 
-const PHOTO_OPTION_TYPE = 'photo';
+export const MAX_PHOTOS_PER_TEMPLATE = 3;
 
 @Injectable()
 export class InspectionSummaryItemsService {
@@ -92,7 +92,7 @@ export class InspectionSummaryItemsService {
   async remove(id: number) {
     const item = await this.itemsRepo.findOneByOrFail({ itemId: id });
 
-    await this.storageService.deleteFile(item.detailValue);
+    await this.storageService.deleteFile(item.photoUrl);
 
     return this.itemsRepo.remove(item);
   }
@@ -111,13 +111,18 @@ export class InspectionSummaryItemsService {
     const template = await this.templatesRepo.findOneByOrFail({
       templateId: dto.templateId,
     });
-    const option = await this.optionsRepo.findOneByOrFail({
-      optionId: dto.optionId,
-    });
 
-    if (option.type !== 'photo') {
+    // นับก่อนอัปโหลด จะได้ไม่มีไฟล์ค้างใน Storage ถ้าเกินจำนวน
+    const existingPhotoCount = await this.itemsRepo.count({
+      where: {
+        round: { roundId: dto.roundId },
+        template: { templateId: dto.templateId },
+        photoUrl: Not(IsNull()),
+      },
+    });
+    if (existingPhotoCount >= MAX_PHOTOS_PER_TEMPLATE) {
       throw new BadRequestException(
-        `option_id ${dto.optionId} ไม่ใช่ option ประเภท photo`,
+        `อัปโหลดรูปได้สูงสุด ${MAX_PHOTOS_PER_TEMPLATE} รูปต่อหัวข้อ`,
       );
     }
 
@@ -136,9 +141,8 @@ export class InspectionSummaryItemsService {
     const item = this.itemsRepo.create({
       round,
       template,
-      option,
       refItem,
-      detailValue: photoUrl,
+      photoUrl,
     });
 
     return this.itemsRepo.save(item);
@@ -170,7 +174,7 @@ export class InspectionSummaryItemsService {
     // สำคัญ: ต้อง "ไม่" ลบ item ประเภท photo ไปด้วย เพราะหน้ารายงานเรียก endpoint นี้
     // ทุกครั้งที่กด "บันทึกรายงาน" เพื่อล้างคำตอบเก่าก่อนสร้างใหม่ (ไม่ใช่ล้างรูปที่อัปโหลดไว้แล้ว)
     const photoItems = await this.itemsRepo.find({
-      where: { round: { roundId }, option: { type: PHOTO_OPTION_TYPE } },
+      where: { round: { roundId }, photoUrl: Not(IsNull()) },
       select: { itemId: true },
     });
     const keepIds = photoItems.map((i) => i.itemId);
@@ -224,10 +228,7 @@ export class InspectionSummaryItemsService {
         .delete()
         .from(InspectionSummaryItem)
         .where('round_id = :roundId', { roundId })
-        .andWhere(
-          `option_id IS NULL OR option_id NOT IN (SELECT option_id FROM summary_template_option WHERE type = :photo)`,
-          { photo: PHOTO_OPTION_TYPE },
-        )
+        .andWhere('photo_url IS NULL')
         .execute();
       if (!rows.length) return [];
       return manager.save(manager.create(InspectionSummaryItem, rows));
