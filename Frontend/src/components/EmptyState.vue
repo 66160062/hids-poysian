@@ -2,7 +2,7 @@
   <div class="column flex-center q-py-xl q-mt-xl text-grey-5">
     <q-icon name="assignment" size="80px" class="q-mb-md opacity-50" />
     <div class="text-h6 text-weight-medium">
-      {{ message }}
+      {{ message ?? t('components.emptyState.defaultMessage') }}
     </div>
     <div class="text-body2 q-mt-sm">{{ t('components.emptyState.hint') }}</div>
   </div>
@@ -16,7 +16,7 @@ const { t } = useI18n();
 defineProps({
   message: {
     type: String,
-    default: 'ไม่มีพบรายการตรวจ',
+    default: null,
   },
 });
 </script>

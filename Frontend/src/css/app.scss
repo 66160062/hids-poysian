@@ -1,5 +1,21 @@
 // app global css in SCSS form
 
+// Always reserve space for the vertical scrollbar so pages that toggle
+// between scrollable/non-scrollable content (e.g. switching calendar views)
+// don't shift width when the scrollbar appears/disappears.
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+// Quasar's scroll lock ($q.loading, dialogs) puts `overflow-y: scroll` on <body>
+// whenever the page is taller than the viewport, which reserves a second
+// scrollbar gutter on top of the one <html> already reserves above — centered
+// layouts jump sideways by half a scrollbar width each time it toggles.
+body.q-body--force-scrollbar-y {
+  overflow-y: visible;
+}
+
 // Disable Quasar's default click-ripple effect everywhere except the bottom footer nav
 .q-ripple {
   display: none !important;
@@ -14,4 +30,5 @@
   opacity: 0 !important;
   background: none !important;
 }
+
 

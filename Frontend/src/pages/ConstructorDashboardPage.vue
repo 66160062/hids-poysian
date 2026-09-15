@@ -212,8 +212,9 @@ onActivated(() => {
 
 <style scoped>
 .inspector-dashboard-page {
-  max-width: 600px;
+  max-width: 480px;
   margin: 0 auto;
+  width: 100%;
   min-height: 100vh;
   padding-bottom: 90px;
 }
@@ -223,9 +224,21 @@ onActivated(() => {
   border: 1px solid #e0e0e0;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 768px) {
   .inspector-dashboard-page {
-    max-width: 800px;
+    max-width: 720px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .inspector-dashboard-page {
+    max-width: 1100px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .inspector-dashboard-page {
+    max-width: 1280px;
   }
 }
 </style>

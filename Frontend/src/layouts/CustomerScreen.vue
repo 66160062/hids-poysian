@@ -62,7 +62,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import LanguageToggle from 'src/components/LanguageToggle.vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 //const authStore = useAuthStore()
@@ -147,6 +147,11 @@ onUnmounted(() => {
 })
 
 watch(() => route.path, () => {
+  void nextTick(updateIndicator)
+})
+
+// เปลี่ยนภาษาแล้วความกว้างของ label เปลี่ยน ต้องคำนวณตำแหน่งขีดใต้ใหม่
+watch(locale, () => {
   void nextTick(updateIndicator)
 })
 

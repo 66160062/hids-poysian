@@ -1,5 +1,5 @@
 <template>
-  <q-card class="login-card">
+  <q-card class="login-card" flat>
     <q-card-section class="text-center">
       <div class="title">{{ t('login.title') }}</div>
     </q-card-section>
@@ -23,11 +23,22 @@
         @keyup.enter="handleLogin"
       >
         <template v-slot:append>
-          <q-icon
-            :name="showPassword ? 'visibility_off' : 'visibility'"
-            class="cursor-pointer"
+          <q-btn
+            round
+            flat
+            dense
+            class="eye-toggle"
+            :class="{ 'eye-toggle--active': showPassword }"
             @click="showPassword = !showPassword"
-          />
+          >
+            <transition name="eye-fade" mode="out-in">
+              <q-icon
+                :key="showPassword ? 'off' : 'on'"
+                :name="showPassword ? 'visibility_off' : 'visibility'"
+                class="eye-icon"
+              />
+            </transition>
+          </q-btn>
         </template>
       </q-input>
 
@@ -48,6 +59,7 @@
         :loading="loading"
         :disable="!email || !password"
         @click="handleLogin"
+        flat
       >
         <template v-slot:loading>
           <span class="login-spinner" />
@@ -146,6 +158,32 @@ const handleLogin = async () => {
   color: red;
   font-size: 13px;
   text-align: center;
+}
+.eye-toggle {
+  color: #9aa5b1;
+  transition: color 0.25s ease, background-color 0.25s ease;
+}
+/* .eye-toggle:hover {
+  color: #2d6fb7;
+  background: rgba(45, 111, 183, 0.08);
+} */
+.eye-toggle--active {
+  color: #2d6fb7;
+}
+.eye-icon {
+  font-size: 20px;
+}
+.eye-fade-enter-active,
+.eye-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.eye-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.8);
+}
+.eye-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
 }
 @media (max-width: 600px) {
   .title {

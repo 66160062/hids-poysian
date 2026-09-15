@@ -75,34 +75,19 @@
         </div>
 
         <!-- Badge สถานะตำแหน่ง (Anti-forget) -->
-        <div class="row items-center q-gutter-x-xs q-mt-xs">
-          <q-badge
-            v-if="defect.planId || defect.plan"
-            color="positive"
-            text-color="white"
-            class="q-px-xs text-weight-medium"
-            style="font-size: 10px;"
-          >
-            📍 มีพิกัดแปลน
-          </q-badge>
-          <q-badge
-            v-else-if="defect.locationZone"
-            color="info"
-            text-color="white"
-            class="q-px-xs text-weight-medium"
-            style="font-size: 10px;"
-          >
-            {{ defect.locationZone }}
-          </q-badge>
-          <q-badge
-            v-else
-            color="orange-2"
-            text-color="orange-9"
-            class="q-px-xs text-weight-medium"
-            style="font-size: 10px;"
-          >
-            ⚠️ ยังไม่ระบุพิกัด
-          </q-badge>
+        <div class="row items-center q-mt-xs">
+          <div v-if="defect.planId || defect.plan" class="status-pill status-pill--pinned">
+            <q-icon name="place" size="12px" />
+            <span>{{ t('components.defectDetailCard.planPinned') }}</span>
+          </div>
+          <div v-else-if="defect.locationZone" class="status-pill status-pill--zone">
+            <q-icon name="label" size="12px" />
+            <span>{{ defect.locationZone }}</span>
+          </div>
+          <div v-else class="status-pill status-pill--missing">
+            <q-icon name="location_off" size="12px" />
+            <span>{{ t('components.defectDetailCard.planMissing') }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -212,5 +197,31 @@ defineEmits(['click', 'retry']);
   background: #fff4f4;
   border: 1px solid #ffcdd2;
   border-radius: 8px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.status-pill--pinned {
+  background: #e3f6ea;
+  color: #1b7a43;
+}
+
+.status-pill--zone {
+  background: #e8f1fd;
+  color: #1257a8;
+}
+
+.status-pill--missing {
+  background: #fdeee8;
+  color: #b9490a;
 }
 </style>

@@ -31,7 +31,7 @@
           style="width:100%; border-radius:14px; border:2px solid #1976D2; display:block; aspect-ratio:16/9; object-fit:cover;"
         />
         <div style="position:absolute; top:8px; left:8px;">
-          <q-badge color="red" label="BEFORE" style="font-size:11px; font-weight:700;" />
+          <q-badge color="red" :label="t('common.photo.before')" style="font-size:11px; font-weight:700;" />
         </div>
       </div>
 
@@ -45,7 +45,7 @@
           style="width:100%; border-radius:14px; border:2px solid #4CAF50; display:block; aspect-ratio:16/9; object-fit:cover;"
         />
         <div style="position:absolute; top:8px; left:8px;">
-          <q-badge color="green" label="AFTER" style="font-size:11px; font-weight:700;" />
+          <q-badge color="green" :label="t('common.photo.after')" style="font-size:11px; font-weight:700;" />
         </div>
       </div>
 

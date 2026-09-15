@@ -18,7 +18,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 
+const { t } = useI18n();
 const rating = defineModel<number>({ default: 0 });
 
 withDefaults(
@@ -36,15 +38,15 @@ withDefaults(
   },
 );
 
-const labels: Record<number, string> = {
-  1: 'แย่มาก',
-  2: 'แย่',
-  3: 'พอใช้',
-  4: 'ดี',
-  5: 'ดีมาก',
-};
+const labels = computed<Record<number, string>>(() => ({
+  1: t('components.starRating.rating1'),
+  2: t('components.starRating.rating2'),
+  3: t('components.starRating.rating3'),
+  4: t('components.starRating.rating4'),
+  5: t('components.starRating.rating5'),
+}));
 
-const ratingLabel = computed(() => labels[rating.value] ?? 'เลือกคะแนน');
+const ratingLabel = computed(() => labels.value[rating.value] ?? t('components.starRating.selectRating'));
 </script>
 
 <style scoped>

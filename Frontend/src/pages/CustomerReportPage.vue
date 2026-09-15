@@ -4,7 +4,7 @@
     <div class="q-px-md q-pb-xl">
 
       <!-- Sections -->
-      <div v-for="section in reportSections" :key="section.title" class="q-mb-lg">
+      <div v-for="section in reportSections" :key="section.title" class="q-mb-lg card-stagger">
 
         <q-card flat bordered class="info-card">
 
@@ -141,8 +141,41 @@ onMounted(async () => {
 <style scoped>
 
 .report-page {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   max-width: 480px;
   margin: 0 auto;
+  width: 100%;
+}
+@media (min-width: 768px) {
+  .report-page {
+    max-width: 720px;
+  }
+}
+@media (min-width: 1024px) {
+  .report-page {
+    max-width: 1100px;
+  }
+}
+@media (min-width: 1440px) {
+  .report-page {
+    max-width: 1280px;
+  }
+}
+
+.card-stagger {
+  animation: card-in 320ms var(--ease-out) both;
+}
+.card-stagger:nth-child(1) { animation-delay: 0ms; }
+.card-stagger:nth-child(2) { animation-delay: 40ms; }
+.card-stagger:nth-child(3) { animation-delay: 80ms; }
+.card-stagger:nth-child(4) { animation-delay: 120ms; }
+.card-stagger:nth-child(n + 5) { animation-delay: 150ms; }
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-stagger { animation-duration: 0.01ms !important; }
 }
 
 .page-header{
@@ -156,7 +189,10 @@ onMounted(async () => {
 
 .info-card{
   border-radius:16px;
-  border:1px solid #e9e9e9;
+  border-color:#ebebeb;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 4px 10px rgba(0, 0, 0, 0.04);
 }
 
 .section-title{

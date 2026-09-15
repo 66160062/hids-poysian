@@ -1,17 +1,18 @@
 <template>
-  <div class="row q-gutter-xs">
-    <q-chip
+  <div class="row q-gutter-sm">
+    <q-btn
       v-for="option in options"
       :key="option"
-      clickable
-      dense
-      :outline="!modelValue.includes(option)"
-      :color="modelValue.includes(option) ? 'primary' : 'grey-7'"
+      unelevated
+      rounded
+      no-caps
+      :color="modelValue.includes(option) ? 'primary' : 'grey-2'"
       :text-color="modelValue.includes(option) ? 'white' : 'grey-8'"
+      class="filter-chip-btn"
       @click="toggle(option)"
     >
-      {{ option }}
-    </q-chip>
+      <span class="text-weight-medium q-px-sm">{{ option }}</span>
+    </q-btn>
   </div>
 </template>
 
@@ -36,3 +37,10 @@ const toggle = (val: string) => {
   emit('update:modelValue', current)
 }
 </script>
+
+<style scoped>
+.filter-chip-btn {
+  min-width: fit-content;
+  border: 1px solid #e0e0e0;
+}
+</style>

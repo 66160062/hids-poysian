@@ -50,7 +50,6 @@ function selectLocale(value: MessageLanguages) {
   padding: 3px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .lang-toggle__thumb {
