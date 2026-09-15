@@ -145,7 +145,7 @@
 
           <div class="q-mb-xl q-pb-xl">
             <q-card flat class="bg-red-1 custom-card q-pa-md" style="border: 1px solid #ffcdd2;">
-              <div class="text-red-8 text-weight-bold q-mb-xs" style="font-size: 14px;">Danger Zone</div>
+              <div class="text-red-8 text-weight-bold q-mb-xs" style="font-size: 14px;">{{ t('adminManage.profile.dangerZone') }}</div>
               <div class="text-grey-7 q-mb-md" style="font-size: 11px; line-height: 1.5;">
                 {{ t('adminManage.profile.deactivateDescription') }}
               </div>
@@ -246,6 +246,7 @@ import { useI18n } from 'vue-i18n';
 import { useQuasar, LocalStorage, QForm } from 'quasar';
 import { useAuthStore } from 'src/stores/useAuth';
 import { api } from 'src/boot/axios';
+import ConfirmActionDialog from 'src/components/ConfirmActionDialog.vue';
 import { Cropper } from 'vue-advanced-cropper';
 import 'vue-advanced-cropper/dist/style.css';
 
@@ -459,10 +460,13 @@ const saveChanges = async () => {
 
 const logout = () => {
   $q.dialog({
-    title: t('adminManage.profile.logoutConfirmTitle'),
-    message: t('adminManage.profile.logoutConfirmMessage'),
-    cancel: true,
-    persistent: true
+    component: ConfirmActionDialog,
+    componentProps: {
+      title: t('adminManage.profile.logoutConfirmTitle'),
+      message: t('adminManage.profile.logoutConfirmMessage'),
+      icon: 'logout',
+      color: 'negative',
+    },
   }).onOk(() => {
     // Clear user data and redirect to login
     localStorage.clear();

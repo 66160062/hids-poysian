@@ -1,7 +1,8 @@
 <template>
   <q-layout view="lHh Lpr lFf">
     <q-page-container>
-      <q-page class="q-pa-md bg-white" style="padding-bottom: 80px">
+      <q-page class="q-pa-md bg-white row justify-center" style="padding-bottom: 80px">
+        <div class="detail-content">
         <SearchBar v-model="store.searchQuery" @filter="showFilter = true">
           <template #filter-btn>
             <q-btn flat round @click="showFilter = true">
@@ -86,16 +87,17 @@
             />
           </div>
         </div>
+        </div>
 
         <ActionFab v-if="!isLocked" @add="onAddDefectClick" />
       </q-page>
     </q-page-container>
 
-    <q-footer v-if="!isLocked" class="bg-transparent q-px-md q-pb-lg">
+    <q-footer v-if="!isLocked" class="bg-transparent q-px-md q-pb-lg row justify-center">
       <q-btn
         color="primary"
         :label="isAlreadyInspected ? t('inspection.inspect.confirmInspectionComplete') : t('inspection.inspect.saveInspectionEdit')"
-        class="full-width text-weight-bold shadow-3"
+        class="full-width text-weight-bold shadow-3 footer-btn"
         style="border-radius: 8px; height: 48px"
         :loading="isSubmitting"
         @click="confirmInspectionDialog"
@@ -126,6 +128,7 @@ import EmptyState from '../components/EmptyState.vue';
 import InspectionItemCard from '../components/InspectionItemCard.vue';
 import ActionFab from '../components/ActionFab.vue';
 import FilterBottomSheet from '../components/FilterBottomSheet.vue';
+import ConfirmActionDialog from '../components/ConfirmActionDialog.vue';
 import { useInspectionStore } from 'src/stores/useInspection';
 import { useRoundLock } from 'src/composables/useRoundLock';
 import { useInspectionRoutes } from 'src/composables/useInspectionRoutes';
@@ -133,6 +136,7 @@ import { api } from 'src/boot/axios'; // ปลดคอมเมนต์
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 
 const inspectionSpinner = createIconSpinner('checklist');
+const saveInspectionSpinner = createIconSpinner('cloud_upload');
 
 // ── Route & Plugins ───────────────────────────────────────────
 
@@ -192,9 +196,17 @@ const onAddDefectClick = () => {
 // ── Confirm Inspection (แทนที่ onSubmit เดิม) ───────────────────
 async function executeConfirmInspection() {
   isSubmitting.value = true;
+  $q.loading.show({
+    spinner: saveInspectionSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     // ยิงไปเส้น confirm-inspection ตามที่คุณสร้างไว้
     await api.patch(`/inspection-rounds/${roundId}/confirm-inspection`);
+    // ปิด loading ก่อนเปลี่ยนหน้า ไม่งั้นจะไปปิด loading ของหน้าปลายทางที่เพิ่ง show ใน onMounted
+    $q.loading.hide();
 
     $q.notify({
       color: 'positive',
@@ -211,6 +223,7 @@ async function executeConfirmInspection() {
       await router.push(`/inspector/job/${roundId}/`);
     }
   } catch (error) {
+    $q.loading.hide();
     const axiosError = error as { response?: { data?: { message?: string } } };
     console.error('Confirm Inspection Error:', axiosError);
 
@@ -227,18 +240,15 @@ async function executeConfirmInspection() {
 // ผูกกับปุ่มในหน้า UI มี Dialog คอนเฟิร์มกันลั่นด้วย
 const confirmInspectionDialog = () => {
   $q.dialog({
-    title: t('inspection.inspect.confirmInspectionDialogTitle'),
-    message: t('inspection.inspect.confirmInspectionDialogMessage'),
-    ok: {
-      label: t('inspection.inspect.confirm'),
+    component: ConfirmActionDialog,
+    componentProps: {
+      title: t('inspection.inspect.confirmInspectionDialogTitle'),
+      message: t('inspection.inspect.confirmInspectionDialogMessage'),
+      icon: '',
       color: 'primary',
+      confirmLabel: t('inspection.inspect.confirm'),
+      cancelLabel: t('inspection.inspect.cancel'),
     },
-    cancel: {
-      label: t('inspection.inspect.cancel'),
-      color: 'grey-7',
-      flat: true, // ทำให้ปุ่มยกเลิกไม่มีพื้นหลัง ดูเป็นปุ่มรอง
-    },
-    persistent: true,
   }).onOk(() => {
     void executeConfirmInspection();
   });
@@ -246,3 +256,44 @@ const confirmInspectionDialog = () => {
 
 const isAlreadyInspected = ref(false);
 </script>
+
+<style scoped>
+.detail-content {
+  width: 100%;
+  max-width: 480px;
+}
+@media (min-width: 768px) {
+  .detail-content {
+    max-width: 720px;
+  }
+}
+@media (min-width: 1024px) {
+  .detail-content {
+    max-width: 1100px;
+  }
+}
+@media (min-width: 1440px) {
+  .detail-content {
+    max-width: 1280px;
+  }
+}
+
+.footer-btn {
+  max-width: 480px;
+}
+@media (min-width: 768px) {
+  .footer-btn {
+    max-width: 720px;
+  }
+}
+@media (min-width: 1024px) {
+  .footer-btn {
+    max-width: 1100px;
+  }
+}
+@media (min-width: 1440px) {
+  .footer-btn {
+    max-width: 1280px;
+  }
+}
+</style>

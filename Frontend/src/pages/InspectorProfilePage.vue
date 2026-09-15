@@ -211,6 +211,7 @@ import { useI18n } from 'vue-i18n';
 import { useQuasar, LocalStorage, QForm } from 'quasar';
 import { useAuthStore } from 'src/stores/useAuth';
 import { api } from 'src/boot/axios';
+import ConfirmActionDialog from 'src/components/ConfirmActionDialog.vue';
 import { Cropper } from 'vue-advanced-cropper';
 import 'vue-advanced-cropper/dist/style.css';
 
@@ -419,10 +420,13 @@ const saveChanges = async () => {
 
 const logout = () => {
   $q.dialog({
-    title: t('inspector.profile.logoutConfirmTitle'),
-    message: t('inspector.profile.logoutConfirmMessage'),
-    cancel: true,
-    persistent: true
+    component: ConfirmActionDialog,
+    componentProps: {
+      title: t('inspector.profile.logoutConfirmTitle'),
+      message: t('inspector.profile.logoutConfirmMessage'),
+      icon: 'logout',
+      color: 'negative',
+    },
   }).onOk(() => {
     localStorage.clear();
     sessionStorage.clear();
