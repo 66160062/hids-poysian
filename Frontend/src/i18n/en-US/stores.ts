@@ -18,6 +18,9 @@ export default {
   },
   defectList: {
     floorPrefix: 'Floor {label}',
+    all: 'All',
+    statusPassed: 'Passed',
+    statusFailed: 'Failed',
   },
   contractorRepairDetail: {
     floorPrefix: 'Floor {label}',

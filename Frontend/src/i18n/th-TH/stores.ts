@@ -18,6 +18,9 @@ export default {
   },
   defectList: {
     floorPrefix: 'ชั้น{label}',
+    all: 'ทั้งหมด',
+    statusPassed: 'ผ่าน',
+    statusFailed: 'ไม่ผ่าน',
   },
   contractorRepairDetail: {
     floorPrefix: 'ชั้น {label}',
