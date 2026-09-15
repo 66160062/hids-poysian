@@ -11,9 +11,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFiles,
-  Req,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { InspectionRoundsService } from './inspection-rounds.service';
@@ -23,7 +21,7 @@ import { UpdateJobInfoDto } from './dto/update-job-info.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { RoundAccessGuard } from 'src/auth/round-access.guard';
 import { InspectorSelfOrAdminGuard } from 'src/auth/inspector-self-or-admin.guard';
-import { ReportsService } from 'src/reports/reports.service';
+import { ReportsService, ReportLocale } from 'src/reports/reports.service';
 import { AiSummaryService } from 'src/ai-summary/ai-summary.service';
 
 @Controller('inspection-rounds')
@@ -36,14 +34,8 @@ export class InspectionRoundsController {
 
   @Post()
   @UseGuards(AuthGuard)
-  create(
-    @Body() createInspectionRoundDto: CreateInspectionRoundDto,
-    @Req() req: Request & { user?: { sub: number } },
-  ) {
-    return this.inspectionRoundsService.create(
-      createInspectionRoundDto,
-      req.user?.sub,
-    );
+  create(@Body() createInspectionRoundDto: CreateInspectionRoundDto) {
+    return this.inspectionRoundsService.create(createInspectionRoundDto);
   }
 
   @Get()
@@ -78,12 +70,13 @@ export class InspectionRoundsController {
     return this.inspectionRoundsService.findOne(+id);
   }
 
-  // เช็ค cache PDF เดิม ไม่ trigger การ generate ใดๆ ทั้งสิ้น
+  // เช็ค cache PDF เดิม ไม่ trigger การ generate ใดๆ ทั้งสิ้น (ยกเว้น lang=en-US ที่ยัง lazy-generate ครั้งแรก ดู ReportsService)
   // ส่ง generatedAt กลับไปด้วยให้ UI โชว์ได้ว่าไฟล์นี้ข้อมูล ณ เวลาไหน (PDF อาจล้าหลังการแก้ defect ล่าสุดได้)
   @Get(':id/report')
   @UseGuards(AuthGuard)
-  getReport(@Param('id') id: string) {
-    return this.reportsService.getCachedReportUrl(+id);
+  getReport(@Param('id') id: string, @Query('lang') lang?: string) {
+    const locale: ReportLocale = lang === 'en-US' ? 'en-US' : 'th-TH';
+    return this.reportsService.getCachedReportUrl(+id, locale);
   }
 
   // สั่งสร้างสรุปท้ายเล่มใหม่แบบ manual เลือก provider เอง (เช่นปุ่ม "สร้างสรุปใหม่" ในหน้า admin)
@@ -135,17 +128,14 @@ export class InspectionRoundsController {
     return this.inspectionRoundsService.update(+id, updateInspectionRoundDto);
   }
 
-  // endpoint แบบจำกัดสิทธิ์: แก้ได้แค่ "ข้อมูลผู้รับเหมา + รูปหน้าโครงการ + แปลนบ้าน" ของ job
+  // endpoint แบบจำกัดสิทธิ์: แก้ได้แค่ "ข้อมูลผู้รับเหมา + รูปหน้าโครงการ" ของ job
   // ที่รอบนี้สังกัด — ให้ inspector ที่ถูก assign เข้ารอบนี้ (หรือ admin) เติม/แก้ข้อมูลที่ office
   // อาจกรอกไม่ครบตอนสร้างงานได้ โดยไม่เปิดช่องให้แก้ field อื่นของ job เหมือน admin
   @Patch(':id/job-info')
   @UseGuards(RoundAccessGuard)
   @UseInterceptors(
     FileFieldsInterceptor(
-      [
-        { name: 'projectImageUrl', maxCount: 1 },
-        { name: 'housePlanUrl', maxCount: 1 },
-      ],
+      [{ name: 'projectImageUrl', maxCount: 1 }],
       { storage: memoryStorage() },
     ),
   )
@@ -154,7 +144,6 @@ export class InspectionRoundsController {
     @UploadedFiles()
     files: {
       projectImageUrl?: Express.Multer.File[];
-      housePlanUrl?: Express.Multer.File[];
     },
     @Body() updateJobInfoDto: UpdateJobInfoDto,
   ) {

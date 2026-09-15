@@ -39,37 +39,42 @@ describe('InspectionJobsController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('falls back to placeholder image and empty house plan when no files are uploaded', async () => {
-    await controller.create({}, { title: 'บ้านเดี่ยว' } as never);
+  it('falls back to placeholder image when no file is uploaded', async () => {
+    await controller.create(
+      {},
+      { title: 'บ้านเดี่ยว' } as never,
+      { user: { sub: 7 } } as never,
+    );
 
     expect(storage.uploadImage).not.toHaveBeenCalled();
-    expect(service.create).toHaveBeenCalledWith({
-      title: 'บ้านเดี่ยว',
-      projectImageUrl: '/uploads/inspection_jobs/unknown.jpg',
-      housePlanUrl: '',
-    });
+    expect(service.create).toHaveBeenCalledWith(
+      {
+        title: 'บ้านเดี่ยว',
+        projectImageUrl: '/uploads/inspection_jobs/unknown.jpg',
+      },
+      7,
+    );
   });
 
-  it('uploads both files and forwards their urls when attached', async () => {
-    storage.uploadImage
-      .mockResolvedValueOnce('https://example.com/project.jpg')
-      .mockResolvedValueOnce('https://example.com/plan.jpg');
+  it('uploads the project image and forwards its url when attached', async () => {
+    storage.uploadImage.mockResolvedValueOnce('https://example.com/project.jpg');
     const projectImageUrl = [
       { buffer: Buffer.from('p') },
     ] as Express.Multer.File[];
-    const housePlanUrl = [
-      { buffer: Buffer.from('h') },
-    ] as Express.Multer.File[];
 
-    await controller.create({ projectImageUrl, housePlanUrl }, {
-      title: 'บ้านเดี่ยว',
-    } as never);
+    await controller.create(
+      { projectImageUrl },
+      { title: 'บ้านเดี่ยว' } as never,
+      { user: { sub: 7 } } as never,
+    );
 
-    expect(service.create).toHaveBeenCalledWith({
-      title: 'บ้านเดี่ยว',
-      projectImageUrl: 'https://example.com/project.jpg',
-      housePlanUrl: 'https://example.com/plan.jpg',
-    });
+    expect(service.create).toHaveBeenCalledWith(
+      {
+        title: 'บ้านเดี่ยว',
+        projectImageUrl: 'https://example.com/project.jpg',
+      },
+      7,
+    );
   });
 
   it('treats the "all" status filter as no filter at all', () => {
@@ -118,19 +123,18 @@ describe('InspectionJobsController', () => {
     );
   });
 
-  it('only overwrites the house plan url when a new file is uploaded on update', async () => {
+  it('leaves the project image url untouched when no new file is uploaded on update', async () => {
     await controller.update(
       '4',
       {},
       {
-        housePlanUrl: 'https://example.com/old-plan.jpg',
+        projectImageUrl: 'https://example.com/old-project.jpg',
       },
     );
 
     expect(storage.uploadImage).not.toHaveBeenCalled();
     expect(service.update).toHaveBeenCalledWith(4, {
-      housePlanUrl: 'https://example.com/old-plan.jpg',
-      projectImageUrl: undefined,
+      projectImageUrl: 'https://example.com/old-project.jpg',
     });
   });
 });

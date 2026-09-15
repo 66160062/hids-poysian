@@ -3,7 +3,8 @@ import { Customer } from 'src/customers/entities/customer.entity';
 import { HouseType } from 'src/house-types/entities/house-type.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
 import { Branch } from 'src/branches/entities/branch.entity';
-import { JobPlan } from 'src/job-plans/entities/job-plan.entity';
+import { HousePlan } from 'src/house-plans/entities/house-plan.entity';
+import { User } from 'src/users/entities/user.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -33,16 +34,15 @@ export class InspectionJob {
   @Column({
     type: 'varchar',
     length: 255,
+    nullable: true,
   })
-  locationCoordinate!: string;
+  projectNameEn!: string | null;
 
   @Column({
     type: 'varchar',
     length: 255,
-    nullable: true,
-    default: '',
   })
-  housePlanUrl!: string;
+  locationCoordinate!: string;
 
   @Column({ type: 'real' })
   usableArea!: number;
@@ -72,6 +72,10 @@ export class InspectionJob {
   @CreateDateColumn()
   createdAt!: Date;
 
+  // เวลาที่แอดมินปิดงาน (อนุมัติรอบที่ defect ผ่านครบ) — ใช้คู่กับ createdAt คำนวณระยะเวลาดำเนินงานทั้งงาน
+  @Column({ name: 'completed_at', type: 'timestamp', nullable: true })
+  completedAt!: Date | null;
+
   @DeleteDateColumn()
   deletedAt!: Date;
 
@@ -95,9 +99,14 @@ export class InspectionJob {
   @JoinColumn({ name: 'branch_id' })
   branch!: Branch | null;
 
+  // แอดมินที่ติดต่อลูกค้าแล้วเปิดงานนี้ — ใช้แสดงเป็น "ผู้ประสานงาน" (Coordinator) ในหน้ารายละเอียดงานและรายงาน PDF
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'created_by' })
+  createdBy!: User | null;
+
   @OneToMany(() => InspectionRound, (round) => round.job)
   rounds!: InspectionRound[];
 
-  @OneToMany(() => JobPlan, (plan) => plan.job)
-  plans!: JobPlan[];
+  @OneToMany(() => HousePlan, (plan) => plan.job)
+  housePlans!: HousePlan[];
 }

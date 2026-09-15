@@ -62,14 +62,6 @@ export class CreateDailyReportDto {
   @MaxLength(255)
   locationCoordinate: string;
 
-  @ApiProperty({
-    description: 'House plan URL',
-    example: 'https://example.com/plan.pdf',
-  })
-  @IsString()
-  @MaxLength(255)
-  housePlanUrl: string;
-
   @ApiProperty({ description: 'Usable area in square meters', example: 150.5 })
   @Type(() => Number)
   @IsNumber()

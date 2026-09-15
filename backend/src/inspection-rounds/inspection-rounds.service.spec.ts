@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
+import { DataSource, Not } from 'typeorm';
 import { BadRequestException } from '@nestjs/common';
 import { InspectionRoundsService } from './inspection-rounds.service';
 import { InspectionRound } from './entities/inspection-round.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { User } from 'src/users/entities/user.entity';
-import { Defect } from 'src/defects/entities/defect.entity';
+import { Defect, DefectStatus } from 'src/defects/entities/defect.entity';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { MailService } from 'src/mail/mail.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
@@ -135,6 +135,18 @@ describe('InspectionRoundsService', () => {
           scheduledDate: yesterday.toISOString(),
         } as never),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects creating a new round on a job that is already closed', async () => {
+      jobsRepo.findOneByOrFail.mockResolvedValue({
+        jobId: 1,
+        status: 'Completed',
+      });
+
+      await expect(
+        service.create({ jobId: 1 } as never),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(roundsRepo.findOne).not.toHaveBeenCalled();
     });
 
     it('rejects creating a new round while the previous one is still open', async () => {
@@ -271,40 +283,72 @@ describe('InspectionRoundsService', () => {
       );
     });
 
-    it('marks the job Completed when approving round 2 or later', async () => {
+    it('closes the job and stamps completedAt when every defect in the round is verified', async () => {
       roundsRepo.findOneOrFail.mockResolvedValue({
         roundId: 1,
-        roundNumber: 2,
+        roundNumber: 1,
         status: 'SUBMITTED',
-        job: { jobId: 1, status: 'Pending' },
+        job: { jobId: 1, status: 'Pending', inspectionType: 'Standard' },
         teamMembers: [{ inspector: { id: 9 } }],
       });
+      defectsRepo.count.mockResolvedValueOnce(0);
 
       const { data, notification } = await service.approveReport(1);
 
+      expect(defectsRepo.count).toHaveBeenCalledWith({
+        where: {
+          round: { roundId: 1 },
+          status: Not(DefectStatus.VERIFIED),
+        },
+      });
       expect(data.job.status).toBe('Completed');
+      expect(data.job.completedAt).toBe(data.approvedAt);
       expect(notification).toMatchObject({
         type: 'REPORT_APPROVED',
         recipientUserId: 9,
       });
       expect(activityLogsService.log).toHaveBeenCalledWith(
         1,
-        expect.objectContaining({ type: 'round_approved' }),
+        expect.objectContaining({
+          type: 'round_approved',
+          sub: 'ปิดงานเรียบร้อย',
+        }),
         1,
       );
     });
 
-    it('marks the job Active when approving round 1', async () => {
+    it('keeps the job Active while the round still has unverified defects, even on round 2+', async () => {
+      roundsRepo.findOneOrFail.mockResolvedValue({
+        roundId: 1,
+        roundNumber: 3,
+        status: 'SUBMITTED',
+        job: { jobId: 1, status: 'Pending', inspectionType: 'Standard' },
+        teamMembers: [],
+      });
+      defectsRepo.count.mockResolvedValueOnce(2);
+
+      const { data } = await service.approveReport(1);
+
+      expect(data.job.status).toBe('Active');
+      expect(data.job.completedAt).toBeNull();
+    });
+
+    it('keeps the round-number rule for construction jobs', async () => {
       roundsRepo.findOneOrFail.mockResolvedValue({
         roundId: 1,
         roundNumber: 1,
         status: 'SUBMITTED',
-        job: { jobId: 1, status: 'Pending' },
+        job: {
+          jobId: 1,
+          status: 'Pending',
+          inspectionType: 'CONSTRUCTION_INSPECTION',
+        },
         teamMembers: [],
       });
 
       const { data } = await service.approveReport(1);
 
+      expect(defectsRepo.count).not.toHaveBeenCalled();
       expect(data.job.status).toBe('Active');
     });
 
@@ -326,7 +370,10 @@ describe('InspectionRoundsService', () => {
       await new Promise((resolve) => setImmediate(resolve));
 
       expect(authService.generateLinkToken).toHaveBeenCalledWith(1, 'customer');
-      expect(reportsService.getLatestReportPdf).toHaveBeenCalledWith(1);
+      expect(reportsService.getLatestReportPdf).toHaveBeenCalledWith(
+        1,
+        'th-TH',
+      );
       expect(mailService.sendApprovalEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           customerEmail: 'customer@example.com',
@@ -336,6 +383,33 @@ describe('InspectionRoundsService', () => {
           tokenUrl: 'http://localhost:9000/#/view/prj-1?token=mock-token',
           pdfBuffer: Buffer.from('%PDF'),
         }),
+      );
+    });
+
+    it('emails the customer with the English PDF when preferredLocale is en-US', async () => {
+      roundsRepo.findOneOrFail.mockResolvedValue({
+        roundId: 1,
+        roundNumber: 2,
+        status: 'SUBMITTED',
+        job: {
+          jobId: 1,
+          status: 'Pending',
+          projectName: 'บ้านตัวอย่าง',
+          customer: {
+            email: 'customer@example.com',
+            fullName: 'คุณลูกค้า',
+            preferredLocale: 'en-US',
+          },
+        },
+        teamMembers: [],
+      });
+
+      await service.approveReport(1);
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(reportsService.getLatestReportPdf).toHaveBeenCalledWith(
+        1,
+        'en-US',
       );
     });
 
@@ -458,28 +532,31 @@ describe('InspectionRoundsService', () => {
       expect(contractorService.update).not.toHaveBeenCalled();
     });
 
-    it('uploads the project image and house plan and stores their returned URLs', async () => {
+    it('uploads the project image and stores its returned URL', async () => {
       roundsRepo.findOneOrFail.mockResolvedValue({
         roundId: 1,
         job: { jobId: 4, contractor: null },
       });
-      storageService.uploadImage
-        .mockResolvedValueOnce('https://cdn.example.com/project.jpg')
-        .mockResolvedValueOnce('https://cdn.example.com/plan.jpg');
+      storageService.uploadImage.mockResolvedValueOnce(
+        'https://cdn.example.com/project.jpg',
+      );
       jobsRepo.findOneOrFail.mockResolvedValue({ jobId: 4 });
 
-      const projectImageFile = { buffer: Buffer.from('a') } as Express.Multer.File;
-      const housePlanFile = { buffer: Buffer.from('b') } as Express.Multer.File;
+      const projectImageFile = {
+        buffer: Buffer.from('a'),
+      } as Express.Multer.File;
 
-      await service.updateJobInfo(1, {}, {
-        projectImageUrl: [projectImageFile],
-        housePlanUrl: [housePlanFile],
-      });
+      await service.updateJobInfo(
+        1,
+        {},
+        {
+          projectImageUrl: [projectImageFile],
+        },
+      );
 
       expect(jobsRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
           projectImageUrl: 'https://cdn.example.com/project.jpg',
-          housePlanUrl: 'https://cdn.example.com/plan.jpg',
         }),
       );
     });

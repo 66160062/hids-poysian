@@ -56,16 +56,20 @@ export class CreateInspectionJobDto {
   @IsOptional()
   branchId?: number;
 
-  @ApiProperty({ description: 'รหัสทีมตรวจ (ใช้เป็น Branch ของงาน)', example: 1, required: false })
-  @Type(() => Number)
-  @IsNumber()
-  @IsOptional()
-  teamId?: number;
-
   @ApiProperty({ description: 'ชื่อโครงการ', example: 'หมู่บ้านแสนสุข วิลเลจ' })
   @IsString()
   @MaxLength(255)
   projectName!: string;
+
+  @ApiProperty({
+    description: 'ชื่อโครงการ (ภาษาอังกฤษ)',
+    example: 'Saensuk Village',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  projectNameEn?: string;
 
   @ApiProperty({
     description: 'พิกัดแผนที่ (Latitude, Longitude)',
@@ -74,17 +78,6 @@ export class CreateInspectionJobDto {
   @IsString()
   @MaxLength(255)
   locationCoordinate!: string;
-
-  @ApiProperty({
-    type: 'string',
-    format: 'binary',
-    description: 'ไฟล์แปลนบ้าน',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  @MaxLength(255)
-  housePlanUrl?: string;
 
   @ApiProperty({ description: 'พื้นที่ใช้สอย (ตารางเมตร)', example: 150.5 })
   @Type(() => Number)

@@ -113,7 +113,6 @@ export class DailyReportsService {
         inspectionType: createDailyReportDto.inspectionType,
         projectName: createDailyReportDto.projectName,
         locationCoordinate: createDailyReportDto.locationCoordinate,
-        housePlanUrl: createDailyReportDto.housePlanUrl,
         usableArea: createDailyReportDto.usableArea,
         projectImageUrl:
           createDailyReportDto.projectImageUrl ??
@@ -160,10 +159,45 @@ export class DailyReportsService {
       throw new NotFoundException(`ไม่พบ daily report ID ${jobId}`);
     }
 
-    return this.dataSource.getRepository(InspectionRound).find({
+    const rounds = await this.dataSource.getRepository(InspectionRound).find({
       where: { job: { jobId } },
       relations: ['teamMembers', 'teamMembers.inspector', 'teamMembers.team'],
       order: { roundNumber: 'ASC' },
+    });
+    if (rounds.length === 0) return [];
+
+    // จำนวน defect ต่อรอบ — หน้า admin ใช้ตัดสินว่าปุ่มอนุมัติรอบนี้จะ "ปิดงาน" ด้วยหรือไม่
+    const counts = await this.dataSource
+      .getRepository(Defect)
+      .createQueryBuilder('defect')
+      .select('defect.round_id', 'roundId')
+      .addSelect('COUNT(*)', 'defectCount')
+      .addSelect(
+        'COUNT(*) FILTER (WHERE defect.status <> :verified)',
+        'openDefectCount',
+      )
+      .where('defect.round_id IN (:...roundIds)', {
+        roundIds: rounds.map((round) => round.roundId),
+      })
+      .setParameter('verified', DefectStatus.VERIFIED)
+      .groupBy('defect.round_id')
+      .getRawMany<{
+        roundId: number;
+        defectCount: string;
+        openDefectCount: string;
+      }>();
+
+    const countsByRound = new Map(
+      counts.map((row) => [Number(row.roundId), row]),
+    );
+
+    return rounds.map((round) => {
+      const row = countsByRound.get(round.roundId);
+      return {
+        ...round,
+        defectCount: Number(row?.defectCount ?? 0),
+        openDefectCount: Number(row?.openDefectCount ?? 0),
+      };
     });
   }
 
@@ -173,6 +207,11 @@ export class DailyReportsService {
     });
     if (!job) {
       throw new NotFoundException(`ไม่พบ daily report ID ${jobId}`);
+    }
+    if (job.status === 'Completed') {
+      throw new BadRequestException(
+        'ไม่สามารถสร้างรอบใหม่ได้ เนื่องจากงานนี้ปิดงานแล้ว',
+      );
     }
 
     let notifyInspectorIds: number[] = [];
@@ -233,6 +272,7 @@ export class DailyReportsService {
               option: item.option,
               refItem: item.refItem ?? null,
               detailValue: item.detailValue,
+              photoUrl: item.photoUrl,
             }),
           );
           await manager.getRepository(InspectionSummaryItem).save(clonedItems);
@@ -369,6 +409,7 @@ export class DailyReportsService {
               option: item.option,
               refItem: { itemId: item.itemId } as InspectionSummaryItem,
               detailValue: item.detailValue,
+              photoUrl: item.photoUrl,
             }),
           ),
         );

@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 
 // ใช้กับ PATCH /inspection-rounds/:id/job-info — endpoint แบบจำกัดสิทธิ์ที่ inspector ที่ถูก
-// assign เข้ารอบนี้ (หรือ admin) ใช้แก้ไข "ข้อมูลผู้รับเหมา + รูปหน้าโครงการ + แปลนบ้าน" ของ job
+// assign เข้ารอบนี้ (หรือ admin) ใช้แก้ไข "ข้อมูลผู้รับเหมา + รูปหน้าโครงการ" ของ job
 // เท่านั้น — ไม่ใช่ endpoint แก้ไข job แบบเต็มรูปแบบเหมือน PATCH /inspection-jobs/:id ที่ admin ใช้
 export class UpdateJobInfoDto {
   @ApiProperty({ description: 'ชื่อผู้รับเหมา', required: false })
@@ -39,15 +39,4 @@ export class UpdateJobInfoDto {
   @IsOptional()
   @MaxLength(255)
   projectImageUrl?: string;
-
-  @ApiProperty({
-    type: 'string',
-    format: 'binary',
-    description: 'ไฟล์แปลนบ้าน',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  @MaxLength(255)
-  housePlanUrl?: string;
 }

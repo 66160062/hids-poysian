@@ -43,6 +43,12 @@ export class RatingsService {
     const job = await this.jobsRepo.findOneByOrFail({
       jobId: linkPayload.project_id,
     });
+    // ลูกค้าให้คะแนนได้หลังแอดมินปิดงานแล้วเท่านั้น (ดู InspectionRoundsService.approveReport)
+    if (job.status !== 'Completed') {
+      throw new ForbiddenException(
+        'Ratings are only accepted after the job is closed',
+      );
+    }
     const comment = createRatingDto.comment?.trim() || null;
 
     try {

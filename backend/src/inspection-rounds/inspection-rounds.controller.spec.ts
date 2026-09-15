@@ -80,13 +80,27 @@ describe('InspectionRoundsController', () => {
     reports.getCachedReportUrl.mockResolvedValue({
       url: 'https://example.com/r.pdf',
       generatedAt,
+      isStale: false,
     });
 
     await expect(controller.getReport('4')).resolves.toEqual({
       url: 'https://example.com/r.pdf',
       generatedAt,
+      isStale: false,
     });
-    expect(reports.getCachedReportUrl).toHaveBeenCalledWith(4);
+    expect(reports.getCachedReportUrl).toHaveBeenCalledWith(4, 'th-TH');
+  });
+
+  it('forwards lang=en-US as the en-US locale when requesting the cached report url', async () => {
+    reports.getCachedReportUrl.mockResolvedValue({
+      url: 'https://example.com/r-en.pdf',
+      generatedAt: null,
+      isStale: false,
+    });
+
+    await controller.getReport('4', 'en-US');
+
+    expect(reports.getCachedReportUrl).toHaveBeenCalledWith(4, 'en-US');
   });
 
   it('converts the route param to a number and forwards the dto and files when updating job info', async () => {
@@ -94,7 +108,7 @@ describe('InspectionRoundsController', () => {
     const files = { projectImageUrl: [{ buffer: Buffer.from('a') }] };
     service.updateJobInfo.mockResolvedValue({ jobId: 4 } as never);
 
-    await controller.updateJobInfo('1', files as never, dto as never);
+    await controller.updateJobInfo('1', files as never, dto);
 
     expect(service.updateJobInfo).toHaveBeenCalledWith(1, dto, files);
   });

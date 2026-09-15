@@ -131,6 +131,44 @@ describe('DailyReportsService', () => {
     });
   });
 
+  describe('findRoundsByJob', () => {
+    it('attaches total and unverified defect counts to each round', async () => {
+      const queryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        setParameter: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        getRawMany: jest
+          .fn()
+          .mockResolvedValue([
+            { roundId: 1, defectCount: '4', openDefectCount: '0' },
+          ]),
+      };
+      dataSource.getRepository.mockImplementation((entity: { name: string }) => {
+        if (entity.name === 'InspectionJob') {
+          return { findOneBy: jest.fn().mockResolvedValue({ jobId: 1 }) };
+        }
+        if (entity.name === 'InspectionRound') {
+          return {
+            find: jest.fn().mockResolvedValue([
+              { roundId: 1, roundNumber: 1 },
+              { roundId: 2, roundNumber: 2 },
+            ]),
+          };
+        }
+        return { createQueryBuilder: jest.fn(() => queryBuilder) };
+      });
+
+      const result = await service.findRoundsByJob(1);
+
+      expect(result).toEqual([
+        { roundId: 1, roundNumber: 1, defectCount: 4, openDefectCount: 0 },
+        { roundId: 2, roundNumber: 2, defectCount: 0, openDefectCount: 0 },
+      ]);
+    });
+  });
+
   describe('createRound', () => {
     it('throws NotFoundException when the job does not exist', async () => {
       dataSource.getRepository.mockReturnValue({
@@ -140,6 +178,19 @@ describe('DailyReportsService', () => {
       await expect(
         service.createRound(99, { scheduledDate: undefined } as never),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('rejects creating a new round on a job that is already closed', async () => {
+      dataSource.getRepository.mockReturnValue({
+        findOneBy: jest
+          .fn()
+          .mockResolvedValue({ jobId: 1, status: 'Completed' }),
+      });
+
+      await expect(service.createRound(1, {} as never)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(dataSource.transaction).not.toHaveBeenCalled();
     });
 
     it('rejects creating a new round while the previous one is still open', async () => {

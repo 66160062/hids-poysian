@@ -10,7 +10,6 @@ import {
 } from 'typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
-import { User } from 'src/users/entities/user.entity';
 
 @Entity('inspection_round')
 export class InspectionRound {
@@ -63,6 +62,32 @@ export class InspectionRound {
   // เพื่อให้ผู้ใช้เช็คได้ว่าไฟล์ที่กำลังดู/ดาวน์โหลดเป็นข้อมูล ณ เวลาไหน (PDF อาจ regenerate ช้ากว่าการแก้ defect ล่าสุดได้)
   @Column({ name: 'last_pdf_generated_at', type: 'timestamp', nullable: true })
   lastPdfGeneratedAt!: Date | null;
+
+  // cache ภาษาอังกฤษแยกจากไทย (lastPdfHash/lastPdfUrl/lastPdfGeneratedAt ด้านบน) — render แบบ lazy
+  // ตอนมีคนขอ PDF อังกฤษจริงๆ เท่านั้น ไม่ได้ regenerate พร้อมกันทุกครั้งที่ scheduleRegeneration ทำงาน
+  // (ดู ReportsService) เพื่อไม่ให้ debounce ตอนแก้ defect ต้อง render ซ้ำสองภาษาทุกครั้ง
+  @Column({
+    name: 'last_pdf_hash_en',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  lastPdfHashEn!: string | null;
+
+  @Column({
+    name: 'last_pdf_url_en',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  lastPdfUrlEn!: string | null;
+
+  @Column({
+    name: 'last_pdf_generated_at_en',
+    type: 'timestamp',
+    nullable: true,
+  })
+  lastPdfGeneratedAtEn!: Date | null;
 
   // ตั้งเวลาไว้กันแจ้งเตือนซ้ำ — ยิงแค่ครั้งแรกที่ยอดซ่อมข้าม threshold (ดู REPAIR_ALERT_THRESHOLD ใน defects.service.ts)
   @Column({ name: 'repair_alert_sent_at', type: 'timestamp', nullable: true })
@@ -117,11 +142,6 @@ export class InspectionRound {
   @ManyToOne(() => InspectionJob)
   @JoinColumn({ name: 'job_id' })
   job!: InspectionJob;
-
-  // แอดมินที่เปิดรอบตรวจนี้ — ใช้แสดงเป็น "ผู้ประสานงาน" ในรายงาน PDF
-  @ManyToOne(() => User, { nullable: true })
-  @JoinColumn({ name: 'created_by' })
-  createdBy!: User | null;
 
   @OneToMany(() => InspectionTeamMember, (teamMember) => teamMember.round)
   teamMembers!: InspectionTeamMember[];

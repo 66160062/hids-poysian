@@ -10,7 +10,9 @@ import {
   UploadedFiles,
   Query,
   UseGuards,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { InspectionJobsService } from './inspection-jobs.service';
 import { CreateInspectionJobDto } from './dto/create-inspection-job.dto';
 import { UpdateInspectionJobDto } from './dto/update-inspection-job.dto';
@@ -38,10 +40,7 @@ export class InspectionJobsController {
   @ApiBody({ description: 'ข้อมูลการตรวจ', type: CreateInspectionJobDto })
   @UseInterceptors(
     FileFieldsInterceptor(
-      [
-        { name: 'projectImageUrl', maxCount: 1 },
-        { name: 'housePlanUrl', maxCount: 1 },
-      ],
+      [{ name: 'projectImageUrl', maxCount: 1 }],
       { storage: memoryStorage() },
     ),
   )
@@ -49,28 +48,24 @@ export class InspectionJobsController {
     @UploadedFiles()
     files: {
       projectImageUrl?: Express.Multer.File[];
-      housePlanUrl?: Express.Multer.File[];
     },
     @Body() createInspectionJobDto: CreateInspectionJobDto,
+    @Req() req: Request & { user?: { sub: number } },
   ) {
     const projectImage = files?.projectImageUrl?.[0];
-    const housePlan = files?.housePlanUrl?.[0];
 
-    return this.inspectionJobsService.create({
-      ...createInspectionJobDto,
-      projectImageUrl: projectImage
-        ? await this.storageService.uploadImage(
-            projectImage.buffer,
-            'inspection_jobs',
-          )
-        : '/uploads/inspection_jobs/unknown.jpg',
-      housePlanUrl: housePlan
-        ? await this.storageService.uploadImage(
-            housePlan.buffer,
-            'inspection_jobs',
-          )
-        : createInspectionJobDto.housePlanUrl || '',
-    });
+    return this.inspectionJobsService.create(
+      {
+        ...createInspectionJobDto,
+        projectImageUrl: projectImage
+          ? await this.storageService.uploadImage(
+              projectImage.buffer,
+              'inspection_jobs',
+            )
+          : '/uploads/inspection_jobs/unknown.jpg',
+      },
+      req.user?.sub,
+    );
   }
 
   @Get()
@@ -146,10 +141,7 @@ export class InspectionJobsController {
   @ApiBody({ description: 'ข้อมูลการตรวจ', type: UpdateInspectionJobDto })
   @UseInterceptors(
     FileFieldsInterceptor(
-      [
-        { name: 'projectImageUrl', maxCount: 1 },
-        { name: 'housePlanUrl', maxCount: 1 },
-      ],
+      [{ name: 'projectImageUrl', maxCount: 1 }],
       { storage: memoryStorage() },
     ),
   )
@@ -158,12 +150,10 @@ export class InspectionJobsController {
     @UploadedFiles()
     files: {
       projectImageUrl?: Express.Multer.File[];
-      housePlanUrl?: Express.Multer.File[];
     },
     @Body() updateInspectionJobDto: UpdateInspectionJobDto,
   ) {
     const projectImage = files?.projectImageUrl?.[0];
-    const housePlan = files?.housePlanUrl?.[0];
 
     return this.inspectionJobsService.update(+id, {
       ...updateInspectionJobDto,
@@ -173,12 +163,6 @@ export class InspectionJobsController {
             'inspection_jobs',
           )
         : updateInspectionJobDto.projectImageUrl,
-      housePlanUrl: housePlan
-        ? await this.storageService.uploadImage(
-            housePlan.buffer,
-            'inspection_jobs',
-          )
-        : updateInspectionJobDto.housePlanUrl,
     });
   }
 
