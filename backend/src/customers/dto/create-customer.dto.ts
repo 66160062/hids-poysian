@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCustomerDto {
@@ -61,4 +61,14 @@ export class CreateCustomerDto {
   })
   @IsString()
   lineId!: string;
+
+  @ApiPropertyOptional({
+    description: 'ภาษาที่ลูกค้าอยากได้รับเอกสาร (อีเมลอนุมัติ/PDF แนบ)',
+    example: 'th-TH',
+    enum: ['th-TH', 'en-US'],
+    default: 'th-TH',
+  })
+  @IsOptional()
+  @IsEnum(['th-TH', 'en-US'])
+  preferredLocale?: string;
 }
