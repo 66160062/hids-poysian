@@ -18,7 +18,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "eval:ai-summary": "ts-node -r tsconfig-paths/register scripts/ai-summary-eval.ts"
+    "eval:ai-summary": "ts-node -r tsconfig-paths/register scripts/ai-summary-eval.ts",
+    "migrate:house-plans": "ts-node -r tsconfig-paths/register scripts/migrate-house-plans.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.16",

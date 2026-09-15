@@ -5,7 +5,7 @@ import { SubRoom } from 'src/sub-rooms/entities/sub-room.entity';
 import { Floor } from 'src/floor/entities/floor.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
-import { JobPlan } from 'src/job-plans/entities/job-plan.entity';
+import { HousePlan } from 'src/house-plans/entities/house-plan.entity';
 import {
   Column,
   Entity,
@@ -105,7 +105,7 @@ export class Defect {
   @Column({ type: 'varchar', length: 100, nullable: true })
   locationZone!: string | null;
 
-  @ManyToOne(() => JobPlan, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => HousePlan, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'plan_id' })
-  plan!: JobPlan | null;
+  plan!: HousePlan | null;
 }

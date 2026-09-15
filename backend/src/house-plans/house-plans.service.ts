@@ -5,17 +5,18 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { JobPlan } from './entities/job-plan.entity';
+import { HousePlan } from './entities/house-plan.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { Floor } from 'src/floor/entities/floor.entity';
-import { CreateJobPlanDto } from './dto/create-job-plan.dto';
+import { CreateHousePlanDto } from './dto/create-house-plan.dto';
+import { UpdateHousePlanDto } from './dto/update-house-plan.dto';
 import { StorageService } from 'src/storage/storage.service';
 
 @Injectable()
-export class JobPlansService {
+export class HousePlansService {
   constructor(
-    @InjectRepository(JobPlan)
-    private readonly jobPlansRepo: Repository<JobPlan>,
+    @InjectRepository(HousePlan)
+    private readonly housePlansRepo: Repository<HousePlan>,
 
     @InjectRepository(InspectionJob)
     private readonly jobsRepo: Repository<InspectionJob>,
@@ -26,8 +27,8 @@ export class JobPlansService {
     private readonly storageService: StorageService,
   ) {}
 
-  async findByJob(jobId: number): Promise<JobPlan[]> {
-    return this.jobPlansRepo.find({
+  async findByJob(jobId: number): Promise<HousePlan[]> {
+    return this.housePlansRepo.find({
       where: { job: { jobId } },
       order: {
         orderIndex: 'ASC',
@@ -37,8 +38,8 @@ export class JobPlansService {
     });
   }
 
-  async findOne(planId: number): Promise<JobPlan> {
-    const plan = await this.jobPlansRepo.findOne({
+  async findOne(planId: number): Promise<HousePlan> {
+    const plan = await this.housePlansRepo.findOne({
       where: { planId },
       relations: ['floor', 'job'],
     });
@@ -51,8 +52,8 @@ export class JobPlansService {
   async create(
     jobId: number,
     file: Express.Multer.File | undefined,
-    dto: CreateJobPlanDto,
-  ): Promise<JobPlan> {
+    dto: CreateHousePlanDto,
+  ): Promise<HousePlan> {
     if (!file) {
       throw new BadRequestException('กรุณาอัปโหลดรูปภาพแปลน');
     }
@@ -72,25 +73,36 @@ export class JobPlansService {
 
     const imageUrl = await this.storageService.uploadImage(
       file.buffer,
-      'job-plans',
+      'house-plans',
     );
 
-    const plan = this.jobPlansRepo.create({
+    const plan = this.housePlansRepo.create({
       name: dto.name,
+      nameEn: dto.nameEn ?? null,
       imageUrl,
       orderIndex: dto.orderIndex ?? 0,
       job,
       floor,
     });
 
-    return this.jobPlansRepo.save(plan);
+    return this.housePlansRepo.save(plan);
   }
 
-  async remove(planId: number): Promise<JobPlan> {
+  async update(
+    planId: number,
+    dto: UpdateHousePlanDto,
+  ): Promise<HousePlan> {
+    const plan = await this.findOne(planId);
+    plan.name = dto.name;
+    if (dto.nameEn !== undefined) plan.nameEn = dto.nameEn;
+    return this.housePlansRepo.save(plan);
+  }
+
+  async remove(planId: number): Promise<HousePlan> {
     const plan = await this.findOne(planId);
     if (plan.imageUrl) {
       await this.storageService.deleteFile(plan.imageUrl);
     }
-    return this.jobPlansRepo.remove(plan);
+    return this.housePlansRepo.remove(plan);
   }
 }

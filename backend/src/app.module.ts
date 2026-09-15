@@ -68,8 +68,8 @@ import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { ActivityLog } from './activity-logs/entities/activity-log.entity';
 import { Assignment } from './assignments/entities/assignment.entity';
 import { AiSummaryModule } from './ai-summary/ai-summary.module';
-import { JobPlan } from './job-plans/entities/job-plan.entity';
-import { JobPlansModule } from './job-plans/job-plans.module';
+import { HousePlan } from './house-plans/entities/house-plan.entity';
+import { HousePlansModule } from './house-plans/house-plans.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -121,7 +121,7 @@ import { JobPlansModule } from './job-plans/job-plans.module';
           Branch,
           ActivityLog,
           Assignment,
-          JobPlan,
+          HousePlan,
         ],
         synchronize: true,
         namingStrategy: new SnakeNamingStrategy(),
@@ -135,7 +135,7 @@ import { JobPlansModule } from './job-plans/job-plans.module';
     AuthModule,
     UsersModule,
     InspectionJobsModule,
-    JobPlansModule,
+    HousePlansModule,
     CustomersModule,
     AddressesModule,
     HouseTypesModule,

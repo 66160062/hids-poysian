@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { JobPlansService } from './job-plans.service';
-import { JobPlan } from './entities/job-plan.entity';
+import { HousePlansService } from './house-plans.service';
+import { HousePlan } from './entities/house-plan.entity';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { Floor } from 'src/floor/entities/floor.entity';
 import { StorageService } from 'src/storage/storage.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
-describe('JobPlansService', () => {
-  let service: JobPlansService;
-  let jobPlansRepo: {
+describe('HousePlansService', () => {
+  let service: HousePlansService;
+  let housePlansRepo: {
     find: jest.Mock;
     findOne: jest.Mock;
     create: jest.Mock;
@@ -28,7 +28,7 @@ describe('JobPlansService', () => {
   };
 
   beforeEach(async () => {
-    jobPlansRepo = {
+    housePlansRepo = {
       find: jest.fn(),
       findOne: jest.fn(),
       create: jest.fn(),
@@ -48,15 +48,15 @@ describe('JobPlansService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        JobPlansService,
-        { provide: getRepositoryToken(JobPlan), useValue: jobPlansRepo },
+        HousePlansService,
+        { provide: getRepositoryToken(HousePlan), useValue: housePlansRepo },
         { provide: getRepositoryToken(InspectionJob), useValue: jobsRepo },
         { provide: getRepositoryToken(Floor), useValue: floorRepo },
         { provide: StorageService, useValue: storageService },
       ],
     }).compile();
 
-    service = module.get<JobPlansService>(JobPlansService);
+    service = module.get<HousePlansService>(HousePlansService);
   });
 
   it('should be defined', () => {
@@ -69,11 +69,11 @@ describe('JobPlansService', () => {
         { planId: 1, name: 'แปลนชั้น 1', orderIndex: 0 },
         { planId: 2, name: 'แปลนชั้น 2', orderIndex: 1 },
       ];
-      jobPlansRepo.find.mockResolvedValue(mockPlans);
+      housePlansRepo.find.mockResolvedValue(mockPlans);
 
       const result = await service.findByJob(10);
       expect(result).toEqual(mockPlans);
-      expect(jobPlansRepo.find).toHaveBeenCalledWith({
+      expect(housePlansRepo.find).toHaveBeenCalledWith({
         where: { job: { jobId: 10 } },
         order: { orderIndex: 'ASC', createdAt: 'ASC' },
         relations: ['floor'],
@@ -97,7 +97,7 @@ describe('JobPlansService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('successfully creates and saves job plan', async () => {
+    it('successfully creates and saves house plan', async () => {
       const file = { buffer: Buffer.from('test') } as Express.Multer.File;
       const mockJob = { jobId: 1, projectName: 'Project A' };
       const mockFloor = { floorId: 2, label: 'ชั้น 2' };
@@ -105,8 +105,8 @@ describe('JobPlansService', () => {
       jobsRepo.findOneBy.mockResolvedValue(mockJob);
       floorRepo.findOneBy.mockResolvedValue(mockFloor);
       storageService.uploadImage.mockResolvedValue('/plans/test.webp');
-      jobPlansRepo.create.mockImplementation((val) => val);
-      jobPlansRepo.save.mockImplementation(async (val) => ({
+      housePlansRepo.create.mockImplementation((val) => val);
+      housePlansRepo.save.mockImplementation(async (val) => ({
         planId: 10,
         ...val,
       }));
@@ -119,7 +119,7 @@ describe('JobPlansService', () => {
 
       expect(storageService.uploadImage).toHaveBeenCalledWith(
         file.buffer,
-        'job-plans',
+        'house-plans',
       );
       expect(result).toMatchObject({
         planId: 10,
@@ -132,6 +132,33 @@ describe('JobPlansService', () => {
     });
   });
 
+  describe('update', () => {
+    it('throws NotFoundException if plan does not exist', async () => {
+      housePlansRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.update(999, { name: 'แปลนชั้น 2' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('renames the plan and saves it', async () => {
+      const mockPlan = {
+        planId: 5,
+        name: 'แปลนชั้น 1',
+        imageUrl: '/plans/test.webp',
+      };
+      housePlansRepo.findOne.mockResolvedValue(mockPlan);
+      housePlansRepo.save.mockImplementation(async (val) => val);
+
+      const result = await service.update(5, { name: 'แปลนชั้น 2 (แก้ไข)' });
+
+      expect(housePlansRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ planId: 5, name: 'แปลนชั้น 2 (แก้ไข)' }),
+      );
+      expect(result.name).toBe('แปลนชั้น 2 (แก้ไข)');
+    });
+  });
+
   describe('remove', () => {
     it('deletes storage image and removes plan from repo', async () => {
       const mockPlan = {
@@ -139,14 +166,14 @@ describe('JobPlansService', () => {
         name: 'แปลนชั้น 1',
         imageUrl: '/plans/test.webp',
       };
-      jobPlansRepo.findOne.mockResolvedValue(mockPlan);
-      jobPlansRepo.remove.mockResolvedValue(mockPlan);
+      housePlansRepo.findOne.mockResolvedValue(mockPlan);
+      housePlansRepo.remove.mockResolvedValue(mockPlan);
 
       const result = await service.remove(5);
       expect(storageService.deleteFile).toHaveBeenCalledWith(
         '/plans/test.webp',
       );
-      expect(jobPlansRepo.remove).toHaveBeenCalledWith(mockPlan);
+      expect(housePlansRepo.remove).toHaveBeenCalledWith(mockPlan);
       expect(result).toEqual(mockPlan);
     });
   });
