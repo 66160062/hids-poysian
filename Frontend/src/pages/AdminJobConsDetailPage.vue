@@ -15,11 +15,11 @@
 
     <!-- Loading State -->
     <div v-if="isLoading" class="text-center q-py-xl absolute-center full-width">
-      <q-spinner color="primary" size="3em" />
+      <IconBounceSpinner icon="construction" size="64px" color="primary" />
       <div class="text-grey-6 q-mt-md">{{ t('adminJobs.construction.loadingData') }}</div>
     </div>
 
-    <div v-else class="detail-content q-pa-md">
+    <div v-else class="detail-content">
       <!-- Project Card -->
       <q-card flat bordered class="q-mb-md card-round overflow-hidden">
         <!-- House Image -->
@@ -38,7 +38,7 @@
           <!-- Project Name & Map button -->
           <div class="row items-start justify-between">
             <div class="col">
-              <div class="text-h6 text-primary text-weight-bold">{{ job.projectName }}</div>
+              <div class="text-h6 text-primary text-weight-bold">{{ pickLocalized(job.projectName, job.projectNameEn) }}</div>
               <div class="text-caption text-grey-7 q-mt-xs">{{ job.address }}</div>
             </div>
             <q-btn round flat icon="map" color="primary" class="map-btn" @click="openGoogleMaps" />
@@ -75,9 +75,11 @@
               <div class="text-weight-bold text-body2">{{ job.customerName }}</div>
               <div class="text-caption text-primary q-mt-xs">
                 <q-icon name="phone" size="13px" class="q-mr-xs" />
-                {{ job.customerPhone }}
+                {{ job.customerPhone }}<template v-if="job.customerPhone2"> | {{ job.customerPhone2 }}</template><template v-if="job.customerPhone3"> | {{ job.customerPhone3 }}</template>
               </div>
-              <div class="text-caption text-grey-7 q-mt-xs">{{ t('adminJobs.construction.emailPrefix') }} {{ job.customerEmail }}</div>
+              <div class="text-caption text-grey-7 q-mt-xs">
+                {{ t('adminJobs.construction.emailPrefix') }} {{ job.customerEmail }}<template v-if="job.customerEmail2"> | {{ job.customerEmail2 }}</template><template v-if="job.customerEmail3"> | {{ job.customerEmail3 }}</template>
+              </div>
             </div>
 
             <!-- ผู้ประสานงาน -->
@@ -128,7 +130,7 @@
       </q-card>
 
       <!-- Contractor Progress Section -->
-      <div v-if="inspectionRounds.length > 0 && job.status === 'เสร็จสิ้น'" class="q-mb-lg">
+      <div v-if="inspectionRounds.length > 0 && job.status === 'COMPLETED'" class="q-mb-lg">
         <div class="row items-center justify-between q-mb-sm">
           <div class="text-subtitle2 text-weight-bold">{{ t('adminJobs.construction.contractorProgressTitle') }}</div>
           <div class="text-caption text-weight-bold" :class="job.contractorProgress >= 50 ? 'text-positive' : 'text-orange'">
@@ -200,7 +202,7 @@
                   text-color="dark"
                   class="text-caption"
                 >
-                  {{ round.status }}
+                  {{ jobStatusLabel(round.status) }}
                 </q-chip>
                 <q-icon name="chevron_right" color="grey-5" class="q-mt-xs" />
               </q-item-section>
@@ -254,6 +256,9 @@
       :initial-zone="selectedDefect?.locationZone ?? null"
       readonly
     />
+
+    <!-- House Plan Viewer (ปุ่ม "ดูแปลน") -->
+    <PlanPositionDialog v-model="showHousePlanDialog" :job-id="jobId" readonly />
 
     <!-- Create New Round Dialog -->
     <q-dialog v-model="showCreateRoundDialog" transition-show="scale" transition-hide="scale">
@@ -443,13 +448,13 @@
                     </div>
                   </div>
                   <q-chip v-if="selectedRound" dense :color="getRoundStatusColor(selectedRound.status)" text-color="dark">
-                    {{ selectedRound.status }}
+                    {{ jobStatusLabel(selectedRound.status) }}
                   </q-chip>
                 </q-card-section>
 
 
                 <div v-if="isLoadingRoundDefects" class="column items-center q-pa-xl">
-                  <q-spinner color="primary" size="32px" />
+                  <IconBounceSpinner icon="assignment" size="40px" color="primary" />
                   <div class="text-caption text-grey-6 q-mt-sm">{{ t('adminJobs.construction.loadingDefects') }}</div>
                 </div>
 
@@ -766,14 +771,18 @@ import { useTeamStore } from '../stores/useTeam';
 import { useConstructionDailyReportStore } from 'src/stores/useConstructionDailyReport';
 import type { ExtendedConstructionReport } from 'src/stores/useConstructionDailyReport';
 import ConstructionReportPdf from 'src/components/ConstructionReportPdf.vue';
-import type { Defect } from 'src/models';
+import type { Defect, HousePlan } from 'src/models';
 import InspectionItemCard from '../components/InspectionItemCard.vue';
 import PlanPositionDialog from '../components/PlanPositionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
+import { useLocalizedField } from 'src/composables/useLocalizedField';
+import { useJobStatus, roundStatusCode, jobStatusCode } from 'src/composables/useJobStatus';
 
 const pdfSpinner = createIconSpinner('picture_as_pdf');
 
 const { t, locale } = useI18n();
+const { jobStatusLabel } = useJobStatus();
+const { pickLocalized } = useLocalizedField();
 const constructionPdfRef = ref<InstanceType<typeof ConstructionReportPdf> | null>(null);
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
@@ -811,12 +820,22 @@ interface AddressEntity {
 interface JobApiResponse {
   jobId: number;
   projectName: string;
+  projectNameEn?: string | null;
   usableArea: number;
-  housePlanUrl?: string;
   projectImageUrl?: string;
-  customer?: { fullName?: string; phoneNumber?: string; email?: string; lineId?: string };
+  customer?: {
+    fullName?: string;
+    phoneNumber?: string;
+    phoneNumber2?: string;
+    phoneNumber3?: string;
+    email?: string;
+    email2?: string;
+    email3?: string;
+    lineId?: string;
+  };
   contractor?: { fullName?: string; phoneNumber?: string; email?: string; companyName?: string };
-  houseType?: { name?: string };
+  createdBy?: { fullName?: string; phoneNumber?: string; email?: string; lineId?: string } | null;
+  houseType?: { name?: string; nameEn?: string | null };
   address?: AddressEntity;
   createdAt?: string;
   status?: string;
@@ -1030,25 +1049,12 @@ const formatRoundDate = (dateStr: string) => {
 
   const hour = date.getHours();
   if (hour === 9) {
-    return `${formattedDate} (${t('adminJobs.construction.morningRoundSuffix')})`;
+    return `${formattedDate} 09:00-12:00 (${t('adminJobs.construction.morningRoundSuffix')})`;
   } else if (hour === 13) {
-    return `${formattedDate} (${t('adminJobs.construction.afternoonRoundSuffix')})`;
+    return `${formattedDate} 13:00-16:00 (${t('adminJobs.construction.afternoonRoundSuffix')})`;
   }
 
   return formattedDate;
-};
-
-const mapRoundStatus = (status: string) => {
-  switch (status) {
-    case 'COMPLETED':
-    case 'APPROVED':
-      return 'เสร็จสิ้น';
-    case 'SUBMITTED':
-      return 'รออนุมัติ';
-    case 'SCHEDULED':
-    default:
-      return 'กำลังดำเนินการ';
-  }
 };
 
 const mapRoundToView = (round: RoundApiResponse) => {
@@ -1076,7 +1082,7 @@ const mapRoundToView = (round: RoundApiResponse) => {
     id: round.roundId,
     roundNumber: round.roundNumber,
     date: formatRoundDate(round.scheduledDate),
-    status: mapRoundStatus(round.status),
+    status: roundStatusCode(round.status),
     statusKey: round.status,
     inspectors,
     summaryCompletedAt: round.summaryCompletedAt,
@@ -1086,6 +1092,17 @@ const mapRoundToView = (round: RoundApiResponse) => {
 async function fetchJobDetails() {
   const { data } = await api.get<JobApiResponse>(`/inspection-jobs/${jobId.value}`);
   jobData.value = data;
+}
+
+const housePlans = ref<HousePlan[]>([]);
+
+async function fetchHousePlans() {
+  try {
+    const { data } = await api.get<HousePlan[]>(`/inspection-jobs/${jobId.value}/house-plans`);
+    housePlans.value = data;
+  } catch (error) {
+    console.error('Failed to fetch house plans', error);
+  }
 }
 
 async function fetchTeamMembers() {
@@ -1135,6 +1152,7 @@ async function loadPageData() {
     await Promise.all([
       fetchJobDetails(),
       fetchTeamMembers(),
+      fetchHousePlans(),
       teamStore.fetchTeams() // ดึงข้อมูลทีม
     ]);
     const rounds = await fetchRounds();
@@ -1173,13 +1191,18 @@ const job = computed(() => {
   if (!data) {
     return {
       projectName: '-',
+      projectNameEn: '',
       houseType: '-',
       area: '-',
       appointmentDate: '-',
       address: '-',
       customerName: '-',
       customerPhone: '-',
+      customerPhone2: '',
+      customerPhone3: '',
       customerEmail: '-',
+      customerEmail2: '',
+      customerEmail3: '',
       coordName: '-',
       coordPhone: '-',
       coordEmail: '-',
@@ -1197,12 +1220,12 @@ const job = computed(() => {
     if (!addr) return '-';
 
     const parts = [];
-    if (addr.houseNumber) parts.push(`เลขที่ ${addr.houseNumber}`);
-    if (addr.floor && addr.floor !== '-' && addr.floor !== '') parts.push(`ชั้น ${addr.floor}`);
-    if (addr.soi && addr.soi !== '-' && addr.soi !== '') parts.push(`ซอย ${addr.soi}`);
-    if (addr.subDistrict) parts.push(`ต.${addr.subDistrict}`);
-    if (addr.district) parts.push(`อ.${addr.district}`);
-    if (addr.province) parts.push(`จ.${addr.province}`);
+    if (addr.houseNumber) parts.push(t('common.address.houseNumber', { value: addr.houseNumber }));
+    if (addr.floor && addr.floor !== '-' && addr.floor !== '') parts.push(t('common.address.floor', { value: addr.floor }));
+    if (addr.soi && addr.soi !== '-' && addr.soi !== '') parts.push(t('common.address.soi', { value: addr.soi }));
+    if (addr.subDistrict) parts.push(t('common.address.subDistrict', { value: addr.subDistrict }));
+    if (addr.district) parts.push(t('common.address.district', { value: addr.district }));
+    if (addr.province) parts.push(t('common.address.province', { value: addr.province }));
     if (addr.postalCode) parts.push(`${addr.postalCode}`);
 
     return parts.length > 0 ? parts.join(' ') : '-';
@@ -1212,20 +1235,25 @@ const job = computed(() => {
 
   return {
     projectName: data.projectName || '-',
-    houseType: data.houseType?.name || '-',
+    projectNameEn: data.projectNameEn || '',
+    houseType: pickLocalized(data.houseType?.name, data.houseType?.nameEn) || '-',
     area: data.usableArea?.toString() || '-',
     appointmentDate: latestRound?.date || (data.createdAt ? new Date(data.createdAt).toLocaleDateString(locale.value) : '-'),
     address: formatAddressStr(data.address),
     customerName: data.customer?.fullName || '-',
     customerPhone: data.customer?.phoneNumber || '-',
+    customerPhone2: data.customer?.phoneNumber2 || '',
+    customerPhone3: data.customer?.phoneNumber3 || '',
     customerEmail: data.customer?.email || '-',
-    coordName: data.contractor?.fullName || '-',
-    coordPhone: data.contractor?.phoneNumber || '-',
-    coordEmail: data.contractor?.email || '-',
-    coordLine: data.contractor?.companyName || '-',
-    housePlanImage: getImageUrl(data.housePlanUrl),
+    customerEmail2: data.customer?.email2 || '',
+    customerEmail3: data.customer?.email3 || '',
+    coordName: data.createdBy?.fullName || '-',
+    coordPhone: data.createdBy?.phoneNumber || '-',
+    coordEmail: data.createdBy?.email || '-',
+    coordLine: data.createdBy?.lineId || '-',
+    housePlanImage: housePlans.value[0] ? getImageUrl(housePlans.value[0].imageUrl) : null,
     projectImage: getImageUrl(data.projectImageUrl),
-    status: latestRound?.status || data.status || '-',
+    status: latestRound?.status || jobStatusCode(data.status) || data.status || '-',
     statusKey: (latestRound?.status || data.status) === 'Active' ? 'in_progress' : 'waiting',
     contractorProgress: data.contractorProgress || 0,
     isReadyForRound2: data.isReadyForRound2 || false,
@@ -1354,7 +1382,10 @@ async function handleViewReport(round: RoundView) {
           roundNumber: round.roundNumber,
           job: jobData.value,
         },
-        contractorName: job.value.coordName || job.value.coordLine || '-',
+        contractorName:
+          jobData.value?.contractor?.fullName ||
+          jobData.value?.contractor?.companyName ||
+          '-',
         reporterName: round.inspectors?.join(', ') || '-',
       };
       showReportDialog.value = true;
@@ -1380,10 +1411,11 @@ async function handleViewReport(round: RoundView) {
   }
 }
 
+const showHousePlanDialog = ref(false);
+
 const viewPlan = () => {
-  if (job.value.housePlanImage) {
-    currentImageUrl.value = job.value.housePlanImage;
-    showImageDialog.value = true;
+  if (housePlans.value.length) {
+    showHousePlanDialog.value = true;
   } else {
     $q.notify({
       message: t('adminJobs.construction.noHousePlanImage'),
@@ -1595,7 +1627,8 @@ const formatDateDisplay = (dateStr: string) => {
 };
 
 const onCreateRound = () => {
-  if (job.value.status === 'เสร็จสิ้น' && job.value.contractorProgress < 50) {
+  // เดิมเทียบกับสถานะของรอบล่าสุดเท่านั้น — เช็คว่ามีรอบก่อน กันงานที่ยังไม่มีรอบแต่ job.status เป็น Completed
+  if (inspectionRounds.value.length > 0 && job.value.status === 'COMPLETED' && job.value.contractorProgress < 50) {
     $q.dialog({
       title: t('adminJobs.construction.confirmCreateRoundTitle'),
       message: t('adminJobs.construction.confirmCreateRoundMessage', {
@@ -1677,8 +1710,10 @@ const submitCreateRound = async () => {
       inspectorId?: number;
     }
 
+    const startTime = timeInput.value.split(' - ')[0];
+
     const roundPayload: RoundPayload = {
-      scheduledDate: timeInput.value ? `${scheduledDate.value} ${timeInput.value}` : scheduledDate.value,
+      scheduledDate: startTime ? `${scheduledDate.value} ${startTime}` : scheduledDate.value,
       status: 'SCHEDULED',
     };
 
@@ -1739,13 +1774,14 @@ const submitCreateRound = async () => {
   }
 };
 
+// status คือรหัสจาก useJobStatus (IN_PROGRESS/PENDING_APPROVAL/COMPLETED) ไม่ใช่ข้อความที่แสดง
 function getRoundStatusColor(status: string) {
   switch (status) {
-    case 'กำลังดำเนินการ':
+    case 'IN_PROGRESS':
       return 'orange-2';
-    case 'รออนุมัติ':
+    case 'PENDING_APPROVAL':
       return 'blue-2';
-    case 'เสร็จสิ้น':
+    case 'COMPLETED':
       return 'green-2';
     default:
       return 'grey-3';
@@ -1779,6 +1815,20 @@ function getRoundStatusColor(status: string) {
 .detail-content {
   max-width: 600px;
   margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px;
+}
+@media (min-width: 1024px) {
+  .detail-content {
+    max-width: 820px;
+    padding: 24px 32px;
+  }
+}
+@media (min-width: 1440px) {
+  .detail-content {
+    max-width: 920px;
+  }
 }
 
 .review-dialog-content {
@@ -1812,6 +1862,14 @@ function getRoundStatusColor(status: string) {
 .house-img-placeholder {
   width: 100%;
   height: 200px;
+}
+
+@media (min-width: 1024px) {
+  .house-image-wrapper,
+  .house-img,
+  .house-img-placeholder {
+    height: 280px;
+  }
 }
 
 .map-btn {

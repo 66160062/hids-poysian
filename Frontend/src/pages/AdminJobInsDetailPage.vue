@@ -23,15 +23,15 @@
       <div
         class="house-image-wrapper"
         :class="job.projectImage ? 'cursor-pointer' : ''"
+        :tabindex="job.projectImage ? 0 : -1"
+        :role="job.projectImage ? 'button' : undefined"
         @click="viewProjectImage"
+        @keyup.enter="viewProjectImage"
       >
-        <q-img
-          loading="eager"
-          v-if="job.projectImage"
-          :src="job.projectImage"
-          class="house-img"
-          fit="cover"
-        />
+        <template v-if="job.projectImage">
+          <q-img loading="eager" :src="job.projectImage" fit="cover" class="house-img-bg" />
+          <q-img loading="eager" :src="job.projectImage" fit="contain" class="house-img-fg" />
+        </template>
         <div v-else class="house-img-placeholder row items-center justify-center bg-grey-2">
           <q-icon name="home" size="64px" color="grey-4" />
         </div>
@@ -40,24 +40,41 @@
       <!-- Project Name & Status -->
       <div class="row items-center justify-between no-wrap q-mb-xs q-mt-sm">
         <div class="text-primary text-weight-bold ellipsis" style="font-size: 20px">
-          {{ job.projectName }}
+          {{ t('adminJobs.inspection.projectLabel') }} {{ pickLocalized(job.projectName, job.projectNameEn) }}
         </div>
-        <q-badge
-          :color="getRoundStatusColor(job.status)"
-          text-color="dark"
-          style="border-radius: 99px; font-weight: 500; font-size: 10px; padding: 4px 10px"
-        >
-          {{ job.status }}
-        </q-badge>
+        <div class="row items-center q-gutter-x-sm">
+          <q-badge
+            v-if="isDefect(job.inspectionType)"
+            color="primary"
+            outline
+            :label="t('adminJobs.inspection.badgeInspection')"
+            class="q-px-sm q-py-xs type-badge"
+          />
+          <q-badge
+            v-else-if="isConstruction(job.inspectionType)"
+            color="warning"
+            outline
+            :label="t('adminJobs.inspection.badgeConstruction')"
+            class="q-px-sm q-py-xs type-badge"
+          />
+          <q-badge
+            class="status-badge"
+            :class="[getJobStatusBgClass(job.status), `text-${getJobStatusTextColor(job.status)}`]"
+          >
+            {{ jobStatusLabel(job.status) }}
+          </q-badge>
+        </div>
       </div>
 
-      <div class="text-grey-6 q-mb-md" style="font-size: 10px; font-weight: 300; line-height: 1.4">
-        {{ job.address }}
-      </div>
-
-      <!-- Type & Area & Map -->
+      <!-- Address & Type & Area & Map -->
       <div class="row items-center justify-between no-wrap q-mb-sm">
         <div class="column q-gutter-y-sm">
+          <div class="row items-center q-gutter-x-sm">
+            <q-icon name="place" color="primary" size="18px" />
+            <span class="text-dark" style="font-size: 12px; font-weight: 500">
+              : {{ job.address }}
+            </span>
+          </div>
           <div class="row items-center q-gutter-x-sm">
             <q-icon name="home" color="primary" size="18px" />
             <span class="text-dark" style="font-size: 12px; font-weight: 500">
@@ -84,11 +101,14 @@
       </div>
 
       <!-- House Plan -->
-      <div class="row items-center justify-between no-wrap q-mb-sm">
+      <div class="row items-center no-wrap q-gutter-md q-mb-sm">
         <div
           v-if="job.housePlanImage"
           class="plan-thumb relative-position cursor-pointer"
+          tabindex="0"
+          role="button"
           @click="viewPlan"
+          @keyup.enter="viewPlan"
         >
           <q-img loading="eager" :src="job.housePlanImage" class="plan-img" fit="cover" />
         </div>
@@ -126,12 +146,16 @@
             <q-icon name="phone_in_talk" color="primary" size="18px" />
             <span class="text-dark" style="font-size: 12px; font-weight: 500">
               : {{ job.customerPhone }}
+              | {{ job.customerPhone2 }}
+              | {{ job.customerPhone3 }}
             </span>
           </div>
           <div class="row items-center q-gutter-x-sm">
             <q-icon name="mail_outline" color="primary" size="18px" />
             <span class="text-dark" style="font-size: 12px; font-weight: 500">
               : {{ job.customerEmail }}
+              | {{ job.customerEmail2 }}
+              | {{ job.customerEmail3 }}
             </span>
           </div>
         </div>
@@ -282,13 +306,13 @@
       </q-card>
 
       <!-- Contractor Progress Section -->
-      <div v-if="inspectionRounds.length > 0 && job.status === 'เสร็จสิ้น'" class="q-mb-lg">
+      <div v-if="inspectionRounds.length > 0 && job.status === 'COMPLETED'" class="q-mb-lg">
         <div class="row items-center justify-between q-mb-sm">
           <div class="text-subtitle2 text-weight-bold">
             {{ t('adminJobs.inspection.contractorProgressTitle') }}
           </div>
           <div
-            class="text-caption text-weight-bold"
+            class="text-caption text-weight-bold tabular-nums"
             :class="job.contractorProgress >= 50 ? 'text-positive' : 'text-orange'"
           >
             {{ Math.round(job.contractorProgress) }}%
@@ -353,8 +377,20 @@
                     text-color="dark"
                     class="text-caption q-my-none q-mr-none q-ml-md"
                   >
-                    {{ round.status }}
+                    {{ jobStatusLabel(round.status) }}
                   </q-chip>
+                  <div
+                    v-if="round.statusKey === 'SUBMITTED'"
+                    class="q-ml-lg"
+                    :class="roundClosesJob(round) ? 'text-positive' : 'text-orange-8'"
+                    style="font-size: 11px"
+                  >
+                    {{
+                      roundClosesJob(round)
+                        ? t('adminJobs.inspection.allDefectsVerifiedHint')
+                        : t('adminJobs.inspection.openDefectsHint', { count: round.openDefectCount })
+                    }}
+                  </div>
                 </div>
                 <div class="text-grey-7 q-mt-xs" style="font-size: 11px">
                   {{ t('adminJobs.inspection.datePrefix') }} {{ round.date }}
@@ -371,12 +407,8 @@
               <q-btn
                 unelevated
                 color="positive"
-                icon="verified"
-                :label="
-                  round.statusKey === 'APPROVED'
-                    ? t('adminJobs.inspection.approved')
-                    : t('adminJobs.inspection.approve')
-                "
+                icon="task_alt"
+                :label="approveButtonLabel(round)"
                 no-caps
                 dense
                 class="q-px-md"
@@ -429,7 +461,7 @@
           </q-card>
         </div>
         <div class="q-mt-md">
-          <div :class="{ 'cursor-not-allowed': isLatestRoundNotCompleted }">
+          <div :class="{ 'cursor-not-allowed': cannotCreateRound }">
             <q-btn
               unelevated
               color="primary"
@@ -437,17 +469,21 @@
               :label="t('adminJobs.inspection.createNewRound')"
               class="full-width create-round-btn"
               no-caps
-              :disable="isLatestRoundNotCompleted"
-              :style="isLatestRoundNotCompleted ? 'pointer-events: none;' : ''"
+              :disable="cannotCreateRound"
+              :style="cannotCreateRound ? 'pointer-events: none;' : ''"
               @click="onCreateRound"
             />
             <q-tooltip
-              v-if="isLatestRoundNotCompleted"
+              v-if="cannotCreateRound"
               class="bg-red text-white"
               anchor="top middle"
               self="bottom middle"
             >
-              {{ t('adminJobs.inspection.closeRoundFirst') }}
+              {{
+                isJobClosed
+                  ? t('adminJobs.inspection.jobClosedNoNewRound')
+                  : t('adminJobs.inspection.closeRoundFirst')
+              }}
             </q-tooltip>
           </div>
         </div>
@@ -691,12 +727,18 @@ import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
 import { useUserStore } from '../stores/useUser';
 import { useTeamStore } from '../stores/useTeam';
+import { useWorkListStore } from '../stores/useWorkList';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
-import type { Defect, InspectionSummaryItem, InspectionRound } from 'src/models';
+import type { Defect, InspectionSummaryItem, InspectionRound, HousePlan } from 'src/models';
 import DefectReport from '../components/DefectReport.vue';
+import ConfirmActionDialog from '../components/ConfirmActionDialog.vue';
 import PlanPositionDialog from '../components/PlanPositionDialog.vue';
+import { useLocalizedField } from 'src/composables/useLocalizedField';
+import { useJobStatus, roundStatusCode, jobStatusCode } from 'src/composables/useJobStatus';
 
 const { t, locale } = useI18n();
+const { jobStatusLabel } = useJobStatus();
+const { pickLocalized } = useLocalizedField();
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 
 const getImageUrl = (path: string | null | undefined): string | null => {
@@ -704,6 +746,11 @@ const getImageUrl = (path: string | null | undefined): string | null => {
   if (path.startsWith('http')) return path;
   return `${API_BASE_URL}${path}`;
 };
+
+const isDefect = (type?: string) =>
+  type === 'DEFECT_INSPECTION' || type === 'Defect' || type === 'ตรวจ Defect';
+const isConstruction = (type?: string) =>
+  type === 'CONSTRUCTION_INSPECTION' || type === 'Construction' || type === 'ตรวจก่อสร้าง';
 
 interface AddressEntity {
   houseNumber?: string;
@@ -718,12 +765,14 @@ interface AddressEntity {
 interface JobApiResponse {
   jobId: number;
   projectName: string;
+  projectNameEn?: string | null;
   usableArea: number;
-  housePlanUrl?: string;
   projectImageUrl?: string;
-  customer?: { fullName?: string; phoneNumber?: string; email?: string; lineId?: string };
+  inspectionType?: string;
+  customer?: { fullName?: string; phoneNumber?: string; phoneNumber2?: string; phoneNumber3?: string; email?: string; email2?: string; email3?: string; lineId?: string };
   contractor?: { fullName?: string; phoneNumber?: string; email?: string; companyName?: string };
-  houseType?: { name?: string };
+  createdBy?: { fullName?: string; phoneNumber?: string; email?: string; lineId?: string } | null;
+  houseType?: { name?: string; nameEn?: string | null };
   address?: AddressEntity;
   createdAt?: string;
   status?: string;
@@ -750,6 +799,8 @@ interface RoundApiResponse {
     team?: { team_name?: string };
   }[];
   summaryCompletedAt?: string | null;
+  defectCount?: number;
+  openDefectCount?: number;
 }
 
 interface RoundView {
@@ -760,6 +811,8 @@ interface RoundView {
   statusKey: string;
   inspectors?: string[];
   summaryCompletedAt?: string | null | undefined;
+  // defect ที่ยังไม่ verified — เป็น 0 แปลว่าอนุมัติรอบนี้แล้วงานจะถูกปิด
+  openDefectCount: number;
 }
 
 interface ShareLinkResponse {
@@ -792,6 +845,7 @@ const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
 const userStore = useUserStore();
+const workStore = useWorkListStore();
 // ไอคอนเดียวกับปุ่ม "ตรวจบ้าน" ในหน้ารายการงานของ admin ให้สไตล์ตอนโหลดตรงกัน
 const homeInspectionSpinner = createIconSpinner('home');
 const pdfSpinner = createIconSpinner('picture_as_pdf');
@@ -804,6 +858,30 @@ const isLatestRoundNotCompleted = computed(() => {
   if (!latestRound) return false;
   return latestRound?.statusKey !== 'APPROVED' && latestRound?.statusKey !== 'CANCELLED';
 });
+// งานปิดจริงต้องมีทั้ง job.status = Completed และรอบล่าสุดอนุมัติแล้ว (approveReport ตั้งสองอย่างนี้พร้อมกัน)
+// กันข้อมูลเก่าที่ job ค้าง Completed ทั้งที่รอบล่าสุดยังรออนุมัติ ไม่ให้ขึ้นว่าปิดงานแล้ว
+const isJobClosed = computed(
+  () => jobData.value?.status === 'Completed' && !isLatestRoundNotCompleted.value,
+);
+const cannotCreateRound = computed(() => isJobClosed.value || isLatestRoundNotCompleted.value);
+
+// ต้องตรงกับกฎฝั่ง backend (InspectionRoundsService.approveReport): defect ในรอบผ่านครบ = ปิดงาน
+const roundClosesJob = (round: RoundView) =>
+  round.statusKey === 'SUBMITTED' &&
+  round.openDefectCount === 0 &&
+  !isConstruction(jobData.value?.inspectionType);
+
+const approveButtonLabel = (round: RoundView) => {
+  if (round.statusKey === 'APPROVED') {
+    const isLatestRound = inspectionRounds.value[inspectionRounds.value.length - 1]?.id === round.id;
+    return isJobClosed.value && isLatestRound
+      ? t('adminJobs.inspection.jobClosed')
+      : t('adminJobs.inspection.approved');
+  }
+  return roundClosesJob(round)
+    ? t('adminJobs.inspection.approveAndCloseJob')
+    : t('adminJobs.inspection.approve');
+};
 const isLoading = ref(true);
 const isSubmittingRound = ref(false);
 const isApprovingRound = ref(false);
@@ -954,25 +1032,12 @@ const formatRoundDate = (dateStr: string) => {
 
   const hour = date.getHours();
   if (hour === 9) {
-    return `${formattedDate} (${t('adminJobs.inspection.morningRoundSuffix')})`;
+    return `${formattedDate} 09:00-12:00 (${t('adminJobs.inspection.morningRoundSuffix')})`;
   } else if (hour === 13) {
-    return `${formattedDate} (${t('adminJobs.inspection.afternoonRoundSuffix')})`;
+    return `${formattedDate} 13:00-16:00 (${t('adminJobs.inspection.afternoonRoundSuffix')})`;
   }
 
   return formattedDate;
-};
-
-const mapRoundStatus = (status: string) => {
-  switch (status) {
-    case 'COMPLETED':
-    case 'APPROVED':
-      return 'เสร็จสิ้น';
-    case 'SUBMITTED':
-      return 'รออนุมัติ';
-    case 'SCHEDULED':
-    default:
-      return 'กำลังดำเนินการ';
-  }
 };
 
 const mapRoundToView = (round: RoundApiResponse) => {
@@ -1000,16 +1065,27 @@ const mapRoundToView = (round: RoundApiResponse) => {
     id: round.roundId,
     roundNumber: round.roundNumber,
     date: formatRoundDate(round.scheduledDate),
-    status: mapRoundStatus(round.status),
+    status: roundStatusCode(round.status),
     statusKey: round.status,
     inspectors,
     summaryCompletedAt: round.summaryCompletedAt,
+    openDefectCount: round.openDefectCount ?? 0,
   };
 };
 
+const housePlans = ref<HousePlan[]>([]);
+
 async function fetchJobDetails() {
-  const { data } = await api.get<JobApiResponse>(`/inspection-jobs/${jobId.value}`);
-  jobData.value = data;
+  jobData.value = await workStore.fetchJobById<JobApiResponse>(jobId.value);
+}
+
+async function fetchHousePlans() {
+  try {
+    const { data } = await api.get<HousePlan[]>(`/inspection-jobs/${jobId.value}/house-plans`);
+    housePlans.value = data;
+  } catch (error) {
+    console.error('Failed to fetch house plans', error);
+  }
 }
 
 async function fetchTeamMembers() {
@@ -1032,6 +1108,7 @@ async function loadPageData() {
     await Promise.all([
       fetchJobDetails(),
       fetchTeamMembers(),
+      fetchHousePlans(),
       teamStore.fetchTeams(), // ดึงข้อมูลทีม
     ]);
     const rounds = await fetchRounds();
@@ -1093,13 +1170,19 @@ const job = computed(() => {
   if (!data) {
     return {
       projectName: '-',
+      projectNameEn: '',
+      inspectionType: '',
       houseType: '-',
       area: '-',
       appointmentDate: '-',
       address: '-',
       customerName: '-',
       customerPhone: '-',
+      customerPhone2: '',
+      customerPhone3: '',
       customerEmail: '-',
+      customerEmail2: '',
+      customerEmail3: '',
       coordName: '-',
       coordPhone: '-',
       coordEmail: '-',
@@ -1117,12 +1200,12 @@ const job = computed(() => {
     if (!addr) return '-';
 
     const parts = [];
-    if (addr.houseNumber) parts.push(`เลขที่ ${addr.houseNumber}`);
-    if (addr.floor && addr.floor !== '-' && addr.floor !== '') parts.push(`ชั้น ${addr.floor}`);
-    if (addr.soi && addr.soi !== '-' && addr.soi !== '') parts.push(`ซอย ${addr.soi}`);
-    if (addr.subDistrict) parts.push(`ต.${addr.subDistrict}`);
-    if (addr.district) parts.push(`อ.${addr.district}`);
-    if (addr.province) parts.push(`จ.${addr.province}`);
+    if (addr.houseNumber) parts.push(t('common.address.houseNumber', { value: addr.houseNumber }));
+    if (addr.floor && addr.floor !== '-' && addr.floor !== '') parts.push(t('common.address.floor', { value: addr.floor }));
+    if (addr.soi && addr.soi !== '-' && addr.soi !== '') parts.push(t('common.address.soi', { value: addr.soi }));
+    if (addr.subDistrict) parts.push(t('common.address.subDistrict', { value: addr.subDistrict }));
+    if (addr.district) parts.push(t('common.address.district', { value: addr.district }));
+    if (addr.province) parts.push(t('common.address.province', { value: addr.province }));
     if (addr.postalCode) parts.push(`${addr.postalCode}`);
 
     return parts.length > 0 ? parts.join(' ') : '-';
@@ -1132,7 +1215,9 @@ const job = computed(() => {
 
   return {
     projectName: data.projectName || '-',
-    houseType: data.houseType?.name || '-',
+    projectNameEn: data.projectNameEn || '',
+    inspectionType: data.inspectionType || '',
+    houseType: pickLocalized(data.houseType?.name, data.houseType?.nameEn) || '-',
     area: data.usableArea?.toString() || '-',
     appointmentDate:
       latestRound?.date ||
@@ -1140,14 +1225,18 @@ const job = computed(() => {
     address: formatAddressStr(data.address),
     customerName: data.customer?.fullName || '-',
     customerPhone: data.customer?.phoneNumber || '-',
+    customerPhone2: data.customer?.phoneNumber2 || '',
+    customerPhone3: data.customer?.phoneNumber3 || '',
     customerEmail: data.customer?.email || '-',
-    coordName: data.contractor?.fullName || '-',
-    coordPhone: data.contractor?.phoneNumber || '-',
-    coordEmail: data.contractor?.email || '-',
-    coordLine: data.contractor?.companyName || '-',
-    housePlanImage: getImageUrl(data.housePlanUrl),
+    customerEmail2: data.customer?.email2 || '-',
+    customerEmail3: data.customer?.email3 || '-',
+    coordName: data.createdBy?.fullName || '-',
+    coordPhone: data.createdBy?.phoneNumber || '-',
+    coordEmail: data.createdBy?.email || '-',
+    coordLine: data.createdBy?.lineId || '-',
+    housePlanImage: housePlans.value[0] ? getImageUrl(housePlans.value[0].imageUrl) : null,
     projectImage: getImageUrl(data.projectImageUrl),
-    status: latestRound?.status || data.status || '-',
+    status: latestRound?.status || jobStatusCode(data.status) || data.status || '-',
     statusKey: (latestRound?.status || data.status) === 'Active' ? 'in_progress' : 'waiting',
     contractorProgress: data.contractorProgress || 0,
     isReadyForRound2: data.isReadyForRound2 || false,
@@ -1257,15 +1346,26 @@ const viewProjectImage = () => {
 
 function confirmApproveRound() {
   if (!selectedRound.value) return;
+  const closesJob = roundClosesJob(selectedRound.value);
+  const messageParams = { number: selectedRound.value.roundNumber };
 
+  // ใช้ dialog ชุดเดียวกับ "บันทึกการแก้ไขการตรวจ" / "บันทึกรายงาน" (InspectionPage, InspectionReportPage)
   $q.dialog({
-    title: t('adminJobs.inspection.confirmApproveTitle'),
-    message: t('adminJobs.inspection.confirmApproveMessage', {
-      number: selectedRound.value.roundNumber,
-    }),
-    ok: { label: t('adminJobs.inspection.approve'), color: 'positive' },
-    cancel: { label: t('adminJobs.inspection.cancel'), flat: true, color: 'grey-7' },
-    persistent: true,
+    component: ConfirmActionDialog,
+    componentProps: {
+      title: closesJob
+        ? t('adminJobs.inspection.confirmCloseJobTitle')
+        : t('adminJobs.inspection.confirmApproveTitle'),
+      message: closesJob
+        ? t('adminJobs.inspection.confirmCloseJobMessage', messageParams)
+        : t('adminJobs.inspection.confirmApproveMessage', messageParams),
+      icon: '',
+      color: 'positive',
+      confirmLabel: closesJob
+        ? t('adminJobs.inspection.approveAndCloseJob')
+        : t('adminJobs.inspection.approve'),
+      cancelLabel: t('adminJobs.inspection.cancel'),
+    },
   }).onOk(() => {
     void approveSelectedRound();
   });
@@ -1286,7 +1386,9 @@ async function approveSelectedRound() {
     selectedRound.value = updatedRound ?? null;
 
     $q.notify({
-      message: t('adminJobs.inspection.approveRoundSuccess'),
+      message: isJobClosed.value
+        ? t('adminJobs.inspection.closeJobSuccess')
+        : t('adminJobs.inspection.approveRoundSuccess'),
       color: 'positive',
       icon: 'verified',
       position: 'top',
@@ -1371,7 +1473,8 @@ const formatDateDisplay = (dateStr: string) => {
 };
 
 const onCreateRound = () => {
-  if (job.value.status === 'เสร็จสิ้น' && job.value.contractorProgress < 50) {
+  // เดิมเทียบกับสถานะของรอบล่าสุดเท่านั้น — เช็คว่ามีรอบก่อน กันงานที่ยังไม่มีรอบแต่ job.status เป็น Completed
+  if (inspectionRounds.value.length > 0 && job.value.status === 'COMPLETED' && job.value.contractorProgress < 50) {
     $q.dialog({
       title: t('adminJobs.inspection.confirmCreateRoundTitle'),
       message: t('adminJobs.inspection.confirmCreateRoundMessage', {
@@ -1529,21 +1632,72 @@ const submitCreateRound = async () => {
   }
 };
 
+// status ในสามฟังก์ชันนี้คือรหัสจาก useJobStatus (IN_PROGRESS/PENDING_APPROVAL/COMPLETED) ไม่ใช่ข้อความที่แสดง
 function getRoundStatusColor(status: string) {
   switch (status) {
-    case 'กำลังดำเนินการ':
+    case 'IN_PROGRESS':
       return 'orange-2';
-    case 'รออนุมัติ':
+    case 'PENDING_APPROVAL':
       return 'blue-2';
-    case 'เสร็จสิ้น':
+    case 'COMPLETED':
       return 'green-2';
     default:
       return 'grey-3';
   }
 }
+
+// สีป้ายสถานะงาน (ไม่ใช่รอบ) ให้ตรงกับ statusBgClass/statusTextColor ใน InspectorDetailPage.vue
+function getJobStatusBgClass(status: string) {
+  switch (status) {
+    case 'COMPLETED':
+      return 'bg-green-1';
+    case 'PENDING_APPROVAL':
+      return 'bg-orange-1';
+    case 'IN_PROGRESS':
+      return 'bg-blue-1';
+    default:
+      return 'bg-grey-3';
+  }
+}
+function getJobStatusTextColor(status: string) {
+  switch (status) {
+    case 'COMPLETED':
+      return 'green-9';
+    case 'PENDING_APPROVAL':
+      return 'orange-8';
+    case 'IN_PROGRESS':
+      return 'blue-9';
+    default:
+      return 'grey-8';
+  }
+}
 </script>
 
 <style scoped>
+.detail-content {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.type-badge {
+  font-weight: 700;
+  font-size: 12.5px;
+  border-radius: 24px;
+}
+
+.status-badge {
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 6px 14px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
 .header-bar {
   position: sticky;
   top: 0;
@@ -1567,15 +1721,28 @@ function getRoundStatusColor(status: string) {
 }
 
 .detail-content {
-  max-width: 800px;
+  max-width: 480px;
   min-height: 100vh;
   margin: 0 auto;
   box-sizing: border-box;
+  width: 100%;
 }
 
-@media (max-width: 1023px) {
+@media (min-width: 768px) {
   .detail-content {
-    max-width: 430px;
+    max-width: 720px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .detail-content {
+    max-width: 1100px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .detail-content {
+    max-width: 1280px;
   }
 }
 
@@ -1600,13 +1767,41 @@ function getRoundStatusColor(status: string) {
 }
 
 .report-card {
-  border-radius: 8px;
-  border-color: #e0e0e0;
+  border-radius: 16px;
+  border-color: #ececec;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 4px 10px rgba(0, 0, 0, 0.04);
 }
 
 .round-card {
-  border-radius: 8px;
-  border-color: #e0e0e0;
+  border-radius: 16px;
+  border-color: #ececec;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 4px 10px rgba(0, 0, 0, 0.04);
+  animation: detail-card-in 320ms var(--ease-out) both;
+}
+.round-card:nth-child(1) { animation-delay: 0ms; }
+.round-card:nth-child(2) { animation-delay: 50ms; }
+.round-card:nth-child(3) { animation-delay: 100ms; }
+.round-card:nth-child(n + 4) { animation-delay: 150ms; }
+
+@keyframes detail-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .round-card {
+    animation-duration: 0.01ms !important;
+  }
 }
 
 .action-btn {
@@ -1616,20 +1811,40 @@ function getRoundStatusColor(status: string) {
   font-size: 14px;
   padding: 8px 16px;
   height: 44px;
+  transition:
+    background-color 150ms var(--ease-out),
+    box-shadow 150ms var(--ease-out);
+}
+.action-btn:hover {
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.15);
 }
 
 .house-image-wrapper {
+  position: relative;
   width: 100%;
   height: 250px;
   margin-top: 20px;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
+  transition: box-shadow 150ms var(--ease-out);
+}
+.house-image-wrapper:focus-visible {
+  outline: 2px solid var(--q-primary, #1976d2);
+  outline-offset: 2px;
 }
 
-.house-img {
-  width: 100%;
-  height: 250px;
-  object-fit: cover;
+.house-img-bg {
+  position: absolute;
+  inset: 0;
+  filter: blur(20px) brightness(0.65) saturate(1.15);
+  transform: scale(1.15);
+}
+.house-img-fg {
+  position: absolute;
+  inset: 0;
+}
+.house-img-fg :deep(.q-img__image) {
+  background-color: transparent;
 }
 
 .house-img-placeholder {
@@ -1643,6 +1858,16 @@ function getRoundStatusColor(status: string) {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid #e0e0e0;
+  transition: border-color 150ms var(--ease-out);
+}
+.plan-thumb:focus-visible {
+  outline: 2px solid var(--q-primary, #1976d2);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .plan-thumb:hover {
+    border-color: #90caf9;
+  }
 }
 
 .plan-img {
@@ -1658,20 +1883,31 @@ function getRoundStatusColor(status: string) {
 }
 
 .plan-btn {
-  border-radius: 50px;
-  padding: 0 20px;
-  height: 40px;
+  border-radius: 12px;
+  padding: 0 18px;
+  height: 44px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  transition: box-shadow 150ms var(--ease-out);
+}
+.plan-btn:hover {
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.25);
 }
 
 .create-round-btn {
   border-radius: 50px;
   height: 48px;
   font-size: 15px;
+  transition: box-shadow 150ms var(--ease-out);
+}
+.create-round-btn:hover {
+  box-shadow: 0 4px 14px rgba(25, 118, 210, 0.25);
 }
 
 .revoke-link-btn {
   font-size: 12px;
   font-weight: 600;
+  transition: background-color 150ms var(--ease-out);
 }
 
 .share-link-row {
@@ -1685,10 +1921,21 @@ function getRoundStatusColor(status: string) {
   white-space: nowrap;
   padding: 0 14px;
   flex-shrink: 0;
+  transition: box-shadow 150ms var(--ease-out);
+}
+.share-copy-btn:hover {
+  box-shadow: 0 3px 10px rgba(25, 118, 210, 0.25);
 }
 
 .share-link-input :deep(.q-field__control) {
   border-radius: 10px;
+  transition:
+    box-shadow 150ms var(--ease-out),
+    border-color 150ms var(--ease-out);
+}
+.share-link-input :deep(.q-field__control):focus-within {
+  border-color: rgba(25, 118, 210, 0.5);
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.12);
 }
 
 .share-link-input :deep(input) {
@@ -1794,5 +2041,13 @@ function getRoundStatusColor(status: string) {
   border-radius: 12px !important;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
   border: 1px solid #e2e8f0;
+}
+</style>
+
+<style>
+/* Frosted-glass backdrop for this page's dialogs */
+.q-dialog__backdrop {
+  backdrop-filter: blur(6px) saturate(180%);
+  -webkit-backdrop-filter: blur(6px) saturate(180%);
 }
 </style>

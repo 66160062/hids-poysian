@@ -37,16 +37,15 @@ export interface InspectionRound {
   aiSummaryProvider?: string | null;
   lastPdfGeneratedAt?: string | null;
   teamMember?: { inspector?: { team?: { teamName: string; contactInfo: string } } };
-  createdBy?: { fullName: string; phoneNumber: string } | null;
   job: {
     jobId: number;
     projectName: string;
+    projectNameEn?: string | null;
     projectImageUrl: string;
-    housePlanUrl?: string;
     inspectionType: string;
-    branch?: { branchId: number; branchName: string; logoUrl: string | null } | null;
-    houseType: { name: string };
-    customer: { fullName: string; phoneNumber: string; email: string };
+    branch?: { branchId: number; branchName: string; phoneNumber: string; mailAddress: string;  facebook: string; line: string; logoUrl: string | null } | null;
+    houseType: { name: string; nameEn?: string | null };
+    customer: { fullName: string; phoneNumber: string; phoneNumber2: string; phoneNumber3: string; email: string; email2: string; email3: string; };
     contractor?: {
       contractorId: number;
       fullName: string;
@@ -54,6 +53,7 @@ export interface InspectionRound {
       email?: string;
       companyName?: string;
     } | null;
+    createdBy?: { fullName: string; phoneNumber: string } | null;
     usableArea: string;
     address: {
       houseNumber: string;
@@ -78,19 +78,22 @@ export interface WeekDay {
 export interface Category {
   categoryId: number;
   name: string;
+  nameEn?: string | null;
 }
 
 export interface SubCategory {
   subCategoryId: number;
   name: string;
+  nameEn?: string | null;
   categoryId: Category;
 }
-export interface JobPlan {
+export interface HousePlan {
   planId: number;
   name: string;
+  nameEn?: string | null;
   imageUrl: string;
   orderIndex: number;
-  floor?: { floorId: number; label: string } | null;
+  floor?: { floorId: number; label: string; labelEn?: string | null } | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -108,12 +111,13 @@ export interface Defect {
   subCategories: {
     subCategoryId: number;
     name: string;
-    category?: { name: string; categoryId: number };
+    nameEn?: string | null;
+    category?: { name: string; nameEn?: string | null; categoryId: number };
   }[];
-  room?: { roomName: string; roomId: number };
-  subRoom?: { roomName: string; subRoomId: number } | null;
-  floor?: { floorId: number; label: string; floorOrder?: number };
-  plan?: JobPlan | null;
+  room?: { roomName: string; roomNameEn?: string | null; roomId: number };
+  subRoom?: { roomName: string; roomNameEn?: string | null; subRoomId: number } | null;
+  floor?: { floorId: number; label: string; labelEn?: string | null; floorOrder?: number };
+  plan?: HousePlan | null;
   planId?: number | null;
   planX?: number | null;
   planY?: number | null;
@@ -123,45 +127,54 @@ export interface Defect {
 export interface SummaryTemplateOption {
   optionId: number;
   value: string;
+  valueEn?: string | null;
   group: string;
+  groupEn?: string | null;
   type: string;
 }
 
 export interface SummaryTemplate {
   templateId: number;
   category: string;
+  categoryEn?: string | null;
   label: string;
+  labelEn?: string | null;
   options: SummaryTemplateOption[];
 }
 
 export interface InspectionSummaryItem {
   itemId: number;
   template: SummaryTemplate;
-  option: SummaryTemplateOption;
+  option: SummaryTemplateOption | null; // null = แถวรูปหลักฐาน (ดู photoUrl)
   refItemId?: number | null;
   refItem?: Pick<InspectionSummaryItem, 'itemId'> | null;
   detailValue?: string;
+  photoUrl?: string | null;
 }
 
 export interface DefectCategory {
   categoryId: number;
   name: string;
+  nameEn?: string | null;
 }
 
 export interface DefectSubCategory {
   subCategoryId: number;
   name: string;
+  nameEn?: string | null;
   category?: DefectCategory;
 }
 
 export interface SubRoom {
   subRoomId: number;
   roomName: string;
+  roomNameEn?: string | null;
 }
 
 export interface Floor {
   floorId: number;
   label: string;
+  labelEn?: string | null;
   floorOrder?: number;
 }
 
@@ -178,4 +191,6 @@ export interface Team {
   team_name: string;
   contact_info?: string;
   logo_url?: string;
+  branchId?: number | null;
+  branch?: { branchId: number; branchName: string | null } | null;
 }
