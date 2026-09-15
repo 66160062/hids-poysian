@@ -1,5 +1,5 @@
 import type { ExecutionContext } from '@nestjs/common';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { RoundAccessGuard } from './round-access.guard';
 import { AuthService } from './auth.service';
 
@@ -60,6 +60,15 @@ describe('RoundAccessGuard', () => {
       where: { roundId: 9 },
       relations: ['job'],
     });
+  });
+
+  it('rejects with BadRequestException when neither :roundId nor :id is a valid number', async () => {
+    const request = { params: { id: 'undefined' }, query: {}, headers: {} };
+
+    await expect(
+      guard.canActivate(createContext(request)),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(roundsRepo.findOne).not.toHaveBeenCalled();
   });
 
   it('throws NotFoundException when the round does not exist or has no job', async () => {

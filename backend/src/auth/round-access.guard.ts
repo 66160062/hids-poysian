@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   CanActivate,
   ExecutionContext,
   Injectable,
@@ -23,6 +24,9 @@ export class RoundAccessGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const roundId = Number(request.params.roundId ?? request.params.id);
+    if (!Number.isInteger(roundId)) {
+      throw new BadRequestException('roundId ไม่ถูกต้อง');
+    }
 
     const round = await this.roundsRepo.findOne({
       where: { roundId },

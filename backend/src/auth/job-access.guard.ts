@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 // ใช้กับ route ที่ jobId/id ใน param คือ jobId ตรงๆ (เช่น GET /inspection-jobs/:id,
@@ -11,6 +16,9 @@ export class JobAccessGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const jobId = Number(request.params.jobId ?? request.params.id);
+    if (!Number.isInteger(jobId)) {
+      throw new BadRequestException('jobId ไม่ถูกต้อง');
+    }
 
     request.user = await this.authService.verifyJobAccess(
       request.headers.authorization,

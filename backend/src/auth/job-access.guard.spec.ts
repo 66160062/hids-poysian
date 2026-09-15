@@ -1,4 +1,5 @@
 import type { ExecutionContext } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { JobAccessGuard } from './job-access.guard';
 import { AuthService } from './auth.service';
 
@@ -46,6 +47,15 @@ describe('JobAccessGuard', () => {
       undefined,
       7,
     );
+  });
+
+  it('rejects with BadRequestException when neither :jobId nor :id is a valid number', async () => {
+    const request = { params: { id: 'undefined' }, query: {}, headers: {} };
+
+    await expect(
+      guard.canActivate(createContext(request)),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(authService.verifyJobAccess).not.toHaveBeenCalled();
   });
 
   it('propagates the rejection from verifyJobAccess', async () => {
