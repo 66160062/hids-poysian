@@ -76,7 +76,7 @@ import PropertyCard from 'src/components/PropertyCard.vue';
 import InspectorCalendar from 'src/components/InspectorCalendar.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 
-const consDashboardSpinner = createIconSpinner('assignment_turned_in');
+const consDashboardSpinner = createIconSpinner('construction');
 
 // ── Plugins & State ───────────────────────────────────────────
 const $q = useQuasar();

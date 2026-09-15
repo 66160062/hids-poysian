@@ -242,7 +242,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'Inspectsdashboard',
         component: () => import('pages/InspectorDashboardPage.vue'),
-        meta: { title: 'การตรวจบ้าน', icon: 'engineering' },
+        meta: { title: 'การตรวจบ้าน', icon: 'search' },
       },
       {
         path: 'job/:roundId',
@@ -283,7 +283,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'Consdashboard',
         component: () => import('pages/ConstructorDashboardPage.vue'),
-        meta: { title: 'ตรวจก่อสร้าง', icon: 'assignment_turned_in' },
+        meta: { title: 'ตรวจก่อสร้าง', icon: 'construction' },
       },
     ],
   },

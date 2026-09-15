@@ -515,7 +515,7 @@ import { useInspectorJobEditDialog } from 'src/composables/useInspectorJobEditDi
 import { useContractorStore } from 'src/stores/useContractor';
 import { useWorkListStore } from 'src/stores/useWorkList';
 
-const jobDetailSpinner = createIconSpinner('home');
+const jobDetailSpinner = createIconSpinner('search');
 const pdfSpinner = createIconSpinner('picture_as_pdf');
 
 const apiUrl = import.meta.env.VITE_API_URL;

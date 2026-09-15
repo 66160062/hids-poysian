@@ -386,7 +386,7 @@ import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models'
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { localizedName, useLocalizedField } from 'src/composables/useLocalizedField';
 
-const overviewSpinner = createIconSpinner('home');
+const overviewSpinner = createIconSpinner('search');
 
 const { isCustomerViewOnly, hasLinkAccess, projectId, linkToken } = useLinkAccess();
 const linkParams = computed(() =>

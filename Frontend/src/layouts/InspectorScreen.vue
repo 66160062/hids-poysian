@@ -74,7 +74,7 @@
           :class="activeTab === 'inspection' ? 'text-blue' : 'text-grey-5'"
           @click="changeTab('inspection', '/inspector/Inspectsdashboard')"
         >
-          <q-icon name="engineering" size="32px" />
+          <q-icon name="search" size="32px" />
           <div class="text-caption text-weight-bold">{{ t('nav.inspector.footerInspection') }}</div>
         </div>
 
@@ -84,7 +84,7 @@
           :class="activeTab === 'progress' ? 'text-blue' : 'text-grey-5'"
           @click="changeTab('progress', '/inspector/Consdashboard')"
         >
-          <q-icon name="assignment_turned_in" size="32px" />
+          <q-icon name="construction" size="32px" />
           <div class="text-caption text-weight-bold">{{ t('nav.inspector.footerConstruction') }}</div>
         </div>
 

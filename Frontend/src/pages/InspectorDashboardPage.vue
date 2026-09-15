@@ -79,7 +79,7 @@ import PropertyCard from '../components/PropertyCard.vue';
 import InspectorCalendar from '../components/InspectorCalendar.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 
-const inspectDashboardSpinner = createIconSpinner('engineering');
+const inspectDashboardSpinner = createIconSpinner('search');
 
 // ── Plugins & State ───────────────────────────────────────────
 const $q = useQuasar();

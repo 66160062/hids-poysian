@@ -72,7 +72,7 @@
           @click="selectedJobType = 'ตรวจบ้าน'"
         >
           <div class="row items-center q-gutter-x-sm no-wrap">
-            <q-icon name="home" size="18px" />
+            <q-icon name="search" size="18px" />
             <span>{{ t('adminWork.workList.homeInspectionTab') }}</span>
             <q-badge v-if="selectedJobType !== 'ตรวจบ้าน'" color="grey-3" text-color="grey-8" rounded>{{ defectJobCount }}</q-badge>
           </div>
@@ -377,7 +377,7 @@
         <q-fab-action
           color="blue-8"
           text-color="white"
-          icon="home"
+          icon="search"
           :label="t('adminWork.workList.homeInspectionFab')"
           class="text-weight-bold custom-fab-action"
           @click="addNewWork('defect')"
@@ -401,7 +401,7 @@ import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { useLocalizedField } from 'src/composables/useLocalizedField';
 
 const workSpinner = createIconSpinner('business_center');
-const homeInspectionSpinner = createIconSpinner('home');
+const homeInspectionSpinner = createIconSpinner('search');
 const constructionSpinner = createIconSpinner('construction');
 
 const router = useRouter();

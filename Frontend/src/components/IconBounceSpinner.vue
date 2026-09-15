@@ -45,6 +45,7 @@ const sizeStyle = computed(() => (typeof props.size === 'number' ? `${props.size
 
 .icon-bounce-spinner__icon {
   position: relative;
+  transform-origin: 50% 100%;
   animation: icon-bounce 1.1s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
 }
 
@@ -61,10 +62,12 @@ const sizeStyle = computed(() => (typeof props.size === 'number' ? `${props.size
 }
 
 @keyframes icon-bounce {
-  0%, 100% { transform: translateY(0) rotate(0deg) scale(1, 1); }
-  30% { transform: translateY(-42%) rotate(-8deg) scale(0.92, 1.08); }
-  50% { transform: translateY(-56%) rotate(0deg) scale(1, 1); }
-  70% { transform: translateY(-14%) rotate(8deg) scale(1.08, 0.9); }
+  0% { transform: translateY(0) scale(1, 1); }
+  12% { transform: translateY(0) scale(1.14, 0.84); }
+  45% { transform: translateY(-52%) scale(0.94, 1.08); }
+  55% { transform: translateY(-52%) scale(0.94, 1.08); }
+  88% { transform: translateY(0) scale(1.14, 0.84); }
+  100% { transform: translateY(0) scale(1, 1); }
 }
 
 @keyframes icon-shadow-pulse {

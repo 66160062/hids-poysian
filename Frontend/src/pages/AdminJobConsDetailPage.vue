@@ -13,13 +13,7 @@
       <q-btn flat no-caps :label="t('adminJobs.construction.edit')" color="primary" @click="onEdit" />
     </div>
 
-    <!-- Loading State -->
-    <div v-if="isLoading" class="text-center q-py-xl absolute-center full-width">
-      <IconBounceSpinner icon="construction" size="64px" color="primary" />
-      <div class="text-grey-6 q-mt-md">{{ t('adminJobs.construction.loadingData') }}</div>
-    </div>
-
-    <div v-else class="detail-content">
+    <div class="detail-content">
       <!-- Project Card -->
       <q-card flat bordered class="q-mb-md card-round overflow-hidden">
         <!-- House Image -->
@@ -779,6 +773,7 @@ import { useLocalizedField } from 'src/composables/useLocalizedField';
 import { useJobStatus, roundStatusCode, jobStatusCode } from 'src/composables/useJobStatus';
 
 const pdfSpinner = createIconSpinner('picture_as_pdf');
+const detailSpinner = createIconSpinner('construction');
 
 const { t, locale } = useI18n();
 const { jobStatusLabel } = useJobStatus();
@@ -907,7 +902,6 @@ const isLatestRoundNotCompleted = computed(() => {
   if (!latestRound) return false;
   return latestRound?.statusKey !== 'APPROVED' && latestRound?.statusKey !== 'CANCELLED';
 });
-const isLoading = ref(true);
 const isSubmittingRound = ref(false);
 const isLoadingRoundDefects = ref(false);
 const isSavingDefect = ref(false);
@@ -1147,7 +1141,12 @@ async function fetchDefectMasterData() {
 */
 
 async function loadPageData() {
-  isLoading.value = true;
+  $q.loading.show({
+    spinner: detailSpinner,
+    spinnerColor: 'primary',
+    spinnerSize: 70,
+    backgroundColor: 'white',
+  });
   try {
     await Promise.all([
       fetchJobDetails(),
@@ -1178,7 +1177,7 @@ async function loadPageData() {
       position: 'top',
     });
   } finally {
-    isLoading.value = false;
+    $q.loading.hide();
   }
 }
 

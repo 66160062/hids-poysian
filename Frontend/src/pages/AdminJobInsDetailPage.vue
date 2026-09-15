@@ -847,7 +847,7 @@ const $q = useQuasar();
 const userStore = useUserStore();
 const workStore = useWorkListStore();
 // ไอคอนเดียวกับปุ่ม "ตรวจบ้าน" ในหน้ารายการงานของ admin ให้สไตล์ตอนโหลดตรงกัน
-const homeInspectionSpinner = createIconSpinner('home');
+const homeInspectionSpinner = createIconSpinner('search');
 const pdfSpinner = createIconSpinner('picture_as_pdf');
 
 const jobId = computed(() => Number(route.params.id));
