@@ -9,7 +9,6 @@ import { HouseTypesModule } from 'src/house-types/house-types.module';
 import { ContractorModule } from 'src/contractor/contractor.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { Branch } from 'src/branches/entities/branch.entity';
-import { BranchesModule } from 'src/branches/branches.module';
 
 @Module({
   imports: [
@@ -19,7 +18,6 @@ import { BranchesModule } from 'src/branches/branches.module';
     HouseTypesModule,
     ContractorModule,
     AuthModule,
-    BranchesModule,
   ],
   controllers: [InspectionJobsController],
   providers: [InspectionJobsService],

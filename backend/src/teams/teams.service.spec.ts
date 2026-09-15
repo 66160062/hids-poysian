@@ -11,6 +11,7 @@ describe('TeamsService', () => {
     save: jest.Mock;
     find: jest.Mock;
     findOneByOrFail: jest.Mock;
+    findOneOrFail: jest.Mock;
     softDelete: jest.Mock;
   };
   let usersRepo: {
@@ -23,6 +24,7 @@ describe('TeamsService', () => {
       save: jest.fn(),
       find: jest.fn(),
       findOneByOrFail: jest.fn(),
+      findOneOrFail: jest.fn(),
       softDelete: jest.fn(),
     };
     usersRepo = {
@@ -49,15 +51,19 @@ describe('TeamsService', () => {
 
     expect(teamsRepo.find).toHaveBeenCalledWith({
       where: { status: 'active' },
+      relations: ['branch'],
       order: { team_Id: 'DESC' },
     });
   });
 
-  it('looks up a team using the team_Id column', async () => {
-    teamsRepo.findOneByOrFail.mockResolvedValue({ team_Id: 8 });
+  it('looks up a team using the team_Id column, including its branch', async () => {
+    teamsRepo.findOneOrFail.mockResolvedValue({ team_Id: 8 });
 
     await expect(service.findOne(8)).resolves.toMatchObject({ team_Id: 8 });
-    expect(teamsRepo.findOneByOrFail).toHaveBeenCalledWith({ team_Id: 8 });
+    expect(teamsRepo.findOneOrFail).toHaveBeenCalledWith({
+      where: { team_Id: 8 },
+      relations: ['branch'],
+    });
   });
 
   it('merges the dto onto the loaded team before saving', async () => {
@@ -70,6 +76,18 @@ describe('TeamsService', () => {
     await expect(
       service.update(8, { teamName: 'ใหม่' } as never),
     ).resolves.toMatchObject({ team_Id: 8, teamName: 'ใหม่' });
+  });
+
+  it('treats branchId: 0 as a sentinel to unassign the branch', async () => {
+    teamsRepo.findOneByOrFail.mockResolvedValue({
+      team_Id: 8,
+      branchId: 3,
+    });
+    teamsRepo.save.mockImplementation((value) => value);
+
+    await expect(
+      service.update(8, { branchId: 0 } as never),
+    ).resolves.toMatchObject({ team_Id: 8, branchId: null });
   });
 
   it('deactivates a team instead of deleting the row, and unassigns its members', async () => {

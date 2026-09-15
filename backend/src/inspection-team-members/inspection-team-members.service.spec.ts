@@ -7,7 +7,6 @@ import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entit
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Team } from 'src/teams/entities/team.entity';
-import { BranchesService } from 'src/branches/branches.service';
 
 describe('InspectionTeamMembersService', () => {
   let service: InspectionTeamMembersService;
@@ -47,10 +46,6 @@ describe('InspectionTeamMembersService', () => {
         { provide: getRepositoryToken(InspectionRound), useValue: roundsRepo },
         { provide: getRepositoryToken(User), useValue: usersRepo },
         { provide: getRepositoryToken(Team), useValue: teamRepo },
-        {
-          provide: BranchesService,
-          useValue: { findOrCreateForTeam: jest.fn().mockResolvedValue(null) },
-        },
       ],
     }).compile();
 

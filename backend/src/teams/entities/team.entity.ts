@@ -4,7 +4,10 @@ import {
   Column,
   CreateDateColumn,
   DeleteDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Branch } from 'src/branches/entities/branch.entity';
 
 @Entity('team')
 export class Team {
@@ -28,4 +31,11 @@ export class Team {
 
   @DeleteDateColumn()
   deleted_at!: Date;
+
+  @Column({ name: 'branch_id', nullable: true })
+  branchId!: number | null;
+
+  @ManyToOne(() => Branch, { nullable: true })
+  @JoinColumn({ name: 'branch_id' })
+  branch!: Branch | null;
 }

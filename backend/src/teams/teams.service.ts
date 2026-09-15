@@ -23,6 +23,7 @@ export class TeamsService {
   findAll() {
     return this.teamsRepo.find({
       where: { status: 'active' },
+      relations: ['branch'],
       order: {
         team_Id: 'DESC',
       },
@@ -30,12 +31,22 @@ export class TeamsService {
   }
 
   findOne(id: number) {
-    return this.teamsRepo.findOneByOrFail({ team_Id: id });
+    return this.teamsRepo.findOneOrFail({
+      where: { team_Id: id },
+      relations: ['branch'],
+    });
   }
 
   async update(id: number, updateTeamDto: UpdateTeamDto) {
     const team = await this.teamsRepo.findOneByOrFail({ team_Id: id });
     Object.assign(team, updateTeamDto);
+
+    // branchId: 0 is a sentinel from the frontend meaning "unassign branch"
+    // (multipart/form-data can't carry a real null; 0 is never a valid branch id)
+    if ((updateTeamDto.branchId as unknown as number) === 0) {
+      team.branchId = null;
+    }
+
     return this.teamsRepo.save(team);
   }
 
