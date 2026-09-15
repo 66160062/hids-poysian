@@ -11,6 +11,15 @@
             @click="goBack"
           />
           <q-toolbar-title class="text-weight-bold job-detail-title">{{ headerTitle }}</q-toolbar-title>
+          <q-btn
+            v-if="isJobDetailPage"
+            flat
+            no-caps
+            :label="t('nav.inspector.editJob')"
+            color="primary"
+            class="job-edit-btn"
+            @click="jobEditDialog.isOpen.value = true"
+          />
         </template>
         <template v-else>
           <div class="row items-center">
@@ -31,7 +40,7 @@
               round
               icon="notifications_none"
               color="dark"
-              aria-label="Notifications"
+              :aria-label="t('nav.admin.titleNotifications')"
               @click="$router.push('/inspector/notifications')"
             >
               <q-badge v-if="unreadCount > 0" color="red" floating rounded>{{ unreadCount }}</q-badge>
@@ -50,7 +59,11 @@
     </q-header>
 
     <q-page-container class="bg-white">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <transition name="page-fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </q-page-container>
 
     <q-footer v-if="!hideBottomBar" class="bg-white text-grey-6">
@@ -88,8 +101,11 @@ import { useI18n } from 'vue-i18n';
 import { useAuthStore } from 'src/stores/useAuth';
 import { api } from 'src/boot/axios';
 import LanguageToggle from 'src/components/LanguageToggle.vue';
+import { useInspectorJobEditDialog } from 'src/composables/useInspectorJobEditDialog';
 
-const { t } = useI18n();
+const jobEditDialog = useInspectorJobEditDialog();
+
+const { t, locale } = useI18n();
 const router = useRouter();
 const route = useRoute();
 
@@ -124,6 +140,8 @@ const activeTab = computed(() => {
 
 const hideBottomBar = computed(() => route.path.includes('/job/'));
 const isJobPage = computed(() => route.path.includes('/inspector/job/'));
+// เฉพาะหน้ารายละเอียดงาน (ไม่ใช่ inspection/room-defect/report ฯลฯ) เท่านั้นที่แก้ไขได้
+const isJobDetailPage = computed(() => /^\/inspector\/job\/[^/]+$/.test(route.path));
 
 const inspectionTabRef = ref<HTMLElement | null>(null);
 const progressTabRef = ref<HTMLElement | null>(null);
@@ -155,6 +173,11 @@ onUnmounted(() => {
 });
 
 watch(activeTab, () => {
+  void nextTick(updateIndicator);
+});
+
+// เปลี่ยนภาษาแล้วความกว้างของ label เปลี่ยน ต้องคำนวณตำแหน่งขีดใต้ใหม่
+watch(locale, () => {
   void nextTick(updateIndicator);
 });
 
@@ -196,6 +219,16 @@ const hideHeader = computed(() => route.path.includes('/add-defect'));
 </script>
 
 <style scoped>
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+}
+
 .footer-tab-indicator {
   position: absolute;
   bottom: 6px;
@@ -206,6 +239,14 @@ const hideHeader = computed(() => route.path.includes('/add-defect'));
 
 .job-back-icon {
   position: relative;
+  z-index: 2;
+}
+
+.job-edit-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
   z-index: 2;
 }
 
