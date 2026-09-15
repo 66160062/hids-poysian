@@ -9,6 +9,10 @@ export class DefectCategory {
   @Column({ type: 'varchar', length: 255 })
   name!: string;
 
+  // ชื่อภาษาอังกฤษ (optional) — `name` ภาษาไทยยังเป็นค่าหลัก เพราะ ai-summary จับ keyword จากชื่อไทย
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  nameEn!: string | null;
+
   @OneToMany(() => DefectSubCategory, (sub) => sub.category)
   subCategories!: DefectSubCategory[];
 }

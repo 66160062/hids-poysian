@@ -19,4 +19,14 @@ export class CreateSummaryTemplateOptionDto {
   @IsOptional()
   @IsString()
   type?: string;
+
+  @ApiProperty({ example: 'Brick wall with plaster', required: false })
+  @IsOptional()
+  @IsString()
+  valueEn?: string;
+
+  @ApiProperty({ example: 'Structure Type', required: false })
+  @IsOptional()
+  @IsString()
+  groupEn?: string;
 }

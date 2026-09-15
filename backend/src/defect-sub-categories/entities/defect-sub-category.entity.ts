@@ -14,6 +14,9 @@ export class DefectSubCategory {
   @Column({ type: 'varchar', length: 255 })
   name!: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  nameEn!: string | null;
+
   @ManyToOne(() => DefectCategory, (category) => category.subCategories)
   @JoinColumn({ name: 'category_id' })
   category!: DefectCategory;

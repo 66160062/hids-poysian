@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class CreateSummaryTemplateDto {
   @ApiProperty({ example: 'งานโครงสร้าง' })
@@ -9,4 +9,14 @@ export class CreateSummaryTemplateDto {
   @ApiProperty({ example: 'สภาพโดยรวม' })
   @IsString()
   label!: string;
+
+  @ApiProperty({ example: 'Structural Work', required: false })
+  @IsOptional()
+  @IsString()
+  categoryEn?: string;
+
+  @ApiProperty({ example: 'Overall Condition', required: false })
+  @IsOptional()
+  @IsString()
+  labelEn?: string;
 }

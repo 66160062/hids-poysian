@@ -13,6 +13,10 @@ export class HouseType {
   @Column({ type: 'varchar', length: 255 })
   name!: string;
 
+  // ชื่อภาษาอังกฤษ (optional) — ตารางนี้เป็น lookup ปิดตายตัว (ไม่กี่แถว) ไม่มี admin UI แก้ชื่อ
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  nameEn!: string | null;
+
   @DeleteDateColumn()
   deleted_at!: Date;
 }

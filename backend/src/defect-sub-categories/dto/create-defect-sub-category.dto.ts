@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsString, MaxLength } from 'class-validator';
+import { IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateDefectSubCategoryDto {
   @ApiProperty({ description: 'รหัสหมวดหมู่หลัก', example: 1 })
@@ -10,4 +10,14 @@ export class CreateDefectSubCategoryDto {
   @IsString()
   @MaxLength(255)
   name!: string;
+
+  @ApiProperty({
+    description: 'ชื่อหมวดหมู่ย่อยภาษาอังกฤษ',
+    example: 'Crack',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  nameEn?: string;
 }
