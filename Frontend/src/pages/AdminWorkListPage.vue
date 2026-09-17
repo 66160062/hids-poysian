@@ -1151,11 +1151,11 @@ function getBranchParams(): { branchId?: number } {
   justify-content: flex-start !important;
   padding-left: 16px !important;
 }
-.custom-fab-action :deep(.q-icon) {
+.custom-fab-action .q-icon {
   font-size: 26px !important;
   margin-right: 8px !important;
 }
-.custom-fab-action :deep(.q-btn__content) {
+.custom-fab-action .q-btn__content {
   width: 100%;
   justify-content: flex-start;
 }
