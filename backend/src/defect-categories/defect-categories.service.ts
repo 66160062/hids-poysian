@@ -30,7 +30,9 @@ export class DefectCategoriesService {
   }
 
   async findAll() {
-    return await this.defectCategoriesRepository.find();
+    return await this.defectCategoriesRepository.find({
+      relations: ['subCategories'],
+    });
   }
 
   async findOne(id: number): Promise<DefectCategory> {
