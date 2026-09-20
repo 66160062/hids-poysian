@@ -73,7 +73,7 @@ import { useAuthStore } from 'src/stores/useAuth';
 import { api } from 'src/boot/axios';
 import LanguageToggle from 'src/components/LanguageToggle.vue';
 
-const { t, locale } = useI18n();
+const { t, locale } = useI18n({ useScope: 'global' });
 const route = useRoute();
 const router = useRouter();
 
@@ -99,17 +99,21 @@ const getImageUrl = (path: string | null | undefined): string | null => {
   return `${API_BASE_URL}${path}`;
 };
 const currentTitle = computed(() => {
+  void locale.value;
   const key = route.meta.title as string | undefined;
   return key ? t(key) : t('nav.admin.fallback');
 });
-const menuList = computed(() => [
-  { name: 'dashboard', label: t('nav.admin.menuDashboard'), icon: 'home', link: '/admin' },
-  { name: 'work', label: t('nav.admin.menuWork'), icon: 'business_center', link: '/admin/work' },
-  { name: 'users', label: t('nav.admin.menuUsers'), icon: 'group', link: '/admin/users' },
-  { name: 'teams', label: t('nav.admin.menuTeams'), icon: 'groups', link: '/admin/teams' },
-  { name: 'business-dashboard', label: t('nav.admin.menuBusinessDashboard'), icon: 'bar_chart', link: '/admin/dashboard' },
-  // { name: 'settings', label: t('nav.admin.menuSettings'), icon: 'settings', link: '/admin/settings' },
-]);
+const menuList = computed(() => {
+  void locale.value;
+  return [
+    { name: 'dashboard', label: t('nav.admin.menuDashboard'), icon: 'home', link: '/admin' },
+    { name: 'work', label: t('nav.admin.menuWork'), icon: 'business_center', link: '/admin/work' },
+    { name: 'users', label: t('nav.admin.menuUsers'), icon: 'group', link: '/admin/users' },
+    { name: 'teams', label: t('nav.admin.menuTeams'), icon: 'groups', link: '/admin/teams' },
+    { name: 'master-data', label: t('nav.admin.menuMasterData'), icon: 'dashboard_customize', link: '/admin/master-data' },
+    { name: 'business-dashboard', label: t('nav.admin.menuBusinessDashboard'), icon: 'bar_chart', link: '/admin/dashboard' },
+  ];
+});
 
 function isActive(link: string) {
   if (link === '/admin') return route.path === '/admin';

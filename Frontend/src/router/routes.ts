@@ -119,6 +119,11 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'nav.admin.titleTeams', icon: 'groups' },
       },
       {
+        path: 'master-data',
+        component: () => import('pages/admin/MasterDataPage.vue'),
+        meta: { title: 'nav.admin.titleMasterData', icon: 'dashboard_customize' },
+      },
+      {
         path: 'branches',
         redirect: '/admin/teams',
         meta: { title: 'บริษัท / สาขา', icon: 'business' },
