@@ -33,7 +33,12 @@ export const useUserStore = defineStore('user', () => {
       if (payload.form.lineId !== undefined) requestData.append('lineId', payload.form.lineId);
       if (payload.form.role !== undefined) requestData.append('role', payload.form.role);
       if (payload.form.password !== undefined) requestData.append('password', payload.form.password);
-      if (payload.form.teamId !== undefined) requestData.append('teamId', payload.form.teamId.toString());
+      if (payload.form.branchId !== undefined) {
+        requestData.append('branchId', (payload.form.branchId ?? 0).toString());
+      }
+      if (payload.form.teamId !== undefined) {
+        requestData.append('teamId', (payload.form.teamId ?? 0).toString());
+      }
 
       // Append file
       if (payload.file) {
@@ -67,7 +72,12 @@ export const useUserStore = defineStore('user', () => {
       if (payload.form.lineId !== undefined) requestData.append('lineId', payload.form.lineId);
       if (payload.form.role !== undefined) requestData.append('role', payload.form.role);
       if (payload.form.password !== undefined) requestData.append('password', payload.form.password);
-      if (payload.form.teamId !== undefined) requestData.append('teamId', payload.form.teamId.toString());
+      if (payload.form.branchId !== undefined) {
+        requestData.append('branchId', (payload.form.branchId ?? 0).toString());
+      }
+      if (payload.form.teamId !== undefined) {
+        requestData.append('teamId', (payload.form.teamId ?? 0).toString());
+      }
 
       // Append file
       if (payload.file) {

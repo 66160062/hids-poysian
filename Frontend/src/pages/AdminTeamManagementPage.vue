@@ -1,11 +1,61 @@
 <template>
   <q-page class="admin-team-page bg-grey-1 q-pb-xl">
-    <!-- Header Area -->
-    <div
-      class="q-pa-md text-dark"
-      style="border-bottom-left-radius: 20px; border-bottom-right-radius: 20px"
-    >
-      <!-- Search + Filter Row -->
+    <!-- Header Section -->
+    <div class="q-px-md q-pt-md q-pb-sm text-dark header-bg">
+      <div class="q-mb-md">
+        <!-- <div class="text-h6 text-weight-bold text-dark">
+          {{ t('adminManage.teamManagement.title') }}
+        </div> -->
+        <div class="text-caption text-weight">
+          {{ t('adminManage.teamManagement.subtitle') }}
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards (3 Cards) -->
+      <div class="row q-col-gutter-sm q-mb-md">
+        <div class="col-4">
+          <q-card flat bordered class="kpi-card bg-white shadow-1">
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar color="blue-1" text-color="primary" icon="groups" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminManage.teamManagement.kpiTotalTeams') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ teamStore.teams.length }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <div class="col-4">
+          <q-card flat bordered class="kpi-card bg-white shadow-1">
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar color="teal-1" text-color="teal-9" icon="person" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminManage.teamManagement.kpiTotalMembers') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ totalMembersAssignedCount }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <div class="col-4">
+          <q-card
+            flat
+            bordered
+            class="kpi-card bg-white shadow-1 cursor-pointer ripple"
+            @click="openBranchManagement"
+          >
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar color="deep-purple-1" text-color="deep-purple-9" icon="business" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminManage.teamManagement.kpiTotalBranches') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ branchStore.branches.length }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
+      <!-- Search Bar & Round Tune Filter Button -->
       <div class="row q-gutter-x-sm no-wrap items-center">
         <q-input
           v-model="searchQuery"
@@ -13,97 +63,104 @@
           borderless
           rounded
           :placeholder="t('adminManage.teamManagement.searchPlaceholder')"
-          class="search-input col"
+          class="col search-input"
           hide-bottom-space
         >
-          <template v-slot:prepend>
+          <template #prepend>
             <q-icon name="search" color="grey-7" />
           </template>
-          <template v-slot:append v-if="searchQuery">
-            <q-icon name="close" @click="searchQuery = ''" class="cursor-pointer" />
+          <template #append v-if="searchQuery">
+            <q-icon name="close" class="cursor-pointer" @click="searchQuery = ''" />
           </template>
         </q-input>
 
+        <!-- Round Tune Filter Button -->
         <q-btn
           round
           unelevated
-          :color="activeFilterCount > 0 ? 'primary' : 'white'"
-          :text-color="activeFilterCount > 0 ? 'white' : 'primary'"
+          :color="selectedBranchId !== null ? 'primary' : 'white'"
+          :text-color="selectedBranchId !== null ? 'white' : 'primary'"
           icon="tune"
-          class="shadow-1"
-          style="height: 48px; width: 48px; min-height: 48px"
-          @click="showFilterDialog = true"
+          class="shadow-1 shrink-0"
+          style="height: 44px; width: 44px; min-height: 44px; min-width: 44px"
         >
           <q-badge
-            v-if="activeFilterCount > 0"
+            v-if="selectedBranchId !== null"
             color="red"
             floating
             rounded
             style="top: 2px; right: 2px"
-            >{{ activeFilterCount }}</q-badge
           >
+            1
+          </q-badge>
+
+          <q-menu anchor="bottom right" self="top right" :offset="[0, 8]" class="rounded-borders shadow-3">
+            <q-list style="min-width: 220px" class="q-py-xs">
+              <q-item-label header class="text-caption text-weight-bold text-grey-7">
+                {{ t('adminManage.teamManagement.branchLabel') }}
+              </q-item-label>
+              <q-item
+                v-for="chip in branchFilterChips"
+                :key="String(chip.value)"
+                clickable
+                v-close-popup
+                :active="selectedBranchId === chip.value"
+                active-class="bg-blue-1 text-primary text-weight-bold"
+                @click="selectedBranchId = chip.value"
+              >
+                <q-item-section avatar min-width="24px">
+                  <q-icon name="business" size="18px" :color="selectedBranchId === chip.value ? 'primary' : 'grey-7'" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>{{ chip.label }}</q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-badge
+                    :color="selectedBranchId === chip.value ? 'primary' : 'grey-3'"
+                    :text-color="selectedBranchId === chip.value ? 'white' : 'dark'"
+                    rounded
+                  >
+                    {{ chip.count }}
+                  </q-badge>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
         </q-btn>
+      </div>
+
+      <!-- Action Buttons Row: 50/50 balanced grid on mobile, inline right on desktop -->
+      <div class="row q-col-gutter-xs q-mt-sm items-center justify-end">
+        <div class="col-6 col-sm-auto">
+          <q-btn
+            outline
+            color="indigo-8"
+            icon="business"
+            :label="t('adminManage.teamManagement.manageBranches')"
+            class="full-width action-btn-secondary"
+            no-caps
+            @click="openBranchManagement"
+          />
+        </div>
+
+        <div class="col-6 col-sm-auto">
+          <q-btn
+            unelevated
+            color="primary"
+            icon="add"
+            :label="t('adminManage.teamManagement.addNewTeam')"
+            class="full-width action-btn-primary shadow-1"
+            no-caps
+            @click="openCreateForm"
+          />
+        </div>
       </div>
     </div>
 
-    <!-- Filter Bottom Sheet Dialog -->
-    <q-dialog
-      v-model="showFilterDialog"
-      position="bottom"
-      transition-show="sheet-in"
-      transition-hide="sheet-out"
-    >
-      <q-card
-        style="width: 100%; max-width: 600px; border-radius: 28px 28px 0 0"
-        class="q-pa-lg filter-sheet"
-      >
-        <div class="sheet-handle" />
-        <div class="row items-center justify-between q-mb-lg">
-          <div class="text-h6 text-weight-bold text-dark">{{ t('adminManage.teamManagement.filterTitle') }}</div>
-          <div class="row items-center">
-            <q-btn
-              v-if="activeFilterCount > 0"
-              flat
-              dense
-              color="negative"
-              :label="t('adminManage.teamManagement.clearButton')"
-              class="q-mr-sm"
-              @click="clearFilters"
-            />
-            <q-btn flat round dense icon="close" color="grey-6" v-close-popup />
-          </div>
-        </div>
-
-        <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">{{ t('adminManage.teamManagement.branchLabel') }}</div>
-        <q-select
-          v-model="selectedBranchId"
-          :options="branchOptions"
-          emit-value
-          map-options
-          dense
-          outlined
-          rounded
-          class="q-mb-lg filter-select"
-          behavior="dialog"
-        />
-
-        <q-btn
-          unelevated
-          rounded
-          color="primary"
-          :label="t('adminManage.teamManagement.doneButton')"
-          class="full-width text-weight-bold"
-          style="height: 48px; font-size: 16px"
-          v-close-popup
-        />
-      </q-card>
-    </q-dialog>
-
-    <!-- Active Filters Chips -->
-    <div v-if="activeFilterCount > 0" class="row items-center q-gutter-x-sm q-px-md q-mt-sm">
+    <!-- Active Filter Removers (if needed) -->
+    <div v-if="selectedBranchId !== null" class="row items-center q-gutter-x-sm q-px-md q-my-xs">
       <span class="text-caption text-grey-7 q-mr-xs">{{ t('adminManage.teamManagement.filteringLabel') }}</span>
       <q-chip
-        v-if="selectedBranchId !== null"
         removable
         @remove="selectedBranchId = null"
         color="blue-1"
@@ -115,8 +172,8 @@
       </q-chip>
     </div>
 
-    <!-- Main Content -->
-    <div class="q-pa-md q-mt-sm">
+    <!-- Main Content Grid -->
+    <div class="q-px-md q-pt-sm q-pb-md">
       <div v-if="!teamStore.isLoading && filteredTeams.length === 0" class="text-center q-py-xl text-grey-6">
         <q-icon name="groups" size="64px" class="q-mb-md" />
         <div>{{ t('adminManage.teamManagement.noTeamsFound') }}</div>
@@ -137,12 +194,97 @@
       </div>
     </div>
 
-    <!-- FAB Add Button -->
-    <q-page-sticky position="bottom-right" :offset="[16, 16]">
-      <q-btn fab icon="add" color="primary" @click="openCreateForm" />
-    </q-page-sticky>
+    <!-- Integrated Branch Management Dialog -->
+    <q-dialog v-model="showBranchManagementDialog">
+      <q-card style="width: 100%; max-width: 540px; border-radius: 20px" class="q-pa-md">
+        <q-card-section class="row items-center justify-between q-pb-xs">
+          <div class="row items-center">
+            <q-avatar color="indigo-1" text-color="indigo-9" icon="business" size="40px" class="q-mr-sm" />
+            <div>
+              <div class="text-subtitle1 text-weight-bold text-dark">{{ t('adminManage.teamManagement.manageBranchesTitle') }}</div>
+              <div class="text-caption text-grey-6">{{ t('adminManage.teamManagement.manageBranchesSubtitle') }}</div>
+            </div>
+          </div>
+          <q-btn flat round dense icon="close" color="grey-6" v-close-popup />
+        </q-card-section>
 
-    <!-- Form Dialog -->
+        <q-separator class="q-my-sm" />
+
+        <!-- Add/Edit Branch Form inside Dialog -->
+        <q-card-section>
+          <q-form class="q-gutter-sm" @submit="handleSaveBranch">
+            <q-input
+              v-model="branchNameInput"
+              outlined
+              dense
+              bg-color="white"
+              :label="t('adminManage.branchManagement.nameLabel')"
+              :rules="[(val) => !!val.trim() || t('adminManage.userManagement.fillRequiredFields')]"
+              hide-bottom-space
+            />
+            <q-file
+              v-model="branchLogoFileInput"
+              outlined
+              dense
+              bg-color="white"
+              accept="image/*"
+              :label="t('adminManage.branchManagement.logoLabel')"
+              clearable
+              hide-bottom-space
+            >
+              <template #prepend>
+                <q-icon name="image" />
+              </template>
+            </q-file>
+
+            <div class="row justify-end q-gutter-x-sm q-mt-xs">
+              <q-btn
+                v-if="editingBranchId !== null"
+                flat
+                color="grey-7"
+                :label="t('adminManage.teamManagement.cancelLabel')"
+                @click="cancelBranchEdit"
+              />
+              <q-btn
+                type="submit"
+                color="primary"
+                unelevated
+                :label="editingBranchId !== null ? t('adminManage.teamManagement.saveButton') : t('adminManage.branchManagement.addBranch')"
+                :loading="savingBranch"
+              />
+            </div>
+          </q-form>
+        </q-card-section>
+
+        <!-- Current Branches List -->
+        <q-card-section class="q-pt-none">
+          <div class="text-caption text-weight-bold text-grey-8 q-mb-xs">
+            {{ t('adminManage.teamManagement.kpiTotalBranches') }} ({{ branchStore.branches.length }})
+          </div>
+          <div style="max-height: 240px; overflow-y: auto" class="q-pr-xs">
+            <q-list separator bordered class="rounded-borders">
+              <q-item v-for="branch in branchStore.branches" :key="branch.branchId">
+                <q-item-section avatar>
+                  <q-avatar color="grey-2">
+                    <img v-if="branch.logoUrl" :src="getImageUrl(branch.logoUrl)" />
+                    <q-icon v-else name="business" color="indigo-7" />
+                  </q-avatar>
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label class="text-weight-bold text-dark">{{ branch.branchName }}</q-item-label>
+                  <q-item-label caption>{{ t('adminManage.branchManagement.jobMappingHint') }}</q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-btn flat round dense icon="edit" color="blue" @click="editBranch(branch)" />
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Standard Team Form Dialog -->
     <q-dialog v-model="isFormMode" persistent>
       <q-card class="dialog-card">
         <q-card-section class="dialog-header row items-center no-wrap">
@@ -150,7 +292,9 @@
             <q-icon :name="isEditing ? 'edit' : 'group_add'" size="24px" />
           </div>
           <div class="col q-ml-md">
-            <div class="dialog-title text-weight-bold text-dark">{{ isEditing ? t('adminManage.teamManagement.editTeamTitle') : t('adminManage.teamManagement.addTeamTitle') }}</div>
+            <div class="dialog-title text-weight-bold text-dark">
+              {{ isEditing ? t('adminManage.teamManagement.editTeamTitle') : t('adminManage.teamManagement.addTeamTitle') }}
+            </div>
           </div>
           <q-btn icon="close" flat round dense class="dialog-close-btn" v-close-popup />
         </q-card-section>
@@ -202,7 +346,7 @@
                   hide-bottom-space
                   @update:model-value="onImageFileChange"
                 >
-                  <template v-slot:prepend>
+                  <template #prepend>
                     <q-icon name="image" />
                   </template>
                 </q-file>
@@ -238,11 +382,19 @@
                 outlined
                 dense
                 filled
+                :disable="isEditing && selectedTeamMembers.length > 0"
                 hide-bottom-space
               />
+              <div
+                v-if="isEditing && selectedTeamMembers.length > 0"
+                class="text-caption text-negative q-mt-xs row items-center"
+              >
+                <q-icon name="lock" size="14px" class="q-mr-xs" />
+                ไม่สามารถเปลี่ยนสาขาได้เนื่องจากทีมนี้มีสมาชิกอยู่ {{ selectedTeamMembers.length }} คน (ต้องย้ายหรือถอดสมาชิกออกจากทีมทั้งหมดก่อนจึงจะเปลี่ยนสาขาได้)
+              </div>
             </div>
 
-            <!-- Creating a team: must pick at least one starting member up front -->
+            <!-- Initial Members for New Team -->
             <div v-if="!isEditing">
               <div class="dialog-field-label">
                 {{ t('adminManage.teamManagement.initialMembersLabel') }} <span class="text-negative">*</span>
@@ -264,7 +416,7 @@
                 :rules="[(val: number[]) => (Array.isArray(val) && val.length > 0) || t('adminManage.teamManagement.selectAtLeastOneMember')]"
                 :loading="userStore.isLoading"
               >
-                <template v-slot:no-option>
+                <template #no-option>
                   <q-item>
                     <q-item-section class="text-grey-6">{{ t('adminManage.teamManagement.noUnassignedInspectors') }}</q-item-section>
                   </q-item>
@@ -272,7 +424,7 @@
               </q-select>
             </div>
 
-            <!-- Members management: only available once the team exists -->
+            <!-- Members Management for Existing Team -->
             <div v-if="isEditing">
               <q-separator class="q-mb-md" />
               <div class="dialog-field-label">
@@ -296,7 +448,7 @@
                   hide-bottom-space
                   :loading="userStore.isLoading"
                 >
-                  <template v-slot:no-option>
+                  <template #no-option>
                     <q-item>
                       <q-item-section class="text-grey-6">{{ t('adminManage.teamManagement.noAvailableInspectors') }}</q-item-section>
                     </q-item>
@@ -369,7 +521,7 @@
       </q-card>
     </q-dialog>
 
-    <!-- Crop Dialog: shown right after picking a logo file -->
+    <!-- Crop Dialog -->
     <q-dialog v-model="showCropDialog" persistent>
       <q-card style="width: 480px; max-width: 90vw; border-radius: 16px">
         <q-card-section class="row items-center q-pb-none">
@@ -404,7 +556,7 @@ import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { useTeamStore } from 'src/stores/useTeam';
 import { useUserStore } from 'src/stores/useUser';
-import { useBranchStore } from 'src/stores/useBranch';
+import { useBranchStore, type Branch } from 'src/stores/useBranch';
 import AdminTeamCard from 'src/components/AdminTeamCard.vue';
 import ConfirmActionDialog from 'src/components/ConfirmActionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
@@ -414,7 +566,7 @@ import type { Team, User } from 'src/models';
 
 const teamSpinner = createIconSpinner('groups');
 
-const { t } = useI18n();
+const { t, locale } = useI18n({ useScope: 'global' });
 const $q = useQuasar();
 const teamStore = useTeamStore();
 const userStore = useUserStore();
@@ -439,25 +591,48 @@ const filteredTeams = computed(() => {
   });
 });
 
+const totalMembersAssignedCount = computed(() => {
+  return teamStore.teams.reduce((acc, team) => acc + getTeamMembers(team.team_Id).length, 0);
+});
+
 const selectedTeamMembers = computed(() => {
   if (editTeamId.value === null) return [];
   return getTeamMembers(editTeamId.value);
 });
 
-// เฉพาะ inspector เท่านั้นที่เพิ่มเข้าทีมได้
 const newMemberId = ref<number | null>(null);
 const availableInspectorOptions = computed(() => {
-  const currentTeamId = editTeamId.value;
+  const currentBranchId = localForm.value.branchId;
   return userStore.users
-    .filter((u) => u.role === 'inspector' && (u.teamId ?? u.team?.team_Id) !== currentTeamId)
+    .filter((u) => {
+      if (u.role !== 'inspector') return false;
+      // ต้องไม่มีสังกัดทีมใดๆ เท่านั้น
+      if (u.teamId ?? u.team?.team_Id) return false;
+      // ต้องอยู่สาขาเดียวกันกับทีม
+      if (currentBranchId) {
+        const uBranchId = u.branchId ?? u.branch?.branchId;
+        if (uBranchId !== currentBranchId) return false;
+      }
+      return true;
+    })
     .map((u) => ({ label: u.fullName, value: u.id }));
 });
 
-// ตอนสร้างทีมใหม่ ต้องเลือกสมาชิกเริ่มต้นอย่างน้อย 1 คน (เฉพาะ inspector ที่ยังไม่มีทีม)
 const newTeamMemberIds = ref<number[]>([]);
 const unassignedInspectorOptions = computed(() => {
+  const currentBranchId = localForm.value.branchId;
   return userStore.users
-    .filter((u) => u.role === 'inspector' && !(u.teamId ?? u.team?.team_Id))
+    .filter((u) => {
+      if (u.role !== 'inspector') return false;
+      // ต้องไม่มีสังกัดทีมใดๆ เท่านั้น
+      if (u.teamId ?? u.team?.team_Id) return false;
+      // ต้องอยู่สาขาเดียวกันกับทีม
+      if (currentBranchId) {
+        const uBranchId = u.branchId ?? u.branch?.branchId;
+        if (uBranchId !== currentBranchId) return false;
+      }
+      return true;
+    })
     .map((u) => ({ label: u.fullName, value: u.id }));
 });
 
@@ -474,30 +649,82 @@ const localForm = ref<{
 });
 const logoFile = ref<File | null>(null);
 const selectedBranchId = ref<number | null>(null);
-const branchOptions = computed(() => [
-  { label: t('adminManage.teamManagement.allBranchesOption'), value: null },
-  ...branchStore.branches.map((branch) => ({
-    label: branch.branchName || t('adminManage.teamManagement.branchFallbackLabel', { id: branch.branchId }),
-    value: branch.branchId,
-  })),
-]);
-// ตัวเลือกสาขาสำหรับฟอร์มเพิ่ม/แก้ไขทีม — ใช้ "ไม่ระบุสาขา" แทน "รวมทุกสาขา" ของตัวกรอง
-const branchFormOptions = computed(() => [
-  { label: t('adminManage.teamManagement.noBranchOption'), value: null },
-  ...branchStore.branches.map((branch) => ({
-    label: branch.branchName || t('adminManage.teamManagement.branchFallbackLabel', { id: branch.branchId }),
-    value: branch.branchId,
-  })),
-]);
 
-const showFilterDialog = ref(false);
-const activeFilterCount = computed(() => (selectedBranchId.value !== null ? 1 : 0));
+const branchOptions = computed(() => {
+  void locale.value;
+  return [
+    { label: t('adminManage.teamManagement.allBranchesOption'), value: null },
+    ...branchStore.branches.map((branch) => ({
+      label: branch.branchName || t('adminManage.teamManagement.branchFallbackLabel', { id: branch.branchId }),
+      value: branch.branchId,
+    })),
+  ];
+});
 
-function clearFilters() {
-  selectedBranchId.value = null;
+const branchFormOptions = computed(() => {
+  void locale.value;
+  return [
+    { label: t('adminManage.teamManagement.noBranchOption'), value: null },
+    ...branchStore.branches.map((branch) => ({
+      label: branch.branchName || t('adminManage.teamManagement.branchFallbackLabel', { id: branch.branchId }),
+      value: branch.branchId,
+    })),
+  ];
+});
+
+const branchFilterChips = computed(() => {
+  void locale.value;
+  return [
+    { label: t('adminManage.teamManagement.allBranchesOption'), value: null, count: teamStore.teams.length },
+    ...branchStore.branches.map((b) => ({
+      label: b.branchName || t('adminManage.teamManagement.branchFallbackLabel', { id: b.branchId }),
+      value: b.branchId,
+      count: teamStore.teams.filter((t) => t.branchId === b.branchId).length,
+    })),
+  ];
+});
+
+// Integrated Branch Management Dialog State
+const showBranchManagementDialog = ref(false);
+const editingBranchId = ref<number | null>(null);
+const branchNameInput = ref('');
+const branchLogoFileInput = ref<File | null>(null);
+const savingBranch = ref(false);
+
+function openBranchManagement() {
+  editingBranchId.value = null;
+  branchNameInput.value = '';
+  branchLogoFileInput.value = null;
+  showBranchManagementDialog.value = true;
 }
 
-// ไฟล์ที่เพิ่งเลือกจากเครื่อง รอเข้ากระบวนการตัดกรอบ ก่อนกลายเป็น logoFile จริง
+function editBranch(branch: Branch) {
+  editingBranchId.value = branch.branchId;
+  branchNameInput.value = branch.branchName || '';
+  branchLogoFileInput.value = null;
+}
+
+function cancelBranchEdit() {
+  editingBranchId.value = null;
+  branchNameInput.value = '';
+  branchLogoFileInput.value = null;
+}
+
+async function handleSaveBranch() {
+  if (!branchNameInput.value.trim()) return;
+  savingBranch.value = true;
+  try {
+    await branchStore.saveBranch(editingBranchId.value, branchNameInput.value.trim(), branchLogoFileInput.value);
+    $q.notify({ type: 'positive', message: t('adminManage.branchManagement.saveSuccess') });
+    cancelBranchEdit();
+  } catch (err) {
+    console.error(err);
+    $q.notify({ type: 'negative', message: t('adminManage.branchManagement.saveFailed') });
+  } finally {
+    savingBranch.value = false;
+  }
+}
+
 const pickedLogoFile = ref<File | null>(null);
 const showCropDialog = ref(false);
 const cropSourceUrl = ref('');
@@ -518,9 +745,7 @@ onMounted(async () => {
       teamStore.fetchTeams().catch(() => {
         $q.notify({ type: 'negative', message: t('adminManage.teamManagement.fetchTeamsFailed'), position: 'top' });
       }),
-      userStore.fetchUsers().catch(() => {
-        // silently fail fetching users if error, main focus is teams
-      }),
+      userStore.fetchUsers().catch(() => {}),
     ]);
   } finally {
     $q.loading.hide();
@@ -534,7 +759,7 @@ const getImageUrl = (url?: string | null) => {
 };
 
 const getTeamMembers = (teamId: number) => {
-  return userStore.users.filter(user => user.teamId === teamId || user.team?.team_Id === teamId);
+  return userStore.users.filter((user) => user.teamId === teamId || user.team?.team_Id === teamId);
 };
 
 const addMember = () => {
@@ -543,39 +768,25 @@ const addMember = () => {
   const inspector = userStore.users.find((u) => u.id === newMemberId.value);
   if (!inspector || !targetTeam) return;
 
-  const currentTeamId = inspector.teamId ?? inspector.team?.team_Id;
-  const doAdd = () => {
-    $q.loading.show({ message: t('adminManage.teamManagement.addingMember') });
-    userStore
-      .updateUser(inspector.id, { form: { teamId: targetTeam.team_Id }, file: null })
-      .then(() => {
-        $q.notify({ type: 'positive', message: t('adminManage.teamManagement.addMemberSuccess'), icon: 'check_circle', position: 'top' });
-        newMemberId.value = null;
-      })
-      .catch(() => {
-        $q.notify({ type: 'negative', message: t('adminManage.teamManagement.addMemberFailed'), position: 'top' });
-      })
-      .finally(() => {
-        $q.loading.hide();
-      });
-  };
-
-  if (currentTeamId && currentTeamId !== targetTeam.team_Id) {
-    const oldTeamName = teamStore.teams.find((t) => t.team_Id === currentTeamId)?.team_name || t('adminManage.teamManagement.previousTeamFallback');
-    $q.dialog({
-      title: t('adminManage.teamManagement.moveTeamTitle'),
-      message: t('adminManage.teamManagement.moveTeamMessage', {
-        name: inspector.fullName,
-        oldTeam: oldTeamName,
-        newTeam: targetTeam.team_name,
-      }),
-      cancel: true,
-      persistent: true,
-      color: 'primary',
-    }).onOk(doAdd);
-  } else {
-    doAdd();
-  }
+  $q.loading.show({ message: t('adminManage.teamManagement.addingMember') });
+  userStore
+    .updateUser(inspector.id, {
+      form: {
+        teamId: targetTeam.team_Id,
+        branchId: targetTeam.branchId ?? undefined,
+      },
+      file: null,
+    })
+    .then(() => {
+      $q.notify({ type: 'positive', message: t('adminManage.teamManagement.addMemberSuccess'), icon: 'check_circle', position: 'top' });
+      newMemberId.value = null;
+    })
+    .catch(() => {
+      $q.notify({ type: 'negative', message: t('adminManage.teamManagement.addMemberFailed'), position: 'top' });
+    })
+    .finally(() => {
+      $q.loading.hide();
+    });
 };
 
 const confirmRemoveMember = (user: User) => {
@@ -601,129 +812,165 @@ const confirmRemoveMember = (user: User) => {
   });
 };
 
-const openCreateForm = () => {
-  isEditing.value = false;
-  editTeamId.value = null;
-  localForm.value = { team_name: '', logo_url: '', contact_info: '', branchId: null };
-  logoFile.value = null;
-  pickedLogoFile.value = null;
-  newMemberId.value = null;
-  newTeamMemberIds.value = [];
-  isFormMode.value = true;
-};
-
-const openEditForm = (team: Team) => {
-  isEditing.value = true;
-  editTeamId.value = team.team_Id;
-  localForm.value = {
-    team_name: team.team_name || '',
-    logo_url: team.logo_url || '',
-    contact_info: team.contact_info || '',
-    branchId: team.branchId ?? null,
-  };
-  logoFile.value = null;
-  pickedLogoFile.value = null;
-  newMemberId.value = null;
-  isFormMode.value = true;
-};
-
-const closeForm = () => {
-  isFormMode.value = false;
-};
-
-// เลือกไฟล์แล้วเปิด dialog ตัดกรอบก่อนเสมอ ยังไม่เซ็ต logoFile จริงจนกว่าจะกดยืนยัน
-const onImageFileChange = (file: File | null) => {
+function onImageFileChange(file: File | null) {
   if (!file) {
+    cropSourceUrl.value = '';
     return;
+  }
+  if (cropSourceUrl.value) {
+    URL.revokeObjectURL(cropSourceUrl.value);
   }
   cropSourceUrl.value = URL.createObjectURL(file);
   showCropDialog.value = true;
-};
+}
 
-const removeLogo = () => {
+function cancelCrop() {
+  showCropDialog.value = false;
+  if (cropSourceUrl.value) {
+    URL.revokeObjectURL(cropSourceUrl.value);
+    cropSourceUrl.value = '';
+  }
+  pickedLogoFile.value = null;
+}
+
+function confirmCrop() {
+  const cropper = cropperRef.value;
+  if (!cropper) return;
+  const result = cropper.getResult();
+  if (!result.canvas) return;
+
+  result.canvas.toBlob(
+    (blob) => {
+      if (!blob) return;
+      const file = new File([blob], pickedLogoFile.value?.name || 'logo.png', {
+        type: 'image/png',
+      });
+      logoFile.value = file;
+      if (localForm.value.logo_url && localForm.value.logo_url.startsWith('blob:')) {
+        URL.revokeObjectURL(localForm.value.logo_url);
+      }
+      localForm.value.logo_url = URL.createObjectURL(file);
+      showCropDialog.value = false;
+      if (cropSourceUrl.value) {
+        URL.revokeObjectURL(cropSourceUrl.value);
+        cropSourceUrl.value = '';
+      }
+    },
+    'image/png',
+    0.9,
+  );
+}
+
+function removeLogo() {
   if (localForm.value.logo_url && localForm.value.logo_url.startsWith('blob:')) {
     URL.revokeObjectURL(localForm.value.logo_url);
   }
   localForm.value.logo_url = '';
   logoFile.value = null;
   pickedLogoFile.value = null;
-};
+}
 
-const cancelCrop = () => {
-  if (cropSourceUrl.value) {
-    URL.revokeObjectURL(cropSourceUrl.value);
-  }
-  cropSourceUrl.value = '';
-  pickedLogoFile.value = null;
-  showCropDialog.value = false;
-};
+function openCreateForm() {
+  isEditing.value = false;
+  editTeamId.value = null;
+  removeLogo();
+  localForm.value = { team_name: '', logo_url: '', contact_info: '', branchId: null };
+  newTeamMemberIds.value = [];
+  newMemberId.value = null;
+  isFormMode.value = true;
+}
 
-const confirmCrop = () => {
-  const result = cropperRef.value?.getResult();
-  const canvas = result?.canvas;
-  if (!canvas) {
-    cancelCrop();
+function openEditForm(team: Team) {
+  isEditing.value = true;
+  editTeamId.value = team.team_Id;
+  removeLogo();
+  localForm.value = {
+    team_name: team.team_name,
+    logo_url: team.logo_url || '',
+    contact_info: team.contact_info || '',
+    branchId: team.branchId ?? null,
+  };
+  newTeamMemberIds.value = [];
+  newMemberId.value = null;
+  isFormMode.value = true;
+}
+
+function closeForm() {
+  removeLogo();
+  isFormMode.value = false;
+}
+
+async function onSave() {
+  if (!localForm.value.team_name.trim()) {
+    $q.notify({ type: 'warning', message: t('adminManage.teamManagement.teamNameRequired'), position: 'top' });
     return;
   }
-  canvas.toBlob((blob) => {
-    if (!blob) {
-      cancelCrop();
-      return;
-    }
-    if (localForm.value.logo_url && localForm.value.logo_url.startsWith('blob:')) {
-      URL.revokeObjectURL(localForm.value.logo_url);
-    }
-    const croppedFile = new File([blob], 'logo.jpg', { type: 'image/jpeg' });
-    logoFile.value = croppedFile;
-    localForm.value.logo_url = URL.createObjectURL(croppedFile);
+  if (!isEditing.value && newTeamMemberIds.value.length === 0) {
+    $q.notify({ type: 'warning', message: t('adminManage.teamManagement.selectAtLeastOneMember'), position: 'top' });
+    return;
+  }
 
-    URL.revokeObjectURL(cropSourceUrl.value);
-    cropSourceUrl.value = '';
-    pickedLogoFile.value = null;
-    showCropDialog.value = false;
-  }, 'image/jpeg', 0.92);
-};
-
-const onSave = async () => {
   $q.loading.show({ message: t('adminManage.teamManagement.saving') });
   try {
-    if (isEditing.value && editTeamId.value) {
-      await teamStore.updateTeam(editTeamId.value, { form: localForm.value, file: logoFile.value });
+    if (isEditing.value && editTeamId.value !== null) {
+      await teamStore.updateTeam(editTeamId.value, {
+        form: {
+          team_name: localForm.value.team_name,
+          contact_info: localForm.value.contact_info,
+          branchId: localForm.value.branchId,
+        },
+        file: logoFile.value,
+      });
       $q.notify({ type: 'positive', message: t('adminManage.teamManagement.editTeamSuccess'), icon: 'check_circle', position: 'top' });
     } else {
-      const newTeam = await teamStore.createTeam({ form: localForm.value, file: logoFile.value });
-      await Promise.all(
-        newTeamMemberIds.value.map((userId) =>
-          userStore.updateUser(userId, { form: { teamId: newTeam.team_Id }, file: null }),
-        ),
-      );
+      const createdTeam = await teamStore.createTeam({
+        form: {
+          team_name: localForm.value.team_name,
+          contact_info: localForm.value.contact_info,
+          branchId: localForm.value.branchId,
+        },
+        file: logoFile.value,
+      });
+      if (createdTeam && newTeamMemberIds.value.length > 0) {
+        await Promise.all(
+          newTeamMemberIds.value.map((userId) =>
+            userStore.updateUser(userId, {
+              form: {
+                teamId: createdTeam.team_Id,
+                branchId: createdTeam.branchId ?? undefined,
+              },
+              file: null,
+            }),
+          ),
+        );
+      }
       $q.notify({ type: 'positive', message: t('adminManage.teamManagement.createTeamSuccess'), icon: 'check_circle', position: 'top' });
     }
     closeForm();
-  } catch {
+  } catch (err: unknown) {
+    console.error(err);
     $q.notify({ type: 'negative', message: t('adminManage.teamManagement.saveErrorApiCheck'), position: 'top' });
   } finally {
     $q.loading.hide();
   }
-};
+}
 
-const confirmDelete = (team: Team) => {
+function confirmDelete(team: Team) {
   $q.dialog({
     component: ConfirmActionDialog,
     componentProps: {
       title: t('adminManage.teamManagement.deactivateConfirmTitle'),
       message: t('adminManage.teamManagement.deactivateConfirmMessage', { name: team.team_name }),
-      icon: 'block',
-      color: 'negative',
       confirmLabel: t('adminManage.teamManagement.deactivateConfirmLabel'),
       cancelLabel: t('adminManage.teamManagement.cancelLabel'),
+      color: 'negative',
+      icon: 'warning',
     },
   }).onOk(() => {
     $q.loading.show({ message: t('adminManage.teamManagement.deactivating') });
     teamStore
       .deleteTeam(team.team_Id)
-      .then(async () => {
-        await userStore.fetchUsers();
+      .then(() => {
         $q.notify({ type: 'positive', message: t('adminManage.teamManagement.deactivateSuccess'), icon: 'check_circle', position: 'top' });
       })
       .catch(() => {
@@ -733,129 +980,105 @@ const confirmDelete = (team: Team) => {
         $q.loading.hide();
       });
   });
-};
+}
 </script>
 
 <style scoped>
 .admin-team-page {
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
-  max-width: 600px;
+  max-width: 1200px;
   margin: 0 auto;
-  min-height: 100vh;
 }
 
-@media (min-width: 600px) {
-  .admin-team-page {
-    max-width: 800px;
-  }
+.header-bg {
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
 }
-@media (min-width: 1024px) {
-  .admin-team-page {
-    max-width: 1100px;
-  }
+
+.kpi-card {
+  border-radius: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-@media (min-width: 1440px) {
-  .admin-team-page {
-    max-width: 1300px;
-  }
+
+.kpi-card:hover {
+  transform: translateY(-2px);
 }
 
 .search-input {
-  background-color: #ffffff;
-  border: 1px solid #ebebeb;
+  background: #ffffff;
   border-radius: 24px;
-  padding: 2px 16px;
-  height: 48px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-  transition:
-    box-shadow 200ms var(--ease-out),
-    border-color 200ms var(--ease-out);
-}
-.search-input:focus-within {
-  border-color: rgba(25, 118, 210, 0.5);
-  box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.12);
+  padding: 4px 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
-.filter-sheet {
-  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
+.action-btn-secondary {
+  height: 42px;
+  border-radius: 14px;
+  font-weight: 600;
+  background-color: #ffffff !important;
+  font-size: 13px;
 }
-.sheet-handle {
-  width: 36px;
-  height: 4px;
-  border-radius: 999px;
-  background: #e0e0e0;
-  margin: -8px auto 16px;
+
+.action-btn-primary {
+  height: 42px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.scroll-container {
+  max-width: 100%;
+}
+
+.filter-chip {
+  min-height: 42px;
+  padding: 6px 14px;
+  border-radius: 21px;
+  white-space: nowrap;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.filter-text {
+  white-space: nowrap;
+}
+
+.shrink-0 {
+  flex-shrink: 0;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 .card-stagger {
-  animation: card-in 320ms var(--ease-out) both;
-}
-.card-stagger:nth-child(1) { animation-delay: 0ms; }
-.card-stagger:nth-child(2) { animation-delay: 40ms; }
-.card-stagger:nth-child(3) { animation-delay: 80ms; }
-.card-stagger:nth-child(4) { animation-delay: 120ms; }
-.card-stagger:nth-child(n + 5) { animation-delay: 150ms; }
-@keyframes card-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  transition: transform 0.2s ease;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .card-stagger,
-  .search-input {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-.filter-select :deep(.q-field__control) {
-  height: 42px;
-  min-height: 42px;
-  border: 1px solid #e0e0e0;
-}
-.filter-select :deep(.q-field__control:before),
-.filter-select :deep(.q-field__control:after) {
-  border: none !important;
-}
-
-.avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.logo-cropper {
-  height: 320px;
-  background: #ddd;
+.card-stagger:hover {
+  transform: translateY(-2px);
 }
 
 .dialog-card {
   width: 100%;
-  max-width: 480px;
+  max-width: 580px;
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
-@media (min-width: 600px) {
-  .dialog-card {
-    max-width: 560px;
-  }
-}
+
 @media (min-width: 1024px) {
   .dialog-card {
     max-width: 640px;
   }
 }
+
 .dialog-header {
   padding: 20px 24px;
 }
+
 .dialog-header-icon {
   width: 44px;
   height: 44px;
@@ -865,98 +1088,70 @@ const confirmDelete = (team: Team) => {
   color: #1976d2;
   flex-shrink: 0;
 }
+
 .dialog-title {
   font-size: 18px;
   line-height: 1.3;
 }
+
 .dialog-close-btn {
   background-color: #f2f4f7;
   transition: background-color 0.15s ease;
 }
+
 .dialog-close-btn:hover {
   background-color: #e7ebf0;
 }
+
 .dialog-body {
   padding: 22px 24px;
   max-height: 62vh;
   overflow-y: auto;
 }
+
 .dialog-field-label {
   font-size: 13px;
   font-weight: 600;
   color: #55606e;
   margin-bottom: 6px;
 }
+
 .upload-zone {
   padding: 14px;
   border: 1.5px dashed #d7dee6;
   border-radius: 16px;
   background-color: #fafbfc;
 }
+
 .dialog-member-list {
   border-radius: 12px;
   border-color: #eef0f2;
 }
+
 .dialog-body :deep(.q-field__control) {
   border-radius: 12px;
 }
+
 .dialog-footer {
   padding: 16px 24px;
   background-color: #fafbfc;
 }
+
 .dialog-btn {
   border-radius: 12px;
   height: 44px;
   font-weight: 600;
   min-width: 120px;
 }
+
 .dialog-btn--cancel {
   border: 1px solid #e3e6ea;
   background-color: #ffffff;
 }
 
-@media (max-width: 599px) {
-  .dialog-header,
-  .dialog-body,
-  .dialog-footer {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-  .dialog-body {
-    max-height: 70vh;
-  }
-  .dialog-title {
-    font-size: 16px;
-  }
-}
-</style>
-
-<style>
-/* Frosted-glass backdrop + spring-eased bottom sheet for the filter dialog */
-.q-dialog__backdrop {
-  backdrop-filter: blur(6px) saturate(180%);
-  -webkit-backdrop-filter: blur(6px) saturate(180%);
-}
-
-.q-transition--sheet-in-enter-active {
-  transition: all 320ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-.q-transition--sheet-in-enter-from {
-  transform: translateY(100%);
-  opacity: 0.6;
-}
-.q-transition--sheet-out-leave-active {
-  transition: all 200ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-.q-transition--sheet-out-leave-to {
-  transform: translateY(100%);
-  opacity: 0.6;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .q-transition--sheet-in-enter-active,
-  .q-transition--sheet-out-leave-active {
-    transition-duration: 0.01ms !important;
-  }
+.logo-cropper {
+  height: 280px;
+  background: #222;
+  border-radius: 12px;
 }
 </style>

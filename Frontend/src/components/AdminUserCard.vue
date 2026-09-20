@@ -67,11 +67,22 @@
         </div>
       </div>
 
-      <div class="row items-center text-grey-7" style="font-size: 13px">
-        <q-icon name="work" size="16px" class="q-mr-sm" />
-        <span class="ellipsis" style="max-width: 80%">
-          {{ user.team ? user.team.team_name : t('components.adminUserCard.noTeam') }}
-        </span>
+      <div class="row items-center text-grey-7 justify-between" style="font-size: 13px">
+        <div class="row items-center col ellipsis">
+          <q-icon name="work" size="16px" class="q-mr-xs" />
+          <span class="ellipsis" style="max-width: 140px">
+            {{ user.team ? user.team.team_name : t('components.adminUserCard.noTeam') }}
+          </span>
+        </div>
+        <q-badge
+          v-if="branchName"
+          color="indigo-1"
+          text-color="indigo-9"
+          class="tag-badge text-weight-bold"
+        >
+          <q-icon name="business" size="12px" class="q-mr-xs" />
+          {{ branchName }}
+        </q-badge>
       </div>
     </q-card-section>
 
@@ -94,15 +105,30 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useBranchStore } from 'src/stores/useBranch';
 import type { User } from 'src/models';
 
 const { t } = useI18n();
+const branchStore = useBranchStore();
 
 const props = defineProps({
   user: {
     type: Object as () => User,
     required: true,
   }
+});
+
+const branchName = computed(() => {
+  if (props.user.branch?.branchName) {
+    return props.user.branch.branchName;
+  }
+  if (props.user.team?.branch?.branchName) {
+    return props.user.team.branch.branchName;
+  }
+  const bId = props.user.branchId ?? props.user.team?.branchId;
+  if (!bId) return '';
+  const found = branchStore.branches.find((b) => b.branchId === bId);
+  return found?.branchName || '';
 });
 
 const ROLE_LABEL_KEYS: Record<string, string> = {

@@ -138,22 +138,48 @@
             />
           </div>
 
-          <!-- Team (Hidden if Admin) -->
+          <!-- Branch Selection -->
           <div v-if="localForm.role !== 'admin'">
             <div class="dialog-field-label">
-              {{ t('components.adminUserFormDialog.team') }} <span class="text-negative">*</span>
+              {{ t('adminManage.teamManagement.branchLabel') || 'บริษัท / สาขา' }} <span class="text-negative">*</span>
             </div>
             <q-select
-              v-model="localForm.teamId"
-              :options="teamOptions"
+              v-model="localForm.branchId"
+              :options="branchOptions"
               outlined
               dense
               filled
               emit-value
               map-options
+              :disable="isEditing && !!(initialData.teamId || initialData.team?.team_Id)"
+              :rules="[(val) => !!val || t('adminManage.userManagement.branchRequired') || 'กรุณาเลือกสาขา']"
               hide-bottom-space
-              :rules="[(val) => !!val || t('components.adminUserFormDialog.teamRequired')]"
             />
+            <div
+              v-if="isEditing && !!(initialData.teamId || initialData.team?.team_Id)"
+              class="text-caption text-negative q-mt-xs row items-center"
+            >
+              <q-icon name="lock" size="14px" class="q-mr-xs" />
+              ไม่สามารถเปลี่ยนสาขาได้เนื่องจากผู้ใช้นี้สังกัดทีมอยู่ (ต้องไปถอดผู้ใช้นี้ออกจากทีมในหน้าจัดการทีมก่อนจึงจะเปลี่ยนสาขาได้)
+            </div>
+          </div>
+
+          <!-- Current Team Status (Read-only for Editing) -->
+          <div v-if="localForm.role !== 'admin' && isEditing">
+            <div class="dialog-field-label">
+              {{ t('components.adminUserFormDialog.team') || 'ทีม' }}
+            </div>
+            <div class="team-status-box row items-center justify-between q-pa-sm">
+              <div class="row items-center text-dark">
+                <q-icon name="groups" size="20px" class="q-mr-xs text-primary" />
+                <span class="text-weight-bold" style="font-size: 14px">
+                  {{ currentTeamName || 'ยังไม่มีทีม' }}
+                </span>
+              </div>
+              <div class="text-caption text-grey-6">
+                (จัดการสมาชิกได้ที่หน้าจัดการทีม)
+              </div>
+            </div>
           </div>
         </q-form>
       </q-card-section>
@@ -235,7 +261,8 @@ const getImageUrl = (url?: string | null) => {
 
 interface Option {
   label: string;
-  value: string | number;
+  value: string | number | null;
+  branchId?: number | null | undefined;
 }
 
 const props = defineProps({
@@ -259,12 +286,18 @@ const props = defineProps({
     type: Array as () => Option[],
     default: () => [],
   },
+  branchOptions: {
+    type: Array as () => Option[],
+    default: () => [],
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'save']);
 
 const localForm = ref<Partial<User>>({});
 const profileImageFile = ref<File | null>(null);
+
+const currentTeamName = computed(() => props.initialData.team?.team_name || '');
 
 // ไฟล์ที่เพิ่งเลือกจากเครื่อง รอเข้ากระบวนการตัดกรอบ ก่อนกลายเป็น profileImageFile จริง
 const pickedProfileImageFile = ref<File | null>(null);
@@ -287,12 +320,27 @@ watch(
   () => props.modelValue,
   (val) => {
     if (val) {
-      localForm.value = { ...props.initialData };
+      if (props.isEditing) {
+        const initialBranchId = props.initialData.branchId ?? props.initialData.team?.branchId ?? null;
+        localForm.value = {
+          ...props.initialData,
+          branchId: initialBranchId,
+          password: '',
+        };
+      } else {
+        localForm.value = {
+          fullName: '',
+          phoneNumber: '',
+          email: '',
+          password: '',
+          lineId: '',
+          role: 'inspector',
+          branchId: null,
+          imageUrl: '',
+        };
+      }
       profileImageFile.value = null;
       pickedProfileImageFile.value = null;
-      if (props.isEditing) {
-        localForm.value.password = ''; // empty password on edit by default
-      }
     }
   },
 );
@@ -442,6 +490,11 @@ const onSave = () => {
 .dialog-btn--cancel {
   border: 1px solid #e3e6ea;
   background-color: #ffffff;
+}
+.team-status-box {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
 }
 
 @media (max-width: 599px) {

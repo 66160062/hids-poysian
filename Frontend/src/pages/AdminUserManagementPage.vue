@@ -1,11 +1,68 @@
 <template>
   <q-page class="admin-user-page bg-grey-1 q-pb-xl">
-    <!-- Header Area -->
-    <div
-      class="q-pa-md text-dark"
-      style="border-bottom-left-radius: 20px; border-bottom-right-radius: 20px"
-    >
-      <!-- Search + Filter Row -->
+    <!-- Header Section -->
+    <div class="q-px-md q-pt-md q-pb-sm text-dark header-bg">
+      <div class="q-mb-md">
+        <!-- <div class="text-h6 text-weight-bold text-dark">
+          {{ t('adminManage.userManagement.title') }}
+        </div> -->
+        <div class="text-caption text-weight">
+          {{ t('adminManage.userManagement.subtitle') }}
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards (4 Cards) -->
+      <div class="row q-col-gutter-sm q-mb-md">
+        <div class="col-6 col-sm-3">
+          <q-card flat bordered class="kpi-card bg-white shadow-1">
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar color="blue-1" text-color="primary" icon="group" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminManage.userManagement.kpiTotalUsers') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ usersList.length }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <div class="col-6 col-sm-3">
+          <q-card flat bordered class="kpi-card bg-white shadow-1">
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar color="deep-purple-1" text-color="deep-purple-9" icon="admin_panel_settings" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminManage.userManagement.kpiAdmins') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ adminCount }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <div class="col-6 col-sm-3">
+          <q-card flat bordered class="kpi-card bg-white shadow-1">
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar color="teal-1" text-color="teal-9" icon="engineering" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminManage.userManagement.kpiInspectors') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ inspectorCount }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <div class="col-6 col-sm-3">
+          <q-card flat bordered class="kpi-card bg-white shadow-1">
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar color="orange-1" text-color="orange-9" icon="person_search" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminManage.userManagement.kpiUnassigned') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ unassignedCount }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
+      <!-- Search Bar & Round Tune Filter Button -->
       <div class="row q-gutter-x-sm no-wrap items-center">
         <q-input
           v-model="searchQuery"
@@ -13,26 +70,26 @@
           borderless
           rounded
           :placeholder="t('adminManage.userManagement.searchPlaceholder')"
-          class="search-input col"
+          class="col search-input"
           hide-bottom-space
         >
-          <template v-slot:prepend>
+          <template #prepend>
             <q-icon name="search" color="grey-7" />
           </template>
-          <template v-slot:append v-if="searchQuery">
-            <q-icon name="close" @click="searchQuery = ''" class="cursor-pointer" />
+          <template #append v-if="searchQuery">
+            <q-icon name="close" class="cursor-pointer" @click="searchQuery = ''" />
           </template>
         </q-input>
 
+        <!-- Round Tune Filter Button -->
         <q-btn
           round
           unelevated
           :color="activeFilterCount > 0 ? 'primary' : 'white'"
           :text-color="activeFilterCount > 0 ? 'white' : 'primary'"
           icon="tune"
-          class="shadow-1"
-          style="height: 48px; width: 48px; min-height: 48px"
-          @click="showFilterDialog = true"
+          class="shadow-1 shrink-0"
+          style="height: 44px; width: 44px; min-height: 44px; min-width: 44px"
         >
           <q-badge
             v-if="activeFilterCount > 0"
@@ -40,84 +97,86 @@
             floating
             rounded
             style="top: 2px; right: 2px"
-            >{{ activeFilterCount }}</q-badge
           >
+            {{ activeFilterCount }}
+          </q-badge>
+
+          <q-menu anchor="bottom right" self="top right" :offset="[0, 8]" class="rounded-borders shadow-3">
+            <q-list style="min-width: 230px" class="q-py-xs">
+              <q-item-label header class="text-caption text-weight-bold text-grey-7">
+                {{ t('adminManage.userManagement.roleFilterLabel') || 'ประเภทผู้ใช้' }}
+              </q-item-label>
+              <q-item
+                v-for="chip in roleFilterChips"
+                :key="chip.value"
+                clickable
+                v-close-popup
+                :active="activeRoleFilter === chip.value"
+                active-class="bg-blue-1 text-primary text-weight-bold"
+                @click="activeRoleFilter = chip.value"
+              >
+                <q-item-section avatar min-width="24px">
+                  <q-icon :name="chip.icon" size="18px" :color="activeRoleFilter === chip.value ? 'primary' : 'grey-7'" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>{{ chip.label }}</q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-badge
+                    :color="activeRoleFilter === chip.value ? 'primary' : 'grey-3'"
+                    :text-color="activeRoleFilter === chip.value ? 'white' : 'dark'"
+                    rounded
+                  >
+                    {{ chip.count }}
+                  </q-badge>
+                </q-item-section>
+              </q-item>
+
+              <template v-if="branchOptions.length > 1">
+                <q-separator class="q-my-xs" />
+                <q-item-label header class="text-caption text-weight-bold text-grey-7">
+                  {{ t('adminManage.teamManagement.branchLabel') || 'สาขา' }}
+                </q-item-label>
+                <q-item
+                  v-for="b in branchOptions"
+                  :key="String(b.value)"
+                  clickable
+                  v-close-popup
+                  :active="selectedBranchId === b.value"
+                  active-class="bg-blue-1 text-primary text-weight-bold"
+                  @click="selectedBranchId = b.value"
+                >
+                  <q-item-section avatar min-width="24px">
+                    <q-icon name="business" size="18px" :color="selectedBranchId === b.value ? 'primary' : 'grey-7'" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ b.label }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-list>
+          </q-menu>
         </q-btn>
+      </div>
+
+      <!-- Action Buttons Row -->
+      <div class="row items-center justify-end q-mt-sm">
+        <div class="col-12 col-sm-auto">
+          <q-btn
+            unelevated
+            color="primary"
+            icon="add"
+            :label="t('adminManage.userManagement.addNewUser')"
+            class="full-width action-btn-primary shadow-1"
+            no-caps
+            @click="openCreateDialog"
+          />
+        </div>
       </div>
     </div>
 
-    <!-- Filter Bottom Sheet Dialog -->
-    <q-dialog
-      v-model="showFilterDialog"
-      position="bottom"
-      transition-show="sheet-in"
-      transition-hide="sheet-out"
-    >
-      <q-card
-        style="width: 100%; max-width: 600px; border-radius: 28px 28px 0 0"
-        class="q-pa-lg filter-sheet"
-      >
-        <div class="sheet-handle" />
-        <div class="row items-center justify-between q-mb-lg">
-          <div class="text-h6 text-weight-bold text-dark">{{ t('adminManage.userManagement.filterTitle') }}</div>
-          <div class="row items-center">
-            <q-btn
-              v-if="activeFilterCount > 0"
-              flat
-              dense
-              color="negative"
-              :label="t('adminManage.userManagement.clear')"
-              class="q-mr-sm"
-              @click="clearFilters"
-            />
-            <q-btn flat round dense icon="close" color="grey-6" v-close-popup />
-          </div>
-        </div>
-
-        <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">{{ t('adminManage.userManagement.branchLabel') }}</div>
-        <q-select
-          v-model="selectedBranchId"
-          :options="branchOptions"
-          emit-value
-          map-options
-          dense
-          outlined
-          rounded
-          class="q-mb-lg filter-select"
-          behavior="dialog"
-        />
-
-        <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">{{ t('adminManage.userManagement.roleLabel') }}</div>
-        <div class="row q-gutter-x-sm no-wrap overflow-auto hide-scrollbar q-py-xs q-mb-lg">
-          <q-btn
-            v-for="filter in roleFilters"
-            :key="filter.value"
-            unelevated
-            rounded
-            :color="activeRoleFilter === filter.value ? 'primary' : 'grey-2'"
-            :text-color="activeRoleFilter === filter.value ? 'white' : 'grey-8'"
-            class="filter-chip"
-            no-caps
-            @click="activeRoleFilter = filter.value"
-          >
-            <span class="text-weight-medium q-px-sm">{{ filter.label }}</span>
-          </q-btn>
-        </div>
-
-        <q-btn
-          unelevated
-          rounded
-          color="primary"
-          :label="t('adminManage.userManagement.done')"
-          class="full-width text-weight-bold"
-          style="height: 48px; font-size: 16px"
-          v-close-popup
-        />
-      </q-card>
-    </q-dialog>
-
-    <!-- Active Filters Chips -->
-    <div v-if="activeFilterCount > 0" class="row items-center q-gutter-x-sm q-px-md q-mb-sm">
+    <!-- Active Filter Chips (if selected) -->
+    <div v-if="activeRoleFilter !== 'all' || selectedBranchId !== null" class="row items-center q-gutter-x-xs q-px-md q-my-xs">
       <span class="text-caption text-grey-7 q-mr-xs">{{ t('adminManage.userManagement.filteringLabel') }}</span>
       <q-chip
         v-if="activeRoleFilter !== 'all'"
@@ -128,14 +187,14 @@
         dense
         class="text-weight-medium"
       >
-        {{ roleFilters.find((f) => f.value === activeRoleFilter)?.label }}
+        {{ roleFilterChips.find((r) => r.value === activeRoleFilter)?.label }}
       </q-chip>
       <q-chip
         v-if="selectedBranchId !== null"
         removable
         @remove="selectedBranchId = null"
-        color="blue-1"
-        text-color="primary"
+        color="purple-1"
+        text-color="purple-9"
         dense
         class="text-weight-medium"
       >
@@ -143,15 +202,15 @@
       </q-chip>
     </div>
 
-    <!-- User List -->
-    <div class="q-pa-md">
+    <!-- User Cards Grid -->
+    <div class="q-px-md q-pt-sm q-pb-md">
       <!-- Empty State -->
       <div v-if="!isLoading && filteredUsers.length === 0" class="text-center q-py-xl text-grey-6">
         <q-icon name="person_off" size="64px" class="q-mb-md" />
         <div>{{ t('adminManage.userManagement.noUsersFound') }}</div>
       </div>
 
-      <!-- Users -->
+      <!-- Users Grid -->
       <div v-else class="row q-col-gutter-md">
         <div
           v-for="user in filteredUsers"
@@ -168,18 +227,14 @@
       </div>
     </div>
 
-    <!-- FAB Add Button -->
-    <q-page-sticky position="bottom-right" :offset="[16, 16]" class="q-gutter-y-sm column">
-      <q-btn fab icon="add" color="primary" @click="openCreateDialog" />
-    </q-page-sticky>
-
-    <!-- Refactored Form Dialog -->
+    <!-- User Form Dialog -->
     <AdminUserFormDialog
       v-model="showFormDialog"
       :isEditing="isEditing"
       :initialData="formData"
       :roleOptions="roleOptions"
       :teamOptions="teamOptions"
+      :branchOptions="branchFormOptions"
       @save="onSaveUser"
     />
   </q-page>
@@ -200,25 +255,11 @@ import type { User } from 'src/models';
 
 const userSpinner = createIconSpinner('group');
 
-const { t } = useI18n();
+const { t, locale } = useI18n({ useScope: 'global' });
 const $q = useQuasar();
 const teamStore = useTeamStore();
 const userStore = useUserStore();
 const branchStore = useBranchStore();
-
-// Global Options
-const roleFilters = computed(() => [
-  { label: t('adminManage.userManagement.filterAll'), value: 'all' },
-  { label: t('adminManage.userManagement.filterAdmin'), value: 'admin' },
-  { label: t('adminManage.userManagement.filterInspector'), value: 'inspector' },
-]);
-
-const roleOptions = computed(() => [
-  { label: t('adminManage.userManagement.roleAdmin'), value: 'admin' },
-  { label: t('adminManage.userManagement.roleInspector'), value: 'inspector' },
-]);
-
-const teamOptions = computed(() => teamStore.teamOptions);
 
 // State
 const isLoading = computed(() => userStore.isLoading);
@@ -226,15 +267,14 @@ const usersList = computed(() => userStore.users);
 const searchQuery = ref('');
 const activeRoleFilter = ref('all');
 const selectedBranchId = ref<number | null>(null);
-const branchOptions = computed(() => [
-  { label: t('adminManage.userManagement.allBranches'), value: null },
-  ...branchStore.branches.map((branch) => ({
-    label: branch.branchName || t('adminManage.userManagement.branchFallback', { id: branch.branchId }),
-    value: branch.branchId,
-  })),
-]);
 
-const showFilterDialog = ref(false);
+// KPI Counts
+const adminCount = computed(() => usersList.value.filter((u) => u.role === 'admin').length);
+const inspectorCount = computed(() => usersList.value.filter((u) => u.role === 'inspector').length);
+const unassignedCount = computed(() =>
+  usersList.value.filter((u) => u.role === 'inspector' && !(u.teamId ?? u.team?.team_Id)).length
+);
+
 const activeFilterCount = computed(() => {
   let count = 0;
   if (activeRoleFilter.value !== 'all') count++;
@@ -242,10 +282,50 @@ const activeFilterCount = computed(() => {
   return count;
 });
 
-function clearFilters() {
-  activeRoleFilter.value = 'all';
-  selectedBranchId.value = null;
-}
+const roleFilterChips = computed(() => {
+  void locale.value;
+  return [
+    { label: t('adminManage.userManagement.filterAll'), value: 'all', icon: 'group', count: usersList.value.length },
+    { label: t('adminManage.userManagement.filterAdmin'), value: 'admin', icon: 'admin_panel_settings', count: adminCount.value },
+    { label: t('adminManage.userManagement.filterInspector'), value: 'inspector', icon: 'engineering', count: inspectorCount.value },
+    { label: t('adminManage.userManagement.filterUnassigned'), value: 'unassigned', icon: 'person_search', count: unassignedCount.value },
+  ];
+});
+
+const roleOptions = computed(() => {
+  void locale.value;
+  return [
+    { label: t('adminManage.userManagement.roleAdmin'), value: 'admin' },
+    { label: t('adminManage.userManagement.roleInspector'), value: 'inspector' },
+  ];
+});
+
+const teamOptions = computed(() =>
+  teamStore.teams.map((t) => ({
+    label: t.team_name,
+    value: t.team_Id,
+    branchId: t.branchId ?? null,
+  }))
+);
+
+const branchOptions = computed(() => {
+  void locale.value;
+  return [
+    { label: t('adminManage.userManagement.allBranches'), value: null },
+    ...branchStore.branches.map((branch) => ({
+      label: branch.branchName || t('adminManage.userManagement.branchFallback', { id: branch.branchId }),
+      value: branch.branchId,
+    })),
+  ];
+});
+
+const branchFormOptions = computed(() => {
+  void locale.value;
+  return branchStore.branches.map((branch) => ({
+    label: branch.branchName || t('adminManage.userManagement.branchFallback', { id: branch.branchId }),
+    value: branch.branchId,
+  }));
+});
 
 // Computed filters
 const filteredUsers = computed(() => {
@@ -256,9 +336,19 @@ const filteredUsers = computed(() => {
       [user.fullName, user.phoneNumber, user.email, user.lineId, user.team?.team_name].some((field) =>
         (field || '').toLowerCase().includes(query),
       );
-    const matchRole = activeRoleFilter.value === 'all' || user.role === activeRoleFilter.value;
+    
+    let matchRole = true;
+    if (activeRoleFilter.value === 'admin') matchRole = user.role === 'admin';
+    else if (activeRoleFilter.value === 'inspector') matchRole = user.role === 'inspector';
+    else if (activeRoleFilter.value === 'unassigned') matchRole = user.role === 'inspector' && !(user.teamId ?? user.team?.team_Id);
+
     const matchBranch =
-      selectedBranchId.value === null || user.team?.branchId === selectedBranchId.value;
+      selectedBranchId.value === null ||
+      user.branchId === selectedBranchId.value ||
+      user.branch?.branchId === selectedBranchId.value ||
+      user.team?.branchId === selectedBranchId.value ||
+      user.team?.branch?.branchId === selectedBranchId.value;
+
     return matchSearch && matchRole && matchBranch;
   });
 });
@@ -269,20 +359,17 @@ const isEditing = ref(false);
 const editingId = ref<number | null>(null);
 const formData = ref<Partial<User>>({});
 
-const defaultForm = (): Partial<User> & { teamId?: number } => ({
+const defaultForm = (): Partial<User> & { teamId?: number | undefined; branchId?: number | null } => ({
   fullName: '',
   phoneNumber: '',
   email: '',
   lineId: '',
   role: 'inspector',
-  teamId: 1, // default select
+  teamId: undefined,
+  branchId: null,
   imageUrl: '',
   password: '',
 });
-
-/* =========================================
-   UI HANDLERS
-   ========================================= */
 
 onMounted(async () => {
   $q.loading.show({
@@ -319,7 +406,11 @@ const openCreateDialog = () => {
 const openEditDialog = (user: User) => {
   isEditing.value = true;
   editingId.value = user.id;
-  formData.value = { ...user, teamId: user.team?.team_Id };
+  formData.value = {
+    ...user,
+    teamId: user.team?.team_Id ?? user.teamId,
+    branchId: user.branchId ?? user.branch?.branchId ?? user.team?.branchId ?? null,
+  };
   showFormDialog.value = true;
 };
 
@@ -329,8 +420,8 @@ const onSaveUser = async (payload: { form: Partial<User>; file: File | null }) =
     !f.fullName ||
     !f.phoneNumber ||
     !f.role ||
-    (!isEditing.value && !f.password) ||
-    (f.role !== 'admin' && !f.teamId)
+    (f.role !== 'admin' && !f.branchId) ||
+    (!isEditing.value && !f.password)
   ) {
     $q.notify({
       message: t('adminManage.userManagement.fillRequiredFields'),
@@ -374,7 +465,8 @@ const confirmDeleteUser = (user: User) => {
     },
   }).onOk(() => {
     $q.loading.show({ message: t('adminManage.userManagement.deleting') });
-    userStore.deleteUser(user.id)
+    userStore
+      .deleteUser(user.id)
       .then(() => {
         $q.notify({ type: 'positive', message: t('adminManage.userManagement.deleteSuccess'), icon: 'check_circle' });
       })
@@ -393,131 +485,72 @@ const confirmDeleteUser = (user: User) => {
 
 <style scoped>
 .admin-user-page {
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
-  max-width: 600px;
+  max-width: 1200px;
   margin: 0 auto;
-  min-height: 100vh;
 }
 
-@media (min-width: 600px) {
-  .admin-user-page {
-    max-width: 800px;
-  }
+.header-bg {
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
 }
-@media (min-width: 1024px) {
-  .admin-user-page {
-    max-width: 1100px;
-  }
+
+.kpi-card {
+  border-radius: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-@media (min-width: 1440px) {
-  .admin-user-page {
-    max-width: 1300px;
-  }
+
+.kpi-card:hover {
+  transform: translateY(-2px);
 }
 
 .search-input {
-  background-color: #ffffff;
-  border: 1px solid #ebebeb;
+  background: #ffffff;
   border-radius: 24px;
-  padding: 2px 16px;
-  height: 48px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-  transition:
-    box-shadow 200ms var(--ease-out),
-    border-color 200ms var(--ease-out);
-}
-.search-input:focus-within {
-  border-color: rgba(25, 118, 210, 0.5);
-  box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.12);
+  padding: 4px 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
-.filter-sheet {
-  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
-}
-.sheet-handle {
-  width: 36px;
-  height: 4px;
-  border-radius: 999px;
-  background: #e0e0e0;
-  margin: -8px auto 16px;
+.action-btn-primary {
+  height: 42px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 13px;
 }
 
-.card-stagger {
-  animation: card-in 320ms var(--ease-out) both;
-}
-.card-stagger:nth-child(1) { animation-delay: 0ms; }
-.card-stagger:nth-child(2) { animation-delay: 40ms; }
-.card-stagger:nth-child(3) { animation-delay: 80ms; }
-.card-stagger:nth-child(4) { animation-delay: 120ms; }
-.card-stagger:nth-child(n + 5) { animation-delay: 150ms; }
-@keyframes card-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+.scroll-container {
+  max-width: 100%;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .card-stagger,
-  .search-input {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
+.filter-chip {
+  min-height: 42px;
+  padding: 6px 14px;
+  border-radius: 21px;
+  white-space: nowrap;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.filter-text {
+  white-space: nowrap;
+}
+
+.shrink-0 {
+  flex-shrink: 0;
 }
 
 .hide-scrollbar {
   scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
-.filter-chip {
-  min-width: fit-content;
-  border-radius: 20px;
-  border: 1px solid #e0e0e0;
-}
-.filter-select :deep(.q-field__control) {
-  height: 42px;
-  min-height: 42px;
-  border: 1px solid #e0e0e0;
-}
-.filter-select :deep(.q-field__control:before),
-.filter-select :deep(.q-field__control:after) {
-  border: none !important;
-}
-</style>
 
-<style>
-/* Frosted-glass backdrop + spring-eased bottom sheet for the filter dialog */
-.q-dialog__backdrop {
-  backdrop-filter: blur(6px) saturate(180%);
-  -webkit-backdrop-filter: blur(6px) saturate(180%);
+.card-stagger {
+  transition: transform 0.2s ease;
 }
 
-.q-transition--sheet-in-enter-active {
-  transition: all 320ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-.q-transition--sheet-in-enter-from {
-  transform: translateY(100%);
-  opacity: 0.6;
-}
-.q-transition--sheet-out-leave-active {
-  transition: all 200ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-.q-transition--sheet-out-leave-to {
-  transform: translateY(100%);
-  opacity: 0.6;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .q-transition--sheet-in-enter-active,
-  .q-transition--sheet-out-leave-active {
-    transition-duration: 0.01ms !important;
-  }
+.card-stagger:hover {
+  transform: translateY(-2px);
 }
 </style>

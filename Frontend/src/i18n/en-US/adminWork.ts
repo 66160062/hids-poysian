@@ -46,6 +46,13 @@ export default {
     },
   },
   workList: {
+    title: 'Jobs & Projects Management',
+    subtitle: 'Manage home inspection jobs, construction projects, and statuses',
+    kpiTotalJobs: 'Total Jobs',
+    kpiPending: 'Pending / Approval',
+    kpiInspection: 'In Progress',
+    kpiCompleted: 'Completed',
+    addNewJob: 'Create Job',
     loading: 'Loading data...',
     retry: 'Retry',
     searchPlaceholder: 'Search project, inspector...',
