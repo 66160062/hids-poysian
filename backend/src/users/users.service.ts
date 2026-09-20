@@ -29,13 +29,77 @@ export class UsersService {
     return this.usersRepository.save(newUser);
   }
 
-  findAll() {
-    return this.usersRepository.find({
-      order: {
-        id: 'DESC',
+  async findAll(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    role?: string;
+    branchId?: number;
+    all?: boolean | string;
+  }) {
+    const isAll =
+      params?.all === true ||
+      params?.all === 'true' ||
+      (!params?.page &&
+        !params?.limit &&
+        !params?.search &&
+        !params?.role &&
+        !params?.branchId);
+
+    const query = this.usersRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.team', 'team')
+      .leftJoinAndSelect('team.branch', 'teamBranch')
+      .leftJoinAndSelect('user.branch', 'branch')
+      .orderBy('user.id', 'DESC');
+
+    if (params?.role && params.role !== 'all') {
+      query.andWhere('user.role = :role', { role: params.role });
+    }
+
+    if (params?.branchId) {
+      query.andWhere(
+        '(user.branchId = :branchId OR team.branch_id = :branchId)',
+        { branchId: params.branchId },
+      );
+    }
+
+    if (params?.search && params.search.trim()) {
+      query.andWhere(
+        '(LOWER(user.fullName) LIKE LOWER(:search) OR LOWER(user.email) LIKE LOWER(:search) OR user.phoneNumber LIKE :search)',
+        { search: `%${params.search.trim()}%` },
+      );
+    }
+
+    if (isAll) {
+      const data = await query.getMany();
+      return {
+        data,
+        meta: {
+          total: data.length,
+          page: 1,
+          limit: data.length,
+          totalPages: 1,
+        },
+      };
+    }
+
+    const page = Math.max(1, Number(params?.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(params?.limit) || 9));
+
+    query.skip((page - 1) * limit).take(limit);
+
+    const [data, total] = await query.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
       },
-      relations: ['team', 'team.branch', 'branch'],
-    });
+    };
   }
 
   async findOne(id: number) {

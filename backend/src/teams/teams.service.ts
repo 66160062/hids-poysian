@@ -20,14 +20,69 @@ export class TeamsService {
   }
 
   // เฉพาะทีมที่ active เท่านั้นที่แสดงในหน้า admin
-  findAll() {
-    return this.teamsRepo.find({
-      where: { status: 'active' },
-      relations: ['branch'],
-      order: {
-        team_Id: 'DESC',
+  async findAll(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    branchId?: number;
+    all?: boolean | string;
+  }) {
+    const isAll =
+      params?.all === true ||
+      params?.all === 'true' ||
+      (!params?.page &&
+        !params?.limit &&
+        !params?.search &&
+        !params?.branchId);
+
+    const query = this.teamsRepo
+      .createQueryBuilder('team')
+      .leftJoinAndSelect('team.branch', 'branch')
+      .where('team.status = :status', { status: 'active' })
+      .orderBy('team.team_Id', 'DESC');
+
+    if (params?.branchId) {
+      query.andWhere('team.branchId = :branchId', {
+        branchId: params.branchId,
+      });
+    }
+
+    if (params?.search && params.search.trim()) {
+      query.andWhere(
+        '(LOWER(team.team_name) LIKE LOWER(:search) OR team.contact_number LIKE :search)',
+        { search: `%${params.search.trim()}%` },
+      );
+    }
+
+    if (isAll) {
+      const data = await query.getMany();
+      return {
+        data,
+        meta: {
+          total: data.length,
+          page: 1,
+          limit: data.length,
+          totalPages: 1,
+        },
+      };
+    }
+
+    const page = Math.max(1, Number(params?.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(params?.limit) || 9));
+
+    query.skip((page - 1) * limit).take(limit);
+
+    const [data, total] = await query.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
       },
-    });
+    };
   }
 
   findOne(id: number) {

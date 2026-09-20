@@ -5,25 +5,67 @@ import type { Team } from 'src/models';
 
 export const useTeamStore = defineStore('team', () => {
   const teams = ref<Team[]>([]);
+  const allTeams = ref<Team[]>([]);
   const teamOptions = ref<{ label: string; value: number }[]>([]);
   const isLoading = ref(false);
+  const meta = ref({
+    total: 0,
+    page: 1,
+    limit: 5,
+    totalPages: 1,
+  });
 
-  // ดึงข้อมูลทีมทั้งหมด
-  const fetchTeams = async () => {
+  // ดึงข้อมูลทีม (รองรับ Pagination, Search, Branch Filter)
+  const fetchTeams = async (params?: {
+    page?: number | undefined;
+    limit?: number | undefined;
+    search?: string | undefined;
+    branchId?: number | null | undefined;
+    all?: boolean | undefined;
+  }) => {
     isLoading.value = true;
     try {
-      const response = await api.get('/teams');
-      teams.value = response.data;
-      // สร้าง Options สำหรับนำไปใช้ใน Select Dropdown
-      teamOptions.value = response.data.map((team: Team) => ({
-        label: team.team_name,
-        value: team.team_Id,
-      }));
+      const queryParams: Record<string, unknown> = {};
+      if (params?.page) queryParams.page = params.page;
+      if (params?.limit) queryParams.limit = params.limit;
+      if (params?.search) queryParams.search = params.search;
+      if (params?.branchId) queryParams.branchId = params.branchId;
+      if (params?.all) queryParams.all = params.all;
+
+      const response = await api.get('/teams', { params: queryParams });
+      if (response.data && response.data.meta) {
+        teams.value = response.data.data;
+        meta.value = response.data.meta;
+      } else {
+        const data = Array.isArray(response.data)
+          ? response.data
+          : response.data.data || [];
+        teams.value = data;
+      }
     } catch (error) {
       console.error('Failed to fetch teams', error);
       throw error;
     } finally {
       isLoading.value = false;
+    }
+  };
+
+  // ดึงทีมทั้งหมดสำหรับสร้าง Options ใน Dropdown
+  const fetchAllTeams = async () => {
+    try {
+      const response = await api.get('/teams', { params: { all: true } });
+      const data: Team[] = Array.isArray(response.data)
+        ? response.data
+        : response.data.data || [];
+      allTeams.value = data;
+      teamOptions.value = data.map((team: Team) => ({
+        label: team.team_name,
+        value: team.team_Id,
+      }));
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch all teams', error);
+      return [];
     }
   };
 
@@ -104,5 +146,16 @@ export const useTeamStore = defineStore('team', () => {
     }
   };
 
-  return { teams, teamOptions, isLoading, fetchTeams, createTeam, updateTeam, deleteTeam };
+  return {
+    teams,
+    allTeams,
+    teamOptions,
+    meta,
+    isLoading,
+    fetchTeams,
+    fetchAllTeams,
+    createTeam,
+    updateTeam,
+    deleteTeam,
+  };
 });
