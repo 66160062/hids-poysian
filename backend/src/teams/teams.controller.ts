@@ -8,11 +8,12 @@ import {
   Delete,
   UseInterceptors,
   UploadedFile,
+  Query,
 } from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
-import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { StorageService } from 'src/storage/storage.service';
@@ -41,8 +42,21 @@ export class TeamsController {
   }
 
   @Get()
-  findAll() {
-    return this.teamsService.findAll();
+  @ApiOperation({ summary: 'ดึงรายชื่อทีมทั้งหมด พร้อมรองรับ pagination / search / filter' })
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('branchId') branchId?: string,
+    @Query('all') all?: string,
+  ) {
+    return this.teamsService.findAll({
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+      search,
+      branchId: branchId ? Number(branchId) : undefined,
+      all,
+    });
   }
 
   @Get(':id')

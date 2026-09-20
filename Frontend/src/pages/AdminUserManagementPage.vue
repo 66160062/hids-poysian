@@ -205,7 +205,7 @@
     <!-- User Cards Grid -->
     <div class="q-px-md q-pt-sm q-pb-md">
       <!-- Empty State -->
-      <div v-if="!isLoading && filteredUsers.length === 0" class="text-center q-py-xl text-grey-6">
+      <div v-if="!isLoading && usersList.length === 0" class="text-center q-py-xl text-grey-6">
         <q-icon name="person_off" size="64px" class="q-mb-md" />
         <div>{{ t('adminManage.userManagement.noUsersFound') }}</div>
       </div>
@@ -213,7 +213,7 @@
       <!-- Users Grid -->
       <div v-else class="row q-col-gutter-md">
         <div
-          v-for="user in filteredUsers"
+          v-for="user in usersList"
           :key="user.id"
           class="col-12 col-sm-6 col-md-4 card-stagger"
         >
@@ -224,6 +224,21 @@
             @delete="confirmDeleteUser"
           />
         </div>
+      </div>
+
+      <!-- Pagination Controls -->
+      <div class="row justify-center q-mt-lg q-pb-md" v-if="usersList.length > 0">
+        <q-pagination
+          v-model="currentPage"
+          :max="userStore.meta.totalPages || 1"
+          :max-pages="5"
+          boundary-numbers
+          direction-links
+          color="primary"
+          active-color="primary"
+          active-text-color="white"
+          @update:model-value="loadUsers"
+        />
       </div>
     </div>
 
@@ -241,7 +256,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import AdminUserCard from 'src/components/AdminUserCard.vue';
@@ -264,15 +279,17 @@ const branchStore = useBranchStore();
 // State
 const isLoading = computed(() => userStore.isLoading);
 const usersList = computed(() => userStore.users);
+const allUsersList = computed(() => (userStore.allUsers.length > 0 ? userStore.allUsers : userStore.users));
+const currentPage = ref(1);
 const searchQuery = ref('');
 const activeRoleFilter = ref('all');
 const selectedBranchId = ref<number | null>(null);
 
 // KPI Counts
-const adminCount = computed(() => usersList.value.filter((u) => u.role === 'admin').length);
-const inspectorCount = computed(() => usersList.value.filter((u) => u.role === 'inspector').length);
+const adminCount = computed(() => allUsersList.value.filter((u) => u.role === 'admin').length);
+const inspectorCount = computed(() => allUsersList.value.filter((u) => u.role === 'inspector').length);
 const unassignedCount = computed(() =>
-  usersList.value.filter((u) => u.role === 'inspector' && !(u.teamId ?? u.team?.team_Id)).length
+  allUsersList.value.filter((u) => u.role === 'inspector' && !(u.teamId ?? u.team?.team_Id)).length
 );
 
 const activeFilterCount = computed(() => {
@@ -285,7 +302,7 @@ const activeFilterCount = computed(() => {
 const roleFilterChips = computed(() => {
   void locale.value;
   return [
-    { label: t('adminManage.userManagement.filterAll'), value: 'all', icon: 'group', count: usersList.value.length },
+    { label: t('adminManage.userManagement.filterAll'), value: 'all', icon: 'group', count: allUsersList.value.length },
     { label: t('adminManage.userManagement.filterAdmin'), value: 'admin', icon: 'admin_panel_settings', count: adminCount.value },
     { label: t('adminManage.userManagement.filterInspector'), value: 'inspector', icon: 'engineering', count: inspectorCount.value },
     { label: t('adminManage.userManagement.filterUnassigned'), value: 'unassigned', icon: 'person_search', count: unassignedCount.value },
@@ -301,7 +318,7 @@ const roleOptions = computed(() => {
 });
 
 const teamOptions = computed(() =>
-  teamStore.teams.map((t) => ({
+  (teamStore.allTeams.length > 0 ? teamStore.allTeams : teamStore.teams).map((t) => ({
     label: t.team_name,
     value: t.team_Id,
     branchId: t.branchId ?? null,
@@ -327,30 +344,35 @@ const branchFormOptions = computed(() => {
   }));
 });
 
-// Computed filters
-const filteredUsers = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase();
-  return usersList.value.filter((user) => {
-    const matchSearch =
-      !query ||
-      [user.fullName, user.phoneNumber, user.email, user.lineId, user.team?.team_name].some((field) =>
-        (field || '').toLowerCase().includes(query),
-      );
-    
-    let matchRole = true;
-    if (activeRoleFilter.value === 'admin') matchRole = user.role === 'admin';
-    else if (activeRoleFilter.value === 'inspector') matchRole = user.role === 'inspector';
-    else if (activeRoleFilter.value === 'unassigned') matchRole = user.role === 'inspector' && !(user.teamId ?? user.team?.team_Id);
+const loadUsers = async () => {
+  try {
+    await userStore.fetchUsers({
+      page: currentPage.value,
+      limit: 5,
+      search: searchQuery.value.trim() || undefined,
+      role: activeRoleFilter.value !== 'all' ? activeRoleFilter.value : undefined,
+      branchId: selectedBranchId.value ?? undefined,
+    });
+  } catch (err) {
+    const error = err as Error & { response?: { data?: { message?: string } } };
+    console.error('Fetch users error:', error);
+    const msg = error?.response?.data?.message || error?.message || t('adminManage.userManagement.unknownError');
+    $q.notify({ type: 'negative', message: t('adminManage.userManagement.fetchFailed', { msg }) });
+  }
+};
 
-    const matchBranch =
-      selectedBranchId.value === null ||
-      user.branchId === selectedBranchId.value ||
-      user.branch?.branchId === selectedBranchId.value ||
-      user.team?.branchId === selectedBranchId.value ||
-      user.team?.branch?.branchId === selectedBranchId.value;
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+watch(searchQuery, () => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    currentPage.value = 1;
+    void loadUsers();
+  }, 400);
+});
 
-    return matchSearch && matchRole && matchBranch;
-  });
+watch([activeRoleFilter, selectedBranchId], () => {
+  currentPage.value = 1;
+  void loadUsers();
 });
 
 // Form State
@@ -383,13 +405,9 @@ onMounted(async () => {
   });
   try {
     await Promise.all([
-      userStore.fetchUsers().catch((err) => {
-        const error = err as Error & { response?: { data?: { message?: string } } };
-        console.error('Fetch users error:', error);
-        const msg = error?.response?.data?.message || error?.message || t('adminManage.userManagement.unknownError');
-        $q.notify({ type: 'negative', message: t('adminManage.userManagement.fetchFailed', { msg }) });
-      }),
-      teamStore.fetchTeams(),
+      userStore.fetchAllUsers(),
+      loadUsers(),
+      teamStore.fetchAllTeams(),
     ]);
   } finally {
     $q.loading.hide();
@@ -442,6 +460,8 @@ const onSaveUser = async (payload: { form: Partial<User>; file: File | null }) =
       $q.notify({ type: 'positive', message: t('adminManage.userManagement.addSuccess'), icon: 'check_circle' });
     }
     showFormDialog.value = false;
+    void loadUsers();
+    void userStore.fetchAllUsers();
   } catch (err) {
     const error = err as Error & { response?: { data?: { message?: string } } };
     console.error('Save user failed', error);
@@ -469,6 +489,8 @@ const confirmDeleteUser = (user: User) => {
       .deleteUser(user.id)
       .then(() => {
         $q.notify({ type: 'positive', message: t('adminManage.userManagement.deleteSuccess'), icon: 'check_circle' });
+        void loadUsers();
+        void userStore.fetchAllUsers();
       })
       .catch((err) => {
         const error = err as Error & { response?: { data?: { message?: string } } };

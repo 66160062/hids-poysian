@@ -19,7 +19,7 @@
               <q-avatar color="blue-1" text-color="primary" icon="groups" size="40px" />
               <div class="q-ml-sm">
                 <div class="text-caption text-grey-7">{{ t('adminManage.teamManagement.kpiTotalTeams') }}</div>
-                <div class="text-h6 text-weight-bold text-dark">{{ teamStore.teams.length }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ totalTeamsCount }}</div>
               </div>
             </q-card-section>
           </q-card>
@@ -174,13 +174,13 @@
 
     <!-- Main Content Grid -->
     <div class="q-px-md q-pt-sm q-pb-md">
-      <div v-if="!teamStore.isLoading && filteredTeams.length === 0" class="text-center q-py-xl text-grey-6">
+      <div v-if="!teamStore.isLoading && teamStore.teams.length === 0" class="text-center q-py-xl text-grey-6">
         <q-icon name="groups" size="64px" class="q-mb-md" />
         <div>{{ t('adminManage.teamManagement.noTeamsFound') }}</div>
       </div>
       <div v-else class="row q-col-gutter-md">
         <div
-          v-for="team in filteredTeams"
+          v-for="team in teamStore.teams"
           :key="team.team_Id"
           class="col-12 col-sm-6 col-md-4 card-stagger"
         >
@@ -191,6 +191,21 @@
             @delete="confirmDelete"
           />
         </div>
+      </div>
+
+      <!-- Pagination Controls -->
+      <div class="row justify-center q-mt-lg q-pb-md" v-if="teamStore.teams.length > 0">
+        <q-pagination
+          v-model="currentPage"
+          :max="teamStore.meta.totalPages || 1"
+          :max-pages="5"
+          boundary-numbers
+          direction-links
+          color="primary"
+          active-color="primary"
+          active-text-color="white"
+          @update:model-value="loadTeams"
+        />
       </div>
     </div>
 
@@ -551,7 +566,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { useTeamStore } from 'src/stores/useTeam';
@@ -576,23 +591,17 @@ const isFormMode = ref(false);
 const isEditing = ref(false);
 const editTeamId = ref<number | null>(null);
 
+const currentPage = ref(1);
 const searchQuery = ref('');
-const filteredTeams = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase();
-  return teamStore.teams.filter((team) => {
-    const matchBranch =
-      selectedBranchId.value === null || team.branchId === selectedBranchId.value;
-    if (!matchBranch) return false;
-    if (!query) return true;
-    const memberNames = getTeamMembers(team.team_Id).map((m) => m.fullName);
-    return [team.team_name, team.contact_info, ...memberNames].some((field) =>
-      (field || '').toLowerCase().includes(query),
-    );
-  });
-});
+const selectedBranchId = ref<number | null>(null);
+
+const allTeamsList = computed(() => (teamStore.allTeams.length > 0 ? teamStore.allTeams : teamStore.teams));
+const allUsersList = computed(() => (userStore.allUsers.length > 0 ? userStore.allUsers : userStore.users));
+
+const totalTeamsCount = computed(() => allTeamsList.value.length);
 
 const totalMembersAssignedCount = computed(() => {
-  return teamStore.teams.reduce((acc, team) => acc + getTeamMembers(team.team_Id).length, 0);
+  return allTeamsList.value.reduce((acc, team) => acc + getTeamMembers(team.team_Id).length, 0);
 });
 
 const selectedTeamMembers = computed(() => {
@@ -603,7 +612,7 @@ const selectedTeamMembers = computed(() => {
 const newMemberId = ref<number | null>(null);
 const availableInspectorOptions = computed(() => {
   const currentBranchId = localForm.value.branchId;
-  return userStore.users
+  return allUsersList.value
     .filter((u) => {
       if (u.role !== 'inspector') return false;
       // ต้องไม่มีสังกัดทีมใดๆ เท่านั้น
@@ -621,7 +630,7 @@ const availableInspectorOptions = computed(() => {
 const newTeamMemberIds = ref<number[]>([]);
 const unassignedInspectorOptions = computed(() => {
   const currentBranchId = localForm.value.branchId;
-  return userStore.users
+  return allUsersList.value
     .filter((u) => {
       if (u.role !== 'inspector') return false;
       // ต้องไม่มีสังกัดทีมใดๆ เท่านั้น
@@ -636,6 +645,34 @@ const unassignedInspectorOptions = computed(() => {
     .map((u) => ({ label: u.fullName, value: u.id }));
 });
 
+const loadTeams = async () => {
+  try {
+    await teamStore.fetchTeams({
+      page: currentPage.value,
+      limit: 5,
+      search: searchQuery.value.trim() || undefined,
+      branchId: selectedBranchId.value ?? undefined,
+    });
+  } catch (err) {
+    console.error('Fetch teams error:', err);
+    $q.notify({ type: 'negative', message: t('adminManage.teamManagement.fetchTeamsFailed'), position: 'top' });
+  }
+};
+
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+watch(searchQuery, () => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    currentPage.value = 1;
+    void loadTeams();
+  }, 400);
+});
+
+watch(selectedBranchId, () => {
+  currentPage.value = 1;
+  void loadTeams();
+});
+
 const localForm = ref<{
   team_name: string;
   logo_url: string;
@@ -648,7 +685,6 @@ const localForm = ref<{
   branchId: null,
 });
 const logoFile = ref<File | null>(null);
-const selectedBranchId = ref<number | null>(null);
 
 const branchOptions = computed(() => {
   void locale.value;
@@ -742,10 +778,9 @@ onMounted(async () => {
   });
   try {
     await Promise.all([
-      teamStore.fetchTeams().catch(() => {
-        $q.notify({ type: 'negative', message: t('adminManage.teamManagement.fetchTeamsFailed'), position: 'top' });
-      }),
-      userStore.fetchUsers().catch(() => {}),
+      teamStore.fetchAllTeams(),
+      loadTeams(),
+      userStore.fetchAllUsers(),
     ]);
   } finally {
     $q.loading.hide();
@@ -759,7 +794,7 @@ const getImageUrl = (url?: string | null) => {
 };
 
 const getTeamMembers = (teamId: number) => {
-  return userStore.users.filter((user) => user.teamId === teamId || user.team?.team_Id === teamId);
+  return allUsersList.value.filter((user) => user.teamId === teamId || user.team?.team_Id === teamId);
 };
 
 const addMember = () => {
@@ -780,6 +815,9 @@ const addMember = () => {
     .then(() => {
       $q.notify({ type: 'positive', message: t('adminManage.teamManagement.addMemberSuccess'), icon: 'check_circle', position: 'top' });
       newMemberId.value = null;
+      void loadTeams();
+      void teamStore.fetchAllTeams();
+      void userStore.fetchAllUsers();
     })
     .catch(() => {
       $q.notify({ type: 'negative', message: t('adminManage.teamManagement.addMemberFailed'), position: 'top' });
@@ -802,6 +840,9 @@ const confirmRemoveMember = (user: User) => {
       .updateUser(user.id, { form: { teamId: 0 }, file: null })
       .then(() => {
         $q.notify({ type: 'positive', message: t('adminManage.teamManagement.removeMemberSuccess'), icon: 'check_circle', position: 'top' });
+        void loadTeams();
+        void teamStore.fetchAllTeams();
+        void userStore.fetchAllUsers();
       })
       .catch(() => {
         $q.notify({ type: 'negative', message: t('adminManage.teamManagement.removeMemberFailed'), position: 'top' });
@@ -947,6 +988,9 @@ async function onSave() {
       $q.notify({ type: 'positive', message: t('adminManage.teamManagement.createTeamSuccess'), icon: 'check_circle', position: 'top' });
     }
     closeForm();
+    void loadTeams();
+    void teamStore.fetchAllTeams();
+    void userStore.fetchAllUsers();
   } catch (err: unknown) {
     console.error(err);
     $q.notify({ type: 'negative', message: t('adminManage.teamManagement.saveErrorApiCheck'), position: 'top' });
@@ -972,6 +1016,8 @@ function confirmDelete(team: Team) {
       .deleteTeam(team.team_Id)
       .then(() => {
         $q.notify({ type: 'positive', message: t('adminManage.teamManagement.deactivateSuccess'), icon: 'check_circle', position: 'top' });
+        void loadTeams();
+        void teamStore.fetchAllTeams();
       })
       .catch(() => {
         $q.notify({ type: 'negative', message: t('adminManage.teamManagement.deactivateFailed'), position: 'top' });

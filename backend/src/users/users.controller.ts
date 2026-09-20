@@ -10,6 +10,7 @@ import {
   UseInterceptors,
   UploadedFile,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -51,8 +52,23 @@ export class UsersController {
   }
 
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  @ApiOperation({ summary: 'ดึงรายชื่อผู้ใช้งานทั้งหมด พร้อมรองรับ pagination / search / filter' })
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('role') role?: string,
+    @Query('branchId') branchId?: string,
+    @Query('all') all?: string,
+  ) {
+    return this.usersService.findAll({
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+      search,
+      role,
+      branchId: branchId ? Number(branchId) : undefined,
+      all,
+    });
   }
 
   @Get(':id')

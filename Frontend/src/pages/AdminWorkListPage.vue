@@ -1,5 +1,5 @@
 <template>
-  <q-page class="admin-work-page bg-grey-1">
+  <q-page class="admin-work-page bg-grey-1 q-pb-xl">
     <div class="page-content relative-position">
       <!-- Loading Indicator -->
       <q-inner-loading :showing="loading" style="z-index: 100">
@@ -10,6 +10,61 @@
       <div class="q-mb-md text-dark">
         <div class="text-caption text-weight">
           {{ t('adminWork.workList.subtitle') }}
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards (4 Cards: Draft -> Active -> Pending -> Completed) -->
+      <div class="row q-col-gutter-sm q-mb-md">
+        <!-- 1. แบบร่าง -->
+        <div class="col-6 col-sm-3">
+          <q-card flat bordered class="kpi-card bg-white shadow-1">
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar color="indigo-1" text-color="indigo-9" icon="edit_note" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminWork.workList.kpiDraft') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ kpiDraftCount }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- 2. กำลังดำเนินการ -->
+        <div class="col-6 col-sm-3">
+          <q-card flat bordered class="kpi-card bg-white shadow-1">
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar color="blue-1" text-color="primary" icon="engineering" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminWork.workList.kpiActive') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ kpiActiveCount }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- 3. รออนุมัติ -->
+        <div class="col-6 col-sm-3">
+          <q-card flat bordered class="kpi-card bg-white shadow-1">
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar color="orange-1" text-color="orange-9" icon="pending_actions" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminWork.workList.kpiPending') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ kpiPendingCount }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- 4. เสร็จสิ้น -->
+        <div class="col-6 col-sm-3">
+          <q-card flat bordered class="kpi-card bg-white shadow-1">
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar color="green-1" text-color="green-9" icon="check_circle" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminWork.workList.kpiCompleted') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ kpiCompletedCount }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
         </div>
       </div>
 
@@ -348,14 +403,16 @@
         </div>
 
         <!-- Pagination -->
-        <div class="row justify-center q-mt-lg q-pb-xl" v-if="workStore.meta.totalPages > 1">
+        <div class="row justify-center q-mt-lg q-pb-xl" v-if="tasks.length > 0">
           <q-pagination
             v-model="currentPage"
-            :max="workStore.meta.totalPages"
+            :max="workStore.meta.totalPages || 1"
             :max-pages="5"
             boundary-numbers
             direction-links
             color="primary"
+            active-color="primary"
+            active-text-color="white"
             @update:model-value="fetchWorkList"
           />
         </div>
@@ -505,6 +562,45 @@ function clearFilters() {
 
 const defectJobCount = computed(() => workStore.absoluteJobCounts.defect);
 const constructJobCount = computed(() => workStore.absoluteJobCounts.construction);
+
+const kpiDraftCount = computed(() => {
+  const fromMeta = workStore.statusMeta
+    .filter((m) => m.key === 'Draft')
+    .reduce((sum, m) => sum + (m.count || 0), 0);
+  if (fromMeta > 0) return fromMeta;
+  return tasks.value.filter(
+    (t) => t.statusKey === 'Draft' || t.status.includes('ร่าง') || t.status.includes('Draft'),
+  ).length;
+});
+
+const kpiActiveCount = computed(() => {
+  const fromMeta = workStore.statusMeta
+    .filter((m) => m.key === 'Active')
+    .reduce((sum, m) => sum + (m.count || 0), 0);
+  if (fromMeta > 0) return fromMeta;
+  return tasks.value.filter((t) => t.statusKey === 'Active' || t.status.includes('ดำเนิน')).length;
+});
+
+const kpiPendingCount = computed(() => {
+  const fromMeta = workStore.statusMeta
+    .filter((m) => m.key === 'Pending')
+    .reduce((sum, m) => sum + (m.count || 0), 0);
+  if (fromMeta > 0) return fromMeta;
+  return tasks.value.filter(
+    (t) =>
+      t.statusKey === 'Pending' ||
+      t.status.includes('รอ') ||
+      t.status.includes('Pending'),
+  ).length;
+});
+
+const kpiCompletedCount = computed(() => {
+  const fromMeta = workStore.statusMeta
+    .filter((m) => m.key === 'Completed')
+    .reduce((sum, m) => sum + (m.count || 0), 0);
+  if (fromMeta > 0) return fromMeta;
+  return tasks.value.filter((t) => t.statusKey === 'Completed' || t.status.includes('เสร็จ')).length;
+});
 
 const currentPage = ref(1);
 const selectedBranchId = ref<number | null>(null);
@@ -709,7 +805,7 @@ function onDeleteClick(task: TaskItem) {
         // Trigger refetch
         await workStore.fetchJobs({
           page: currentPage.value,
-          limit: 10,
+          limit: 5,
           status: activeFilter.value,
           search: searchTerm.value,
           type: selectedType.value,
@@ -736,7 +832,7 @@ async function loadWorkListData(): Promise<void> {
     await Promise.all([
       workStore.fetchJobs({
         page: currentPage.value,
-        limit: 10,
+        limit: 5,
         status: activeFilter.value,
         search: searchTerm.value,
         type: selectedType.value,
@@ -795,17 +891,33 @@ function getBranchParams(): { branchId?: number } {
 }
 
 .page-content {
-  padding: 24px 16px 0;
+  padding: 24px 16px 32px;
 }
 @media (min-width: 768px) {
   .page-content {
-    padding: 28px 24px 0;
+    padding: 28px 24px 36px;
   }
 }
 @media (min-width: 1024px) {
   .page-content {
-    padding: 32px 32px 0;
+    padding: 32px 32px 40px;
   }
+}
+
+.action-btn-primary {
+  height: 42px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.kpi-card {
+  border-radius: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
 }
 
 .search-input {
