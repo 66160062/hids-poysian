@@ -11,12 +11,20 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) {}
+  ) { }
 
   async create(createUserDto: CreateUserDto) {
     const saltOrRounds = 10;
     const hash = await bcrypt.hash(createUserDto.password, saltOrRounds);
     createUserDto.password = hash;
+
+    if ((createUserDto.teamId as unknown as number) === 0) {
+      delete createUserDto.teamId;
+    }
+    if ((createUserDto.branchId as unknown as number) === 0) {
+      delete createUserDto.branchId;
+    }
+
     const newUser = this.usersRepository.create(createUserDto);
     return this.usersRepository.save(newUser);
   }
@@ -26,13 +34,14 @@ export class UsersService {
       order: {
         id: 'DESC',
       },
-      relations: ['team'],
+      relations: ['team', 'team.branch', 'branch'],
     });
   }
 
   async findOne(id: number) {
     const user = await this.usersRepository.findOne({
       where: { id },
+      relations: ['team', 'team.branch', 'branch'],
     });
 
     if (!user) {
@@ -45,6 +54,7 @@ export class UsersService {
   async findByEmail(email: string) {
     return this.usersRepository.findOne({
       where: { email },
+      relations: ['team', 'team.branch', 'branch'],
     });
   }
 
@@ -63,15 +73,26 @@ export class UsersService {
 
     Object.assign(user, updateUserDto);
 
-    // teamId: 0 is a sentinel from the frontend meaning "remove from team"
-    // (multipart/form-data can't carry a real null; 0 is never a valid team id)
-    if ((updateUserDto.teamId as unknown as number) === 0) {
-      user.teamId = null as any;
+    // branchId handling:
+    // If branchId is provided, parse number and clear user.branch relation cache
+    if (updateUserDto.branchId !== undefined) {
+      const bId = Number(updateUserDto.branchId);
+      user.branchId = bId === 0 ? null : bId;
+      user.branch = null;
+    }
+
+    // teamId handling:
+    // If teamId is provided, parse number and clear user.team relation cache
+    if (updateUserDto.teamId !== undefined) {
+      const tId = Number(updateUserDto.teamId);
+      user.teamId = tId === 0 ? null : tId;
+      user.team = null;
     }
 
     // If role is admin, they shouldn't belong to a team
     if (user.role === 'admin') {
-      user.teamId = null as any;
+      user.teamId = null;
+      user.team = null;
     }
 
     return this.usersRepository.save(user);

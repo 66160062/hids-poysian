@@ -3,10 +3,10 @@
     <!-- Header Section -->
     <div class="q-pa-md text-dark header-bg">
       <div class="q-mb-md">
-        <div class="text-h6 text-weight-bold text-dark">
+        <!-- <div class="text-h6 text-weight-bold text-dark">
           {{ t('adminManage.masterData.title') }}
-        </div>
-        <div class="text-caption text-grey-7">
+        </div> -->
+        <div class="text-caption text-weight">
           {{ t('adminManage.masterData.subtitle') }}
         </div>
       </div>

@@ -46,6 +46,13 @@ export default {
     },
   },
   workList: {
+    title: 'รายการงานและโครงการ',
+    subtitle: 'บริหารจัดการรายการตรวจบ้าน งานก่อสร้าง และสถานะโครงการ',
+    kpiTotalJobs: 'งานทั้งหมด',
+    kpiPending: 'รออนุมัติ / ตรวจ',
+    kpiInspection: 'กำลังดำเนินการ',
+    kpiCompleted: 'เสร็จสิ้นแล้ว',
+    addNewJob: 'สร้างงานใหม่',
     loading: 'กำลังโหลดข้อมูล...',
     retry: 'ลองใหม่',
     searchPlaceholder: 'ค้นหาโครงการ, ผู้ตรวจสอบ...',

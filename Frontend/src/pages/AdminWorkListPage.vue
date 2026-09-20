@@ -6,6 +6,13 @@
         <IconBounceSpinner icon="business_center" size="64px" color="primary" />
       </q-inner-loading>
 
+      <!-- Subtitle Section -->
+      <div class="q-mb-md text-dark">
+        <div class="text-caption text-weight">
+          {{ t('adminWork.workList.subtitle') }}
+        </div>
+      </div>
+
       <!-- Error Banner -->
       <q-banner v-if="error" class="text-white bg-negative q-mb-md" rounded dense>
         <template v-slot:avatar>

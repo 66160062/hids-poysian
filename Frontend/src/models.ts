@@ -21,6 +21,8 @@ export interface User {
   imageUrl?: string | undefined;
   team?: Team | undefined;
   teamId?: number | undefined;
+  branchId?: number | null | undefined;
+  branch?: { branchId: number; branchName: string; logoUrl?: string | null } | undefined;
 }
 
 export interface InspectionRound {

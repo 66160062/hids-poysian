@@ -1,4 +1,5 @@
 import { Team } from 'src/teams/entities/team.entity';
+import { Branch } from 'src/branches/entities/branch.entity';
 import {
   Entity,
   Column,
@@ -44,10 +45,18 @@ export class User {
   @DeleteDateColumn()
   deletedAt!: Date;
 
-  @Column({ name: 'team_id', nullable: true })
-  teamId!: number;
+  @Column({ name: 'branch_id', nullable: true })
+  branchId!: number | null;
 
-  @ManyToOne(() => Team)
+  @ManyToOne(() => Branch, { nullable: true })
+  @JoinColumn({ name: 'branch_id' })
+  branch!: Branch | null;
+
+  @Column({ name: 'team_id', nullable: true })
+  teamId!: number | null;
+
+  @ManyToOne(() => Team, { nullable: true })
   @JoinColumn({ name: 'team_id' })
-  team!: Team;
+  team!: Team | null;
 }
+
