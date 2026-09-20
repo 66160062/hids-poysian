@@ -15,8 +15,8 @@ describe('AdminService', () => {
 
   beforeEach(async () => {
     jobsRepo = { find: jest.fn(), save: jest.fn() };
-    roundsRepo = { find: jest.fn() };
-    defectsRepo = { find: jest.fn() };
+    roundsRepo = { find: jest.fn().mockResolvedValue([]) };
+    defectsRepo = { find: jest.fn().mockResolvedValue([]) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -178,11 +178,8 @@ describe('AdminService', () => {
 
     it('keys the status breakdown by status code in display order', async () => {
       jobsRepo.find.mockImplementation(
-        ({ relations }: { relations: string[] }) => {
-          if (
-            relations?.includes('houseType') &&
-            !relations.includes('rounds')
-          ) {
+        ({ take }: { take?: number }) => {
+          if (!take) {
             return Promise.resolve([
               { status: 'Draft', inspectionType: '', houseType: null },
               { status: 'Active', inspectionType: '', houseType: null },

@@ -5,12 +5,19 @@ import { InspectionJob } from '../inspection-jobs/entities/inspection-job.entity
 import { InspectionRound } from '../inspection-rounds/entities/inspection-round.entity';
 import { Defect } from '../defects/entities/defect.entity';
 import { Branch } from '../branches/entities/branch.entity';
+import { Team } from '../teams/entities/team.entity';
 import {
   DashboardBranchOption,
   DashboardResponse,
   DashboardStatusCode,
   DashboardStatusCount,
   DashboardTaskItem,
+  MonthlyTrendItem,
+  JobDrilldownItem,
+  JobDefectCategoryItem,
+  JobDefectResolution,
+  TeamWorkloadItem,
+  PropertyTypeItem,
 } from './dto/dashboard-response.dto';
 
 /** ลำดับการแสดงผลสถานะงานใต้ตัวเลขรวมในการ์ดสรุป */
@@ -51,6 +58,8 @@ export class AdminService {
     private readonly defectsRepo: Repository<Defect>,
     @InjectRepository(Branch)
     private readonly branchRepo: Repository<Branch>,
+    @InjectRepository(Team)
+    private readonly teamsRepo: Repository<Team>,
   ) {}
 
   /**
@@ -81,11 +90,23 @@ export class AdminService {
     });
 
     // ========================================
-    // 1. ดึงสถิติจำนวนงานทั้งหมด (Single Query with relation)
+    // 1. ดึงสถิติจำนวนงานทั้งหมด (Single Query with relations)
     // ========================================
     const allJobs: InspectionJob[] = await this.jobsRepo.find({
       where: jobWhere,
-      relations: ['houseType'],
+      relations: [
+        'customer',
+        'houseType',
+        'branch',
+        'rounds',
+        'rounds.teamMembers',
+        'rounds.teamMembers.inspector',
+        'rounds.teamMembers.inspector.team',
+        'rounds.teamMembers.team',
+      ],
+      order: {
+        createdAt: 'DESC',
+      },
     });
 
     const totalProjects: number = allJobs.length;
@@ -309,6 +330,374 @@ export class AdminService {
       },
     );
 
+    // ========================================
+    // 5. คำนวณ Monthly Trends (6 เดือนย้อนหลัง)
+    // ========================================
+    const monthNamesTh = [
+      'ม.ค.',
+      'ก.พ.',
+      'มี.ค.',
+      'เม.ย.',
+      'พ.ค.',
+      'มิ.ย.',
+      'ก.ค.',
+      'ส.ค.',
+      'ก.ย.',
+      'ต.ค.',
+      'พ.ย.',
+      'ธ.ค.',
+    ];
+    const monthlyTrends: MonthlyTrendItem[] = [];
+    const now = new Date(targetDate);
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const monthKey = `${y}-${String(m + 1).padStart(2, '0')}`;
+      const monthLabel = `${monthNamesTh[m]} ${((y + 543) % 100)}`;
+
+      let homeCount = 0;
+      let constCount = 0;
+
+      for (const job of allJobs) {
+        const jobDate = new Date(job.createdAt);
+        if (jobDate.getFullYear() === y && jobDate.getMonth() === m) {
+          const inspectionType = job.inspectionType || '';
+          const isConstruction =
+            inspectionType === 'CONSTRUCTION_INSPECTION' ||
+            inspectionType === 'ตรวจก่อสร้าง' ||
+            inspectionType === 'Construction' ||
+            inspectionType === 'งานก่อสร้าง';
+          if (isConstruction) {
+            constCount++;
+          } else {
+            homeCount++;
+          }
+        }
+      }
+
+      monthlyTrends.push({
+        monthKey,
+        monthLabel,
+        homeInspection: homeCount,
+        construction: constCount,
+        total: homeCount + constCount,
+      });
+    }
+
+    // ========================================
+    // 6. ดึงข้อมูล Defects ทั้งหมดสำหรับ Drilldown
+    // ========================================
+    const defects = await this.defectsRepo.find({
+      relations: [
+        'round',
+        'round.job',
+        'subCategories',
+        'subCategories.category',
+        'updatedBy',
+      ],
+    });
+
+    let totalDefects = 0;
+    let totalVerified = 0;
+    let globalPending = 0;
+    let globalRepaired = 0;
+    const globalCategories = new Map<string, number>();
+
+    const jobDefectMap = new Map<
+      number,
+      {
+        categories: Map<string, number>;
+        pending: number;
+        repaired: number;
+        verified: number;
+        contractorName: string | null;
+      }
+    >();
+
+    const categoryColors = [
+      '#3B82F6', // Blue
+      '#F97316', // Orange
+      '#10B981', // Emerald
+      '#8B5CF6', // Purple
+      '#EC4899', // Pink
+      '#EAB308', // Yellow
+      '#06B6D4', // Cyan
+      '#64748B', // Slate
+    ];
+
+    for (const defect of defects) {
+      const defectBranchId = defect.round?.job?.branchId;
+      // กรองตามสาขาเฉพาะเมื่อผู้ใช้เลือกสาขาเฉพาะ และงานของ defect มี branchId ระบุ
+      if (selectedBranchId && defectBranchId && defectBranchId !== selectedBranchId) {
+        continue;
+      }
+
+      totalDefects++;
+      const statusLower = (defect.status || '').toLowerCase();
+      if (statusLower === 'verified') {
+        totalVerified++;
+      } else if (statusLower === 'repaired') {
+        globalRepaired++;
+      } else {
+        globalPending++;
+      }
+
+      // นับรายโครงการ (ถ้ามี jobId)
+      const jobId = defect.round?.job?.jobId;
+      if (jobId) {
+        if (!jobDefectMap.has(jobId)) {
+          jobDefectMap.set(jobId, {
+            categories: new Map<string, number>(),
+            pending: 0,
+            repaired: 0,
+            verified: 0,
+            contractorName:
+              defect.updatedBy?.companyName ?? defect.updatedBy?.fullName ?? null,
+          });
+        }
+
+        const entry = jobDefectMap.get(jobId)!;
+        if (statusLower === 'verified') {
+          entry.verified++;
+        } else if (statusLower === 'repaired') {
+          entry.repaired++;
+        } else {
+          entry.pending++;
+        }
+
+        if (defect.subCategories && defect.subCategories.length > 0) {
+          for (const sub of defect.subCategories) {
+            const catName = sub.category?.name || sub.name || 'หมวดหมู่อื่นๆ';
+            entry.categories.set(
+              catName,
+              (entry.categories.get(catName) || 0) + 1,
+            );
+          }
+        } else {
+          entry.categories.set(
+            'หมวดหมู่อื่นๆ',
+            (entry.categories.get('หมวดหมู่อื่นๆ') || 0) + 1,
+          );
+        }
+      }
+
+      // รวมสถิติหมวดหมู่ Defect ระดับทั้งระบบ
+      if (defect.subCategories && defect.subCategories.length > 0) {
+        for (const sub of defect.subCategories) {
+          const catName = sub.category?.name || sub.name || 'หมวดหมู่อื่นๆ';
+          globalCategories.set(
+            catName,
+            (globalCategories.get(catName) || 0) + 1,
+          );
+        }
+      } else {
+        globalCategories.set(
+          'หมวดหมู่อื่นๆ',
+          (globalCategories.get('หมวดหมู่อื่นๆ') || 0) + 1,
+        );
+      }
+    }
+
+    const overallCompletionRate =
+      totalDefects > 0 ? Math.round((totalVerified / totalDefects) * 100) : 0;
+
+    const sortedGlobalCategories = Array.from(globalCategories.entries()).sort(
+      (a, b) => b[1] - a[1],
+    );
+    let totalCatPoints = 0;
+    for (const [, count] of sortedGlobalCategories) {
+      totalCatPoints += count;
+    }
+
+    const top5 = sortedGlobalCategories.slice(0, 5);
+    const rest = sortedGlobalCategories.slice(5);
+    const restCount = rest.reduce((sum, [, count]) => sum + count, 0);
+
+    const topDefectCategories: JobDefectCategoryItem[] = top5.map(
+      ([catName, count], idx) => ({
+        categoryId: idx + 1,
+        categoryName: catName,
+        count,
+        percentage:
+          totalCatPoints > 0 ? Math.round((count / totalCatPoints) * 100) : 0,
+        color: categoryColors[idx % categoryColors.length],
+      }),
+    );
+
+    if (restCount > 0) {
+      topDefectCategories.push({
+        categoryId: 6,
+        categoryName: 'หมวดหมู่อื่นๆ',
+        count: restCount,
+        percentage:
+          totalCatPoints > 0
+            ? Math.round((restCount / totalCatPoints) * 100)
+            : 0,
+        color: '#94A3B8',
+      });
+    }
+
+    const overallDefectResolution: JobDefectResolution = {
+      pending: globalPending,
+      repaired: globalRepaired,
+      verified: totalVerified,
+      total: totalDefects,
+      completionRate: overallCompletionRate,
+    };
+
+    const jobDrilldowns: JobDrilldownItem[] = recentJobs.map((job) => {
+      const entry = jobDefectMap.get(job.jobId);
+      const pending = entry?.pending || 0;
+      const repaired = entry?.repaired || 0;
+      const verified = entry?.verified || 0;
+      const total = pending + repaired + verified;
+      const completionRate =
+        total > 0 ? Math.round((verified / total) * 100) : 0;
+
+      const defectCategories: JobDefectCategoryItem[] = [];
+      if (entry && entry.categories.size > 0) {
+        let colorIdx = 0;
+        let sumCat = 0;
+        for (const count of entry.categories.values()) sumCat += count;
+
+        entry.categories.forEach((count, catName) => {
+          defectCategories.push({
+            categoryId: colorIdx + 1,
+            categoryName: catName,
+            count,
+            percentage: sumCat > 0 ? Math.round((count / sumCat) * 100) : 0,
+            color: categoryColors[colorIdx % categoryColors.length],
+          });
+          colorIdx++;
+        });
+      }
+
+      const { statusCode } = this.mapJobStatus(job.status);
+
+      return {
+        jobId: job.jobId,
+        title: job.projectName ?? 'ไม่ระบุโครงการ',
+        customerName: job.customer?.fullName ?? 'ลูกค้าทั่วไป',
+        inspectionType: job.inspectionType ?? 'ตรวจบ้าน',
+        status: job.status,
+        statusCode,
+        contractorName: entry?.contractorName ?? null,
+        defectCategories,
+        resolution: {
+          pending,
+          repaired,
+          verified,
+          total,
+          completionRate,
+        },
+      };
+    });
+
+    // ========================================
+    // 7. คำนวณ Team Workload และ Property Types
+    // ========================================
+    const teamWhere: FindOptionsWhere<Team> = { status: 'active' };
+    if (selectedBranchId) {
+      teamWhere.branchId = selectedBranchId;
+    }
+    const allActiveTeams: Team[] = await this.teamsRepo.find({
+      where: teamWhere,
+      order: { team_name: 'ASC' },
+    });
+
+    const teamMap = new Map<
+      number,
+      { teamName: string; active: number; completed: number; total: number }
+    >();
+
+    // ตั้งต้นรายการทีมทั้งหมดจากฐานข้อมูล
+    for (const team of allActiveTeams) {
+      teamMap.set(team.team_Id, {
+        teamName: team.team_name,
+        active: 0,
+        completed: 0,
+        total: 0,
+      });
+    }
+
+    for (const job of allJobs) {
+      const rounds = job.rounds || [];
+      let foundTeamId: number | undefined;
+      let foundTeamName = 'ทีมส่วนกลาง';
+
+      for (const round of rounds) {
+        const members = round.teamMembers || [];
+        for (const member of members) {
+          const tId = member.team?.team_Id ?? member.inspector?.team?.team_Id;
+          const tName = member.team?.team_name ?? member.inspector?.team?.team_name;
+          if (tId) {
+            foundTeamId = tId;
+            foundTeamName = tName || 'ทีมส่วนกลาง';
+            break;
+          }
+        }
+        if (foundTeamId) break;
+      }
+
+      if (foundTeamId) {
+        if (!teamMap.has(foundTeamId)) {
+          teamMap.set(foundTeamId, {
+            teamName: foundTeamName,
+            active: 0,
+            completed: 0,
+            total: 0,
+          });
+        }
+        const t = teamMap.get(foundTeamId)!;
+        t.total++;
+        if (job.status === 'Completed') {
+          t.completed++;
+        } else {
+          t.active++;
+        }
+      }
+    }
+
+    const teamWorkloads: TeamWorkloadItem[] = Array.from(
+      teamMap.entries(),
+    ).map(([teamId, data]) => ({
+      teamId,
+      teamName: data.teamName,
+      activeCount: data.active,
+      completedCount: data.completed,
+      totalCount: data.total,
+    }));
+
+    const totalTypes = totalProjects || 1;
+    const propertyTypes: PropertyTypeItem[] = [
+      {
+        name: 'บ้านเดี่ยว',
+        count: singleHouse,
+        percentage: Math.round((singleHouse / totalTypes) * 100),
+        color: '#3B82F6',
+      },
+      {
+        name: 'ทาวน์โฮม',
+        count: townhouse,
+        percentage: Math.round((townhouse / totalTypes) * 100),
+        color: '#10B981',
+      },
+      {
+        name: 'คอนโดมิเนียม',
+        count: condo,
+        percentage: Math.round((condo / totalTypes) * 100),
+        color: '#F97316',
+      },
+      {
+        name: 'งานก่อสร้าง/อื่นๆ',
+        count: construction,
+        percentage: Math.round((construction / totalTypes) * 100),
+        color: '#8B5CF6',
+      },
+    ];
+
     return {
       totalProjects,
       inProgress,
@@ -316,6 +705,8 @@ export class AdminService {
       townhouse,
       condo,
       construction,
+      totalDefects,
+      overallCompletionRate,
       homeStatusBreakdown: this.toStatusBreakdown(homeStatusCounts),
       constructionStatusBreakdown: this.toStatusBreakdown(
         constructionStatusCounts,
@@ -323,6 +714,12 @@ export class AdminService {
       branches,
       calendarEvents,
       tasks,
+      monthlyTrends,
+      jobDrilldowns,
+      teamWorkloads,
+      propertyTypes,
+      topDefectCategories,
+      overallDefectResolution,
     };
   }
 
