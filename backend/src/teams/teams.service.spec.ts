@@ -13,12 +13,36 @@ describe('TeamsService', () => {
     findOneByOrFail: jest.Mock;
     findOneOrFail: jest.Mock;
     softDelete: jest.Mock;
+    createQueryBuilder: jest.Mock;
   };
   let usersRepo: {
     update: jest.Mock;
   };
+  let qb: {
+    leftJoinAndSelect: jest.Mock;
+    where: jest.Mock;
+    andWhere: jest.Mock;
+    orderBy: jest.Mock;
+    skip: jest.Mock;
+    take: jest.Mock;
+    getMany: jest.Mock;
+    getCount: jest.Mock;
+  };
 
   beforeEach(async () => {
+    qb = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getMany: jest
+        .fn()
+        .mockResolvedValue([{ team_Id: 1, team_name: 'Team A' }]),
+      getCount: jest.fn().mockResolvedValue(1),
+    };
+
     teamsRepo = {
       create: jest.fn(),
       save: jest.fn(),
@@ -26,6 +50,7 @@ describe('TeamsService', () => {
       findOneByOrFail: jest.fn(),
       findOneOrFail: jest.fn(),
       softDelete: jest.fn(),
+      createQueryBuilder: jest.fn().mockReturnValue(qb),
     };
     usersRepo = {
       update: jest.fn(),
@@ -47,13 +72,15 @@ describe('TeamsService', () => {
   });
 
   it('orders teams by team_Id descending and only returns active ones', async () => {
-    await service.findAll();
+    const result = await service.findAll();
 
-    expect(teamsRepo.find).toHaveBeenCalledWith({
-      where: { status: 'active' },
-      relations: ['branch'],
-      order: { team_Id: 'DESC' },
+    expect(teamsRepo.createQueryBuilder).toHaveBeenCalledWith('team');
+    expect(qb.leftJoinAndSelect).toHaveBeenCalledWith('team.branch', 'branch');
+    expect(qb.where).toHaveBeenCalledWith('team.status = :status', {
+      status: 'active',
     });
+    expect(qb.orderBy).toHaveBeenCalledWith('team.team_Id', 'DESC');
+    expect(result.data).toHaveLength(1);
   });
 
   it('looks up a team using the team_Id column, including its branch', async () => {

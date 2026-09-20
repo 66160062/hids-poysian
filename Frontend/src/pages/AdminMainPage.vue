@@ -275,6 +275,10 @@ import { api } from 'src/boot/axios';
 import type { AxiosResponse } from 'axios';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { useJobStatus, type JobStatusCode } from 'src/composables/useJobStatus';
+import type {
+  BranchOption,
+  DashboardStats,
+} from 'src/types/dashboard';
 
 const homeSpinner = createIconSpinner('home');
 const router = useRouter();
@@ -282,15 +286,6 @@ const $q = useQuasar();
 const { t, locale } = useI18n();
 const { jobStatusLabel } = useJobStatus();
 const error = ref<string>('');
-
-// ==========================================
-// 🎯 Interface สำหรับ Dashboard Stats
-// ==========================================
-interface StatusCount {
-  status: string;
-  statusCode: JobStatusCode;
-  count: number;
-}
 
 const STATUS_ACCENT_COLORS: Partial<Record<JobStatusCode, { bg: string; text: string }>> = {
   IN_PROGRESS: { bg: '#e3f2fd', text: '#1565c0' },
@@ -303,22 +298,6 @@ const DEFAULT_STATUS_ACCENT_COLOR = { bg: '#eeeef0', text: '#5f6368' };
 
 function statusAccentColor(code: JobStatusCode): { bg: string; text: string } {
   return STATUS_ACCENT_COLORS[code] ?? DEFAULT_STATUS_ACCENT_COLOR;
-}
-
-interface DashboardStats {
-  totalProjects: number;
-  inProgress: number;
-  singleHouse: number;
-  townhouse: number;
-  condo: number;
-  construction: number;
-  homeStatusBreakdown: StatusCount[];
-  constructionStatusBreakdown: StatusCount[];
-}
-
-interface BranchOption {
-  id: number;
-  name: string;
 }
 
 const dashboard = ref<DashboardStats>({
@@ -587,7 +566,6 @@ async function fetchAdminDashboard(): Promise<void> {
     } else {
       tasks.value = [];
     }
-
   } catch (err: unknown) {
     error.value = t('adminWork.main.loadError');
     console.error('fetchAdminDashboard error:', err);
