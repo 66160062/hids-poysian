@@ -20,6 +20,17 @@ export class CreateUserDto {
   teamId?: number;
 
   @ApiProperty({
+    description: 'ไอดีสาขา',
+    example: 1,
+    required: false,
+  })
+  @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  branchId?: number;
+
+
+  @ApiProperty({
     description: 'เบอร์โทร',
     example: '0987654321',
   })
