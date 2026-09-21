@@ -13,13 +13,46 @@
         </div>
       </div>
 
-      <!-- KPI Summary Cards (4 Cards: Draft -> Active -> Pending -> Completed) -->
-      <div class="row q-col-gutter-sm q-mb-md">
-        <!-- 1. แบบร่าง -->
-        <div class="col-6 col-sm-3">
-          <q-card flat bordered class="kpi-card bg-white shadow-1">
+      <!-- KPI Summary Cards (5 Cards: Total -> Draft -> Active -> Pending -> Completed) -->
+      <div class="kpi-row row no-wrap q-col-gutter-sm q-mb-md">
+        <!-- 1. งานทั้งหมด -->
+        <div class="kpi-col col">
+          <q-card
+            flat
+            bordered
+            class="kpi-card bg-white shadow-1 cursor-pointer"
+            :class="{ 'kpi-card--active': activeFilter === 'all' }"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="activeFilter = 'all'"
+            @keyup.enter="activeFilter = 'all'"
+          >
             <q-card-section class="q-pa-sm row items-center no-wrap">
-              <q-avatar color="indigo-1" text-color="indigo-9" icon="edit_note" size="40px" />
+              <q-avatar color="indigo-1" text-color="indigo-9" icon="assignment" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminWork.workList.kpiTotalJobs') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ kpiTotalCount }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- 2. แบบร่าง -->
+        <div class="kpi-col col">
+          <q-card
+            flat
+            bordered
+            class="kpi-card bg-white shadow-1 cursor-pointer"
+            :class="{ 'kpi-card--active': activeFilter === 'Draft' }"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="activeFilter = 'Draft'"
+            @keyup.enter="activeFilter = 'Draft'"
+          >
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar color="grey-3" text-color="grey-9" icon="edit_note" size="40px" />
               <div class="q-ml-sm">
                 <div class="text-caption text-grey-7">{{ t('adminWork.workList.kpiDraft') }}</div>
                 <div class="text-h6 text-weight-bold text-dark">{{ kpiDraftCount }}</div>
@@ -28,9 +61,19 @@
           </q-card>
         </div>
 
-        <!-- 2. กำลังดำเนินการ -->
-        <div class="col-6 col-sm-3">
-          <q-card flat bordered class="kpi-card bg-white shadow-1">
+        <!-- 3. กำลังดำเนินการ -->
+        <div class="kpi-col col">
+          <q-card
+            flat
+            bordered
+            class="kpi-card bg-white shadow-1 cursor-pointer"
+            :class="{ 'kpi-card--active': activeFilter === 'Active' }"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="activeFilter = 'Active'"
+            @keyup.enter="activeFilter = 'Active'"
+          >
             <q-card-section class="q-pa-sm row items-center no-wrap">
               <q-avatar color="blue-1" text-color="primary" icon="engineering" size="40px" />
               <div class="q-ml-sm">
@@ -41,9 +84,19 @@
           </q-card>
         </div>
 
-        <!-- 3. รออนุมัติ -->
-        <div class="col-6 col-sm-3">
-          <q-card flat bordered class="kpi-card bg-white shadow-1">
+        <!-- 4. รออนุมัติ -->
+        <div class="kpi-col col">
+          <q-card
+            flat
+            bordered
+            class="kpi-card bg-white shadow-1 cursor-pointer"
+            :class="{ 'kpi-card--active': activeFilter === 'Pending' }"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="activeFilter = 'Pending'"
+            @keyup.enter="activeFilter = 'Pending'"
+          >
             <q-card-section class="q-pa-sm row items-center no-wrap">
               <q-avatar color="orange-1" text-color="orange-9" icon="pending_actions" size="40px" />
               <div class="q-ml-sm">
@@ -54,9 +107,19 @@
           </q-card>
         </div>
 
-        <!-- 4. เสร็จสิ้น -->
-        <div class="col-6 col-sm-3">
-          <q-card flat bordered class="kpi-card bg-white shadow-1">
+        <!-- 5. เสร็จสิ้น -->
+        <div class="kpi-col col">
+          <q-card
+            flat
+            bordered
+            class="kpi-card bg-white shadow-1 cursor-pointer"
+            :class="{ 'kpi-card--active': activeFilter === 'Completed' }"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="activeFilter = 'Completed'"
+            @keyup.enter="activeFilter = 'Completed'"
+          >
             <q-card-section class="q-pa-sm row items-center no-wrap">
               <q-avatar color="green-1" text-color="green-9" icon="check_circle" size="40px" />
               <div class="q-ml-sm">
@@ -153,6 +216,37 @@
             <q-badge v-if="selectedJobType !== 'งานก่อสร้าง'" color="grey-3" text-color="grey-8" rounded>{{ constructJobCount }}</q-badge>
           </div>
         </q-btn>
+      </div>
+
+      <!-- Action Buttons Row -->
+      <div class="row items-center justify-end q-mt-sm">
+        <div class="col-12 col-sm-auto">
+          <q-btn
+            unelevated
+            color="primary"
+            icon="add"
+            :label="t('adminWork.workList.addNewJob')"
+            class="full-width action-btn-primary shadow-1"
+            no-caps
+          >
+            <q-menu anchor="bottom right" self="top right" :offset="[0, 8]" class="rounded-borders shadow-3">
+              <q-list style="min-width: 200px" class="q-py-xs">
+                <q-item clickable v-close-popup @click="addNewWork('defect')">
+                  <q-item-section avatar min-width="24px">
+                    <q-icon name="search" size="20px" color="primary" />
+                  </q-item-section>
+                  <q-item-section>{{ t('adminWork.workList.homeInspectionFab') }}</q-item-section>
+                </q-item>
+                <q-item clickable v-close-popup @click="addNewWork('construction')">
+                  <q-item-section avatar min-width="24px">
+                    <q-icon name="construction" size="20px" color="orange-8" />
+                  </q-item-section>
+                  <q-item-section>{{ t('adminWork.workList.constructionFab') }}</q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
+        </div>
       </div>
 
       <!-- Filter Bottom Sheet Dialog -->
@@ -419,41 +513,12 @@
       </div>
     </div>
 
-    <q-page-sticky position="bottom-right" :offset="[18, 18]">
-      <q-fab
-        v-model="isFabClicked"
-        icon="add"
-        active-icon="close"
-        direction="up"
-        :color="selectedJobType === 'ตรวจบ้าน' ? 'primary' : 'orange'"
-        class="shadow-4 custom-fab"
-        transition-show="jump-up"
-        transition-hide="jump-down"
-      >
-        <q-fab-action
-          color="orange-8"
-          text-color="white"
-          icon="construction"
-          :label="t('adminWork.workList.constructionFab')"
-          class="text-weight-bold custom-fab-action"
-          @click="addNewWork('construction')"
-        />
-        <q-fab-action
-          color="blue-8"
-          text-color="white"
-          icon="search"
-          :label="t('adminWork.workList.homeInspectionFab')"
-          class="text-weight-bold custom-fab-action"
-          @click="addNewWork('defect')"
-        />
-      </q-fab>
-    </q-page-sticky>
   </q-page>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { useWorkListStore } from '../stores/useWorkList';
@@ -469,6 +534,7 @@ const homeInspectionSpinner = createIconSpinner('search');
 const constructionSpinner = createIconSpinner('construction');
 
 const router = useRouter();
+const route = useRoute();
 const $q = useQuasar();
 const { t } = useI18n();
 const workStore = useWorkListStore();
@@ -485,6 +551,12 @@ const activeFilter = ref('all');
 const selectedType = ref('ทั้งหมด'); // ตัวเลือกประเภทบ้าน (เก็บเป็นชื่อไทยดิบ — หา nameEn จาก houseTypeStore ตอนแสดงผล)
 const selectedJobType = ref('ตรวจบ้าน'); // ตัวเลือกประเภทงาน
 const sortOrder = ref('desc'); // desc = ล่าสุด -> เก่า, asc = เก่า -> ล่าสุด
+
+// รับตัวกรองจากหน้าอื่น (เช่น การ์ดสรุปในหน้าหลัก) ผ่าน query ?status=Active&jobType=home|construction
+const routeStatus = route.query.status;
+if (typeof routeStatus === 'string' && routeStatus) activeFilter.value = routeStatus;
+if (route.query.jobType === 'construction') selectedJobType.value = 'งานก่อสร้าง';
+else if (route.query.jobType === 'home') selectedJobType.value = 'ตรวจบ้าน';
 
 // ตัวเลือกใน Dropdown
 const typeOptions = computed(() => {
@@ -563,6 +635,8 @@ function clearFilters() {
 const defectJobCount = computed(() => workStore.absoluteJobCounts.defect);
 const constructJobCount = computed(() => workStore.absoluteJobCounts.construction);
 
+const kpiTotalCount = computed(() => workStore.absoluteJobCounts.all);
+
 const kpiDraftCount = computed(() => {
   const fromMeta = workStore.statusMeta
     .filter((m) => m.key === 'Draft')
@@ -603,6 +677,7 @@ const kpiCompletedCount = computed(() => {
 });
 
 const currentPage = ref(1);
+const PAGE_SIZE = 20;
 const selectedBranchId = ref<number | null>(null);
 
 // ==========================================
@@ -772,10 +847,7 @@ async function viewDetail(task: TaskItem): Promise<void> {
   }
 }
 
-const isFabClicked = ref(false);
-
 function addNewWork(type: 'defect' | 'construction') {
-  isFabClicked.value = false;
   void router.push({
     path: '/admin/work/create',
     query: { type },
@@ -805,7 +877,7 @@ function onDeleteClick(task: TaskItem) {
         // Trigger refetch
         await workStore.fetchJobs({
           page: currentPage.value,
-          limit: 5,
+          limit: PAGE_SIZE,
           status: activeFilter.value,
           search: searchTerm.value,
           type: selectedType.value,
@@ -832,7 +904,7 @@ async function loadWorkListData(): Promise<void> {
     await Promise.all([
       workStore.fetchJobs({
         page: currentPage.value,
-        limit: 5,
+        limit: PAGE_SIZE,
         status: activeFilter.value,
         search: searchTerm.value,
         type: selectedType.value,
@@ -912,12 +984,73 @@ function getBranchParams(): { branchId?: number } {
 }
 
 .kpi-card {
+  height: 100%;
   border-radius: 16px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.kpi-col {
+  min-width: 0;
+}
+
+/* มือถือ: การ์ด KPI ทั้ง 5 ใบอยู่แถวเดียวกัน จัดเนื้อหาเป็นแนวตั้งให้พอดีความกว้าง */
+@media (max-width: 599.98px) {
+  .kpi-row {
+    --kpi-gap: 6px;
+    margin-left: calc(-1 * var(--kpi-gap));
+  }
+  .kpi-row > .kpi-col {
+    padding-left: var(--kpi-gap);
+  }
+  .kpi-row .q-card__section {
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    padding: 8px 2px;
+  }
+  .kpi-row .q-avatar {
+    font-size: 30px !important;
+  }
+  .kpi-row .q-card__section > div:not(.q-avatar) {
+    margin-left: 0;
+    margin-top: 4px;
+    min-width: 0;
+    width: 100%;
+  }
+  .kpi-row .text-caption {
+    font-size: 10px;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .kpi-row .text-h6 {
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+}
+
 .kpi-card:hover {
   transform: translateY(-2px);
+}
+
+.kpi-card.kpi-card--active {
+  outline: 2px solid var(--q-primary, #1976d2);
+  outline-offset: -1px;
+}
+
+.kpi-card:focus-visible {
+  outline: 2px solid var(--q-primary, #1976d2);
+  outline-offset: 2px;
+}
+
+.kpi-card.cursor-pointer {
+  user-select: none;
+  -webkit-user-select: none;
+  caret-color: transparent;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .search-input {
@@ -1037,17 +1170,10 @@ function getBranchParams(): { branchId?: number } {
     transform 200ms var(--ease-out),
     box-shadow 200ms var(--ease-out),
     border-color 200ms var(--ease-out);
-  animation: card-in 320ms var(--ease-out) both;
 }
-.work-card:nth-child(1) { animation-delay: 0ms; }
-.work-card:nth-child(2) { animation-delay: 40ms; }
-.work-card:nth-child(3) { animation-delay: 80ms; }
-.work-card:nth-child(4) { animation-delay: 120ms; }
-.work-card:nth-child(n + 5) { animation-delay: 150ms; }
 
 @media (hover: hover) and (pointer: fine) {
   .work-card:hover {
-    transform: translateY(-2px);
     border-color: #e4e4e4;
     box-shadow:
       0 2px 4px rgba(0, 0, 0, 0.04),
@@ -1060,17 +1186,6 @@ function getBranchParams(): { branchId?: number } {
 }
 .work-card :deep(.q-separator) {
   margin-top: auto;
-}
-
-@keyframes card-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 .status-badge {
@@ -1246,36 +1361,5 @@ function getBranchParams(): { branchId?: number } {
 .q-transition--jump-up-enter-active,
 .q-transition--jump-up-leave-active {
   transition-duration: 0.15s !important;
-}
-
-/* Fix q-fab pill buttons overflowing the right edge of screen */
-.custom-fab .q-fab__actions--up {
-  left: auto !important;
-  right: 0 !important;
-  transform: none !important;
-  align-items: flex-end !important;
-}
-
-/* Speed up the FAB jump animation */
-.q-transition--jump-up-enter-active,
-.q-transition--jump-up-leave-active,
-.q-transition--jump-down-enter-active,
-.q-transition--jump-down-leave-active {
-  transition-duration: 0.15s !important;
-}
-
-/* Ensure FAB actions are exactly the same size with larger icons */
-.custom-fab-action {
-  width: 150px !important;
-  justify-content: flex-start !important;
-  padding-left: 16px !important;
-}
-.custom-fab-action .q-icon {
-  font-size: 26px !important;
-  margin-right: 8px !important;
-}
-.custom-fab-action .q-btn__content {
-  width: 100%;
-  justify-content: flex-start;
 }
 </style>
