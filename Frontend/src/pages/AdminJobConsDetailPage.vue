@@ -334,7 +334,7 @@
             borderless
             dense
             v-model="selectedTeam"
-            :options="teamStore.teamOptions"
+            :options="branchTeamOptions"
             :placeholder="t('adminJobs.construction.searchTeamPlaceholder')"
             class="custom-select"
             popup-content-class="custom-dropdown-popup"
@@ -770,6 +770,7 @@ import InspectionItemCard from '../components/InspectionItemCard.vue';
 import PlanPositionDialog from '../components/PlanPositionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { useLocalizedField } from 'src/composables/useLocalizedField';
+import { buildGoogleMapsUrl, parseCoordinate } from 'src/composables/useMapLocation';
 import { useJobStatus, roundStatusCode, jobStatusCode } from 'src/composables/useJobStatus';
 
 const pdfSpinner = createIconSpinner('picture_as_pdf');
@@ -814,10 +815,12 @@ interface AddressEntity {
 
 interface JobApiResponse {
   jobId: number;
+  branchId?: number | null;
   projectName: string;
   projectNameEn?: string | null;
   usableArea: number;
   projectImageUrl?: string;
+  locationCoordinate?: string | null;
   customer?: {
     fullName?: string;
     phoneNumber?: string;
@@ -1152,7 +1155,7 @@ async function loadPageData() {
       fetchJobDetails(),
       fetchTeamMembers(),
       fetchHousePlans(),
-      teamStore.fetchTeams() // ดึงข้อมูลทีม
+      teamStore.fetchAllTeams() // ดึงข้อมูลทีมทั้งหมดไว้กรองตามสาขาของงาน
     ]);
     const rounds = await fetchRounds();
     applyRounds(rounds);
@@ -1296,6 +1299,14 @@ const onEdit = async () => {
 
 const openGoogleMaps = () => {
   if (!jobData.value) return;
+
+  // ถ้าปักหมุดไว้ ให้ไปที่พิกัดนั้นตรงๆ
+  const pinned = parseCoordinate(jobData.value.locationCoordinate);
+  if (pinned) {
+    window.open(buildGoogleMapsUrl(pinned), '_blank');
+    return;
+  }
+
   const projectName = jobData.value.projectName || '';
   const addr = jobData.value.address;
 
@@ -1578,6 +1589,17 @@ const assignmentMode = ref<'team' | 'individual'>('team');
 const selectedTeam = ref<number | null>(null);
 const selectedInspectors = ref<{ label: string; value: number }[]>([]);
 const teamStore = useTeamStore();
+
+// ทีมที่เลือกได้ต้องอยู่สาขาเดียวกับงาน (งานที่ไม่ระบุสาขาเลือกได้ทุกทีม)
+const branchTeamOptions = computed(() => {
+  const jobBranchId = jobData.value?.branchId ?? null;
+  return teamStore.allTeams
+    .filter(
+      (team) =>
+        jobBranchId === null || team.branchId === jobBranchId || team.team_Id === selectedTeam.value,
+    )
+    .map((team) => ({ label: team.team_name, value: team.team_Id }));
+});
 
 // Predefined inspector options list
 const inspectorOptions = computed(() => {

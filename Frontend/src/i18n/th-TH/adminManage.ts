@@ -166,6 +166,8 @@ export default {
     addMemberSuccess: 'เพิ่มสมาชิกสำเร็จ',
     addMemberFailed: 'เพิ่มสมาชิกไม่สำเร็จ',
     previousTeamFallback: 'ทีมเดิม',
+    memberOptionNoTeam: 'ยังไม่มีทีม',
+    moveTeamConfirmLabel: 'ย้ายทีม',
     moveTeamTitle: 'ย้ายทีม',
     moveTeamMessage: '{name} อยู่ในทีม "{oldTeam}" อยู่แล้ว ต้องการย้ายมาทีม "{newTeam}" หรือไม่?',
     removeMemberConfirmTitle: 'นำออกจากทีม',

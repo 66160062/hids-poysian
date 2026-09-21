@@ -166,6 +166,8 @@ export default {
     addMemberSuccess: 'Member added successfully',
     addMemberFailed: 'Failed to add member',
     previousTeamFallback: 'previous team',
+    memberOptionNoTeam: 'No team yet',
+    moveTeamConfirmLabel: 'Move',
     moveTeamTitle: 'Move Team',
     moveTeamMessage: '{name} is already in team "{oldTeam}". Do you want to move them to team "{newTeam}"?',
     removeMemberConfirmTitle: 'Remove from Team',
