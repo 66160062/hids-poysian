@@ -53,7 +53,7 @@
                     :style="{ height: `${getBarHeight(item.homeInspection)}%` }"
                   >
                     <q-tooltip class="bg-dark text-white text-caption">
-                      {{ item.monthLabel }}: {{ t('adminWork.main.homeInspectionJob') }} {{ item.homeInspection }} งาน
+                      {{ item.monthLabel }}: {{ t('adminWork.main.homeInspectionJob') }} {{ item.homeInspection }} {{ t('adminWork.dashboard.jobsUnit') }}
                     </q-tooltip>
                   </div>
                 </div>
@@ -65,7 +65,7 @@
                     :style="{ height: `${getBarHeight(item.construction)}%` }"
                   >
                     <q-tooltip class="bg-dark text-white text-caption">
-                      {{ item.monthLabel }}: {{ t('adminWork.main.constructionJob') }} {{ item.construction }} งาน
+                      {{ item.monthLabel }}: {{ t('adminWork.main.constructionJob') }} {{ item.construction }} {{ t('adminWork.dashboard.jobsUnit') }}
                     </q-tooltip>
                   </div>
                 </div>

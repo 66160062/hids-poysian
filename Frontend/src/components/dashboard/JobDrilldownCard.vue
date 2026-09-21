@@ -101,7 +101,7 @@
                 <div class="text-h6 text-weight-bold text-dark" style="line-height: 1;">
                   {{ currentJob.resolution.total }}
                 </div>
-                <div class="text-caption text-grey-6" style="font-size: 10px;">Defects</div>
+                <div class="text-caption text-grey-6" style="font-size: 10px;">{{ t('adminWork.dashboard.pointsUnit') }}</div>
               </div>
             </div>
 
@@ -114,7 +114,7 @@
               >
                 <div class="row items-center ellipsis" style="max-width: 70%;">
                   <span class="cat-dot q-mr-xs" :style="{ backgroundColor: cat.color || '#3B82F6' }"></span>
-                  <span class="text-caption text-grey-8 ellipsis" style="font-size: 12px;">{{ cat.categoryName }}</span>
+                  <span class="text-caption text-grey-8 ellipsis" style="font-size: 12px;">{{ pickLocalized(cat.categoryName, cat.categoryNameEn) }}</span>
                 </div>
                 <div class="text-caption text-weight-bold text-dark" style="font-size: 12px;">
                   {{ cat.count }} ({{ cat.percentage }}%)
@@ -129,7 +129,7 @@
           <div class="resolution-box q-pa-sm bg-grey-1" style="border-radius: 12px;">
             <div class="row items-center justify-between q-mb-xs">
               <span class="text-caption text-weight-bold text-grey-8">{{ t('adminWork.dashboard.resolutionProgress') }}</span>
-              <span class="text-caption text-weight-bold text-positive">{{ currentJob.resolution.completionRate }}% สำเร็จ</span>
+              <span class="text-caption text-weight-bold text-positive">{{ t('adminWork.dashboard.resolvedRate', { pct: currentJob.resolution.completionRate }) }}</span>
             </div>
 
             <!-- Stacked Progress Bar -->
@@ -137,17 +137,17 @@
               <div
                 class="progress-seg seg-verified"
                 :style="{ width: `${verifiedPct}%` }"
-                title="ตรวจผ่านแล้ว"
+                :title="t('adminWork.dashboard.segVerifiedTitle')"
               />
               <div
                 class="progress-seg seg-repaired"
                 :style="{ width: `${repairedPct}%` }"
-                title="ช่างแก้ไขแล้ว รอตรวจซ้ำ"
+                :title="t('adminWork.dashboard.segRepairedTitle')"
               />
               <div
                 class="progress-seg seg-pending"
                 :style="{ width: `${pendingPct}%` }"
-                title="รอเข้าซ่อม"
+                :title="t('adminWork.dashboard.segPendingTitle')"
               />
             </div>
 
@@ -155,15 +155,15 @@
             <div class="row q-col-gutter-xs text-caption">
               <div class="col-4 text-center">
                 <div class="text-weight-bold text-positive">{{ currentJob.resolution.verified }}</div>
-                <div class="text-grey-6" style="font-size: 10px;">ตรวจผ่าน ({{ verifiedPct }}%)</div>
+                <div class="text-grey-6" style="font-size: 10px;">{{ t('adminWork.dashboard.legendVerified', { pct: verifiedPct }) }}</div>
               </div>
               <div class="col-4 text-center">
                 <div class="text-weight-bold text-primary">{{ currentJob.resolution.repaired }}</div>
-                <div class="text-grey-6" style="font-size: 10px;">รอตรวจ ({{ repairedPct }}%)</div>
+                <div class="text-grey-6" style="font-size: 10px;">{{ t('adminWork.dashboard.legendRepaired', { pct: repairedPct }) }}</div>
               </div>
               <div class="col-4 text-center">
                 <div class="text-weight-bold text-orange-9">{{ currentJob.resolution.pending }}</div>
-                <div class="text-grey-6" style="font-size: 10px;">รอซ่อม ({{ pendingPct }}%)</div>
+                <div class="text-grey-6" style="font-size: 10px;">{{ t('adminWork.dashboard.legendPending', { pct: pendingPct }) }}</div>
               </div>
             </div>
           </div>
@@ -185,6 +185,7 @@ import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import type { JobDrilldownItem } from 'src/types/dashboard';
+import { useLocalizedField } from 'src/composables/useLocalizedField';
 
 const props = defineProps<{
   jobDrilldowns: JobDrilldownItem[];
@@ -192,6 +193,7 @@ const props = defineProps<{
 
 const router = useRouter();
 const { t } = useI18n();
+const { pickLocalized } = useLocalizedField();
 
 const selectedJobId = ref<number | null>(null);
 

@@ -39,6 +39,10 @@ const STATUS_LABEL_TH: Record<DashboardStatusCode, string> = {
 };
 import { WorkListResponse, WorkListItem } from './dto/work-list-response.dto';
 
+/** ชื่อหมวดหมู่สำรองเมื่อ defect ไม่มีหมวดหมู่ (ไทย/อังกฤษ) */
+const OTHER_CATEGORY_TH = 'หมวดหมู่อื่นๆ';
+const OTHER_CATEGORY_EN = 'Other';
+
 /**
  * AdminService — ดึงข้อมูลสถิติสำหรับหน้า Admin Dashboard
  *
@@ -404,6 +408,24 @@ export class AdminService {
     let globalPending = 0;
     let globalRepaired = 0;
     const globalCategories = new Map<string, number>();
+    // ชื่อหมวดหมู่ภาษาอังกฤษ (key = ชื่อไทยที่ใช้รวมสถิติ) ให้ frontend เลือกแสดงตามภาษา
+    const categoryNamesEn = new Map<string, string | null>([
+      [OTHER_CATEGORY_TH, OTHER_CATEGORY_EN],
+    ]);
+    const registerCategoryName = (sub: {
+      name?: string | null;
+      nameEn?: string | null;
+      category?: { name?: string | null; nameEn?: string | null } | null;
+    }): string => {
+      const name = sub.category?.name || sub.name || OTHER_CATEGORY_TH;
+      if (!categoryNamesEn.has(name)) {
+        categoryNamesEn.set(
+          name,
+          sub.category?.name ? sub.category.nameEn || null : sub.nameEn || null,
+        );
+      }
+      return name;
+    };
 
     const jobDefectMap = new Map<
       number,
@@ -469,7 +491,7 @@ export class AdminService {
 
         if (defect.subCategories && defect.subCategories.length > 0) {
           for (const sub of defect.subCategories) {
-            const catName = sub.category?.name || sub.name || 'หมวดหมู่อื่นๆ';
+            const catName = registerCategoryName(sub);
             entry.categories.set(
               catName,
               (entry.categories.get(catName) || 0) + 1,
@@ -477,8 +499,8 @@ export class AdminService {
           }
         } else {
           entry.categories.set(
-            'หมวดหมู่อื่นๆ',
-            (entry.categories.get('หมวดหมู่อื่นๆ') || 0) + 1,
+            OTHER_CATEGORY_TH,
+            (entry.categories.get(OTHER_CATEGORY_TH) || 0) + 1,
           );
         }
       }
@@ -486,7 +508,7 @@ export class AdminService {
       // รวมสถิติหมวดหมู่ Defect ระดับทั้งระบบ
       if (defect.subCategories && defect.subCategories.length > 0) {
         for (const sub of defect.subCategories) {
-          const catName = sub.category?.name || sub.name || 'หมวดหมู่อื่นๆ';
+          const catName = registerCategoryName(sub);
           globalCategories.set(
             catName,
             (globalCategories.get(catName) || 0) + 1,
@@ -494,8 +516,8 @@ export class AdminService {
         }
       } else {
         globalCategories.set(
-          'หมวดหมู่อื่นๆ',
-          (globalCategories.get('หมวดหมู่อื่นๆ') || 0) + 1,
+          OTHER_CATEGORY_TH,
+          (globalCategories.get(OTHER_CATEGORY_TH) || 0) + 1,
         );
       }
     }
@@ -519,6 +541,7 @@ export class AdminService {
       ([catName, count], idx) => ({
         categoryId: idx + 1,
         categoryName: catName,
+        categoryNameEn: categoryNamesEn.get(catName) ?? null,
         count,
         percentage:
           totalCatPoints > 0 ? Math.round((count / totalCatPoints) * 100) : 0,
@@ -529,7 +552,8 @@ export class AdminService {
     if (restCount > 0) {
       topDefectCategories.push({
         categoryId: 6,
-        categoryName: 'หมวดหมู่อื่นๆ',
+        categoryName: OTHER_CATEGORY_TH,
+        categoryNameEn: OTHER_CATEGORY_EN,
         count: restCount,
         percentage:
           totalCatPoints > 0
@@ -566,6 +590,7 @@ export class AdminService {
           defectCategories.push({
             categoryId: colorIdx + 1,
             categoryName: catName,
+            categoryNameEn: categoryNamesEn.get(catName) ?? null,
             count,
             percentage: sumCat > 0 ? Math.round((count / sumCat) * 100) : 0,
             color: categoryColors[colorIdx % categoryColors.length],

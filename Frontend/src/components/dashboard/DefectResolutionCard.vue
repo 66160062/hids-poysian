@@ -58,7 +58,7 @@
               <span class="text-caption text-weight-bold text-positive">{{ t('adminWork.dashboard.verified') }}</span>
             </div>
             <div class="text-h6 text-weight-bold text-dark">{{ resolution?.verified || 0 }}</div>
-            <div class="text-caption text-grey-6" style="font-size: 10px;">{{ verifiedPct }}% ของทั้งหมด</div>
+            <div class="text-caption text-grey-6" style="font-size: 10px;">{{ t('adminWork.dashboard.percentOfTotal', { pct: verifiedPct }) }}</div>
           </div>
         </div>
 
@@ -70,7 +70,7 @@
               <span class="text-caption text-weight-bold text-primary">{{ t('adminWork.dashboard.repaired') }}</span>
             </div>
             <div class="text-h6 text-weight-bold text-dark">{{ resolution?.repaired || 0 }}</div>
-            <div class="text-caption text-grey-6" style="font-size: 10px;">{{ repairedPct }}% ของทั้งหมด</div>
+            <div class="text-caption text-grey-6" style="font-size: 10px;">{{ t('adminWork.dashboard.percentOfTotal', { pct: repairedPct }) }}</div>
           </div>
         </div>
 
@@ -82,7 +82,7 @@
               <span class="text-caption text-weight-bold text-orange-9">{{ t('adminWork.dashboard.pending') }}</span>
             </div>
             <div class="text-h6 text-weight-bold text-dark">{{ resolution?.pending || 0 }}</div>
-            <div class="text-caption text-grey-6" style="font-size: 10px;">{{ pendingPct }}% ของทั้งหมด</div>
+            <div class="text-caption text-grey-6" style="font-size: 10px;">{{ t('adminWork.dashboard.percentOfTotal', { pct: pendingPct }) }}</div>
           </div>
         </div>
       </div>
