@@ -17,6 +17,12 @@ import { useAuthStore } from 'src/stores/useAuth';
  * with the Router instance.
  */
 
+const roleHome: Record<string, string> = {
+  admin: '/admin',
+  inspector: '/inspector/Inspectsdashboard',
+  customer: '/customer',
+};
+
 export default defineRouter(function (/* { store, ssrContext } */) {
   const createHistory = process.env.SERVER
     ? createMemoryHistory
@@ -40,6 +46,15 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     if (to.meta.publicLink) {
       next();
       return;
+    }
+
+    // login แล้วไม่ให้กลับมาหน้า /login — ส่งกลับหน้าหลักของ role ตัวเอง
+    if (to.path === '/login' && auth.token) {
+      const home = roleHome[auth.user?.role ?? ''];
+      if (home) {
+        next(home);
+        return;
+      }
     }
 
     const isAdminRoute = to.path.startsWith('/admin');
