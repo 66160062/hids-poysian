@@ -209,6 +209,8 @@ export default {
     tabRooms: 'ประเภทห้องหลัก',
     tabSubRooms: 'ห้องย่อย',
     tabAllSubCategories: 'ประเภทตำหนิย่อยทั้งหมด',
+    editItem: 'แก้ไขข้อมูล',
+    deleteItem: 'ลบข้อมูล',
     tapToViewDefects: 'แตะเพื่อดูตำหนิ',
     defectsCount: '{count} รายการตำหนิ',
     filterCategory: 'กรองตามประเภทงาน',

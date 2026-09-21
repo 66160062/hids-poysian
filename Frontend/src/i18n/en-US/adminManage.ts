@@ -209,6 +209,8 @@ export default {
     tabRooms: 'Main Rooms',
     tabSubRooms: 'Sub-Rooms',
     tabAllSubCategories: 'All Defect Types',
+    editItem: 'Edit',
+    deleteItem: 'Delete',
     tapToViewDefects: 'Tap to view defects',
     defectsCount: '{count} Defects',
     filterCategory: 'Filter by Category',
