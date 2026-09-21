@@ -117,11 +117,20 @@ defineEmits(['edit', 'delete']);
   min-width: 0;
   display: flex;
   flex-direction: column;
-  transition: border-color 200ms var(--ease-out);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 2px 6px rgba(0, 0, 0, 0.03);
+  transition:
+    transform 200ms var(--ease-out),
+    box-shadow 200ms var(--ease-out),
+    border-color 200ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
   .team-card:hover {
-    border-color: #d0d0d0;
+    border-color: #e4e4e4;
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.04),
+      0 8px 20px rgba(0, 0, 0, 0.07);
   }
 }
 .team-card:focus-visible {

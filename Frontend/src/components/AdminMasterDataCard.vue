@@ -4,25 +4,22 @@
     bordered
     tabindex="0"
     role="button"
-    class="user-card cursor-pointer"
+    class="master-card cursor-pointer"
     v-ripple
-    @click="$emit('edit', user)"
-    @keyup.enter="$emit('edit', user)"
+    @click="$emit('open')"
+    @keyup.enter="$emit('open')"
   >
     <q-card-section class="q-pa-md">
-      <div class="row justify-between items-center q-mb-sm">
+      <div class="row justify-between items-center q-mb-sm no-wrap">
         <div
-          class="text-weight-bold text-dark ellipsis"
-          style="font-size: 17px; max-width: 50%"
+          class="text-weight-bold text-dark ellipsis col"
+          style="font-size: 17px"
         >
-          {{ user.fullName }}
+          {{ title }}
         </div>
-        <div class="row items-center q-gutter-x-sm">
-          <q-badge
-            class="status-badge"
-            :class="user.role === 'admin' ? 'bg-blue-1 text-blue-9' : 'bg-teal-1 text-teal-9'"
-          >
-            {{ roleLabel }}
+        <div class="row items-center no-wrap q-gutter-x-sm q-ml-sm">
+          <q-badge v-if="badge" class="status-badge" :class="badgeClass || 'tone-badge'">
+            {{ badge }}
           </q-badge>
           <q-btn
             flat
@@ -43,23 +40,21 @@
               transition-hide="jump-up"
             >
               <q-list class="action-menu-list">
-                <q-item clickable v-ripple class="action-menu-item" @click="$emit('edit', user)">
+                <q-item clickable v-ripple class="action-menu-item" @click="$emit('edit')">
                   <q-item-section avatar class="action-menu-avatar">
                     <div class="icon-chip icon-chip--primary">
                       <q-icon name="edit" size="18px" />
                     </div>
                   </q-item-section>
-                  <q-item-section class="text-weight-medium">{{ t('components.adminUserCard.edit') }}</q-item-section>
+                  <q-item-section class="text-weight-medium">{{ t('adminManage.masterData.editItem') }}</q-item-section>
                 </q-item>
-                <q-item clickable v-ripple class="action-menu-item action-menu-item--danger" @click="$emit('delete', user)">
+                <q-item clickable v-ripple class="action-menu-item action-menu-item--danger" @click="$emit('delete')">
                   <q-item-section avatar class="action-menu-avatar">
                     <div class="icon-chip icon-chip--danger">
                       <q-icon name="delete" size="18px" />
                     </div>
                   </q-item-section>
-                  <q-item-section class="text-weight-medium text-negative"
-                    >{{ t('components.adminUserCard.deleteUser') }}</q-item-section
-                  >
+                  <q-item-section class="text-weight-medium text-negative">{{ t('adminManage.masterData.deleteItem') }}</q-item-section>
                 </q-item>
               </q-list>
             </q-menu>
@@ -67,85 +62,57 @@
         </div>
       </div>
 
-      <div class="row items-center text-grey-7 justify-between" style="font-size: 13px">
-        <div class="row items-center col ellipsis">
-          <q-icon name="work" size="16px" class="q-mr-xs" />
-          <span class="ellipsis" style="max-width: 140px">
-            {{ user.team ? user.team.team_name : t('components.adminUserCard.noTeam') }}
-          </span>
-        </div>
-        <q-badge
-          v-if="branchName"
-          color="indigo-1"
-          text-color="indigo-9"
-          class="tag-badge text-weight-bold"
-        >
-          <q-icon name="business" size="12px" class="q-mr-xs" />
-          {{ branchName }}
-        </q-badge>
+      <div class="row items-center text-grey-7" style="font-size: 13px">
+        <q-icon :name="subtitleIcon" size="16px" class="q-mr-sm" />
+        <span class="ellipsis" style="max-width: 80%">{{ subtitle || '-' }}</span>
       </div>
     </q-card-section>
 
     <q-separator color="grey-2" inset />
 
-    <q-card-actions class="row items-center q-px-md q-py-sm">
-      <div class="row q-gutter-x-sm">
-        <q-badge color="grey-2" text-color="grey-8" class="tag-badge">
-          <q-icon name="phone" size="14px" class="q-mr-xs" /> {{ user.phoneNumber || '-' }}
+    <q-card-actions class="row items-center justify-between q-px-md q-py-sm">
+      <div class="row q-gutter-x-sm items-center">
+        <q-badge class="tag-badge tone-badge">
+          <q-icon name="tag" size="14px" class="q-mr-xs" /> #{{ id }}
         </q-badge>
-        <q-badge v-if="user.email" color="grey-2" text-color="grey-8" class="tag-badge">
-          <q-icon name="email" size="14px" class="q-mr-xs" />
-          <span class="ellipsis" style="max-width: 140px">{{ user.email }}</span>
-        </q-badge>
+        <slot name="tags" />
       </div>
+      <slot name="action" />
     </q-card-actions>
   </q-card>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useBranchStore } from 'src/stores/useBranch';
-import type { User } from 'src/models';
 
 const { t } = useI18n();
-const branchStore = useBranchStore();
 
-const props = defineProps({
-  user: {
-    type: Object as () => User,
-    required: true,
-  }
-});
+withDefaults(
+  defineProps<{
+    title: string;
+    subtitle?: string | null | undefined;
+    subtitleIcon?: string;
+    id: number | string;
+    badge?: string;
+    badgeClass?: string;
+  }>(),
+  {
+    subtitle: '',
+    subtitleIcon: 'translate',
+    badge: '',
+    badgeClass: '',
+  },
+);
 
-const branchName = computed(() => {
-  if (props.user.branch?.branchName) {
-    return props.user.branch.branchName;
-  }
-  if (props.user.team?.branch?.branchName) {
-    return props.user.team.branch.branchName;
-  }
-  const bId = props.user.branchId ?? props.user.team?.branchId;
-  if (!bId) return '';
-  const found = branchStore.branches.find((b) => b.branchId === bId);
-  return found?.branchName || '';
-});
-
-const ROLE_LABEL_KEYS: Record<string, string> = {
-  admin: 'adminManage.userManagement.roleAdmin',
-  inspector: 'adminManage.userManagement.roleInspector',
-};
-
-const roleLabel = computed(() => {
-  const key = ROLE_LABEL_KEYS[props.user.role];
-  return key ? t(key) : props.user.role.toUpperCase();
-});
-
-defineEmits(['edit', 'delete']);
+defineEmits<{
+  (e: 'open'): void;
+  (e: 'edit'): void;
+  (e: 'delete'): void;
+}>();
 </script>
 
 <style scoped>
-.user-card {
+.master-card {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   border-radius: 18px;
   border-color: #f0f0f0;
@@ -162,19 +129,23 @@ defineEmits(['edit', 'delete']);
     border-color 200ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
-  .user-card:hover {
+  .master-card:hover {
     border-color: #e4e4e4;
     box-shadow:
       0 2px 4px rgba(0, 0, 0, 0.04),
       0 8px 20px rgba(0, 0, 0, 0.07);
   }
 }
-.user-card:focus-visible {
+.master-card:focus-visible {
   outline: 2px solid var(--q-primary, #1976d2);
   outline-offset: 2px;
 }
-.user-card :deep(.q-separator) {
+.master-card :deep(.q-separator) {
   margin-top: auto;
+}
+.tone-badge {
+  background: var(--tone-soft, #f0f0f0);
+  color: var(--tone-dark, #424242);
 }
 .status-badge {
   font-weight: 700;
@@ -194,7 +165,7 @@ defineEmits(['edit', 'delete']);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .user-card {
+  .master-card {
     transition-duration: 0.01ms !important;
   }
 }

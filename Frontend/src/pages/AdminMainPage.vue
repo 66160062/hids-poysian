@@ -44,7 +44,16 @@
 
       <div class="row q-col-gutter-md q-mb-md kpi-grid">
         <div class="col-6 col-md-3 card-stagger">
-          <q-card flat bordered class="stat-box relative-position overflow-hidden">
+          <q-card
+            flat
+            bordered
+            class="stat-box relative-position overflow-hidden cursor-pointer"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="openWorkList()"
+            @keyup.enter="openWorkList()"
+          >
             <div class="bg-blob blob-blue"></div>
             <q-avatar size="36px" class="bg-blue-1 text-blue q-mb-sm" style="border-radius: 8px;">
               <q-icon name="assignment_turned_in" size="20px" />
@@ -56,7 +65,16 @@
           </q-card>
         </div>
         <div class="col-6 col-md-3 card-stagger">
-          <q-card flat bordered class="stat-box relative-position overflow-hidden">
+          <q-card
+            flat
+            bordered
+            class="stat-box relative-position overflow-hidden cursor-pointer"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="openWorkList({ status: 'Active' })"
+            @keyup.enter="openWorkList({ status: 'Active' })"
+          >
             <div class="bg-blob blob-orange"></div>
             <div class="absolute-top-right q-pa-sm">
               <div class="orange-dot"></div>
@@ -71,7 +89,16 @@
           </q-card>
         </div>
         <div class="col-6 col-md-3 card-stagger">
-          <q-card flat bordered class="mini-card">
+          <q-card
+            flat
+            bordered
+            class="mini-card cursor-pointer"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="openWorkList({ jobType: 'home' })"
+            @keyup.enter="openWorkList({ jobType: 'home' })"
+          >
             <div class="row items-center q-mb-xs">
               <div class="dot-indicator bg-blue q-mr-sm"></div>
               <div class="text-grey-7" style="font-size: 13px;">{{ t('adminWork.main.homeInspectionJobs') }}</div>
@@ -90,7 +117,16 @@
           </q-card>
         </div>
         <div class="col-6 col-md-3 card-stagger">
-          <q-card flat bordered class="mini-card">
+          <q-card
+            flat
+            bordered
+            class="mini-card cursor-pointer"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="openWorkList({ jobType: 'construction' })"
+            @keyup.enter="openWorkList({ jobType: 'construction' })"
+          >
             <div class="row items-center q-mb-xs">
               <div class="dot-indicator bg-orange q-mr-sm"></div>
               <div class="text-grey-7" style="font-size: 13px;">{{ t('adminWork.main.constructionJobs') }}</div>
@@ -484,6 +520,13 @@ function openTaskDetail(task: TaskItem) {
   void router.push(`/admin/work/${prefix}/${task.jobId}`);
 }
 
+function openWorkList(extra: Record<string, string> = {}): void {
+  void router.push({
+    path: '/admin/work',
+    query: { ...(selectedBranchId.value === 'all' ? {} : { branchId: selectedBranchId.value }), ...extra },
+  });
+}
+
 function goToWorkList(): void {
   showTaskDialog.value = false;
   void router.push({
@@ -625,6 +668,13 @@ onMounted((): void => {
 }
 .full-height-card {
   height: 100%;
+}
+.stat-box.cursor-pointer,
+.mini-card.cursor-pointer {
+  user-select: none;
+  -webkit-user-select: none;
+  caret-color: transparent;
+  -webkit-tap-highlight-color: transparent;
 }
 .stat-box {
   border-radius: 16px;

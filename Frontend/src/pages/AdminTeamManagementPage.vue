@@ -11,10 +11,20 @@
         </div>
       </div>
 
-      <!-- KPI Summary Cards (3 Cards) -->
+      <!-- KPI Summary Cards (2 Cards) -->
       <div class="row q-col-gutter-sm q-mb-md">
-        <div class="col-4">
-          <q-card flat bordered class="kpi-card bg-white shadow-1">
+        <div class="col-6">
+          <q-card
+            flat
+            bordered
+            class="kpi-card bg-white shadow-1 cursor-pointer"
+            :class="{ 'kpi-card--active': selectedBranchId === null }"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="selectedBranchId = null"
+            @keyup.enter="selectedBranchId = null"
+          >
             <q-card-section class="q-pa-sm row items-center no-wrap">
               <q-avatar color="blue-1" text-color="primary" icon="groups" size="40px" />
               <div class="q-ml-sm">
@@ -25,19 +35,7 @@
           </q-card>
         </div>
 
-        <div class="col-4">
-          <q-card flat bordered class="kpi-card bg-white shadow-1">
-            <q-card-section class="q-pa-sm row items-center no-wrap">
-              <q-avatar color="teal-1" text-color="teal-9" icon="person" size="40px" />
-              <div class="q-ml-sm">
-                <div class="text-caption text-grey-7">{{ t('adminManage.teamManagement.kpiTotalMembers') }}</div>
-                <div class="text-h6 text-weight-bold text-dark">{{ totalMembersAssignedCount }}</div>
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-
-        <div class="col-4">
+        <div class="col-6">
           <q-card
             flat
             bordered
@@ -129,21 +127,9 @@
         </q-btn>
       </div>
 
-      <!-- Action Buttons Row: 50/50 balanced grid on mobile, inline right on desktop -->
+      <!-- Action Buttons Row: full width on mobile, inline right on desktop -->
       <div class="row q-col-gutter-xs q-mt-sm items-center justify-end">
-        <div class="col-6 col-sm-auto">
-          <q-btn
-            outline
-            color="indigo-8"
-            icon="business"
-            :label="t('adminManage.teamManagement.manageBranches')"
-            class="full-width action-btn-secondary"
-            no-caps
-            @click="openBranchManagement"
-          />
-        </div>
-
-        <div class="col-6 col-sm-auto">
+        <div class="col-12 col-sm-auto">
           <q-btn
             unelevated
             color="primary"
@@ -191,21 +177,6 @@
             @delete="confirmDelete"
           />
         </div>
-      </div>
-
-      <!-- Pagination Controls -->
-      <div class="row justify-center q-mt-lg q-pb-md" v-if="teamStore.teams.length > 0">
-        <q-pagination
-          v-model="currentPage"
-          :max="teamStore.meta.totalPages || 1"
-          :max-pages="5"
-          boundary-numbers
-          direction-links
-          color="primary"
-          active-color="primary"
-          active-text-color="white"
-          @update:model-value="loadTeams"
-        />
       </div>
     </div>
 
@@ -591,7 +562,6 @@ const isFormMode = ref(false);
 const isEditing = ref(false);
 const editTeamId = ref<number | null>(null);
 
-const currentPage = ref(1);
 const searchQuery = ref('');
 const selectedBranchId = ref<number | null>(null);
 
@@ -599,10 +569,6 @@ const allTeamsList = computed(() => (teamStore.allTeams.length > 0 ? teamStore.a
 const allUsersList = computed(() => (userStore.allUsers.length > 0 ? userStore.allUsers : userStore.users));
 
 const totalTeamsCount = computed(() => allTeamsList.value.length);
-
-const totalMembersAssignedCount = computed(() => {
-  return allTeamsList.value.reduce((acc, team) => acc + getTeamMembers(team.team_Id).length, 0);
-});
 
 const selectedTeamMembers = computed(() => {
   if (editTeamId.value === null) return [];
@@ -648,8 +614,7 @@ const unassignedInspectorOptions = computed(() => {
 const loadTeams = async () => {
   try {
     await teamStore.fetchTeams({
-      page: currentPage.value,
-      limit: 5,
+      all: true,
       search: searchQuery.value.trim() || undefined,
       branchId: selectedBranchId.value ?? undefined,
     });
@@ -663,13 +628,11 @@ let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 watch(searchQuery, () => {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => {
-    currentPage.value = 1;
     void loadTeams();
   }, 400);
 });
 
 watch(selectedBranchId, () => {
-  currentPage.value = 1;
   void loadTeams();
 });
 
@@ -1049,19 +1012,28 @@ function confirmDelete(team: Team) {
   transform: translateY(-2px);
 }
 
+.kpi-card.kpi-card--active {
+  outline: 2px solid var(--q-primary, #1976d2);
+  outline-offset: -1px;
+}
+
+.kpi-card:focus-visible {
+  outline: 2px solid var(--q-primary, #1976d2);
+  outline-offset: 2px;
+}
+
+.kpi-card.cursor-pointer {
+  user-select: none;
+  -webkit-user-select: none;
+  caret-color: transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .search-input {
   background: #ffffff;
   border-radius: 24px;
   padding: 4px 16px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-.action-btn-secondary {
-  height: 42px;
-  border-radius: 14px;
-  font-weight: 600;
-  background-color: #ffffff !important;
-  font-size: 13px;
 }
 
 .action-btn-primary {
@@ -1098,14 +1070,6 @@ function confirmDelete(team: Team) {
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
-}
-
-.card-stagger {
-  transition: transform 0.2s ease;
-}
-
-.card-stagger:hover {
-  transform: translateY(-2px);
 }
 
 .dialog-card {
