@@ -307,7 +307,7 @@
             size="sm"
             icon="map"
             :label="t('adminWork.createJob.searchGoogleMaps')"
-            @click="openGoogleMaps"
+            @click="showMapPicker = true"
             class="bg-white"
           />
         </div>
@@ -441,9 +441,48 @@
                 </q-list>
               </q-menu>
             </q-input>
+            <div class="row q-col-gutter-sm">
+              <div class="col-6">
+                <q-input
+                  v-model="form.latitude"
+                  dense
+                  filled
+                  clearable
+                  inputmode="decimal"
+                  :placeholder="t('adminWork.createJob.latitudePlaceholder')"
+                  class="custom-input"
+                  :rules="[
+                    (val) =>
+                      !val || !!toCoordinate(Number(val), 0) || t('adminWork.createJob.latitudeInvalid'),
+                  ]"
+                />
+              </div>
+              <div class="col-6">
+                <q-input
+                  v-model="form.longitude"
+                  dense
+                  filled
+                  clearable
+                  inputmode="decimal"
+                  :placeholder="t('adminWork.createJob.longitudePlaceholder')"
+                  class="custom-input"
+                  :rules="[
+                    (val) =>
+                      !val || !!toCoordinate(0, Number(val)) || t('adminWork.createJob.longitudeInvalid'),
+                  ]"
+                />
+              </div>
+            </div>
           </div>
         </q-card>
       </div>
+
+      <MapPickerDialog
+        v-model="showMapPicker"
+        :initial-coordinate="currentCoordinate"
+        :search-query="mapSearchQuery"
+        @confirm="onMapConfirmed"
+      />
 
       <!-- รายละเอียดของโครงการ -->
       <div class="section">
@@ -454,6 +493,7 @@
         <q-card flat bordered class="q-pa-md bg-white card-rounded">
           <div class="column input-group">
             <q-input
+              ref="projectNameInput"
               v-model="form.projectName"
               dense
               filled
@@ -462,6 +502,8 @@
               class="custom-input"
               maxlength="60"
               counter
+              :error="!!duplicateProjectName"
+              :error-message="duplicateProjectName ? t('adminWork.createJob.projectNameDuplicate') : undefined"
               :rules="[(val) => !!val || t('adminWork.createJob.projectNameRequired')]"
             />
             <q-input
@@ -623,6 +665,15 @@
     <!-- FOOTER BUTTONS               -->
     <!-- ============================= -->
     <div class="submit-footer">
+      <div v-if="showMissing && submitProblems.length" class="missing-panel q-mb-md" role="alert">
+        <div class="row items-center text-negative text-weight-bold q-mb-xs">
+          <q-icon name="warning" size="18px" class="q-mr-xs" />
+          {{ t('adminWork.createJob.missingTitle') }}
+        </div>
+        <ul class="q-my-none q-pl-lg text-negative text-body2">
+          <li v-for="problem in submitProblems" :key="problem">{{ problem }}</li>
+        </ul>
+      </div>
       <q-btn
         unelevated
         :label="isEditMode ? t('adminWork.createJob.save') : t('adminWork.createJob.createNew')"
@@ -636,7 +687,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
@@ -653,6 +704,13 @@ import { defaultPlanNames } from 'src/composables/useDefaultPlanName';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import type { HousePlan } from 'src/models';
 import ConfirmActionDialog from '../components/ConfirmActionDialog.vue';
+import MapPickerDialog from '../components/MapPickerDialog.vue';
+import {
+  formatCoordinate,
+  parseCoordinate,
+  toCoordinate,
+  type Coordinate,
+} from '../composables/useMapLocation';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 const getImageUrl = (path: string | null | undefined): string | null => {
@@ -798,6 +856,8 @@ const form = reactive({
   district: '',
   subDistrict: '',
   postalCode: '',
+  latitude: '',
+  longitude: '',
   usableArea: '',
   houseType: 1,
   projectImage: null as string | null,
@@ -935,30 +995,77 @@ const onAddressSelected = (address: ThaiAddress) => {
   Object.keys(showMenu).forEach((k) => (showMenu[k as keyof typeof showMenu] = false));
 };
 
-// ─── Google Maps ──────────────────────────────────────────────────────────
-const openGoogleMaps = () => {
-  const addressParts = [
+// ─── Map pin (Leaflet) ────────────────────────────────────────────────────
+const showMapPicker = ref(false);
+
+// ข้อความที่อยู่ที่กรอกไว้ ใช้ให้แผนที่เลื่อนไปยังบริเวณใกล้เคียงก่อนปักหมุด
+const mapSearchQuery = computed(() =>
+  [
     form.projectName,
-    form.houseNumber ? `${t('adminWork.createJob.houseNumberLabel')} ${form.houseNumber}` : '',
-    form.soi && form.soi !== '-' ? `${t('adminWork.createJob.soiLabel')} ${form.soi}` : '',
     form.subDistrict ? `ต.${form.subDistrict}` : '',
     form.district ? `อ.${form.district}` : '',
     form.province ? `จ.${form.province}` : '',
     form.postalCode || '',
-  ];
+  ]
+    .filter((part) => part)
+    .join(' '),
+);
 
-  const searchQuery = addressParts.filter((part) => part).join(' ');
+const currentCoordinate = computed(() =>
+  form.latitude.trim() && form.longitude.trim()
+    ? toCoordinate(Number(form.latitude), Number(form.longitude))
+    : null,
+);
 
-  if (searchQuery.trim() && (form.projectName || form.province)) {
-    const encodedQuery = encodeURIComponent(searchQuery);
-    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
-    window.open(mapsUrl, '_blank');
-  } else {
+const coordinateError = computed(() => {
+  const hasLat = !!form.latitude.trim();
+  const hasLng = !!form.longitude.trim();
+  if (!hasLat && !hasLng) return '';
+  if (hasLat !== hasLng) return t('adminWork.createJob.coordinateIncomplete');
+  if (!toCoordinate(Number(form.latitude), 0)) return t('adminWork.createJob.latitudeInvalid');
+  if (!toCoordinate(0, Number(form.longitude))) return t('adminWork.createJob.longitudeInvalid');
+  return '';
+});
+
+// ค่าที่ส่งไป backend: "lat,lng" หรือสตริงว่างถ้ายังไม่ได้ระบุพิกัด
+const locationCoordinateValue = computed(() =>
+  currentCoordinate.value ? formatCoordinate(currentCoordinate.value) : '',
+);
+
+const onMapConfirmed = ({
+  coordinate,
+  address,
+}: {
+  coordinate: Coordinate;
+  address: ThaiAddress | null;
+}) => {
+  form.latitude = coordinate.lat.toFixed(6);
+  form.longitude = coordinate.lng.toFixed(6);
+  if (!address) return;
+
+  // เติมเฉพาะช่องที่ว่าง และไม่เติมเลยถ้าช่องที่กรอกไว้แล้วขัดกับผลจากแผนที่
+  const fields = [
+    ['province', address.province],
+    ['district', address.amphoe],
+    ['subDistrict', address.district],
+    ['postalCode', String(address.zipcode)],
+  ] as const;
+  const conflicts = fields.some(([key, value]) => form[key] && form[key] !== value);
+  if (conflicts) return;
+
+  let filled = false;
+  for (const [key, value] of fields) {
+    if (!form[key]) {
+      form[key] = value;
+      filled = true;
+    }
+  }
+  if (filled) {
     $q.notify({
-      message: t('adminWork.createJob.enterProjectOrAddressFirst'),
-      color: 'warning',
+      message: t('adminWork.createJob.addressFilledFromMap'),
+      color: 'positive',
       position: 'top',
-      icon: 'warning',
+      icon: 'check_circle',
     });
   }
 };
@@ -1024,6 +1131,9 @@ onMounted(async () => {
     form.district = existing.address?.district || '';
     form.subDistrict = existing.address?.subDistrict || '';
     form.postalCode = existing.address?.postalCode || '';
+    const savedCoordinate = parseCoordinate(existing.locationCoordinate);
+    form.latitude = savedCoordinate ? String(savedCoordinate.lat) : '';
+    form.longitude = savedCoordinate ? String(savedCoordinate.lng) : '';
     form.customerName = existing.customer?.fullName || '';
     customerPhones.value = [
       existing.customer?.phoneNumber,
@@ -1085,49 +1195,51 @@ const handleFileChange = (e: Event) => {
 
 // ─── Submit ────────────────────────────────────────────────────────────────
 const isSubmitting = ref(false);
+const projectNameInput = ref<unknown>(null);
+const duplicateProjectName = ref('');
+watch(
+  () => form.projectName,
+  () => {
+    duplicateProjectName.value = '';
+  },
+);
+
+// HIDS ปิด toast ทั้งระบบ จึงสรุปสิ่งที่ขาด/ผิดไว้เหนือปุ่มบันทึก (footer เป็น sticky เห็นตลอด)
+// รายการจะอัปเดตสดตามที่กรอก และแสดงหลังกดบันทึกครั้งแรกเท่านั้น
+const showMissing = ref(false);
+const submitError = ref('');
+const submitProblems = computed(() => {
+  const problems: string[] = [];
+  if (submitError.value) problems.push(submitError.value);
+  const has = (v: string | number | null | undefined) => !!String(v ?? '').trim();
+  const tc = (key: string) => t(`adminWork.createJob.${key}`);
+
+  if (!selectedBranchId.value) problems.push(tc('missingBranch'));
+  if (!has(form.projectName)) problems.push(tc('missingProjectName'));
+  else if (duplicateProjectName.value)
+    problems.push(t('adminWork.createJob.projectNameDuplicate'));
+  if (!has(form.floor)) problems.push(tc('missingFloor'));
+  if (!has(form.usableArea)) problems.push(tc('missingUsableArea'));
+  if (coordinateError.value) problems.push(coordinateError.value);
+  if (!has(form.customerName)) problems.push(tc('missingCustomerName'));
+  if (!has(customerPhones.value[0])) problems.push(tc('missingCustomerPhone'));
+
+  const hasContractorInfo =
+    has(form.contractorFullName) ||
+    has(form.contractorPhoneNumber) ||
+    has(form.contractorEmail) ||
+    has(form.contractorCompanyName);
+  if (hasContractorInfo) {
+    if (!has(form.contractorFullName)) problems.push(tc('missingContractorName'));
+    if (!has(form.contractorPhoneNumber)) problems.push(tc('missingContractorPhone'));
+  }
+  return problems;
+});
 
 const onSubmit = async () => {
-  if (!selectedBranchId.value) {
-    $q.notify({ message: t('adminWork.createJob.selectBranchRequired'), color: 'negative', position: 'top' });
-    return;
-  }
-  // Validate project name always required
-  if (!form.projectName) {
-    $q.notify({
-      message: t('adminWork.createJob.projectNameRequired'),
-      color: 'negative',
-      position: 'top',
-      icon: 'warning',
-    });
-    return;
-  }
-
-  if (!form.customerName || !customerPhones.value[0]) {
-    $q.notify({
-      message: t('adminWork.createJob.customerNameAndPhoneRequired'),
-      color: 'negative',
-      position: 'top',
-      icon: 'warning',
-    });
-    return;
-  }
-
-  if (
-    form.contractorFullName ||
-    form.contractorPhoneNumber ||
-    form.contractorEmail ||
-    form.contractorCompanyName
-  ) {
-    if (!form.contractorFullName || !form.contractorPhoneNumber) {
-      $q.notify({
-        message: t('adminWork.createJob.contractorNameAndPhoneRequired'),
-        color: 'negative',
-        position: 'top',
-        icon: 'warning',
-      });
-      return;
-    }
-  }
+  showMissing.value = true;
+  submitError.value = '';
+  if (submitProblems.value.length) return;
 
   isSubmitting.value = true;
   $q.loading.show({
@@ -1138,6 +1250,14 @@ const onSubmit = async () => {
   });
 
   try {
+    // เช็คชื่อซ้ำก่อนสร้างลูกค้า/ที่อยู่/ผู้รับเหมา จะได้ไม่เหลือข้อมูลค้างเมื่อชื่อซ้ำ
+    if (await workStore.isProjectNameTaken(form.projectName, editId.value ?? undefined)) {
+      duplicateProjectName.value = form.projectName.trim();
+      const el = (projectNameInput.value as { $el?: HTMLElement } | null)?.$el;
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     const addressParts: string[] = [];
     if (form.houseNumber) addressParts.push(`${t('adminWork.createJob.houseNumberLabel')} ${form.houseNumber}`);
     if (form.soi && form.soi !== '-') addressParts.push(`${t('adminWork.createJob.soiLabel')} ${form.soi}`);
@@ -1202,7 +1322,7 @@ const onSubmit = async () => {
         jobFormData.append('houseTypeId', String(form.houseType));
         jobFormData.append('projectName', form.projectName);
         jobFormData.append('projectNameEn', form.projectNameEn);
-        jobFormData.append('locationCoordinate', '');
+        jobFormData.append('locationCoordinate', locationCoordinateValue.value);
         jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
         if (selectedBranchId.value) jobFormData.append('branchId', String(selectedBranchId.value));
         if (finalContractorId) jobFormData.append('contractorId', String(finalContractorId));
@@ -1285,7 +1405,7 @@ const onSubmit = async () => {
       jobFormData.append('houseTypeId', String(form.houseType));
       jobFormData.append('projectName', form.projectName);
       if (form.projectNameEn) jobFormData.append('projectNameEn', form.projectNameEn);
-      jobFormData.append('locationCoordinate', '');
+      jobFormData.append('locationCoordinate', locationCoordinateValue.value);
       jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
       jobFormData.append('status', 'Draft');
       if (selectedBranchId.value) jobFormData.append('branchId', String(selectedBranchId.value));
@@ -1320,7 +1440,16 @@ const onSubmit = async () => {
     }
   } catch (error) {
     console.error('Submit Failed', error);
-    $q.notify({ message: t('adminWork.createJob.saveError'), color: 'negative', position: 'top' });
+    const response = (error as { response?: { status?: number; data?: { message?: string | string[] } } }).response;
+    if (response?.status === 409) {
+      // backend ตอบ 409 เมื่อชื่อโครงการซ้ำ (ข้อความจาก server เป็นภาษาไทยอย่างเดียว จึงใช้ i18n แทน)
+      duplicateProjectName.value = form.projectName.trim();
+    } else {
+      const serverMessage = response?.data?.message;
+      submitError.value =
+        (Array.isArray(serverMessage) ? serverMessage.join(', ') : serverMessage) ||
+        t('adminWork.createJob.saveError');
+    }
   } finally {
     $q.loading.hide();
     isSubmitting.value = false;
@@ -1490,6 +1619,13 @@ const onSubmit = async () => {
   position: sticky;
   bottom: 0;
   z-index: 10;
+}
+
+.missing-panel {
+  background: #fdecea;
+  border: 1px solid #f5c2c0;
+  border-radius: 12px;
+  padding: 10px 14px;
 }
 
 .submit-btn {
