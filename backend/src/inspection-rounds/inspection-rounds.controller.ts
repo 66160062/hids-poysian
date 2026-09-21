@@ -101,10 +101,14 @@ export class InspectionRoundsController {
     return round;
   }
 
+  // แบบสรุปการตรวจขึ้นเป็นหน้าสรุปในเล่มรายงานด้วย (ดู ReportsService.computeDataHash) — ปกติ item
+  // แต่ละตัวสั่ง regenerate มาตั้งแต่ตอนกรอกแล้ว (ดู InspectionSummaryItemsController) ตรงนี้เป็นตาข่ายกันตกอีกชั้น
   @Patch(':id/confirm-summary')
   @UseGuards(RoundAccessGuard)
-  confirmSummary(@Param('id') id: string) {
-    return this.inspectionRoundsService.confirmSummary(+id);
+  async confirmSummary(@Param('id') id: string) {
+    const round = await this.inspectionRoundsService.confirmSummary(+id);
+    this.reportsService.scheduleRegeneration(+id);
+    return round;
   }
 
   @Patch(':id/submit')

@@ -302,7 +302,7 @@
           <div v-for="defect in chunk" :key="defect.defectId" class="defect-card">
             <div class="badge-id">#{{ defect.defectId }}</div>
             <div class="badge-main" style="background: #ef4444">{{ defect.severity }}</div>
-            <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image')" class="defect-img" />
+            <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image', 600)" class="defect-img" />
             <div class="card-body">
               <div class="room-title">{{ getRoomShortName(defect) }}</div>
               <div class="info-grid">
@@ -381,7 +381,7 @@
               >
                 {{ defect.severity }}
               </div>
-              <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image')" class="defect-img" />
+              <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image', 600)" class="defect-img" />
               <div class="card-body">
                 <div class="info-grid">
                   <span class="label">{{ t('reports.defect.jobTypeLabel') }}</span>
@@ -484,7 +484,7 @@
                 v-for="url in topic.photos"
                 :key="url"
                 loading="eager"
-                :src="resolveImageUrl(url)"
+                :src="resolveImageUrl(url, '', 400)"
                 class="summary-evidence-photo"
               />
               <span v-if="!topic.photos.length" class="summary-muted">{{ t('reports.defect.noEvidencePhotos') }}</span>
@@ -771,11 +771,22 @@ const LEGACY_IMAGE_REPLACEMENTS: Record<string, string> = {
     'https://wduuxuwwbesgrcmcsnxq.supabase.co/storage/v1/object/public/hids-uploads/defects/unknown2.jpg',
 };
 
-const resolveImageUrl = (url: string | null | undefined, placeholder = ''): string => {
+// ต้นฉบับใน Storage เก็บที่ 1920px ซึ่งใหญ่กว่าที่หน้านี้แสดงจริงหลายเท่า พอฝังลง PDF ที่มีรูป
+// หลายร้อยใบ ไฟล์จะทะลุเพดานอัปโหลดของ Storage จนสร้างรายงานไม่สำเร็จ — ส่ง width มาด้วยเพื่อขอ
+// รูปย่อจาก backend แทน (ดู ImagesController) ต้นฉบับยังอยู่ครบ แค่ไม่เอามาฝังในเล่ม
+const STORAGE_PUBLIC_PREFIX = '/storage/v1/object/public/';
+const resolveImageUrl = (
+  url: string | null | undefined,
+  placeholder = '',
+  width?: number,
+): string => {
   if (!url) return placeholder;
   const replacement = LEGACY_IMAGE_REPLACEMENTS[url];
-  if (replacement) return replacement;
-  return /^(https?:|data:|blob:)/.test(url) ? url : `${apiUrl}${url}`;
+  const resolved =
+    replacement ?? (/^(https?:|data:|blob:)/.test(url) ? url : `${apiUrl}${url}`);
+
+  if (!width || !resolved.includes(STORAGE_PUBLIC_PREFIX)) return resolved;
+  return `${apiUrl}/images/thumb?w=${width}&src=${encodeURIComponent(resolved)}`;
 };
 
 const props = withDefaults(
