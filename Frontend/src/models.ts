@@ -44,6 +44,7 @@ export interface InspectionRound {
     projectName: string;
     projectNameEn?: string | null;
     projectImageUrl: string;
+    locationCoordinate?: string | null;
     inspectionType: string;
     branch?: { branchId: number; branchName: string; phoneNumber: string; mailAddress: string;  facebook: string; line: string; logoUrl: string | null } | null;
     houseType: { name: string; nameEn?: string | null };

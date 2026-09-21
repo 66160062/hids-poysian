@@ -510,6 +510,7 @@ import DefectReport from 'src/components/DefectReport.vue';
 import PlanPositionDialog from 'src/components/PlanPositionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { useLocalizedField } from 'src/composables/useLocalizedField';
+import { buildGoogleMapsUrl, parseCoordinate } from 'src/composables/useMapLocation';
 import { defaultPlanNames } from 'src/composables/useDefaultPlanName';
 import { useInspectorJobEditDialog } from 'src/composables/useInspectorJobEditDialog';
 import { useContractorStore } from 'src/stores/useContractor';
@@ -798,6 +799,13 @@ const openGoogleMaps = () => {
   if (!jobData.value?.job) return;
   const job = jobData.value.job;
   const address = job.address;
+
+  // ถ้า admin ปักหมุดไว้ ให้ไปที่พิกัดนั้นตรงๆ
+  const pinned = parseCoordinate(job.locationCoordinate);
+  if (pinned) {
+    window.open(buildGoogleMapsUrl(pinned), '_blank');
+    return;
+  }
 
   const searchQueryParts = [
     job.projectName,

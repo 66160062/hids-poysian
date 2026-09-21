@@ -281,7 +281,14 @@ export class DailyReportsService {
         // 2. Clone non-verified defects from previous round
         const oldDefects = await manager.getRepository(Defect).find({
           where: { round: { roundId: latestRound.roundId } },
-          relations: ['room', 'subRoom', 'floor', 'subCategories', 'inspector'],
+          relations: [
+            'room',
+            'subRoom',
+            'floor',
+            'subCategories',
+            'inspector',
+            'plan',
+          ],
         });
 
         const defectsToClone = oldDefects.filter(
@@ -305,6 +312,11 @@ export class DailyReportsService {
               floor: d.floor,
               subCategories: d.subCategories,
               inspector: d.inspector,
+              // ตำแหน่งหมุดบนแปลนบ้าน — ต้อง clone มาด้วย ไม่งั้นพอขึ้นรอบใหม่หมุดจะหายจากแปลน
+              plan: d.plan,
+              planX: d.planX,
+              planY: d.planY,
+              locationZone: d.locationZone,
             }),
           );
           await manager

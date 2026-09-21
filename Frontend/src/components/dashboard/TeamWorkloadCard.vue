@@ -43,11 +43,11 @@
               <span class="text-weight-bold text-dark text-caption ellipsis" style="max-width: 140px;">{{ team.teamName }}</span>
             </div>
             <div class="row items-center q-gutter-x-sm text-caption">
-              <span class="text-primary text-weight-medium">{{ team.activeCount }} กำลังตรวจ</span>
+              <span class="text-primary text-weight-medium">{{ team.activeCount }} {{ t('adminWork.dashboard.teamActiveLabel') }}</span>
               <span class="text-grey-4">|</span>
-              <span class="text-positive text-weight-medium">{{ team.completedCount }} เสร็จสิ้น</span>
+              <span class="text-positive text-weight-medium">{{ team.completedCount }} {{ t('adminWork.dashboard.teamCompletedLabel') }}</span>
               <span class="text-grey-4">|</span>
-              <span class="text-weight-bold text-dark">{{ team.totalCount }} รวม</span>
+              <span class="text-weight-bold text-dark">{{ team.totalCount }} {{ t('adminWork.dashboard.teamTotalLabel') }}</span>
             </div>
           </div>
 
@@ -56,12 +56,12 @@
             <div
               class="bar-active"
               :style="{ width: `${getBarWidth(team.activeCount, maxTeamTotal)}%` }"
-              title="กำลังตรวจ"
+              :title="t('adminWork.dashboard.teamActiveLabel')"
             />
             <div
               class="bar-completed"
               :style="{ width: `${getBarWidth(team.completedCount, maxTeamTotal)}%` }"
-              title="เสร็จสิ้น"
+              :title="t('adminWork.dashboard.teamCompletedLabel')"
             />
           </div>
         </div>

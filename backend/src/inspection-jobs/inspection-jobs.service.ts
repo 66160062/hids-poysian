@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -33,10 +34,34 @@ export class InspectionJobsService {
     private readonly dataSource: DataSource,
   ) {}
 
+  /** ชื่อโครงการซ้ำกับงานอื่นหรือไม่ (ไม่สนตัวพิมพ์เล็ก/ใหญ่และช่องว่างหัวท้าย) */
+  async isProjectNameTaken(name: string, excludeJobId?: number) {
+    const trimmed = name?.trim();
+    if (!trimmed) return false;
+    const query = this.inspectionsRepo
+      .createQueryBuilder('job')
+      .where('LOWER(TRIM(job.projectName)) = LOWER(:name)', { name: trimmed });
+    if (excludeJobId) {
+      query.andWhere('job.jobId != :excludeJobId', { excludeJobId });
+    }
+    return (await query.getCount()) > 0;
+  }
+
+  private async assertProjectNameAvailable(
+    name: string,
+    excludeJobId?: number,
+  ) {
+    if (await this.isProjectNameTaken(name, excludeJobId)) {
+      throw new ConflictException(`มีงานชื่อ "${name.trim()}" อยู่แล้ว`);
+    }
+  }
+
   async create(
     createInspectionJobDto: CreateInspectionJobDto,
     userId?: number,
   ) {
+    await this.assertProjectNameAvailable(createInspectionJobDto.projectName);
+
     const customer = await this.customersRepo.findOneBy({
       customerId: createInspectionJobDto.customerId,
     });
@@ -335,8 +360,18 @@ export class InspectionJobsService {
     // Assign only scalar column fields — NOT relation IDs (those are handled above as relations)
     if (updateInspectionJobDto.inspectionType !== undefined)
       inspectionJob.inspectionType = updateInspectionJobDto.inspectionType;
-    if (updateInspectionJobDto.projectName !== undefined)
+    if (updateInspectionJobDto.projectName !== undefined) {
+      if (
+        updateInspectionJobDto.projectName.trim().toLowerCase() !==
+        inspectionJob.projectName?.trim().toLowerCase()
+      ) {
+        await this.assertProjectNameAvailable(
+          updateInspectionJobDto.projectName,
+          id,
+        );
+      }
       inspectionJob.projectName = updateInspectionJobDto.projectName;
+    }
     if (updateInspectionJobDto.projectNameEn !== undefined)
       inspectionJob.projectNameEn =
         updateInspectionJobDto.projectNameEn || null;

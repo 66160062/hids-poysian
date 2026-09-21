@@ -75,7 +75,7 @@
               <div class="row items-center no-wrap">
                 <span class="cat-dot q-mr-sm" :style="{ backgroundColor: cat.color || '#F97316' }"></span>
                 <span class="text-caption text-grey-8 ellipsis" style="max-width: 140px;">
-                  {{ cat.categoryName }}
+                  {{ pickLocalized(cat.categoryName, cat.categoryNameEn) }}
                 </span>
               </div>
               <div class="row items-center q-gutter-x-xs no-wrap">
@@ -94,12 +94,14 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { JobDefectCategoryItem } from 'src/types/dashboard';
+import { useLocalizedField } from 'src/composables/useLocalizedField';
 
 const props = defineProps<{
   categories?: JobDefectCategoryItem[] | undefined;
 }>();
 
 const { t } = useI18n();
+const { pickLocalized } = useLocalizedField();
 
 const circumference = 2 * Math.PI * 38; // ~238.76
 

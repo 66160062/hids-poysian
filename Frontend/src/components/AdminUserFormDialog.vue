@@ -151,34 +151,59 @@
               filled
               emit-value
               map-options
-              :disable="isEditing && !!(initialData.teamId || initialData.team?.team_Id)"
               :rules="[(val) => !!val || t('adminManage.userManagement.branchRequired') || 'กรุณาเลือกสาขา']"
               hide-bottom-space
             />
             <div
-              v-if="isEditing && !!(initialData.teamId || initialData.team?.team_Id)"
-              class="text-caption text-negative q-mt-xs row items-center"
+              v-if="isEditing && !!currentTeamName"
+              class="text-caption text-grey-6 q-mt-xs row items-center no-wrap"
             >
-              <q-icon name="lock" size="14px" class="q-mr-xs" />
-              ไม่สามารถเปลี่ยนสาขาได้เนื่องจากผู้ใช้นี้สังกัดทีมอยู่ (ต้องไปถอดผู้ใช้นี้ออกจากทีมในหน้าจัดการทีมก่อนจึงจะเปลี่ยนสาขาได้)
+              <q-icon name="info" size="14px" class="q-mr-xs" />
+              {{ t('components.adminUserFormDialog.branchChangeClearsTeam') }}
             </div>
           </div>
 
-          <!-- Current Team Status (Read-only for Editing) -->
+          <!-- Team Selection (Editing only) -->
           <div v-if="localForm.role !== 'admin' && isEditing">
             <div class="dialog-field-label">
               {{ t('components.adminUserFormDialog.team') || 'ทีม' }}
+              <span class="text-grey-5">({{ t('components.adminUserFormDialog.optional') }})</span>
             </div>
-            <div class="team-status-box row items-center justify-between q-pa-sm">
-              <div class="row items-center text-dark">
-                <q-icon name="groups" size="20px" class="q-mr-xs text-primary" />
-                <span class="text-weight-bold" style="font-size: 14px">
-                  {{ currentTeamName || 'ยังไม่มีทีม' }}
-                </span>
-              </div>
-              <div class="text-caption text-grey-6">
-                (จัดการสมาชิกได้ที่หน้าจัดการทีม)
-              </div>
+            <q-select
+              v-model="localForm.teamId"
+              :options="availableTeamOptions"
+              outlined
+              dense
+              filled
+              emit-value
+              map-options
+              :disable="!localForm.branchId"
+              hide-bottom-space
+            >
+              <template v-slot:prepend>
+                <q-icon name="groups" />
+              </template>
+            </q-select>
+            <div
+              v-if="!localForm.branchId"
+              class="text-caption text-grey-6 q-mt-xs row items-center no-wrap"
+            >
+              <q-icon name="info" size="14px" class="q-mr-xs" />
+              {{ t('components.adminUserFormDialog.teamSelectBranchFirst') }}
+            </div>
+            <div
+              v-else-if="teamChangeHint"
+              class="text-caption text-primary q-mt-xs row items-center no-wrap"
+            >
+              <q-icon name="swap_horiz" size="14px" class="q-mr-xs" />
+              {{ teamChangeHint }}
+            </div>
+            <div
+              v-else-if="availableTeamOptions.length <= 1"
+              class="text-caption text-grey-6 q-mt-xs row items-center no-wrap"
+            >
+              <q-icon name="info" size="14px" class="q-mr-xs" />
+              {{ t('components.adminUserFormDialog.teamNoOptions') }}
             </div>
           </div>
         </q-form>
@@ -245,13 +270,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Cropper } from 'vue-advanced-cropper';
 import 'vue-advanced-cropper/dist/style.css';
 import type { User } from 'src/models';
 
 const { t } = useI18n();
+
+// backend ตีความ teamId = 0 ว่า "ไม่สังกัดทีม" (multipart ส่ง null ตรงๆ ไม่ได้)
+const NO_TEAM_ID = 0;
 
 const getImageUrl = (url?: string | null) => {
   if (!url) return '';
@@ -296,8 +324,41 @@ const emit = defineEmits(['update:modelValue', 'save']);
 
 const localForm = ref<Partial<User>>({});
 const profileImageFile = ref<File | null>(null);
+// กันไม่ให้ watcher ของสาขาไปล้างทีมตอนเปิด dialog (ค่ายังไหลเข้าฟอร์มอยู่)
+const isHydrating = ref(false);
 
 const currentTeamName = computed(() => props.initialData.team?.team_name || '');
+const initialTeamId = computed(
+  () => props.initialData.teamId ?? props.initialData.team?.team_Id ?? NO_TEAM_ID,
+);
+
+// ทีมผูกกับสาขา จึงให้เลือกได้เฉพาะทีมในสาขาที่เลือกอยู่ (ทีมที่ยังไม่สังกัดสาขาเลือกได้เสมอ)
+const availableTeamOptions = computed<Option[]>(() => {
+  const branchId = localForm.value.branchId ?? null;
+  const teams = props.teamOptions.filter(
+    (opt) =>
+      opt.value !== NO_TEAM_ID &&
+      (opt.branchId == null || branchId == null || opt.branchId === branchId),
+  );
+  // ทีมปัจจุบันของผู้ใช้ต้องอยู่ในลิสต์เสมอ กันกรณีข้อมูลสาขาไม่ตรงกัน
+  const currentId = localForm.value.teamId;
+  if (currentId && !teams.some((opt) => opt.value === currentId)) {
+    const current = props.teamOptions.find((opt) => opt.value === currentId);
+    if (current) teams.unshift(current);
+  }
+  return [{ label: t('components.adminUserFormDialog.noTeam'), value: NO_TEAM_ID }, ...teams];
+});
+
+const teamChangeHint = computed(() => {
+  if (!props.isEditing) return '';
+  const selectedId = localForm.value.teamId ?? NO_TEAM_ID;
+  if (selectedId === initialTeamId.value) return '';
+  if (selectedId === NO_TEAM_ID) {
+    return t('components.adminUserFormDialog.teamRemoveHint', { team: currentTeamName.value });
+  }
+  const target = props.teamOptions.find((opt) => opt.value === selectedId);
+  return t('components.adminUserFormDialog.teamMoveHint', { team: target?.label || '' });
+});
 
 // ไฟล์ที่เพิ่งเลือกจากเครื่อง รอเข้ากระบวนการตัดกรอบ ก่อนกลายเป็น profileImageFile จริง
 const pickedProfileImageFile = ref<File | null>(null);
@@ -320,11 +381,13 @@ watch(
   () => props.modelValue,
   (val) => {
     if (val) {
+      isHydrating.value = true;
       if (props.isEditing) {
         const initialBranchId = props.initialData.branchId ?? props.initialData.team?.branchId ?? null;
         localForm.value = {
           ...props.initialData,
           branchId: initialBranchId,
+          teamId: initialTeamId.value,
           password: '',
         };
       } else {
@@ -341,6 +404,9 @@ watch(
       }
       profileImageFile.value = null;
       pickedProfileImageFile.value = null;
+      void nextTick(() => {
+        isHydrating.value = false;
+      });
     }
   },
 );
@@ -350,7 +416,21 @@ watch(
   () => localForm.value.role,
   (newRole) => {
     if (newRole === 'admin') {
-      localForm.value.teamId = undefined;
+      localForm.value.teamId = NO_TEAM_ID;
+    }
+  },
+);
+
+// ย้ายสาขาแล้วทีมเดิมของสาขาก่อนหน้าใช้ไม่ได้ ต้องถอดออกให้เลือกทีมใหม่
+watch(
+  () => localForm.value.branchId,
+  (newBranchId, oldBranchId) => {
+    if (isHydrating.value || newBranchId === oldBranchId) return;
+    const selectedId = localForm.value.teamId;
+    if (!selectedId) return;
+    const selected = props.teamOptions.find((opt) => opt.value === selectedId);
+    if (selected && selected.branchId != null && selected.branchId !== newBranchId) {
+      localForm.value.teamId = NO_TEAM_ID;
     }
   },
 );
@@ -490,11 +570,6 @@ const onSave = () => {
 .dialog-btn--cancel {
   border: 1px solid #e3e6ea;
   background-color: #ffffff;
-}
-.team-status-box {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
 }
 
 @media (max-width: 599px) {

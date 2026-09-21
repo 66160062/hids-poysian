@@ -611,7 +611,7 @@
             borderless
             dense
             v-model="selectedTeam"
-            :options="teamStore.teamOptions"
+            :options="branchTeamOptions"
             :placeholder="t('adminJobs.inspection.searchTeamPlaceholder')"
             class="custom-select"
             popup-content-class="custom-dropdown-popup"
@@ -732,6 +732,7 @@ import DefectReport from '../components/DefectReport.vue';
 import ConfirmActionDialog from '../components/ConfirmActionDialog.vue';
 import PlanPositionDialog from '../components/PlanPositionDialog.vue';
 import { useLocalizedField } from 'src/composables/useLocalizedField';
+import { buildGoogleMapsUrl, parseCoordinate } from 'src/composables/useMapLocation';
 import { useJobStatus, roundStatusCode, jobStatusCode } from 'src/composables/useJobStatus';
 
 const { t, locale } = useI18n();
@@ -762,10 +763,12 @@ interface AddressEntity {
 
 interface JobApiResponse {
   jobId: number;
+  branchId?: number | null;
   projectName: string;
   projectNameEn?: string | null;
   usableArea: number;
   projectImageUrl?: string;
+  locationCoordinate?: string | null;
   inspectionType?: string;
   customer?: { fullName?: string; phoneNumber?: string; phoneNumber2?: string; phoneNumber3?: string; email?: string; email2?: string; email3?: string; lineId?: string };
   contractor?: { fullName?: string; phoneNumber?: string; email?: string; companyName?: string };
@@ -1107,7 +1110,7 @@ async function loadPageData() {
       fetchJobDetails(),
       fetchTeamMembers(),
       fetchHousePlans(),
-      teamStore.fetchTeams(), // ดึงข้อมูลทีม
+      teamStore.fetchAllTeams(), // ดึงข้อมูลทีมทั้งหมดไว้กรองตามสาขาของงาน
     ]);
     const rounds = await fetchRounds();
     applyRounds(rounds);
@@ -1302,6 +1305,14 @@ const onEdit = async () => {
 
 const openGoogleMaps = () => {
   if (!jobData.value) return;
+
+  // ถ้าปักหมุดไว้ ให้ไปที่พิกัดนั้นตรงๆ
+  const pinned = parseCoordinate(jobData.value.locationCoordinate);
+  if (pinned) {
+    window.open(buildGoogleMapsUrl(pinned), '_blank');
+    return;
+  }
+
   const projectName = jobData.value.projectName || '';
   const addr = jobData.value.address;
 
@@ -1423,6 +1434,17 @@ const selectedTeam = ref<number | null>(null);
 const selectedInspectors = ref<{ label: string; value: number }[]>([]);
 
 const teamStore = useTeamStore();
+
+// ทีมที่เลือกได้ต้องอยู่สาขาเดียวกับงาน (งานที่ไม่ระบุสาขาเลือกได้ทุกทีม)
+const branchTeamOptions = computed(() => {
+  const jobBranchId = jobData.value?.branchId ?? null;
+  return teamStore.allTeams
+    .filter(
+      (team) =>
+        jobBranchId === null || team.branchId === jobBranchId || team.team_Id === selectedTeam.value,
+    )
+    .map((team) => ({ label: team.team_name, value: team.team_Id }));
+});
 
 // Predefined inspector options list
 const inspectorOptions = computed(() => {

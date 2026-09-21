@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useLocalizedField } from 'src/composables/useLocalizedField';
+import { buildGoogleMapsUrl, parseCoordinate } from 'src/composables/useMapLocation';
 
 interface PropertyItem {
   roundId: number;
@@ -11,6 +12,7 @@ interface PropertyItem {
     projectName: string;
     projectNameEn?: string | null;
     projectImageUrl?: string;
+    locationCoordinate?: string | null;
     inspectionType?: string;
     address?: {
       houseNumber?: string;
@@ -52,6 +54,13 @@ const openGoogleMaps = () => {
 
   const job = props.item.job;
   const address = job.address;
+
+  // ถ้า admin ปักหมุดไว้ ให้ไปที่พิกัดนั้นตรงๆ
+  const pinned = parseCoordinate(job.locationCoordinate);
+  if (pinned) {
+    window.open(buildGoogleMapsUrl(pinned), '_blank');
+    return;
+  }
 
   // รวมข้อมูลที่อยู่ทั้งหมดเพื่อใช้ค้นหา
   const searchQueryParts = [

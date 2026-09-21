@@ -19,6 +19,11 @@ export class InspectionSummaryItem {
   @JoinColumn({ name: 'round_id' })
   round!: InspectionRound;
 
+  // ได้ roundId มาโดยไม่ต้อง join round ทั้งก้อน — controller ใช้สั่ง regenerate PDF ตอนแก้/ลบ
+  // item รายตัว ซึ่ง service ไม่ได้โหลด relation round มาให้ (ดู InspectionSummaryItemsController)
+  @RelationId((item: InspectionSummaryItem) => item.round)
+  roundId?: number;
+
   @ManyToOne(() => SummaryTemplate)
   @JoinColumn({ name: 'template_id' })
   template!: SummaryTemplate;

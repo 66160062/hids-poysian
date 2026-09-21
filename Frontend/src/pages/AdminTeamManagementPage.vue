@@ -466,6 +466,8 @@
                   option-value="value"
                   emit-value
                   map-options
+                  use-input
+                  input-debounce="0"
                   outlined
                   dense
                   filled
@@ -473,7 +475,16 @@
                   :label="t('adminManage.teamManagement.addMemberLabel')"
                   hide-bottom-space
                   :loading="userStore.isLoading"
+                  @filter="onFilterMember"
                 >
+                  <template #option="scope">
+                    <q-item v-bind="scope.itemProps">
+                      <q-item-section>
+                        <q-item-label>{{ scope.opt.label }}</q-item-label>
+                        <q-item-label caption>{{ scope.opt.caption }}</q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
                   <template #no-option>
                     <q-item>
                       <q-item-section class="text-grey-6">{{ t('adminManage.teamManagement.noAvailableInspectors') }}</q-item-section>
@@ -626,21 +637,29 @@ const selectedTeamMembers = computed(() => {
 });
 
 const newMemberId = ref<number | null>(null);
+const memberSearch = ref('');
+const onFilterMember = (val: string, update: (fn: () => void) => void) => {
+  update(() => {
+    memberSearch.value = val.trim().toLowerCase();
+  });
+};
+// เลือกได้เฉพาะผู้ตรวจสอบในสาขาเดียวกับทีม (ยกเว้นคนที่อยู่ทีมนี้แล้ว) — ถ้าคนนั้นมีทีมอยู่จะมี dialog ยืนยันการย้ายตอนกดเพิ่ม
 const availableInspectorOptions = computed(() => {
   const currentBranchId = localForm.value.branchId;
   return allUsersList.value
     .filter((u) => {
       if (u.role !== 'inspector') return false;
-      // ต้องไม่มีสังกัดทีมใดๆ เท่านั้น
-      if (u.teamId ?? u.team?.team_Id) return false;
-      // ต้องอยู่สาขาเดียวกันกับทีม
-      if (currentBranchId) {
-        const uBranchId = u.branchId ?? u.branch?.branchId;
-        if (uBranchId !== currentBranchId) return false;
-      }
-      return true;
+      if ((u.teamId ?? u.team?.team_Id) === editTeamId.value) return false;
+      // สาขาของผู้ใช้ที่อยู่ในทีมแล้วอาจไม่ถูกบันทึกบนตัวผู้ใช้ ให้ใช้สาขาของทีมเป็น fallback
+      const uBranchId = u.branchId ?? u.branch?.branchId ?? u.team?.branchId ?? null;
+      if (currentBranchId && uBranchId !== currentBranchId) return false;
+      return !memberSearch.value || u.fullName.toLowerCase().includes(memberSearch.value);
     })
-    .map((u) => ({ label: u.fullName, value: u.id }));
+    .map((u) => ({
+      label: u.fullName,
+      value: u.id,
+      caption: u.team?.team_name || t('adminManage.teamManagement.memberOptionNoTeam'),
+    }));
 });
 
 const newTeamMemberIds = ref<number[]>([]);
@@ -811,12 +830,7 @@ const getTeamMembers = (teamId: number) => {
   return allUsersList.value.filter((user) => user.teamId === teamId || user.team?.team_Id === teamId);
 };
 
-const addMember = () => {
-  if (!newMemberId.value || editTeamId.value === null) return;
-  const targetTeam = teamStore.teams.find((t) => t.team_Id === editTeamId.value);
-  const inspector = userStore.users.find((u) => u.id === newMemberId.value);
-  if (!inspector || !targetTeam) return;
-
+const doAddMember = (inspector: User, targetTeam: Team) => {
   $q.loading.show({ message: t('adminManage.teamManagement.addingMember') });
   userStore
     .updateUser(inspector.id, {
@@ -839,6 +853,40 @@ const addMember = () => {
     .finally(() => {
       $q.loading.hide();
     });
+};
+
+const addMember = () => {
+  if (!newMemberId.value || editTeamId.value === null) return;
+  const targetTeam = allTeamsList.value.find((tm) => tm.team_Id === editTeamId.value);
+  const inspector = allUsersList.value.find((u) => u.id === newMemberId.value);
+  if (!inspector || !targetTeam) return;
+
+  const currentTeamId = inspector.teamId ?? inspector.team?.team_Id;
+  if (!currentTeamId) {
+    doAddMember(inspector, targetTeam);
+    return;
+  }
+
+  // มีทีมอยู่แล้ว → ขอยืนยันการย้ายทีมก่อน
+  const oldTeamName =
+    inspector.team?.team_name ||
+    allTeamsList.value.find((tm) => tm.team_Id === currentTeamId)?.team_name ||
+    t('adminManage.teamManagement.previousTeamFallback');
+  $q.dialog({
+    component: ConfirmActionDialog,
+    componentProps: {
+      title: t('adminManage.teamManagement.moveTeamTitle'),
+      message: t('adminManage.teamManagement.moveTeamMessage', {
+        name: inspector.fullName,
+        oldTeam: oldTeamName,
+        newTeam: targetTeam.team_name,
+      }),
+      confirmLabel: t('adminManage.teamManagement.moveTeamConfirmLabel'),
+      cancelLabel: t('adminManage.teamManagement.cancelLabel'),
+      color: 'primary',
+      icon: 'swap_horiz',
+    },
+  }).onOk(() => doAddMember(inspector, targetTeam));
 };
 
 const confirmRemoveMember = (user: User) => {
@@ -932,6 +980,7 @@ function openCreateForm() {
   localForm.value = { team_name: '', logo_url: '', contact_info: '', branchId: null };
   newTeamMemberIds.value = [];
   newMemberId.value = null;
+  memberSearch.value = '';
   isFormMode.value = true;
 }
 
@@ -947,6 +996,7 @@ function openEditForm(team: Team) {
   };
   newTeamMemberIds.value = [];
   newMemberId.value = null;
+  memberSearch.value = '';
   isFormMode.value = true;
 }
 

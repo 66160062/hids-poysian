@@ -62,6 +62,7 @@ export interface MonthlyTrendItem {
 export interface JobDefectCategoryItem {
   categoryId: number;
   categoryName: string;
+  categoryNameEn?: string | null;
   count: number;
   percentage: number;
   color?: string;

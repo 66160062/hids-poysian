@@ -428,9 +428,12 @@ const logout = () => {
       color: 'negative',
     },
   }).onOk(() => {
+    // Clear auth state (store + storage) before redirecting, otherwise the
+    // router guard still sees a token and bounces back to the role home.
+    authStore.logout();
     localStorage.clear();
     sessionStorage.clear();
-    void router.push('/login');
+    void router.replace('/login');
     $q.notify({
       message: t('inspector.profile.notifyLogoutSuccess'),
       color: 'info',

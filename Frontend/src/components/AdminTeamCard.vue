@@ -78,7 +78,7 @@
     <q-card-actions class="row items-center q-px-md q-py-sm">
       <div class="row q-gutter-x-sm">
         <q-badge color="grey-2" text-color="grey-8" class="tag-badge">
-          <q-icon name="tag" size="14px" class="q-mr-xs" /> #{{ team.team_Id }}
+          #{{ team.team_Id }}
         </q-badge>
         <q-badge v-if="team.branch?.branchName" color="blue-1" text-color="blue-9" class="tag-badge">
           <q-icon name="store" size="14px" class="q-mr-xs" /> {{ team.branch.branchName }}

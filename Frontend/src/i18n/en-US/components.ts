@@ -1,4 +1,19 @@
 export default {
+  mapPicker: {
+    title: 'Pin Project Location',
+    searchPlaceholder: 'Search for a place or address',
+    hint: 'Tap the map to drop a pin, or drag the pin to adjust (zoom in for accuracy)',
+    selected: 'Selected coordinates',
+    noPin: 'No pin placed yet',
+    cancel: 'Cancel',
+    confirm: 'Confirm Location',
+    layerMap: 'Map',
+    layerSatellite: 'Satellite',
+    notFound: 'No matching place found',
+    searchError: 'Search failed, please try again',
+    addressLookupFailed:
+      'Could not look up the address from the pin. Only the coordinates were saved; please fill in the address manually',
+  },
   planPosition: {
     viewButton: 'View position on plan',
     viewTitle: 'Plan Position',
@@ -183,6 +198,12 @@ export default {
     roleRequired: 'Please select a role',
     team: 'Team',
     teamRequired: 'Please select a team',
+    noTeam: 'No team',
+    teamSelectBranchFirst: 'Select a branch first to choose a team',
+    teamNoOptions: 'No teams in this branch yet',
+    teamMoveHint: 'Will be moved to "{team}" when you save',
+    teamRemoveHint: 'Will be removed from "{team}" when you save',
+    branchChangeClearsTeam: 'Changing the branch removes the user from their current team',
     cancel: 'Cancel',
     save: 'Save',
     cropTitle: 'Crop Profile Picture',

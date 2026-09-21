@@ -24,26 +24,39 @@ import { ReplaceRoundSummaryItemsDto } from './dto/replace-round-summary-items.d
 import { RoundAccessGuard } from 'src/auth/round-access.guard';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { SummaryItemAccessGuard } from './guards/summary-item-access.guard';
+import { ReportsService } from 'src/reports/reports.service';
 
 @Controller('inspection-summary-items')
 export class InspectionSummaryItemsController {
   constructor(
     private readonly inspectionSummaryItemsService: InspectionSummaryItemsService,
+    private readonly reportsService: ReportsService,
   ) {}
+
+  // แบบสรุปการตรวจขึ้นเป็นหน้าสรุปในเล่มรายงาน (ดู summaryPages ใน DefectReport.vue) และช่างกรอกมัน
+  // "หลัง" กดยืนยันผลตรวจ ซึ่งเป็นจังหวะที่ PDF ถูก render ไปแล้ว — ถ้าไม่สั่ง regenerate ตรงนี้
+  // ไฟล์ที่แนบไปกับอีเมลอนุมัติจะเป็นเล่มที่ไม่มีหน้าสรุป (ดู ReportsService.computeDataHash)
+  // ตัว ReportsService debounce + เช็ค hash ให้เองอยู่แล้ว เรียกถี่แค่ไหนก็ไม่ render ซ้ำโดยเปล่าประโยชน์
+  private scheduleReportRefresh(roundId: number | null | undefined): void {
+    if (!roundId) return;
+    this.reportsService.scheduleRegeneration(roundId);
+  }
 
   @Post()
   @UseGuards(AuthGuard)
-  create(
+  async create(
     @Body() createInspectionSummaryItemDto: CreateInspectionSummaryItemDto,
   ) {
-    return this.inspectionSummaryItemsService.create(
+    const item = await this.inspectionSummaryItemsService.create(
       createInspectionSummaryItemDto,
     );
+    this.scheduleReportRefresh(createInspectionSummaryItemDto.roundId);
+    return item;
   }
 
   @Post('photo')
   @UseInterceptors(FileInterceptor('file'))
-  uploadPhoto(
+  async uploadPhoto(
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -55,7 +68,12 @@ export class InspectionSummaryItemsController {
     file: Express.Multer.File,
     @Body() dto: CreateInspectionSummaryItemPhotoDto,
   ) {
-    return this.inspectionSummaryItemsService.createPhotoItem(file, dto);
+    const item = await this.inspectionSummaryItemsService.createPhotoItem(
+      file,
+      dto,
+    );
+    this.scheduleReportRefresh(dto.roundId);
+    return item;
   }
 
   @Get()
@@ -72,14 +90,16 @@ export class InspectionSummaryItemsController {
 
   @Put('round/:roundId')
   @UseGuards(RoundAccessGuard)
-  replaceForRound(
+  async replaceForRound(
     @Param('roundId', ParseIntPipe) roundId: number,
     @Body() dto: ReplaceRoundSummaryItemsDto,
   ) {
-    return this.inspectionSummaryItemsService.replaceForRound(
+    const items = await this.inspectionSummaryItemsService.replaceForRound(
       roundId,
       dto.items,
     );
+    this.scheduleReportRefresh(roundId);
+    return items;
   }
 
   @Get(':id')
@@ -90,37 +110,47 @@ export class InspectionSummaryItemsController {
 
   @Patch(':id')
   @UseGuards(SummaryItemAccessGuard)
-  update(
+  async update(
     @Param('id') id: string,
     @Body() updateInspectionSummaryItemDto: UpdateInspectionSummaryItemDto,
   ) {
-    return this.inspectionSummaryItemsService.update(
+    const item = await this.inspectionSummaryItemsService.update(
       +id,
       updateInspectionSummaryItemDto,
     );
+    this.scheduleReportRefresh(item.roundId);
+    return item;
   }
 
   @Delete('round/:roundId')
   @UseGuards(RoundAccessGuard)
-  deleteByRound(@Param('roundId', ParseIntPipe) roundId: number) {
-    return this.inspectionSummaryItemsService.deleteByRound(roundId);
+  async deleteByRound(@Param('roundId', ParseIntPipe) roundId: number) {
+    const result =
+      await this.inspectionSummaryItemsService.deleteByRound(roundId);
+    this.scheduleReportRefresh(roundId);
+    return result;
   }
 
   @Delete('round/:roundId/template/:templateId')
   @UseGuards(RoundAccessGuard)
-  deleteByRoundAndTemplate(
+  async deleteByRoundAndTemplate(
     @Param('roundId', ParseIntPipe) roundId: number,
     @Param('templateId', ParseIntPipe) templateId: number,
   ) {
-    return this.inspectionSummaryItemsService.deleteByRoundAndTemplate(
-      roundId,
-      templateId,
-    );
+    const result =
+      await this.inspectionSummaryItemsService.deleteByRoundAndTemplate(
+        roundId,
+        templateId,
+      );
+    this.scheduleReportRefresh(roundId);
+    return result;
   }
 
   @Delete(':id')
   @UseGuards(SummaryItemAccessGuard)
-  remove(@Param('id') id: string) {
-    return this.inspectionSummaryItemsService.remove(+id);
+  async remove(@Param('id') id: string) {
+    const item = await this.inspectionSummaryItemsService.remove(+id);
+    this.scheduleReportRefresh(item.roundId);
+    return item;
   }
 }
