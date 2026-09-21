@@ -113,6 +113,21 @@ export class InspectionJobsController {
     );
   }
 
+  @Get('check-name')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'ตรวจสอบชื่อโครงการซ้ำ' })
+  async checkName(
+    @Query('name') name?: string,
+    @Query('excludeId') excludeId?: string,
+  ) {
+    return {
+      taken: await this.inspectionJobsService.isProjectNameTaken(
+        name ?? '',
+        excludeId ? Number(excludeId) : undefined,
+      ),
+    };
+  }
+
   @Get(':id/contractor-share')
   @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'สถานะลิงก์แชร์สำหรับผู้รับเหมา' })

@@ -158,6 +158,13 @@ export const useWorkListStore = defineStore('workList', () => {
     }
   };
 
+  const isProjectNameTaken = async (name: string, excludeId?: number) => {
+    const response = await api.get<{ taken: boolean }>('/inspection-jobs/check-name', {
+      params: { name, excludeId },
+    });
+    return response.data.taken;
+  };
+
   const removeJob = async (id: number) => {
     try {
       await api.delete(`/inspection-jobs/${id}`);
@@ -178,5 +185,5 @@ export const useWorkListStore = defineStore('workList', () => {
     }
   };
 
-  return { works, statusMeta, meta, absoluteJobCounts, isLoading, fetchJobs, fetchJobById, fetchStatusMeta, fetchAbsoluteJobCounts, createJob, removeJob, updateJob };
+  return { works, statusMeta, meta, absoluteJobCounts, isLoading, fetchJobs, fetchJobById, fetchStatusMeta, fetchAbsoluteJobCounts, createJob, removeJob, updateJob, isProjectNameTaken };
 });
