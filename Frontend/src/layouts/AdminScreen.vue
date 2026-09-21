@@ -184,7 +184,10 @@ watch(locale, () => {
   display: none;
 }
 
+/* ทุกช่องกว้างเท่ากันไม่ว่า label ยาวแค่ไหน (flex-basis 0 ไม่ใช้ความกว้างเนื้อหา) */
 .admin-menu-tab {
+  flex: 1 1 0;
+  min-width: 0;
   padding: 0 4px;
   cursor: pointer;
   transition: color 0.2s ease;
@@ -199,8 +202,15 @@ watch(locale, () => {
 }
 
 .tab-label {
+  width: 100%;
   text-align: center;
-  white-space: nowrap;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* Page Transition Animations */

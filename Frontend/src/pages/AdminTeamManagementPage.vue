@@ -18,12 +18,12 @@
             flat
             bordered
             class="kpi-card bg-white shadow-1 cursor-pointer"
-            :class="{ 'kpi-card--active': selectedBranchId === null }"
+            :class="{ 'kpi-card--active': viewMode === 'teams' && selectedBranchId === null }"
             v-ripple
             tabindex="0"
             role="button"
-            @click="selectedBranchId = null"
-            @keyup.enter="selectedBranchId = null"
+            @click="showTeamsView"
+            @keyup.enter="showTeamsView"
           >
             <q-card-section class="q-pa-sm row items-center no-wrap">
               <q-avatar color="blue-1" text-color="primary" icon="groups" size="40px" />
@@ -39,8 +39,13 @@
           <q-card
             flat
             bordered
-            class="kpi-card bg-white shadow-1 cursor-pointer ripple"
-            @click="openBranchManagement"
+            class="kpi-card bg-white shadow-1 cursor-pointer"
+            :class="{ 'kpi-card--active': viewMode === 'branches' }"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="showBranchesView"
+            @keyup.enter="showBranchesView"
           >
             <q-card-section class="q-pa-sm row items-center no-wrap">
               <q-avatar color="deep-purple-1" text-color="deep-purple-9" icon="business" size="40px" />
@@ -60,7 +65,11 @@
           dense
           borderless
           rounded
-          :placeholder="t('adminManage.teamManagement.searchPlaceholder')"
+          :placeholder="
+            viewMode === 'branches'
+              ? t('adminManage.teamManagement.searchBranchPlaceholder')
+              : t('adminManage.teamManagement.searchPlaceholder')
+          "
           class="col search-input"
           hide-bottom-space
         >
@@ -74,6 +83,7 @@
 
         <!-- Round Tune Filter Button -->
         <q-btn
+          v-if="viewMode === 'teams'"
           round
           unelevated
           :color="selectedBranchId !== null ? 'primary' : 'white'"
@@ -134,17 +144,24 @@
             unelevated
             color="primary"
             icon="add"
-            :label="t('adminManage.teamManagement.addNewTeam')"
+            :label="
+              viewMode === 'branches'
+                ? t('adminManage.branchManagement.addBranch')
+                : t('adminManage.teamManagement.addNewTeam')
+            "
             class="full-width action-btn-primary shadow-1"
             no-caps
-            @click="openCreateForm"
+            @click="viewMode === 'branches' ? openBranchForm() : openCreateForm()"
           />
         </div>
       </div>
     </div>
 
     <!-- Active Filter Removers (if needed) -->
-    <div v-if="selectedBranchId !== null" class="row items-center q-gutter-x-sm q-px-md q-my-xs">
+    <div
+      v-if="viewMode === 'teams' && selectedBranchId !== null"
+      class="row items-center q-gutter-x-sm q-px-md q-my-xs"
+    >
       <span class="text-caption text-grey-7 q-mr-xs">{{ t('adminManage.teamManagement.filteringLabel') }}</span>
       <q-chip
         removable
@@ -159,7 +176,55 @@
     </div>
 
     <!-- Main Content Grid -->
-    <div class="q-px-md q-pt-sm q-pb-md">
+    <div v-if="viewMode === 'branches'" class="q-px-md q-pt-sm q-pb-md">
+      <div v-if="filteredBranches.length === 0" class="text-center q-py-xl text-grey-6">
+        <q-icon name="business" size="64px" class="q-mb-md" />
+        <div>{{ t('adminManage.teamManagement.noBranchesFound') }}</div>
+      </div>
+      <div v-else class="row q-col-gutter-md">
+        <div v-for="branch in filteredBranches" :key="branch.branchId" class="col-12 col-sm-6 col-md-4 card-stagger">
+          <q-card
+            flat
+            bordered
+            tabindex="0"
+            role="button"
+            class="branch-card cursor-pointer"
+            v-ripple
+            @click="openBranchForm(branch)"
+            @keyup.enter="openBranchForm(branch)"
+          >
+            <q-card-section class="row items-center no-wrap q-pa-md">
+              <q-avatar size="48px" color="indigo-1" text-color="indigo-9">
+                <img v-if="branch.logoUrl" :src="getImageUrl(branch.logoUrl)" />
+                <q-icon v-else name="business" />
+              </q-avatar>
+              <div class="col q-ml-md" style="min-width: 0">
+                <div class="text-weight-bold text-dark ellipsis" style="font-size: 17px">
+                  {{ branch.branchName || t('adminManage.teamManagement.branchFallbackLabel', { id: branch.branchId }) }}
+                </div>
+                <div class="text-caption text-grey-6 ellipsis">
+                  {{ t('adminManage.branchManagement.jobMappingHint') }}
+                </div>
+              </div>
+              <q-btn flat round dense icon="edit" color="blue" class="q-ml-sm" @click.stop="openBranchForm(branch)" />
+            </q-card-section>
+            <q-separator color="grey-2" inset />
+            <q-card-actions class="row q-px-md q-py-sm q-gutter-x-sm">
+              <q-badge color="blue-1" text-color="blue-9" class="tag-badge">
+                <q-icon name="groups" size="14px" class="q-mr-xs" />
+                {{ t('adminManage.teamManagement.branchTeamCount', { n: branchTeamCount(branch.branchId) }) }}
+              </q-badge>
+              <q-badge color="grey-2" text-color="grey-8" class="tag-badge">
+                <q-icon name="person" size="14px" class="q-mr-xs" />
+                {{ t('adminManage.teamManagement.branchMemberCount', { n: branchMemberCount(branch.branchId) }) }}
+              </q-badge>
+            </q-card-actions>
+          </q-card>
+        </div>
+      </div>
+    </div>
+
+    <div v-else class="q-px-md q-pt-sm q-pb-md">
       <div v-if="!teamStore.isLoading && teamStore.teams.length === 0" class="text-center q-py-xl text-grey-6">
         <q-icon name="groups" size="64px" class="q-mb-md" />
         <div>{{ t('adminManage.teamManagement.noTeamsFound') }}</div>
@@ -187,7 +252,9 @@
           <div class="row items-center">
             <q-avatar color="indigo-1" text-color="indigo-9" icon="business" size="40px" class="q-mr-sm" />
             <div>
-              <div class="text-subtitle1 text-weight-bold text-dark">{{ t('adminManage.teamManagement.manageBranchesTitle') }}</div>
+              <div class="text-subtitle1 text-weight-bold text-dark">
+                {{ editingBranchId !== null ? t('adminManage.branchManagement.editTitle') : t('adminManage.branchManagement.addTitle') }}
+              </div>
               <div class="text-caption text-grey-6">{{ t('adminManage.teamManagement.manageBranchesSubtitle') }}</div>
             </div>
           </div>
@@ -225,11 +292,10 @@
 
             <div class="row justify-end q-gutter-x-sm q-mt-xs">
               <q-btn
-                v-if="editingBranchId !== null"
                 flat
                 color="grey-7"
                 :label="t('adminManage.teamManagement.cancelLabel')"
-                @click="cancelBranchEdit"
+                v-close-popup
               />
               <q-btn
                 type="submit"
@@ -240,32 +306,6 @@
               />
             </div>
           </q-form>
-        </q-card-section>
-
-        <!-- Current Branches List -->
-        <q-card-section class="q-pt-none">
-          <div class="text-caption text-weight-bold text-grey-8 q-mb-xs">
-            {{ t('adminManage.teamManagement.kpiTotalBranches') }} ({{ branchStore.branches.length }})
-          </div>
-          <div style="max-height: 240px; overflow-y: auto" class="q-pr-xs">
-            <q-list separator bordered class="rounded-borders">
-              <q-item v-for="branch in branchStore.branches" :key="branch.branchId">
-                <q-item-section avatar>
-                  <q-avatar color="grey-2">
-                    <img v-if="branch.logoUrl" :src="getImageUrl(branch.logoUrl)" />
-                    <q-icon v-else name="business" color="indigo-7" />
-                  </q-avatar>
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label class="text-weight-bold text-dark">{{ branch.branchName }}</q-item-label>
-                  <q-item-label caption>{{ t('adminManage.branchManagement.jobMappingHint') }}</q-item-label>
-                </q-item-section>
-                <q-item-section side>
-                  <q-btn flat round dense icon="edit" color="blue" @click="editBranch(branch)" />
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </div>
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -564,6 +604,16 @@ const editTeamId = ref<number | null>(null);
 
 const searchQuery = ref('');
 const selectedBranchId = ref<number | null>(null);
+const viewMode = ref<'teams' | 'branches'>('teams');
+
+function showTeamsView() {
+  viewMode.value = 'teams';
+  selectedBranchId.value = null;
+}
+
+function showBranchesView() {
+  viewMode.value = 'branches';
+}
 
 const allTeamsList = computed(() => (teamStore.allTeams.length > 0 ? teamStore.allTeams : teamStore.teams));
 const allUsersList = computed(() => (userStore.allUsers.length > 0 ? userStore.allUsers : userStore.users));
@@ -626,6 +676,7 @@ const loadTeams = async () => {
 
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 watch(searchQuery, () => {
+  if (viewMode.value !== 'teams') return;
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => {
     void loadTeams();
@@ -690,23 +741,11 @@ const branchNameInput = ref('');
 const branchLogoFileInput = ref<File | null>(null);
 const savingBranch = ref(false);
 
-function openBranchManagement() {
-  editingBranchId.value = null;
-  branchNameInput.value = '';
+function openBranchForm(branch?: Branch) {
+  editingBranchId.value = branch?.branchId ?? null;
+  branchNameInput.value = branch?.branchName || '';
   branchLogoFileInput.value = null;
   showBranchManagementDialog.value = true;
-}
-
-function editBranch(branch: Branch) {
-  editingBranchId.value = branch.branchId;
-  branchNameInput.value = branch.branchName || '';
-  branchLogoFileInput.value = null;
-}
-
-function cancelBranchEdit() {
-  editingBranchId.value = null;
-  branchNameInput.value = '';
-  branchLogoFileInput.value = null;
 }
 
 async function handleSaveBranch() {
@@ -715,7 +754,7 @@ async function handleSaveBranch() {
   try {
     await branchStore.saveBranch(editingBranchId.value, branchNameInput.value.trim(), branchLogoFileInput.value);
     $q.notify({ type: 'positive', message: t('adminManage.branchManagement.saveSuccess') });
-    cancelBranchEdit();
+    showBranchManagementDialog.value = false;
   } catch (err) {
     console.error(err);
     $q.notify({ type: 'negative', message: t('adminManage.branchManagement.saveFailed') });
@@ -755,6 +794,18 @@ const getImageUrl = (url?: string | null) => {
   if (url.startsWith('http') || url.startsWith('blob:')) return url;
   return `${import.meta.env.VITE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
 };
+
+const filteredBranches = computed(() => {
+  const keyword = searchQuery.value.trim().toLowerCase();
+  if (!keyword) return branchStore.branches;
+  return branchStore.branches.filter((b) => (b.branchName || '').toLowerCase().includes(keyword));
+});
+
+const branchTeamCount = (branchId: number) =>
+  allTeamsList.value.filter((team) => team.branchId === branchId).length;
+
+const branchMemberCount = (branchId: number) =>
+  allUsersList.value.filter((user) => (user.branchId ?? user.branch?.branchId) === branchId).length;
 
 const getTeamMembers = (teamId: number) => {
   return allUsersList.value.filter((user) => user.teamId === teamId || user.team?.team_Id === teamId);
@@ -1027,6 +1078,37 @@ function confirmDelete(team: Team) {
   -webkit-user-select: none;
   caret-color: transparent;
   -webkit-tap-highlight-color: transparent;
+}
+
+.branch-card {
+  border-radius: 18px;
+  border-color: #f0f0f0;
+  height: 100%;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 2px 6px rgba(0, 0, 0, 0.03);
+  transition: box-shadow 200ms ease, border-color 200ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .branch-card:hover {
+    border-color: #e4e4e4;
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.04),
+      0 8px 20px rgba(0, 0, 0, 0.07);
+  }
+}
+
+.branch-card:focus-visible {
+  outline: 2px solid var(--q-primary, #1976d2);
+  outline-offset: 2px;
+}
+
+.tag-badge {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 6px;
 }
 
 .search-input {
