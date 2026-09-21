@@ -362,31 +362,26 @@
     </div>
 
     <!-- Category Drill-Down Dialog (ดูตำหนิในหมวดงานนี้ + เพิ่มตำหนิ Inline ในตัว) -->
-    <q-dialog
-      v-model="showCategoryDrillDownDialog"
-      position="bottom"
-      transition-show="sheet-in"
-      transition-hide="sheet-out"
-    >
-      <q-card style="width: 100%; max-width: 650px; border-radius: 28px 28px 0 0" class="q-pa-lg">
-        <div class="sheet-handle q-mb-sm" />
-        
+    <q-dialog v-model="showCategoryDrillDownDialog">
+      <q-card class="drill-dialog-card">
         <!-- Header -->
-        <div class="row items-center justify-between q-mb-md">
-          <div class="row items-center">
-            <q-avatar color="deep-purple-1" text-color="deep-purple-9" icon="folder" size="40px" class="q-mr-sm" />
-            <div>
-              <div class="text-h6 text-weight-bold text-dark">{{ selectedCategoryForDrillDown?.name }}</div>
-              <div class="text-caption text-grey-7">
-                {{ t('adminManage.masterData.drillDownSubtitle', { count: categoryDrillDownItems.length }) }}
-              </div>
+        <q-card-section class="drill-dialog-header row items-center no-wrap">
+          <div class="drill-dialog-header-icon">
+            <q-icon name="folder" size="24px" />
+          </div>
+          <div class="col q-ml-md" style="min-width: 0">
+            <div class="drill-dialog-title text-weight-bold text-dark ellipsis">
+              {{ selectedCategoryForDrillDown?.name }}
+            </div>
+            <div class="text-caption text-grey-7">
+              {{ t('adminManage.masterData.drillDownSubtitle', { count: categoryDrillDownItems.length }) }}
             </div>
           </div>
-          <q-btn flat round dense icon="close" color="grey-6" v-close-popup />
-        </div>
+          <q-btn icon="close" flat round dense class="drill-dialog-close-btn" v-close-popup />
+        </q-card-section>
+        <q-separator />
 
-        <q-separator class="q-mb-md" />
-
+        <q-card-section class="drill-dialog-body">
         <!-- Inline Add Sub-Category Form inside Dialog -->
         <q-card flat class="bg-blue-1 rounded-borders q-pa-md q-mb-md">
           <div class="text-subtitle2 text-weight-bold text-primary q-mb-xs row items-center">
@@ -430,7 +425,7 @@
         </q-card>
 
         <!-- Sub-Categories Scrollable List -->
-        <div style="max-height: 320px; overflow-y: auto" class="q-pr-xs">
+        <div>
           <div v-if="categoryDrillDownItems.length === 0" class="text-center q-py-lg text-grey-6">
             <q-icon name="info" size="48px" class="q-mb-xs" />
             <div>{{ t('adminManage.masterData.noSubDefectsInCat') }}</div>
@@ -454,6 +449,7 @@
             </q-item>
           </q-list>
         </div>
+        </q-card-section>
       </q-card>
     </q-dialog>
 
@@ -1134,12 +1130,56 @@ function confirmDelete(type: 'room' | 'subRoom' | 'category' | 'subCategory', id
   font-variant-numeric: tabular-nums;
 }
 
-.sheet-handle {
-  width: 40px;
-  height: 4px;
-  background: #e0e0e0;
-  border-radius: 2px;
-  margin: 0 auto 12px;
+/* หน้าตาเดียวกับ AdminMasterDataFormDialog */
+.drill-dialog-card {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+@media (min-width: 600px) {
+  .drill-dialog-card {
+    max-width: 560px;
+  }
+}
+.drill-dialog-header {
+  padding: 20px 24px;
+}
+.drill-dialog-header-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1976d2;
+  flex-shrink: 0;
+}
+.drill-dialog-title {
+  font-size: 18px;
+  line-height: 1.3;
+}
+.drill-dialog-close-btn {
+  background-color: #f2f4f7;
+  transition: background-color 0.15s ease;
+}
+.drill-dialog-close-btn:hover {
+  background-color: #e7ebf0;
+}
+.drill-dialog-body {
+  padding: 22px 24px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+@media (max-width: 599px) {
+  .drill-dialog-header,
+  .drill-dialog-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .drill-dialog-title {
+    font-size: 16px;
+  }
 }
 
 .gap-xs {
