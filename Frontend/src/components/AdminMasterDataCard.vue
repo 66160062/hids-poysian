@@ -72,9 +72,7 @@
 
     <q-card-actions class="row items-center justify-between q-px-md q-py-sm">
       <div class="row q-gutter-x-sm items-center">
-        <q-badge class="tag-badge tone-badge">
-          <q-icon name="tag" size="14px" class="q-mr-xs" /> #{{ id }}
-        </q-badge>
+        <q-badge class="tag-badge tone-badge">#{{ id }}</q-badge>
         <slot name="tags" />
       </div>
       <slot name="action" />
