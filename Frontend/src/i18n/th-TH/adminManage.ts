@@ -72,7 +72,7 @@ export default {
     markAllError: 'ทำเครื่องหมายอ่านทั้งหมดไม่สำเร็จ',
   },
   userManagement: {
-    title: 'จัดการผู้ใช้งาน',
+    title: 'ผู้ใช้',
     subtitle: 'บริหารจัดการบัญชีผู้ใช้ บทบาท และการมอบหมายทีม',
     kpiTotalUsers: 'ผู้ใช้งานทั้งหมด',
     kpiAdmins: 'ผู้ดูแลระบบ',

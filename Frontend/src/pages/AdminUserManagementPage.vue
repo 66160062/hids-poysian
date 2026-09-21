@@ -12,21 +12,41 @@
       </div>
 
       <!-- KPI Summary Cards (4 Cards) -->
-      <div class="row q-col-gutter-sm q-mb-md">
-        <div class="col-6 col-sm-3">
-          <q-card flat bordered class="kpi-card bg-white shadow-1">
+      <div class="kpi-row row no-wrap q-col-gutter-sm q-mb-md">
+        <div class="kpi-col col">
+          <q-card
+            flat
+            bordered
+            class="kpi-card bg-white shadow-1 cursor-pointer"
+            :class="{ 'kpi-card--active': activeRoleFilter === 'all' }"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="activeRoleFilter = 'all'"
+            @keyup.enter="activeRoleFilter = 'all'"
+          >
             <q-card-section class="q-pa-sm row items-center no-wrap">
               <q-avatar color="blue-1" text-color="primary" icon="group" size="40px" />
               <div class="q-ml-sm">
                 <div class="text-caption text-grey-7">{{ t('adminManage.userManagement.kpiTotalUsers') }}</div>
-                <div class="text-h6 text-weight-bold text-dark">{{ usersList.length }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ allUsersList.length }}</div>
               </div>
             </q-card-section>
           </q-card>
         </div>
 
-        <div class="col-6 col-sm-3">
-          <q-card flat bordered class="kpi-card bg-white shadow-1">
+        <div class="kpi-col col">
+          <q-card
+            flat
+            bordered
+            class="kpi-card bg-white shadow-1 cursor-pointer"
+            :class="{ 'kpi-card--active': activeRoleFilter === 'admin' }"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="activeRoleFilter = 'admin'"
+            @keyup.enter="activeRoleFilter = 'admin'"
+          >
             <q-card-section class="q-pa-sm row items-center no-wrap">
               <q-avatar color="deep-purple-1" text-color="deep-purple-9" icon="admin_panel_settings" size="40px" />
               <div class="q-ml-sm">
@@ -37,8 +57,18 @@
           </q-card>
         </div>
 
-        <div class="col-6 col-sm-3">
-          <q-card flat bordered class="kpi-card bg-white shadow-1">
+        <div class="kpi-col col">
+          <q-card
+            flat
+            bordered
+            class="kpi-card bg-white shadow-1 cursor-pointer"
+            :class="{ 'kpi-card--active': activeRoleFilter === 'inspector' }"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="activeRoleFilter = 'inspector'"
+            @keyup.enter="activeRoleFilter = 'inspector'"
+          >
             <q-card-section class="q-pa-sm row items-center no-wrap">
               <q-avatar color="teal-1" text-color="teal-9" icon="engineering" size="40px" />
               <div class="q-ml-sm">
@@ -49,8 +79,18 @@
           </q-card>
         </div>
 
-        <div class="col-6 col-sm-3">
-          <q-card flat bordered class="kpi-card bg-white shadow-1">
+        <div class="kpi-col col">
+          <q-card
+            flat
+            bordered
+            class="kpi-card bg-white shadow-1 cursor-pointer"
+            :class="{ 'kpi-card--active': activeRoleFilter === 'unassigned' }"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="activeRoleFilter = 'unassigned'"
+            @keyup.enter="activeRoleFilter = 'unassigned'"
+          >
             <q-card-section class="q-pa-sm row items-center no-wrap">
               <q-avatar color="orange-1" text-color="orange-9" icon="person_search" size="40px" />
               <div class="q-ml-sm">
@@ -225,21 +265,6 @@
           />
         </div>
       </div>
-
-      <!-- Pagination Controls -->
-      <div class="row justify-center q-mt-lg q-pb-md" v-if="usersList.length > 0">
-        <q-pagination
-          v-model="currentPage"
-          :max="userStore.meta.totalPages || 1"
-          :max-pages="5"
-          boundary-numbers
-          direction-links
-          color="primary"
-          active-color="primary"
-          active-text-color="white"
-          @update:model-value="loadUsers"
-        />
-      </div>
     </div>
 
     <!-- User Form Dialog -->
@@ -278,9 +303,12 @@ const branchStore = useBranchStore();
 
 // State
 const isLoading = computed(() => userStore.isLoading);
-const usersList = computed(() => userStore.users);
+const isUnassignedInspector = (u: User) => u.role === 'inspector' && !(u.teamId ?? u.team?.team_Id);
+// 'unassigned' is a client-side filter (backend only knows real roles), so narrow the fetched inspectors here
+const usersList = computed(() =>
+  activeRoleFilter.value === 'unassigned' ? userStore.users.filter(isUnassignedInspector) : userStore.users
+);
 const allUsersList = computed(() => (userStore.allUsers.length > 0 ? userStore.allUsers : userStore.users));
-const currentPage = ref(1);
 const searchQuery = ref('');
 const activeRoleFilter = ref('all');
 const selectedBranchId = ref<number | null>(null);
@@ -288,9 +316,7 @@ const selectedBranchId = ref<number | null>(null);
 // KPI Counts
 const adminCount = computed(() => allUsersList.value.filter((u) => u.role === 'admin').length);
 const inspectorCount = computed(() => allUsersList.value.filter((u) => u.role === 'inspector').length);
-const unassignedCount = computed(() =>
-  allUsersList.value.filter((u) => u.role === 'inspector' && !(u.teamId ?? u.team?.team_Id)).length
-);
+const unassignedCount = computed(() => allUsersList.value.filter(isUnassignedInspector).length);
 
 const activeFilterCount = computed(() => {
   let count = 0;
@@ -347,10 +373,14 @@ const branchFormOptions = computed(() => {
 const loadUsers = async () => {
   try {
     await userStore.fetchUsers({
-      page: currentPage.value,
-      limit: 5,
+      all: true,
       search: searchQuery.value.trim() || undefined,
-      role: activeRoleFilter.value !== 'all' ? activeRoleFilter.value : undefined,
+      role:
+        activeRoleFilter.value === 'unassigned'
+          ? 'inspector'
+          : activeRoleFilter.value !== 'all'
+            ? activeRoleFilter.value
+            : undefined,
       branchId: selectedBranchId.value ?? undefined,
     });
   } catch (err) {
@@ -365,13 +395,11 @@ let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 watch(searchQuery, () => {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => {
-    currentPage.value = 1;
     void loadUsers();
   }, 400);
 });
 
 watch([activeRoleFilter, selectedBranchId], () => {
-  currentPage.value = 1;
   void loadUsers();
 });
 
@@ -517,12 +545,73 @@ const confirmDeleteUser = (user: User) => {
 }
 
 .kpi-card {
+  height: 100%;
   border-radius: 16px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .kpi-card:hover {
   transform: translateY(-2px);
+}
+
+.kpi-col {
+  min-width: 0;
+}
+
+/* มือถือ: การ์ด KPI ทั้งหมดอยู่แถวเดียวกัน จัดเนื้อหาเป็นแนวตั้งให้พอดีความกว้าง */
+@media (max-width: 599.98px) {
+  .kpi-row {
+    --kpi-gap: 6px;
+    margin-left: calc(-1 * var(--kpi-gap));
+  }
+  .kpi-row > .kpi-col {
+    padding-left: var(--kpi-gap);
+  }
+  .kpi-row .q-card__section {
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    padding: 8px 2px;
+  }
+  .kpi-row .q-avatar {
+    font-size: 30px !important;
+  }
+  .kpi-row .q-card__section > div:not(.q-avatar) {
+    margin-left: 0;
+    margin-top: 4px;
+    min-width: 0;
+    width: 100%;
+  }
+  .kpi-row .text-caption {
+    font-size: 10px;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .kpi-row .text-h6 {
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+}
+
+.kpi-card.kpi-card--active {
+  outline: 2px solid var(--q-primary, #1976d2);
+  outline-offset: -1px;
+}
+
+.kpi-card:focus-visible {
+  outline: 2px solid var(--q-primary, #1976d2);
+  outline-offset: 2px;
+}
+
+.kpi-card.cursor-pointer {
+  user-select: none;
+  -webkit-user-select: none;
+  caret-color: transparent;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .search-input {
@@ -568,11 +657,4 @@ const confirmDeleteUser = (user: User) => {
   display: none;
 }
 
-.card-stagger {
-  transition: transform 0.2s ease;
-}
-
-.card-stagger:hover {
-  transform: translateY(-2px);
-}
 </style>
