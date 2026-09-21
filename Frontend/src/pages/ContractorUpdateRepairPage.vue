@@ -203,17 +203,10 @@
           <div class="text-body2 text-grey-6">{{ t('contractor.updateRepair.successSubtitle') }}</div>
         </q-card-section>
         <q-card-actions align="center" class="q-pb-md">
-          <q-btn unelevated color="primary" :label="t('contractor.updateRepair.ok')" style="min-width:120px; border-radius:10px;" @click="openRatingAfterSuccess" />
+          <q-btn unelevated color="primary" :label="t('contractor.updateRepair.ok')" style="min-width:120px; border-radius:10px;" @click="confirmSuccess" />
         </q-card-actions>
       </q-card>
     </q-dialog>
-
-    <ReviewDialog
-      v-model="showRatingDialog"
-      :job-id="repairJobId"
-      :defect-id="defectId"
-      @closed="confirmSuccess"
-    />
 
     <!-- Image Viewer Dialog (กดรูปเพื่อดูเต็มจอ) -->
     <q-dialog v-model="showImageViewer" maximized transition-show="fade" transition-hide="fade">
@@ -255,8 +248,7 @@ import { useQuasar } from 'quasar'
 import PlanPositionDialog from 'src/components/PlanPositionDialog.vue'
 import { useRepairDetail } from 'src/stores/useContractorRepairDetail'
 import { useLinkAccess } from 'src/stores/useLinkAccess'
-import { useContractorRepair, defectStatusLabel } from 'src/stores/useContractormain'
-import ReviewDialog from 'src/components/ReviewDialog.vue'
+import { defectStatusLabel } from 'src/stores/useContractormain'
 import { createIconSpinner } from 'src/composables/useIconSpinner'
 
 const $q = useQuasar()
@@ -265,11 +257,9 @@ const repairDetailSpinner = createIconSpinner('construction')
 const route     = useRoute()
 const { t } = useI18n()
 const { isContractorEditable, projectId } = useLinkAccess()
-const contractorRepair = useContractorRepair()
 const showPlanDialog = ref(false)
 const defectId  = Number(route.params.id)
 const fileInput = ref<HTMLInputElement>()
-const showRatingDialog = ref(false)
 const showImageViewer = ref(false)
 const viewerImageUrl = ref('')
 
@@ -315,11 +305,6 @@ const isReadOnly = computed(
   () => !isContractorEditable.value || defect.value.status === 'repaired' || defect.value.status === 'verified',
 )
 const isPassed   = computed(() => defect.value.status === 'verified')
-const repairJobId = computed(() => {
-  const queryJobId = route.query.jobId
-  if (typeof queryJobId === 'string' && queryJobId) return Number(queryJobId)
-  return contractorRepair.currentJobId
-})
 
 const onFileChange = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0]
@@ -342,11 +327,6 @@ const statusColor = (status: string): string => {
     rejected: 'red',
   }
   return map[status] ?? 'grey'
-}
-
-const openRatingAfterSuccess = () => {
-  showSuccess.value = false
-  showRatingDialog.value = true
 }
 </script>
 
