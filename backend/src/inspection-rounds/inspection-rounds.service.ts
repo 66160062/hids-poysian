@@ -166,7 +166,14 @@ export class InspectionRoundsService {
             round: { roundId: latestRound.roundId },
             status: Not(DefectStatus.VERIFIED),
           },
-          relations: ['room', 'subRoom', 'floor', 'subCategories', 'inspector'],
+          relations: [
+            'room',
+            'subRoom',
+            'floor',
+            'subCategories',
+            'inspector',
+            'plan',
+          ],
         });
 
         if (latestDefects.length > 0) {
