@@ -114,10 +114,9 @@ export default {
     deleteFailed: 'Failed to delete data: {msg}',
   },
   teamManagement: {
-    title: 'Team & Branch Management',
+    title: 'Teams/Branches',
     subtitle: 'Manage inspection teams, contact info, team members, and company branches',
     kpiTotalTeams: 'Total Teams',
-    kpiTotalMembers: 'Total Members',
     kpiTotalBranches: 'Branches',
     addNewTeam: 'Add Team',
     manageBranches: 'Manage Branches',

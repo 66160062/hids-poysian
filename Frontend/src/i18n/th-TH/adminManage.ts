@@ -114,10 +114,9 @@ export default {
     deleteFailed: 'ลบข้อมูลล้มเหลว: {msg}',
   },
   teamManagement: {
-    title: 'จัดการทีมวิศวกรและสาขา',
+    title: 'ทีม/สาขา',
     subtitle: 'บริหารจัดการทีมตรวจ ข้อมูลติดต่อ สมาชิกทีม และบริษัท/สาขา',
     kpiTotalTeams: 'ทีมทั้งหมด',
-    kpiTotalMembers: 'สมาชิกทีมรวม',
     kpiTotalBranches: 'บริษัท / สาขา',
     addNewTeam: 'เพิ่มทีมใหม่',
     manageBranches: 'จัดการสาขา',
