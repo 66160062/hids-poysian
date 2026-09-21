@@ -85,17 +85,17 @@
     />
 
     <div
-      class="bg-white col q-pa-lg flex column shadow-up-2"
+      class="bg-white col q-pa-lg flex column no-wrap shadow-up-2"
       style="border-radius: 24px 24px 0 0; margin-top: -24px; z-index: 1; overflow-y: auto"
     >
       <!-- Step 1: รายละเอียดห้อง -->
-      <div v-if="step === 1" class="col column">
+      <div v-if="step === 1" class="col-auto column no-wrap">
         <div class="text-h6 text-weight-bold text-primary">{{ t('inspection.addDefect.roomDetailsTitle') }}</div>
         <div class="text-caption text-grey-7 q-mb-lg">{{ t('inspection.addDefect.roomDetailsSubtitle') }}</div>
-        <div class="column q-gutter-y-md">
+        <div class="column no-wrap q-gutter-y-md">
           <div class="row no-wrap items-start">
             <q-icon name="meeting_room" size="sm" color="primary" class="q-pt-sm q-mr-sm" />
-            <div class="col column q-gutter-y-md">
+            <div class="col column no-wrap q-gutter-y-md">
               <!-- ประเภทห้อง -->
               <q-select
                 outlined
@@ -163,10 +163,10 @@
       </div>
 
       <!-- Step 2: รายละเอียดงาน -->
-      <div v-if="step === 2" class="col column">
+      <div v-if="step === 2" class="col-auto column no-wrap">
         <div class="text-h6 text-weight-bold text-primary">{{ t('inspection.addDefect.jobDetailsTitle') }}</div>
         <div class="text-caption text-grey-7 q-mb-lg">{{ t('inspection.addDefect.jobDetailsSubtitle') }}</div>
-        <div class="column q-gutter-y-md">
+        <div class="column no-wrap q-gutter-y-md">
           <!-- ความรุนแรง -->
           <!-- <div class="row no-wrap items-center">
             <q-icon name="warning_amber" size="sm" color="primary" class="q-mr-sm" />
