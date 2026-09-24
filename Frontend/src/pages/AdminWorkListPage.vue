@@ -484,9 +484,19 @@
 
             <q-card-actions class="row items-center q-px-md q-py-sm">
               <div class="row q-gutter-x-sm">
+                <q-badge
+                  v-if="task.branchName"
+                  color="indigo-1"
+                  text-color="indigo-9"
+                  class="tag-badge text-weight-medium"
+                >
+                  <q-icon name="business" size="14px" class="q-mr-xs text-indigo-7" />
+                  {{ task.branchName }}
+                </q-badge>
                 <q-badge color="grey-2" text-color="grey-8" class="tag-badge">
                   <q-icon name="apartment" size="14px" class="q-mr-xs" /> {{ task.type || t('adminWork.workList.condo') }}
                 </q-badge>
+                
                 <q-badge color="grey-2" text-color="grey-8" class="tag-badge">
                   <q-icon name="square_foot" size="14px" class="q-mr-xs" />
                   {{ task.area || '0' }} {{ t('adminWork.workList.sqm') }}
@@ -696,6 +706,7 @@ interface TaskItem {
   team: string;
   customer: string;
   date: string;
+  branchName?: string | null;
 }
 
 // ==========================================
@@ -778,6 +789,7 @@ const tasks = computed<TaskItem[]>(() => {
       team: t('adminWork.workList.unspecifiedTeam'), // Currently backend Work interface doesn't have team
       customer: work.customer?.fullName || t('adminWork.workList.unspecifiedCustomer'),
       date: latestActiveRoundDate || new Date().toISOString(),
+      branchName: work.branch?.branchName || null,
     };
   });
 });

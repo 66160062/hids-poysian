@@ -16,14 +16,22 @@
           </div>
         </div>
 
-        <div class="row items-center q-gutter-x-md">
+        <div class="row items-center q-gutter-x-sm">
           <div class="row items-center text-caption text-grey-7">
-            <span class="legend-dot bg-primary q-mr-xs"></span>
-            <span>{{ t('adminWork.workList.kpiActive') }}</span>
+            <span class="legend-dot legend-dot-scheduled q-mr-xs"></span>
+            <span>{{ t('adminWork.dashboard.teamScheduledLabel') }}</span>
           </div>
           <div class="row items-center text-caption text-grey-7">
-            <span class="legend-dot bg-positive q-mr-xs"></span>
-            <span>{{ t('adminWork.workList.kpiCompleted') }}</span>
+            <span class="legend-dot legend-dot-in-progress q-mr-xs"></span>
+            <span>{{ t('adminWork.dashboard.teamInProgressLabel') }}</span>
+          </div>
+          <div class="row items-center text-caption text-grey-7">
+            <span class="legend-dot legend-dot-pending-approval q-mr-xs"></span>
+            <span>{{ t('adminWork.dashboard.teamPendingApprovalLabel') }}</span>
+          </div>
+          <div class="row items-center text-caption text-grey-7">
+            <span class="legend-dot legend-dot-completed q-mr-xs"></span>
+            <span>{{ t('adminWork.dashboard.teamCompletedLabel') }}</span>
           </div>
         </div>
       </div>
@@ -42,23 +50,41 @@
               </q-avatar>
               <span class="text-weight-bold text-dark text-caption ellipsis" style="max-width: 140px;">{{ team.teamName }}</span>
             </div>
-            <div class="row items-center q-gutter-x-sm text-caption">
-              <span class="text-primary text-weight-medium">{{ team.activeCount }} {{ t('adminWork.dashboard.teamActiveLabel') }}</span>
+            <div class="row items-center q-gutter-x-xs text-caption">
+              <span class="text-grey-7 text-weight-medium">{{ team.scheduledCount || 0 }} {{ t('adminWork.dashboard.teamScheduledLabel') }}</span>
               <span class="text-grey-4">|</span>
-              <span class="text-positive text-weight-medium">{{ team.completedCount }} {{ t('adminWork.dashboard.teamCompletedLabel') }}</span>
+              <span class="text-primary text-weight-medium">{{ team.inProgressCount || 0 }} {{ t('adminWork.dashboard.teamInProgressLabel') }}</span>
+              <span class="text-grey-4">|</span>
+              <span class="text-purple-8 text-weight-medium">{{ team.pendingApprovalCount || 0 }} {{ t('adminWork.dashboard.teamPendingApprovalLabel') }}</span>
+              <span class="text-grey-4">|</span>
+              <span class="text-positive text-weight-medium">{{ team.completedCount || 0 }} {{ t('adminWork.dashboard.teamCompletedLabel') }}</span>
               <span class="text-grey-4">|</span>
               <span class="text-weight-bold text-dark">{{ team.totalCount }} {{ t('adminWork.dashboard.teamTotalLabel') }}</span>
             </div>
           </div>
 
-          <!-- Dual Progress Bar -->
-          <div class="dual-progress-bar">
+          <!-- 4-segment Progress Bar -->
+          <div class="quad-progress-bar">
             <div
-              class="bar-active"
-              :style="{ width: `${getBarWidth(team.activeCount, maxTeamTotal)}%` }"
-              :title="t('adminWork.dashboard.teamActiveLabel')"
+              v-if="(team.scheduledCount || 0) > 0"
+              class="bar-scheduled"
+              :style="{ width: `${getBarWidth(team.scheduledCount, maxTeamTotal)}%` }"
+              :title="t('adminWork.dashboard.teamScheduledLabel')"
             />
             <div
+              v-if="(team.inProgressCount || 0) > 0"
+              class="bar-in-progress"
+              :style="{ width: `${getBarWidth(team.inProgressCount, maxTeamTotal)}%` }"
+              :title="t('adminWork.dashboard.teamInProgressLabel')"
+            />
+            <div
+              v-if="(team.pendingApprovalCount || 0) > 0"
+              class="bar-pending-approval"
+              :style="{ width: `${getBarWidth(team.pendingApprovalCount, maxTeamTotal)}%` }"
+              :title="t('adminWork.dashboard.teamPendingApprovalLabel')"
+            />
+            <div
+              v-if="(team.completedCount || 0) > 0"
               class="bar-completed"
               :style="{ width: `${getBarWidth(team.completedCount, maxTeamTotal)}%` }"
               :title="t('adminWork.dashboard.teamCompletedLabel')"
@@ -115,7 +141,23 @@ function getBarWidth(count: number, max: number): number {
   display: inline-block;
 }
 
-.dual-progress-bar {
+.legend-dot-scheduled {
+  background-color: #94a3b8;
+}
+
+.legend-dot-in-progress {
+  background-color: #3b82f6;
+}
+
+.legend-dot-pending-approval {
+  background-color: #8b5cf6;
+}
+
+.legend-dot-completed {
+  background-color: #10b981;
+}
+
+.quad-progress-bar {
   height: 8px;
   border-radius: 4px;
   background-color: #e2e8f0;
@@ -124,9 +166,23 @@ function getBarWidth(count: number, max: number): number {
   gap: 2px;
 }
 
-.bar-active {
+.bar-scheduled {
+  height: 100%;
+  background: linear-gradient(90deg, #94a3b8 0%, #64748b 100%);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.bar-in-progress {
   height: 100%;
   background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.bar-pending-approval {
+  height: 100%;
+  background: linear-gradient(90deg, #a855f7 0%, #7e22ce 100%);
   border-radius: 4px;
   transition: width 0.4s ease;
 }

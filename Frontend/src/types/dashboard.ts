@@ -39,6 +39,12 @@ export interface JobDrilldownItem {
   status: string;
   statusCode: JobStatusCode;
   contractorName?: string | null;
+  inspectorName?: string | null;
+  completionScore?: number | null;
+  roundNumber?: number | null;
+  totalRounds?: number;
+  majorCount: number;
+  minorCount: number;
   defectCategories: JobDefectCategoryItem[];
   resolution: JobDefectResolution;
 }
@@ -73,7 +79,9 @@ export interface DashboardTaskItem {
 export interface TeamWorkloadItem {
   teamId: number;
   teamName: string;
-  activeCount: number;
+  scheduledCount: number;
+  inProgressCount: number;
+  pendingApprovalCount: number;
   completedCount: number;
   totalCount: number;
 }
@@ -85,6 +93,26 @@ export interface PropertyTypeItem {
   color: string;
 }
 
+export interface OperationalPipelineStage {
+  key: 'unassigned' | 'scheduled' | 'pendingApproval' | 'completed';
+  labelTh: string;
+  labelEn: string;
+  count: number;
+  percentage: number;
+  color: string;
+  icon: string;
+  hint: string;
+}
+
+export interface OperationalPipeline {
+  unassignedCount: number;
+  scheduledCount: number;
+  pendingApprovalCount: number;
+  completedCount: number;
+  total: number;
+  stages: OperationalPipelineStage[];
+}
+
 export interface DashboardStats {
   totalProjects: number;
   inProgress: number;
@@ -94,6 +122,11 @@ export interface DashboardStats {
   construction: number;
   totalDefects?: number;
   overallCompletionRate?: number;
+  avgCompletionScore?: number | null;
+  scheduledThisMonth?: number;
+  pendingApprovalCount?: number;
+  completedCount?: number;
+  deliverySuccessRate?: number;
   homeStatusBreakdown: StatusCount[];
   constructionStatusBreakdown: StatusCount[];
   branches?: BranchOption[];
@@ -105,4 +138,5 @@ export interface DashboardStats {
   propertyTypes?: PropertyTypeItem[];
   topDefectCategories?: JobDefectCategoryItem[];
   overallDefectResolution?: JobDefectResolution;
+  operationalPipeline?: OperationalPipeline;
 }
