@@ -614,7 +614,15 @@ const isEditing = ref(false);
 const editTeamId = ref<number | null>(null);
 
 const searchQuery = ref('');
-const selectedBranchId = ref<number | null>(null);
+const selectedBranchId = computed<number | null>({
+  get: () => {
+    const branch = branchStore.getPageBranch('teams');
+    return typeof branch === 'number' && branch > 0 ? branch : null;
+  },
+  set: (val: number | null) => {
+    branchStore.setPageBranch('teams', val ?? 'all');
+  },
+});
 const viewMode = ref<'teams' | 'branches'>('teams');
 
 function showTeamsView() {
@@ -702,9 +710,12 @@ watch(searchQuery, () => {
   }, 400);
 });
 
-watch(selectedBranchId, () => {
-  void loadTeams();
-});
+watch(
+  () => branchStore.getPageBranch('teams'),
+  () => {
+    void loadTeams();
+  },
+);
 
 const localForm = ref<{
   team_name: string;
