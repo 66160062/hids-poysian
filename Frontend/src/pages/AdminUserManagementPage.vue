@@ -311,7 +311,15 @@ const usersList = computed(() =>
 const allUsersList = computed(() => (userStore.allUsers.length > 0 ? userStore.allUsers : userStore.users));
 const searchQuery = ref('');
 const activeRoleFilter = ref('all');
-const selectedBranchId = ref<number | null>(null);
+const selectedBranchId = computed<number | null>({
+  get: () => {
+    const branch = branchStore.getPageBranch('users');
+    return typeof branch === 'number' && branch > 0 ? branch : null;
+  },
+  set: (val: number | null) => {
+    branchStore.setPageBranch('users', val ?? 'all');
+  },
+});
 
 // KPI Counts
 const adminCount = computed(() => allUsersList.value.filter((u) => u.role === 'admin').length);

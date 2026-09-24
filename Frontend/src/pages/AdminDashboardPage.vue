@@ -15,9 +15,6 @@
       <!-- Header & Branch Filter Control -->
       <div class="row items-center justify-between q-mb-md">
         <div>
-          <!-- <div class="text-h6 text-weight-bold text-dark">
-            {{ t('nav.admin.titleBusinessDashboard') }}
-          </div> -->
           <div class="text-caption text-grey-6">
             {{ t('adminWork.dashboard.businessSubtitle') }}
           </div>
@@ -34,9 +31,8 @@
             dense
             outlined
             rounded
-            class="branch-select"
+            class="branch-select shadow-1"
             bg-color="white"
-            @update:model-value="onBranchChange"
           >
             <template v-slot:prepend>
               <q-icon name="business" color="primary" size="18px" />
@@ -148,7 +144,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
@@ -158,6 +154,7 @@ import MonthlyTrendChart from 'src/components/dashboard/MonthlyTrendChart.vue';
 import TeamWorkloadCard from 'src/components/dashboard/TeamWorkloadCard.vue';
 import JobDrilldownCard from 'src/components/dashboard/JobDrilldownCard.vue';
 import OperationalPipelineCard from 'src/components/dashboard/OperationalPipelineCard.vue';
+import { useBranchStore } from 'src/stores/useBranch';
 import type {
   MonthlyTrendItem,
   JobDefectCategoryItem,
@@ -173,6 +170,7 @@ const chartSpinner = createIconSpinner('bar_chart');
 const $q = useQuasar();
 const { t } = useI18n();
 const error = ref<string>('');
+const branchStore = useBranchStore();
 
 const dashboard = ref<DashboardStats>({
   totalProjects: 0,
@@ -200,29 +198,27 @@ const teamWorkloads = ref<TeamWorkloadItem[]>([]);
 const jobDrilldowns = ref<JobDrilldownItem[]>([]);
 const operationalPipeline = ref<OperationalPipeline | undefined>(undefined);
 
-const selectedBranchId = ref<number | 'all'>(getStoredBranchId());
+const selectedBranchId = computed<number | 'all'>({
+  get: () => branchStore.getPageBranch('dashboard'),
+  set: (val: number | 'all') => {
+    branchStore.setPageBranch('dashboard', val);
+  },
+});
 
 const branchOptions = computed(() => [
   { label: t('common.branch.all'), value: 'all' as const },
-  ...branches.value.map((b) => ({
-    label: b.name,
-    value: b.id,
+  ...branchStore.branches.map((b) => ({
+    label: b.branchName || t('common.branch.fallbackName', { id: b.branchId }),
+    value: b.branchId,
   })),
 ]);
 
-function getStoredBranchId(): number | 'all' {
-  const branchId = Number(sessionStorage.getItem('adminSelectedBranchId'));
-  return Number.isInteger(branchId) && branchId > 0 ? branchId : 'all';
-}
-
-function onBranchChange(): void {
-  if (selectedBranchId.value === 'all') {
-    sessionStorage.removeItem('adminSelectedBranchId');
-  } else {
-    sessionStorage.setItem('adminSelectedBranchId', String(selectedBranchId.value));
-  }
-  void fetchDashboardData();
-}
+watch(
+  () => branchStore.getPageBranch('dashboard'),
+  () => {
+    void fetchDashboardData();
+  },
+);
 
 async function fetchDashboardData(): Promise<void> {
   $q.loading.show({
@@ -276,6 +272,7 @@ async function fetchDashboardData(): Promise<void> {
 }
 
 onMounted(() => {
+  void branchStore.fetchBranches();
   void fetchDashboardData();
 });
 </script>

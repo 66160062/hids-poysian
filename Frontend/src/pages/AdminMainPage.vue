@@ -303,7 +303,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
@@ -311,6 +311,7 @@ import { api } from 'src/boot/axios';
 import type { AxiosResponse } from 'axios';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { useJobStatus, type JobStatusCode } from 'src/composables/useJobStatus';
+import { useBranchStore } from 'src/stores/useBranch';
 import type {
   BranchOption,
   DashboardStats,
@@ -321,6 +322,7 @@ const router = useRouter();
 const $q = useQuasar();
 const { t, locale } = useI18n();
 const { jobStatusLabel } = useJobStatus();
+const branchStore = useBranchStore();
 const error = ref<string>('');
 
 const STATUS_ACCENT_COLORS: Partial<Record<JobStatusCode, { bg: string; text: string }>> = {
@@ -348,7 +350,7 @@ const dashboard = ref<DashboardStats>({
 });
 
 const branches = ref<BranchOption[]>([]);
-const selectedBranchId = ref<number | 'all'>(getStoredBranchId());
+const selectedBranchId = ref<number | 'all'>(branchStore.selectedBranchId ?? 'all');
 const branchOptions = computed(() => [
   { label: t('common.branch.all'), value: 'all' as const },
   ...branches.value.map((branch) => ({
@@ -535,20 +537,20 @@ function goToWorkList(): void {
   });
 }
 
-function getStoredBranchId(): number | 'all' {
-  const branchId = Number(sessionStorage.getItem('adminSelectedBranchId'));
-  return Number.isInteger(branchId) && branchId > 0 ? branchId : 'all';
-}
-
 function onBranchChange(): void {
-  if (selectedBranchId.value === 'all') {
-    sessionStorage.removeItem('adminSelectedBranchId');
-  } else {
-    sessionStorage.setItem('adminSelectedBranchId', String(selectedBranchId.value));
-  }
-
+  branchStore.setSelectedBranchId(selectedBranchId.value);
   void fetchAdminDashboard();
 }
+
+watch(
+  () => branchStore.selectedBranchId,
+  (newVal) => {
+    if (selectedBranchId.value !== newVal) {
+      selectedBranchId.value = newVal ?? 'all';
+      void fetchAdminDashboard();
+    }
+  },
+);
 
 // ==========================================
 // 🎯 API Integration — ดึงข้อมูล Dashboard จาก Backend

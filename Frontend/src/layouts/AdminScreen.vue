@@ -23,8 +23,8 @@
             :aria-label="t('nav.admin.titleNotifications')"
             @click="$router.push('/admin/notifications')"
           >
-  <q-badge v-if="unreadCount > 0" color="red" floating rounded>{{ unreadCount }}</q-badge>
-</q-btn>
+            <q-badge v-if="unreadCount > 0" color="red" floating rounded>{{ unreadCount }}</q-badge>
+          </q-btn>
           <q-avatar
             size="34px"
             class="bg-primary text-white q-ml-sm cursor-pointer"
