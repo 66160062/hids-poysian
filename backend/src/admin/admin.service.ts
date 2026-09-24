@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, FindOptionsWhere } from 'typeorm';
+import { Repository, Between, FindOptionsWhere, In } from 'typeorm';
 import { InspectionJob } from '../inspection-jobs/entities/inspection-job.entity';
 import { InspectionRound } from '../inspection-rounds/entities/inspection-round.entity';
-import { Defect } from '../defects/entities/defect.entity';
+import { Defect, DefectStatus } from '../defects/entities/defect.entity';
 import { Branch } from '../branches/entities/branch.entity';
 import { Team } from '../teams/entities/team.entity';
 import {
@@ -18,6 +18,7 @@ import {
   JobDefectResolution,
   TeamWorkloadItem,
   PropertyTypeItem,
+  OperationalPipeline,
 } from './dto/dashboard-response.dto';
 
 /** ลำดับการแสดงผลสถานะงานใต้ตัวเลขรวมในการ์ดสรุป */
@@ -391,17 +392,40 @@ export class AdminService {
     }
 
     // ========================================
-    // 6. ดึงข้อมูล Defects ทั้งหมดสำหรับ Drilldown
+    // 6. ดึงข้อมูล Defects จากรอบล่าสุด (Latest Round) ของแต่ละโครงการ
+    //    ป้องกันการนับซ้ำจากการ Clone defect ข้ามรอบ และสะท้อนสถานะปัจจุบัน
     // ========================================
-    const defects = await this.defectsRepo.find({
-      relations: [
-        'round',
-        'round.job',
-        'subCategories',
-        'subCategories.category',
-        'updatedBy',
-      ],
-    });
+    const latestRoundMap = new Map<number, InspectionRound>();
+    for (const job of allJobs) {
+      if (job.rounds && job.rounds.length > 0) {
+        const sortedRounds = [...job.rounds].sort(
+          (a, b) => b.roundNumber - a.roundNumber || b.roundId - a.roundId,
+        );
+        latestRoundMap.set(job.jobId, sortedRounds[0]);
+      }
+    }
+
+    const latestRoundIds = Array.from(latestRoundMap.values())
+      .map((r) => r.roundId)
+      .filter((id): id is number => typeof id === 'number' && id > 0);
+
+    const defects: Defect[] =
+      latestRoundIds.length > 0
+        ? await this.defectsRepo.find({
+            where: {
+              round: {
+                roundId: In(latestRoundIds),
+              },
+            },
+            relations: [
+              'round',
+              'round.job',
+              'subCategories',
+              'subCategories.category',
+              'updatedBy',
+            ],
+          })
+        : [];
 
     let totalDefects = 0;
     let totalVerified = 0;
@@ -434,6 +458,8 @@ export class AdminService {
         pending: number;
         repaired: number;
         verified: number;
+        majorCount: number;
+        minorCount: number;
         contractorName: string | null;
       }
     >();
@@ -450,74 +476,75 @@ export class AdminService {
     ];
 
     for (const defect of defects) {
-      const defectBranchId = defect.round?.job?.branchId;
-      // กรองตามสาขาเฉพาะเมื่อผู้ใช้เลือกสาขาเฉพาะ และงานของ defect มี branchId ระบุ
-      if (selectedBranchId && defectBranchId && defectBranchId !== selectedBranchId) {
-        continue;
-      }
+      const jobId = defect.round?.job?.jobId;
+      if (!jobId) continue;
 
       totalDefects++;
       const statusLower = (defect.status || '').toLowerCase();
-      if (statusLower === 'verified') {
+      const isVerified =
+        statusLower === DefectStatus.VERIFIED || statusLower === 'verified';
+      const isRepaired =
+        statusLower === DefectStatus.REPAIRED || statusLower === 'repaired';
+
+      if (isVerified) {
         totalVerified++;
-      } else if (statusLower === 'repaired') {
+      } else if (isRepaired) {
         globalRepaired++;
       } else {
         globalPending++;
       }
 
-      // นับรายโครงการ (ถ้ามี jobId)
-      const jobId = defect.round?.job?.jobId;
-      if (jobId) {
-        if (!jobDefectMap.has(jobId)) {
-          jobDefectMap.set(jobId, {
-            categories: new Map<string, number>(),
-            pending: 0,
-            repaired: 0,
-            verified: 0,
-            contractorName:
-              defect.updatedBy?.companyName ?? defect.updatedBy?.fullName ?? null,
-          });
-        }
-
-        const entry = jobDefectMap.get(jobId)!;
-        if (statusLower === 'verified') {
-          entry.verified++;
-        } else if (statusLower === 'repaired') {
-          entry.repaired++;
-        } else {
-          entry.pending++;
-        }
-
-        if (defect.subCategories && defect.subCategories.length > 0) {
-          for (const sub of defect.subCategories) {
-            const catName = registerCategoryName(sub);
-            entry.categories.set(
-              catName,
-              (entry.categories.get(catName) || 0) + 1,
-            );
-          }
-        } else {
-          entry.categories.set(
-            OTHER_CATEGORY_TH,
-            (entry.categories.get(OTHER_CATEGORY_TH) || 0) + 1,
-          );
-        }
+      // นับรายโครงการ
+      if (!jobDefectMap.has(jobId)) {
+        jobDefectMap.set(jobId, {
+          categories: new Map<string, number>(),
+          pending: 0,
+          repaired: 0,
+          verified: 0,
+          majorCount: 0,
+          minorCount: 0,
+          contractorName:
+            defect.updatedBy?.companyName ??
+            defect.updatedBy?.fullName ??
+            null,
+        });
       }
 
-      // รวมสถิติหมวดหมู่ Defect ระดับทั้งระบบ
+      const entry = jobDefectMap.get(jobId)!;
+      if (isVerified) {
+        entry.verified++;
+      } else if (isRepaired) {
+        entry.repaired++;
+      } else {
+        entry.pending++;
+      }
+
+      if (defect.severity?.toLowerCase() === 'major') {
+        entry.majorCount++;
+      } else {
+        entry.minorCount++;
+      }
+
+      // รวมหมวดหมู่ของ Defect นี้ (1 Defect จะนับ 1 หมวดหมู่หลักแบบ distinct เพื่อไม่ให้หมวดหมู่ซ้ำซ้อน)
+      const seenCategories = new Set<string>();
       if (defect.subCategories && defect.subCategories.length > 0) {
         for (const sub of defect.subCategories) {
           const catName = registerCategoryName(sub);
-          globalCategories.set(
-            catName,
-            (globalCategories.get(catName) || 0) + 1,
-          );
+          seenCategories.add(catName);
         }
-      } else {
+      }
+      if (seenCategories.size === 0) {
+        seenCategories.add(OTHER_CATEGORY_TH);
+      }
+
+      for (const catName of seenCategories) {
         globalCategories.set(
-          OTHER_CATEGORY_TH,
-          (globalCategories.get(OTHER_CATEGORY_TH) || 0) + 1,
+          catName,
+          (globalCategories.get(catName) || 0) + 1,
+        );
+        entry.categories.set(
+          catName,
+          (entry.categories.get(catName) || 0) + 1,
         );
       }
     }
@@ -571,7 +598,114 @@ export class AdminService {
       completionRate: overallCompletionRate,
     };
 
-    const jobDrilldowns: JobDrilldownItem[] = recentJobs.map((job) => {
+    // ========================================
+    // คำนวณ Operational Pipeline (วิเคราะห์คอขวดงาน 4 Stage) & Average Completion Score
+    // ========================================
+    let unassignedCount = 0;
+    let scheduledCount = 0;
+    let pendingApprovalCount = 0;
+    let completedCount = 0;
+
+    let totalScoreSum = 0;
+    let scoreJobCount = 0;
+
+    for (const job of allJobs) {
+      const latestRound = latestRoundMap.get(job.jobId);
+      const roundStatus = latestRound?.status?.toUpperCase() || '';
+      const jobStatus = job.status;
+      const isSubmittedOrApproved =
+        roundStatus === 'SUBMITTED' ||
+        roundStatus === 'PENDING_APPROVAL' ||
+        roundStatus === 'APPROVED' ||
+        roundStatus === 'COMPLETED' ||
+        jobStatus === 'Completed' ||
+        latestRound?.submittedAt != null;
+
+      if (
+        isSubmittedOrApproved &&
+        latestRound?.completionPercent != null &&
+        latestRound.completionPercent > 0
+      ) {
+        totalScoreSum += latestRound.completionPercent;
+        scoreJobCount++;
+      }
+
+      if (jobStatus === 'Completed' || roundStatus === 'APPROVED') {
+        completedCount++;
+      } else if (
+        roundStatus === 'SUBMITTED' ||
+        roundStatus === 'PENDING_APPROVAL' ||
+        jobStatus === 'Pending' ||
+        jobStatus === 'Locked'
+      ) {
+        pendingApprovalCount++;
+      } else if (
+        roundStatus === 'SCHEDULED' ||
+        roundStatus === 'IN_PROGRESS' ||
+        jobStatus === 'Active'
+      ) {
+        scheduledCount++;
+      } else {
+        unassignedCount++;
+      }
+    }
+
+    const totalPipeline = allJobs.length || 1;
+    const operationalPipeline: OperationalPipeline = {
+      unassignedCount,
+      scheduledCount,
+      pendingApprovalCount,
+      completedCount,
+      total: allJobs.length,
+      stages: [
+        {
+          key: 'unassigned',
+          labelTh: 'รอนัดหมาย / ร่าง',
+          labelEn: 'Draft / Unassigned',
+          count: unassignedCount,
+          percentage: Math.round((unassignedCount / totalPipeline) * 100),
+          color: '#94A3B8',
+          icon: 'edit_note',
+          hint: 'งานเปิดใหม่ยังไม่ได้นัดตรวจ',
+        },
+        {
+          key: 'scheduled',
+          labelTh: 'อยู่ระหว่างนัดตรวจ',
+          labelEn: 'Scheduled / In Progress',
+          count: scheduledCount,
+          percentage: Math.round((scheduledCount / totalPipeline) * 100),
+          color: '#3B82F6',
+          icon: 'event_available',
+          hint: 'ลงตารางตรวจหน้างานแล้ว',
+        },
+        {
+          key: 'pendingApproval',
+          labelTh: 'รออนุมัติเล่มรายงาน',
+          labelEn: 'Pending Review',
+          count: pendingApprovalCount,
+          percentage: Math.round((pendingApprovalCount / totalPipeline) * 100),
+          color: '#F59E0B',
+          icon: 'pending_actions',
+          hint: 'ตรวจเสร็จ รอออกรายงานส่งมอบ',
+        },
+        {
+          key: 'completed',
+          labelTh: 'ส่งมอบเล่มสำเร็จ',
+          labelEn: 'Completed',
+          count: completedCount,
+          percentage: Math.round((completedCount / totalPipeline) * 100),
+          color: '#10B981',
+          icon: 'verified',
+          hint: 'ปิดงานและส่งมอบเล่มแล้ว',
+        },
+      ],
+    };
+
+    const avgCompletionScore =
+      scoreJobCount > 0 ? Math.round(totalScoreSum / scoreJobCount) : null;
+
+    // รวม Drilldown ของทุกงานที่ค้นพบใน Scope เพื่อให้เลือกดูเจาะจงรายโครงการได้อย่างครบถ้วน
+    const jobDrilldowns: JobDrilldownItem[] = allJobs.map((job) => {
       const entry = jobDefectMap.get(job.jobId);
       const pending = entry?.pending || 0;
       const repaired = entry?.repaired || 0;
@@ -579,6 +713,7 @@ export class AdminService {
       const total = pending + repaired + verified;
       const completionRate =
         total > 0 ? Math.round((verified / total) * 100) : 0;
+      const latestRound = latestRoundMap.get(job.jobId);
 
       const defectCategories: JobDefectCategoryItem[] = [];
       if (entry && entry.categories.size > 0) {
@@ -599,7 +734,24 @@ export class AdminService {
         });
       }
 
+      // เรียงหมวดหมู่ตามจำนวนที่พบมากที่สุดก่อน (Top Defect Categories ประจำงานนั้น)
+      defectCategories.sort((a, b) => b.count - a.count);
+
       const { statusCode } = this.mapJobStatus(job.status);
+      const firstMember = latestRound?.teamMembers?.[0];
+      const inspectorName =
+        firstMember?.inspector?.fullName ??
+        firstMember?.team?.team_name ??
+        null;
+
+      const roundStatus = latestRound?.status?.toUpperCase() || '';
+      const isSubmittedOrApproved =
+        roundStatus === 'SUBMITTED' ||
+        roundStatus === 'PENDING_APPROVAL' ||
+        roundStatus === 'APPROVED' ||
+        roundStatus === 'COMPLETED' ||
+        job.status === 'Completed' ||
+        latestRound?.submittedAt != null;
 
       return {
         jobId: job.jobId,
@@ -609,6 +761,14 @@ export class AdminService {
         status: job.status,
         statusCode,
         contractorName: entry?.contractorName ?? null,
+        inspectorName,
+        completionScore: isSubmittedOrApproved
+          ? (latestRound?.completionPercent ?? null)
+          : null,
+        roundNumber: latestRound?.roundNumber ?? null,
+        totalRounds: job.rounds?.length ?? 1,
+        majorCount: entry?.majorCount || 0,
+        minorCount: entry?.minorCount || 0,
         defectCategories,
         resolution: {
           pending,
@@ -634,29 +794,43 @@ export class AdminService {
 
     const teamMap = new Map<
       number,
-      { teamName: string; active: number; completed: number; total: number }
+      {
+        teamName: string;
+        scheduled: number;
+        inProgress: number;
+        pendingApproval: number;
+        completed: number;
+        total: number;
+      }
     >();
 
     // ตั้งต้นรายการทีมทั้งหมดจากฐานข้อมูล
     for (const team of allActiveTeams) {
       teamMap.set(team.team_Id, {
         teamName: team.team_name,
-        active: 0,
+        scheduled: 0,
+        inProgress: 0,
+        pendingApproval: 0,
         completed: 0,
         total: 0,
       });
     }
 
     for (const job of allJobs) {
-      const rounds = job.rounds || [];
+      // ค้นหาทีมที่ได้รับมอบหมายสำหรับงานนี้ (เรียงจากรอบล่าสุดก่อน)
+      const sortedRounds = [...(job.rounds || [])].sort(
+        (a, b) => b.roundNumber - a.roundNumber || b.roundId - a.roundId,
+      );
       let foundTeamId: number | undefined;
       let foundTeamName = 'ทีมส่วนกลาง';
 
-      for (const round of rounds) {
+      for (const round of sortedRounds) {
         const members = round.teamMembers || [];
         for (const member of members) {
-          const tId = member.team?.team_Id ?? member.inspector?.team?.team_Id;
-          const tName = member.team?.team_name ?? member.inspector?.team?.team_name;
+          const tId =
+            member.team?.team_Id ?? member.inspector?.team?.team_Id;
+          const tName =
+            member.team?.team_name ?? member.inspector?.team?.team_name;
           if (tId) {
             foundTeamId = tId;
             foundTeamName = tName || 'ทีมส่วนกลาง';
@@ -666,21 +840,42 @@ export class AdminService {
         if (foundTeamId) break;
       }
 
-      if (foundTeamId) {
-        if (!teamMap.has(foundTeamId)) {
-          teamMap.set(foundTeamId, {
-            teamName: foundTeamName,
-            active: 0,
-            completed: 0,
-            total: 0,
-          });
-        }
+      // ตรวจสอบและนับภาระงานเฉพาะทีมที่สังกัดสาขาที่เลือก (อยู่ใน teamMap)
+      if (foundTeamId && teamMap.has(foundTeamId)) {
         const t = teamMap.get(foundTeamId)!;
-        t.total++;
-        if (job.status === 'Completed') {
+        const latestRound = latestRoundMap.get(job.jobId);
+        const roundStatus = latestRound?.status?.toUpperCase() || '';
+        const defectEntry = jobDefectMap.get(job.jobId);
+        const hasRecordedDefects =
+          defectEntry != null &&
+          defectEntry.pending + defectEntry.repaired + defectEntry.verified > 0;
+
+        if (
+          job.status === 'Completed' ||
+          roundStatus === 'APPROVED' ||
+          roundStatus === 'COMPLETED'
+        ) {
           t.completed++;
+          t.total++;
+        } else if (
+          roundStatus === 'SUBMITTED' ||
+          roundStatus === 'PENDING_APPROVAL' ||
+          job.status === 'Pending' ||
+          job.status === 'Locked'
+        ) {
+          t.pendingApproval++;
+          t.total++;
+        } else if (
+          roundStatus === 'IN_PROGRESS' ||
+          hasRecordedDefects ||
+          latestRound?.inspectedAt != null
+        ) {
+          t.inProgress++;
+          t.total++;
         } else {
-          t.active++;
+          // รอตรวจ: แอดมินเพิ่มรอบตรวจและมอบหมายทีมแล้ว แต่วิศวกรยังไม่ได้เริ่มเปิด defect
+          t.scheduled++;
+          t.total++;
         }
       }
     }
@@ -690,7 +885,9 @@ export class AdminService {
     ).map(([teamId, data]) => ({
       teamId,
       teamName: data.teamName,
-      activeCount: data.active,
+      scheduledCount: data.scheduled,
+      inProgressCount: data.inProgress,
+      pendingApprovalCount: data.pendingApproval,
       completedCount: data.completed,
       totalCount: data.total,
     }));
@@ -745,6 +942,15 @@ export class AdminService {
       propertyTypes,
       topDefectCategories,
       overallDefectResolution,
+      operationalPipeline,
+      avgCompletionScore,
+      scheduledThisMonth: rounds.length,
+      pendingApprovalCount,
+      completedCount,
+      deliverySuccessRate:
+        totalProjects > 0
+          ? Math.round((completedCount / totalProjects) * 100)
+          : 0,
     };
   }
 
