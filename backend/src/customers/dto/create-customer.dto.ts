@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCustomerDto {
@@ -32,19 +32,22 @@ export class CreateCustomerDto {
   @IsString()
   phoneNumber3?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'อีเมล',
     example: 'somchai@email.com',
   })
-  @IsString()
-  email!: string;
+  @IsOptional()
+  @ValidateIf((_o, v) => !!v)
+  @IsEmail()
+  email?: string;
 
   @ApiPropertyOptional({
     description: 'อีเมล (เพิ่มเติม 2)',
     example: 'somchai2@email.com',
   })
   @IsOptional()
-  @IsString()
+  @ValidateIf((_o, v) => !!v)
+  @IsEmail()
   email2?: string;
 
   @ApiPropertyOptional({
@@ -52,7 +55,8 @@ export class CreateCustomerDto {
     example: 'somchai3@email.com',
   })
   @IsOptional()
-  @IsString()
+  @ValidateIf((_o, v) => !!v)
+  @IsEmail()
   email3?: string;
 
   @ApiProperty({

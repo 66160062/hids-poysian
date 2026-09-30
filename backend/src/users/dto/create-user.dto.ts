@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -54,6 +54,7 @@ export class CreateUserDto {
     description: 'รหัสผ่าน',
     example: '123456789',
   })
+  @MaxLength(100)
   password!: string;
 
   @ApiProperty({

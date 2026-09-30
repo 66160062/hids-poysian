@@ -1,7 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
+import { Branch } from 'src/branches/entities/branch.entity';
+import { Team } from 'src/teams/entities/team.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
@@ -14,6 +16,11 @@ export class UsersService {
   ) { }
 
   async create(createUserDto: CreateUserDto) {
+    const existingUser = await this.findByEmail(createUserDto.email);
+    if (existingUser) {
+      throw new ConflictException('อีเมลนี้ถูกใช้งานในระบบแล้ว');
+    }
+
     const saltOrRounds = 10;
     const hash = await bcrypt.hash(createUserDto.password, saltOrRounds);
     createUserDto.password = hash;
@@ -125,6 +132,15 @@ export class UsersService {
   async update(id: number, updateUserDto: UpdateUserDto) {
     const user = await this.findOne(id);
 
+    if (updateUserDto.email && updateUserDto.email !== user.email) {
+      const existingUser = await this.usersRepository.findOne({
+        where: { email: updateUserDto.email, id: Not(id) },
+      });
+      if (existingUser) {
+        throw new ConflictException('อีเมลนี้ถูกใช้งานในระบบแล้ว');
+      }
+    }
+
     if (updateUserDto.password) {
       const saltOrRounds = 10;
       updateUserDto.password = await bcrypt.hash(
@@ -138,19 +154,29 @@ export class UsersService {
     Object.assign(user, updateUserDto);
 
     // branchId handling:
-    // If branchId is provided, parse number and clear user.branch relation cache
+    // If branchId is provided, assign both foreign key column and relation object
     if (updateUserDto.branchId !== undefined) {
       const bId = Number(updateUserDto.branchId);
-      user.branchId = bId === 0 ? null : bId;
-      user.branch = null;
+      if (bId > 0) {
+        user.branchId = bId;
+        user.branch = { branchId: bId } as Branch;
+      } else {
+        user.branchId = null;
+        user.branch = null;
+      }
     }
 
     // teamId handling:
-    // If teamId is provided, parse number and clear user.team relation cache
+    // If teamId is provided, assign both foreign key column and relation object
     if (updateUserDto.teamId !== undefined) {
       const tId = Number(updateUserDto.teamId);
-      user.teamId = tId === 0 ? null : tId;
-      user.team = null;
+      if (tId > 0) {
+        user.teamId = tId;
+        user.team = { team_Id: tId } as Team;
+      } else {
+        user.teamId = null;
+        user.team = null;
+      }
     }
 
     // If role is admin, they shouldn't belong to a team
@@ -159,7 +185,8 @@ export class UsersService {
       user.team = null;
     }
 
-    return this.usersRepository.save(user);
+    await this.usersRepository.save(user);
+    return this.findOne(id);
   }
 
   async remove(id: number) {

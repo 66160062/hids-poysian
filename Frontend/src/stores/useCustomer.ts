@@ -124,11 +124,22 @@ export const useCustomerStore = defineStore('customer', () => {
     }
   };
 
+  const deleteCustomer = async (id: number) => {
+    try {
+      await api.delete(`/customers/${id}`);
+      customers.value = customers.value.filter((c) => c.id !== id);
+    } catch (error) {
+      console.error('Failed to delete customer', error);
+      throw error;
+    }
+  };
+
   return {
     customers,
     isLoading,
     fetchCustomers,
     createCustomer,
     updateCustomer,
+    deleteCustomer,
   };
 });

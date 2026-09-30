@@ -19,7 +19,7 @@
       <q-separator />
 
       <q-card-section class="dialog-body">
-        <q-form @submit="onSave" class="q-gutter-md">
+        <q-form ref="formRef" @submit="onSave" class="q-gutter-md">
           <!-- Profile Image (Mock Upload) -->
           <div class="upload-zone row items-center">
             <q-avatar size="64px" class="q-mr-md" :class="displayImageUrl ? 'bg-grey-3' : 'bg-primary text-white'">
@@ -93,7 +93,15 @@
               outlined
               dense
               filled
-              :rules="[(val) => !!val || t('components.adminUserFormDialog.emailRequired')]"
+              :rules="[
+                (val) => !!val || t('components.adminUserFormDialog.emailRequired'),
+                (val) =>
+                  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) ||
+                  t('components.adminUserFormDialog.emailInvalid'),
+                (val) =>
+                  !isEmailTaken(val) ||
+                  t('components.adminUserFormDialog.emailDuplicate'),
+              ]"
               hide-bottom-space
             />
           </div>
@@ -109,7 +117,10 @@
               outlined
               dense
               filled
-              :rules="[(val) => !!val || t('components.adminUserFormDialog.passwordRequired')]"
+              :rules="[
+                (val) => !!val || t('components.adminUserFormDialog.passwordRequired'),
+                (val) => val.length <= 100 || 'รหัสผ่านต้องไม่เกิน 100 ตัวอักษร'
+              ]"
               hide-bottom-space
             />
           </div>
@@ -272,11 +283,36 @@
 <script setup lang="ts">
 import { ref, watch, computed, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
+import type { QForm } from 'quasar';
 import { Cropper } from 'vue-advanced-cropper';
 import 'vue-advanced-cropper/dist/style.css';
+import { useUserStore } from 'src/stores/useUser';
 import type { User } from 'src/models';
 
 const { t } = useI18n();
+const userStore = useUserStore();
+
+const formRef = ref<QForm | null>(null);
+
+const isEmailTaken = (email?: string | null): boolean => {
+  if (!email || !email.trim()) return false;
+  const targetEmail = email.trim().toLowerCase();
+
+  // หากอยู่ในโหมดแก้ไข และอีเมลตรงกับอีเมลเดิมของผู้ใช้คนนี้ -> ไม่ถือว่าซ้ำ
+  if (props.isEditing) {
+    const originalEmail = props.initialData?.email?.trim().toLowerCase();
+    if (originalEmail && targetEmail === originalEmail) {
+      return false;
+    }
+  }
+
+  const currentUserId = Number(props.initialData?.id ?? localForm.value?.id);
+  return userStore.allUsers.some(
+    (u) =>
+      u.email?.trim().toLowerCase() === targetEmail &&
+      (!props.isEditing || (currentUserId ? Number(u.id) !== currentUserId : true)),
+  );
+};
 
 // backend ตีความ teamId = 0 ว่า "ไม่สังกัดทีม" (multipart ส่ง null ตรงๆ ไม่ได้)
 const NO_TEAM_ID = 0;
@@ -398,7 +434,7 @@ watch(
           password: '',
           lineId: '',
           role: 'inspector',
-          branchId: null,
+          branchId: props.initialData.branchId ?? null,
           imageUrl: '',
         };
       }
@@ -421,15 +457,15 @@ watch(
   },
 );
 
-// ย้ายสาขาแล้วทีมเดิมของสาขาก่อนหน้าใช้ไม่ได้ ต้องถอดออกให้เลือกทีมใหม่
+// ย้ายสาขาแล้วทีมเดิมของสาขาก่อนหน้าใช้ไม่ได้ ต้องถอดออกให้เลือกทีมใหม่ (เฉพาะเมื่อผู้ใช้เลือกเปลี่ยนสาขาในฟอร์มจริงๆ)
 watch(
   () => localForm.value.branchId,
   (newBranchId, oldBranchId) => {
-    if (isHydrating.value || newBranchId === oldBranchId) return;
+    if (isHydrating.value || oldBranchId === undefined || newBranchId === oldBranchId) return;
     const selectedId = localForm.value.teamId;
-    if (!selectedId) return;
-    const selected = props.teamOptions.find((opt) => opt.value === selectedId);
-    if (selected && selected.branchId != null && selected.branchId !== newBranchId) {
+    if (!selectedId || selectedId === NO_TEAM_ID) return;
+    const selected = props.teamOptions.find((opt) => Number(opt.value) === Number(selectedId));
+    if (selected && selected.branchId != null && Number(selected.branchId) !== Number(newBranchId)) {
       localForm.value.teamId = NO_TEAM_ID;
     }
   },
@@ -483,9 +519,25 @@ const confirmCrop = () => {
   }, 'image/jpeg', 0.92);
 };
 
-const onSave = () => {
+const onSave = async () => {
+  if (formRef.value) {
+    const success = await formRef.value.validate(true);
+    if (!success) {
+      return;
+    }
+  }
+
+  // Convert sentinel values (0) to null so backend does not treat them as "clear"
+  const payloadForm = { ...localForm.value };
+  if (payloadForm.branchId === 0) {
+    payloadForm.branchId = null;
+  }
+  if (payloadForm.teamId === 0) {
+    payloadForm.teamId = null;
+  }
+
   emit('save', {
-    form: localForm.value,
+    form: payloadForm,
     file: profileImageFile.value,
   });
 };

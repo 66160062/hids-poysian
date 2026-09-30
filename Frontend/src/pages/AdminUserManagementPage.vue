@@ -251,17 +251,33 @@
       </div>
 
       <!-- Users Grid -->
-      <div v-else class="row q-col-gutter-md">
-        <div
-          v-for="user in usersList"
-          :key="user.id"
-          class="col-12 col-sm-6 col-md-4 card-stagger"
-        >
-          <AdminUserCard
-            :user="user"
-            :teamOptions="teamOptions"
-            @edit="openEditDialog"
-            @delete="confirmDeleteUser"
+      <div v-else>
+        <div class="row q-col-gutter-md">
+          <div
+            v-for="user in usersList"
+            :key="user.id"
+            class="col-12 col-sm-6 col-md-4 card-stagger"
+          >
+            <AdminUserCard
+              :user="user"
+              :teamOptions="teamOptions"
+              @edit="openEditDialog"
+              @delete="confirmDeleteUser"
+            />
+          </div>
+        </div>
+
+        <!-- Pagination Controls (9 items per page) -->
+        <div v-if="usersList.length > 0" class="row justify-center q-mt-lg q-pb-xl">
+          <q-pagination
+            v-model="currentPage"
+            :max="totalPages || 1"
+            :max-pages="5"
+            boundary-numbers
+            direction-links
+            color="primary"
+            active-color="primary"
+            active-text-color="white"
           />
         </div>
       </div>
@@ -378,10 +394,14 @@ const branchFormOptions = computed(() => {
   }));
 });
 
-const loadUsers = async () => {
+const currentPage = ref(1);
+const totalPages = computed(() => userStore.meta.totalPages || 1);
+
+const loadUsers = async (page = currentPage.value) => {
   try {
     await userStore.fetchUsers({
-      all: true,
+      page,
+      limit: 9,
       search: searchQuery.value.trim() || undefined,
       role:
         activeRoleFilter.value === 'unassigned'
@@ -399,16 +419,22 @@ const loadUsers = async () => {
   }
 };
 
+watch(currentPage, (newPage) => {
+  void loadUsers(newPage);
+});
+
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 watch(searchQuery, () => {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => {
-    void loadUsers();
+    currentPage.value = 1;
+    void loadUsers(1);
   }, 400);
 });
 
 watch([activeRoleFilter, selectedBranchId], () => {
-  void loadUsers();
+  currentPage.value = 1;
+  void loadUsers(1);
 });
 
 // Form State
@@ -453,17 +479,22 @@ onMounted(async () => {
 const openCreateDialog = () => {
   isEditing.value = false;
   editingId.value = null;
-  formData.value = { ...defaultForm() };
+  formData.value = {
+    ...defaultForm(),
+    branchId: selectedBranchId.value ?? null,
+  };
   showFormDialog.value = true;
 };
 
 const openEditDialog = (user: User) => {
   isEditing.value = true;
   editingId.value = user.id;
+  const rawBranchId = user.branchId ?? user.branch?.branchId ?? user.team?.branchId ?? user.team?.branch?.branchId ?? null;
+  const rawTeamId = user.teamId ?? user.team?.team_Id ?? null;
   formData.value = {
     ...user,
-    teamId: user.team?.team_Id ?? user.teamId,
-    branchId: user.branchId ?? user.branch?.branchId ?? user.team?.branchId ?? null,
+    teamId: rawTeamId ? Number(rawTeamId) : 0,
+    branchId: rawBranchId ? Number(rawBranchId) : null,
   };
   showFormDialog.value = true;
 };
@@ -496,8 +527,7 @@ const onSaveUser = async (payload: { form: Partial<User>; file: File | null }) =
       $q.notify({ type: 'positive', message: t('adminManage.userManagement.addSuccess'), icon: 'check_circle' });
     }
     showFormDialog.value = false;
-    void loadUsers();
-    void userStore.fetchAllUsers();
+    await Promise.all([loadUsers(), userStore.fetchAllUsers()]);
   } catch (err) {
     const error = err as Error & { response?: { data?: { message?: string } } };
     console.error('Save user failed', error);

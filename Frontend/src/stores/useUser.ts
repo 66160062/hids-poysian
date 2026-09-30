@@ -90,7 +90,7 @@ export const useUserStore = defineStore('user', () => {
       }
 
       const response = await api.post('/users', requestData);
-      await fetchUsers(); // Refresh
+      await Promise.all([fetchUsers(), fetchAllUsers()]);
       return response.data;
     } catch (error) {
       console.error('Failed to create user', error);
@@ -115,7 +115,7 @@ export const useUserStore = defineStore('user', () => {
       if (payload.form.email !== undefined) requestData.append('email', payload.form.email);
       if (payload.form.lineId !== undefined) requestData.append('lineId', payload.form.lineId);
       if (payload.form.role !== undefined) requestData.append('role', payload.form.role);
-      if (payload.form.password !== undefined) requestData.append('password', payload.form.password);
+      if (payload.form.password) requestData.append('password', payload.form.password);
       if (payload.form.branchId !== undefined) {
         requestData.append('branchId', (payload.form.branchId ?? 0).toString());
       }
@@ -129,7 +129,7 @@ export const useUserStore = defineStore('user', () => {
       }
 
       const response = await api.patch(`/users/${id}`, requestData);
-      await fetchUsers();
+      await Promise.all([fetchUsers(), fetchAllUsers()]);
       return response.data;
     } catch (error) {
       console.error('Failed to update user', error);
