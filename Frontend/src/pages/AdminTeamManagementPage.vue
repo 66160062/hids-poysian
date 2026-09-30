@@ -11,9 +11,9 @@
         </div>
       </div>
 
-      <!-- KPI Summary Cards (2 Cards) -->
+      <!-- KPI Summary Cards (3 Cards) -->
       <div class="row q-col-gutter-sm q-mb-md">
-        <div class="col-6">
+        <div class="col-4">
           <q-card
             flat
             bordered
@@ -35,7 +35,7 @@
           </q-card>
         </div>
 
-        <div class="col-6">
+        <div class="col-4">
           <q-card
             flat
             bordered
@@ -56,6 +56,28 @@
             </q-card-section>
           </q-card>
         </div>
+
+        <div class="col-4">
+          <q-card
+            flat
+            bordered
+            class="kpi-card bg-white shadow-1 cursor-pointer"
+            :class="{ 'kpi-card--active': viewMode === 'customers' }"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="showCustomersView"
+            @keyup.enter="showCustomersView"
+          >
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar color="teal-1" text-color="teal-9" icon="assignment_ind" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminManage.teamManagement.kpiTotalCustomers') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ customerStore.customers.length }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
 
       <!-- Search Bar & Round Tune Filter Button -->
@@ -68,7 +90,9 @@
           :placeholder="
             viewMode === 'branches'
               ? t('adminManage.teamManagement.searchBranchPlaceholder')
-              : t('adminManage.teamManagement.searchPlaceholder')
+              : viewMode === 'customers'
+                ? t('adminManage.customerManagement.searchPlaceholder')
+                : t('adminManage.teamManagement.searchPlaceholder')
           "
           class="col search-input"
           hide-bottom-space
@@ -147,11 +171,19 @@
             :label="
               viewMode === 'branches'
                 ? t('adminManage.branchManagement.addBranch')
-                : t('adminManage.teamManagement.addNewTeam')
+                : viewMode === 'customers'
+                  ? t('adminManage.customerManagement.addNew')
+                  : t('adminManage.teamManagement.addNewTeam')
             "
             class="full-width action-btn-primary shadow-1"
             no-caps
-            @click="viewMode === 'branches' ? openBranchForm() : openCreateForm()"
+            @click="
+              viewMode === 'branches'
+                ? openBranchForm()
+                : viewMode === 'customers'
+                  ? openCustomerForm()
+                  : openCreateForm()
+            "
           />
         </div>
       </div>
@@ -220,6 +252,27 @@
               </q-badge>
             </q-card-actions>
           </q-card>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customers View -->
+    <div v-else-if="viewMode === 'customers'" class="q-px-md q-pt-sm q-pb-md">
+      <div v-if="!customerStore.isLoading && filteredCustomers.length === 0" class="text-center q-py-xl text-grey-6">
+        <q-icon name="person_search" size="64px" class="q-mb-md" />
+        <div>{{ t('adminManage.customerManagement.noCustomersFound') }}</div>
+      </div>
+      <div v-else class="row q-col-gutter-md">
+        <div
+          v-for="customer in filteredCustomers"
+          :key="customer.id"
+          class="col-12 col-sm-6 col-md-4 card-stagger"
+        >
+          <AdminCustomerCard
+            :customer="customer"
+            @edit="openEditCustomerForm"
+            @delete="confirmDeleteCustomer"
+          />
         </div>
       </div>
     </div>
@@ -584,6 +637,13 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+    <!-- Customer Form Dialog -->
+    <AdminCustomerFormDialog
+      v-model="showCustomerDialog"
+      :isEditing="isEditingCustomer"
+      :initialData="customerFormData"
+      @save="onSaveCustomer"
+    />
   </q-page>
 </template>
 
@@ -594,7 +654,10 @@ import { useQuasar } from 'quasar';
 import { useTeamStore } from 'src/stores/useTeam';
 import { useUserStore } from 'src/stores/useUser';
 import { useBranchStore, type Branch } from 'src/stores/useBranch';
+import { useCustomerStore, type Customer } from 'src/stores/useCustomer';
 import AdminTeamCard from 'src/components/AdminTeamCard.vue';
+import AdminCustomerCard from 'src/components/AdminCustomerCard.vue';
+import AdminCustomerFormDialog from 'src/components/AdminCustomerFormDialog.vue';
 import ConfirmActionDialog from 'src/components/ConfirmActionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { Cropper } from 'vue-advanced-cropper';
@@ -608,6 +671,7 @@ const $q = useQuasar();
 const teamStore = useTeamStore();
 const userStore = useUserStore();
 const branchStore = useBranchStore();
+const customerStore = useCustomerStore();
 
 const isFormMode = ref(false);
 const isEditing = ref(false);
@@ -623,7 +687,7 @@ const selectedBranchId = computed<number | null>({
     branchStore.setPageBranch('teams', val ?? 'all');
   },
 });
-const viewMode = ref<'teams' | 'branches'>('teams');
+const viewMode = ref<'teams' | 'branches' | 'customers'>('teams');
 
 function showTeamsView() {
   viewMode.value = 'teams';
@@ -632,6 +696,10 @@ function showTeamsView() {
 
 function showBranchesView() {
   viewMode.value = 'branches';
+}
+
+function showCustomersView() {
+  viewMode.value = 'customers';
 }
 
 const allTeamsList = computed(() => (teamStore.allTeams.length > 0 ? teamStore.allTeams : teamStore.teams));
@@ -813,6 +881,7 @@ onMounted(async () => {
       teamStore.fetchAllTeams(),
       loadTeams(),
       userStore.fetchAllUsers(),
+      customerStore.fetchCustomers(),
     ]);
   } finally {
     $q.loading.hide();
@@ -830,6 +899,102 @@ const filteredBranches = computed(() => {
   if (!keyword) return branchStore.branches;
   return branchStore.branches.filter((b) => (b.branchName || '').toLowerCase().includes(keyword));
 });
+
+const filteredCustomers = computed(() => {
+  const keyword = searchQuery.value.trim().toLowerCase();
+  if (!keyword) return customerStore.customers;
+  return customerStore.customers.filter((c) => {
+    const nameMatch = (c.name || '').toLowerCase().includes(keyword);
+    const phoneMatch = [c.phone, c.phone2, c.phone3].some((p) => p && p.includes(keyword));
+    const emailMatch = [c.email, c.email2, c.email3].some((e) => e && e.toLowerCase().includes(keyword));
+    const lineMatch = (c.lineId || '').toLowerCase().includes(keyword);
+    return nameMatch || phoneMatch || emailMatch || lineMatch;
+  });
+});
+
+const showCustomerDialog = ref(false);
+const isEditingCustomer = ref(false);
+const editingCustomerId = ref<number | null>(null);
+const customerFormData = ref<Partial<Customer>>({});
+
+const openCustomerForm = () => {
+  isEditingCustomer.value = false;
+  editingCustomerId.value = null;
+  customerFormData.value = {};
+  showCustomerDialog.value = true;
+};
+
+const openEditCustomerForm = (customer: Customer) => {
+  isEditingCustomer.value = true;
+  editingCustomerId.value = customer.id;
+  customerFormData.value = { ...customer };
+  showCustomerDialog.value = true;
+};
+
+const onSaveCustomer = async (payload: Partial<Customer>) => {
+  try {
+    $q.loading.show({ message: t('adminManage.customerManagement.saving') });
+    const customerPayload = {
+      name: payload.name || '',
+      phone: payload.phone || '',
+      phone2: payload.phone2 || undefined,
+      phone3: payload.phone3 || undefined,
+      email: payload.email || undefined,
+      email2: payload.email2 || undefined,
+      email3: payload.email3 || undefined,
+      lineId: payload.lineId || undefined,
+      preferredLocale: payload.preferredLocale || undefined,
+    };
+
+    if (isEditingCustomer.value && editingCustomerId.value) {
+      await customerStore.updateCustomer(editingCustomerId.value, customerPayload);
+      $q.notify({ type: 'positive', message: t('adminManage.customerManagement.editSuccess'), icon: 'check_circle' });
+    } else {
+      await customerStore.createCustomer(customerPayload);
+      $q.notify({ type: 'positive', message: t('adminManage.customerManagement.addSuccess'), icon: 'check_circle' });
+    }
+    showCustomerDialog.value = false;
+    await customerStore.fetchCustomers();
+  } catch (err) {
+    const error = err as Error & { response?: { data?: { message?: string } } };
+    console.error('Save customer error:', error);
+    const msg = error?.response?.data?.message || error?.message || 'Error';
+    $q.notify({ type: 'negative', message: t('adminManage.customerManagement.saveFailed', { msg }) });
+  } finally {
+    $q.loading.hide();
+  }
+};
+
+const confirmDeleteCustomer = (customer: Customer) => {
+  $q.dialog({
+    component: ConfirmActionDialog,
+    componentProps: {
+      title: t('adminManage.customerManagement.confirmDeleteTitle'),
+      message: t('adminManage.customerManagement.confirmDeleteMessage', { name: customer.name }),
+      icon: 'delete',
+      color: 'negative',
+      confirmLabel: t('adminManage.customerManagement.confirmDeleteOk'),
+      cancelLabel: t('adminManage.customerManagement.confirmDeleteCancel'),
+    },
+  }).onOk(() => {
+    $q.loading.show({ message: t('adminManage.customerManagement.deleting') });
+    customerStore
+      .deleteCustomer(customer.id)
+      .then(() => {
+        $q.notify({ type: 'positive', message: t('adminManage.customerManagement.deleteSuccess'), icon: 'check_circle' });
+        void customerStore.fetchCustomers();
+      })
+      .catch((err) => {
+        const error = err as Error & { response?: { data?: { message?: string } } };
+        console.error('Delete customer error:', error);
+        const msg = error?.response?.data?.message || error?.message || 'Error';
+        $q.notify({ type: 'negative', message: t('adminManage.customerManagement.deleteFailed', { msg }) });
+      })
+      .finally(() => {
+        $q.loading.hide();
+      });
+  });
+};
 
 const branchTeamCount = (branchId: number) =>
   allTeamsList.value.filter((team) => team.branchId === branchId).length;
