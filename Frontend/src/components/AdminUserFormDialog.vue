@@ -19,7 +19,7 @@
       <q-separator />
 
       <q-card-section class="dialog-body">
-        <q-form @submit="onSave" class="q-gutter-md">
+        <q-form ref="formRef" @submit="onSave" class="q-gutter-md">
           <!-- Profile Image (Mock Upload) -->
           <div class="upload-zone row items-center">
             <q-avatar size="64px" class="q-mr-md" :class="displayImageUrl ? 'bg-grey-3' : 'bg-primary text-white'">
@@ -117,7 +117,10 @@
               outlined
               dense
               filled
-              :rules="[(val) => !!val || t('components.adminUserFormDialog.passwordRequired')]"
+              :rules="[
+                (val) => !!val || t('components.adminUserFormDialog.passwordRequired'),
+                (val) => val.length <= 100 || 'รหัสผ่านต้องไม่เกิน 100 ตัวอักษร'
+              ]"
               hide-bottom-space
             />
           </div>
@@ -280,6 +283,7 @@
 <script setup lang="ts">
 import { ref, watch, computed, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
+import type { QForm } from 'quasar';
 import { Cropper } from 'vue-advanced-cropper';
 import 'vue-advanced-cropper/dist/style.css';
 import { useUserStore } from 'src/stores/useUser';
@@ -287,6 +291,8 @@ import type { User } from 'src/models';
 
 const { t } = useI18n();
 const userStore = useUserStore();
+
+const formRef = ref<QForm | null>(null);
 
 const isEmailTaken = (email?: string | null): boolean => {
   if (!email || !email.trim()) return false;
@@ -513,7 +519,14 @@ const confirmCrop = () => {
   }, 'image/jpeg', 0.92);
 };
 
-const onSave = () => {
+const onSave = async () => {
+  if (formRef.value) {
+    const success = await formRef.value.validate(true);
+    if (!success) {
+      return;
+    }
+  }
+
   emit('save', {
     form: localForm.value,
     file: profileImageFile.value,
