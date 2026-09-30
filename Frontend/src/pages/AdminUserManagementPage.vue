@@ -463,10 +463,12 @@ const openCreateDialog = () => {
 const openEditDialog = (user: User) => {
   isEditing.value = true;
   editingId.value = user.id;
+  const rawBranchId = user.branchId ?? user.branch?.branchId ?? user.team?.branchId ?? user.team?.branch?.branchId ?? null;
+  const rawTeamId = user.teamId ?? user.team?.team_Id ?? null;
   formData.value = {
     ...user,
-    teamId: user.team?.team_Id ?? user.teamId,
-    branchId: user.branchId ?? user.branch?.branchId ?? user.team?.branchId ?? null,
+    teamId: rawTeamId ? Number(rawTeamId) : 0,
+    branchId: rawBranchId ? Number(rawBranchId) : null,
   };
   showFormDialog.value = true;
 };
@@ -499,8 +501,7 @@ const onSaveUser = async (payload: { form: Partial<User>; file: File | null }) =
       $q.notify({ type: 'positive', message: t('adminManage.userManagement.addSuccess'), icon: 'check_circle' });
     }
     showFormDialog.value = false;
-    void loadUsers();
-    void userStore.fetchAllUsers();
+    await Promise.all([loadUsers(), userStore.fetchAllUsers()]);
   } catch (err) {
     const error = err as Error & { response?: { data?: { message?: string } } };
     console.error('Save user failed', error);

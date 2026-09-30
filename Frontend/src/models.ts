@@ -20,7 +20,7 @@ export interface User {
   role: UserRole | string;
   imageUrl?: string | undefined;
   team?: Team | undefined;
-  teamId?: number | undefined;
+  teamId?: number | null | undefined;
   branchId?: number | null | undefined;
   branch?: { branchId: number; branchName: string; logoUrl?: string | null } | undefined;
 }

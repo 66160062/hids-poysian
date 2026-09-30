@@ -457,15 +457,15 @@ watch(
   },
 );
 
-// ย้ายสาขาแล้วทีมเดิมของสาขาก่อนหน้าใช้ไม่ได้ ต้องถอดออกให้เลือกทีมใหม่
+// ย้ายสาขาแล้วทีมเดิมของสาขาก่อนหน้าใช้ไม่ได้ ต้องถอดออกให้เลือกทีมใหม่ (เฉพาะเมื่อผู้ใช้เลือกเปลี่ยนสาขาในฟอร์มจริงๆ)
 watch(
   () => localForm.value.branchId,
   (newBranchId, oldBranchId) => {
-    if (isHydrating.value || newBranchId === oldBranchId) return;
+    if (isHydrating.value || oldBranchId === undefined || newBranchId === oldBranchId) return;
     const selectedId = localForm.value.teamId;
-    if (!selectedId) return;
-    const selected = props.teamOptions.find((opt) => opt.value === selectedId);
-    if (selected && selected.branchId != null && selected.branchId !== newBranchId) {
+    if (!selectedId || selectedId === NO_TEAM_ID) return;
+    const selected = props.teamOptions.find((opt) => Number(opt.value) === Number(selectedId));
+    if (selected && selected.branchId != null && Number(selected.branchId) !== Number(newBranchId)) {
       localForm.value.teamId = NO_TEAM_ID;
     }
   },
@@ -527,8 +527,17 @@ const onSave = async () => {
     }
   }
 
+  // Convert sentinel values (0) to null so backend does not treat them as "clear"
+  const payloadForm = { ...localForm.value };
+  if (payloadForm.branchId === 0) {
+    payloadForm.branchId = null;
+  }
+  if (payloadForm.teamId === 0) {
+    payloadForm.teamId = null;
+  }
+
   emit('save', {
-    form: localForm.value,
+    form: payloadForm,
     file: profileImageFile.value,
   });
 };
