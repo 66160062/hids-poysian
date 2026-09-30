@@ -434,7 +434,7 @@ watch(
           password: '',
           lineId: '',
           role: 'inspector',
-          branchId: null,
+          branchId: props.initialData.branchId ?? null,
           imageUrl: '',
         };
       }

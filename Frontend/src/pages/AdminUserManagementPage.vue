@@ -453,7 +453,10 @@ onMounted(async () => {
 const openCreateDialog = () => {
   isEditing.value = false;
   editingId.value = null;
-  formData.value = { ...defaultForm() };
+  formData.value = {
+    ...defaultForm(),
+    branchId: selectedBranchId.value ?? null,
+  };
   showFormDialog.value = true;
 };
 

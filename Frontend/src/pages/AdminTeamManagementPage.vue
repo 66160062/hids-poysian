@@ -988,7 +988,12 @@ function openCreateForm() {
   isEditing.value = false;
   editTeamId.value = null;
   removeLogo();
-  localForm.value = { team_name: '', logo_url: '', contact_info: '', branchId: null };
+  localForm.value = {
+    team_name: '',
+    logo_url: '',
+    contact_info: '',
+    branchId: selectedBranchId.value ?? null,
+  };
   newTeamMemberIds.value = [];
   newMemberId.value = null;
   memberSearch.value = '';

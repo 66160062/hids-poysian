@@ -1119,6 +1119,14 @@ onMounted(async () => {
   }
 
   if (!editId.value) {
+    const activeBranch = branchStore.getPageBranch('work');
+    if (typeof activeBranch === 'number' && activeBranch > 0) {
+      selectedBranchId.value = activeBranch;
+    } else if (route.query.branchId) {
+      selectedBranchId.value = Number(route.query.branchId);
+    } else {
+      selectedBranchId.value = undefined;
+    }
     $q.loading.hide();
     return;
   }
