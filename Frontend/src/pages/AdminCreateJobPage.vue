@@ -205,6 +205,9 @@
               "
               class="custom-input"
               :readonly="!!selectedCustomer && !isEditMode"
+              :rules="[
+                (val) => isValidEmail(val) || t('adminWork.createJob.emailInvalid'),
+              ]"
             >
               <template #append>
                 <q-btn
@@ -281,6 +284,9 @@
               clearable
               :placeholder="t('adminWork.createJob.emailPlaceholder')"
               class="custom-input"
+              :rules="[
+                (val) => isValidEmail(val) || t('adminWork.createJob.emailInvalid'),
+              ]"
             />
             <q-input
               v-model="form.contractorCompanyName"
@@ -534,7 +540,14 @@
               :placeholder="t('adminWork.createJob.usableAreaPlaceholder')"
               class="custom-input"
               type="number"
-              :rules="[(val) => !!val || t('adminWork.createJob.usableAreaRequired')]"
+              min="0.01"
+              step="any"
+              :rules="[
+                (val) => !!val || t('adminWork.createJob.usableAreaRequired'),
+                (val) =>
+                  (Number(val) > 0 && !Number.isNaN(Number(val))) ||
+                  t('adminWork.createJob.usableAreaInvalid'),
+              ]"
             />
             <q-select
               v-model="form.houseType"
@@ -817,6 +830,11 @@ const addCustomerEmail = () => {
 };
 const removeCustomerEmail = (idx: number) => {
   customerEmails.value.splice(idx, 1);
+};
+
+const isValidEmail = (val: string | null | undefined): boolean => {
+  if (!val || !val.trim()) return true;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
 };
 
 const selectCustomer = (c: Customer) => {
@@ -1220,6 +1238,12 @@ const submitProblems = computed(() => {
     problems.push(t('adminWork.createJob.projectNameDuplicate'));
   if (!has(form.floor)) problems.push(tc('missingFloor'));
   if (!has(form.usableArea)) problems.push(tc('missingUsableArea'));
+  else if (Number(form.usableArea) <= 0 || Number.isNaN(Number(form.usableArea)))
+    problems.push(tc('missingUsableAreaInvalid'));
+  if (customerEmails.value.some((e) => !isValidEmail(e)))
+    problems.push(tc('missingCustomerEmail'));
+  if (!isValidEmail(form.contractorEmail))
+    problems.push(tc('missingContractorEmail'));
   if (coordinateError.value) problems.push(coordinateError.value);
   if (!has(form.customerName)) problems.push(tc('missingCustomerName'));
   if (!has(customerPhones.value[0])) problems.push(tc('missingCustomerPhone'));

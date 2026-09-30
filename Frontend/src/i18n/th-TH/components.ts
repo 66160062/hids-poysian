@@ -190,6 +190,8 @@ export default {
     phoneInvalid: 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก',
     email: 'อีเมล',
     emailRequired: 'กรุณาระบุอีเมล',
+    emailInvalid: 'รูปแบบอีเมลไม่ถูกต้อง (เช่น example@mail.com)',
+    emailDuplicate: 'อีเมลนี้มีอยู่ในระบบแล้ว กรุณาใช้อีเมลอื่น',
     password: 'รหัสผ่าน',
     passwordRequired: 'กรุณาระบุรหัสผ่าน',
     lineId: 'ไอดีไลน์',

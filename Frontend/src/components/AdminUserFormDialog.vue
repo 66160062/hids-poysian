@@ -93,7 +93,15 @@
               outlined
               dense
               filled
-              :rules="[(val) => !!val || t('components.adminUserFormDialog.emailRequired')]"
+              :rules="[
+                (val) => !!val || t('components.adminUserFormDialog.emailRequired'),
+                (val) =>
+                  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) ||
+                  t('components.adminUserFormDialog.emailInvalid'),
+                (val) =>
+                  !isEmailTaken(val) ||
+                  t('components.adminUserFormDialog.emailDuplicate'),
+              ]"
               hide-bottom-space
             />
           </div>
@@ -274,9 +282,31 @@ import { ref, watch, computed, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Cropper } from 'vue-advanced-cropper';
 import 'vue-advanced-cropper/dist/style.css';
+import { useUserStore } from 'src/stores/useUser';
 import type { User } from 'src/models';
 
 const { t } = useI18n();
+const userStore = useUserStore();
+
+const isEmailTaken = (email?: string | null): boolean => {
+  if (!email || !email.trim()) return false;
+  const targetEmail = email.trim().toLowerCase();
+
+  // หากอยู่ในโหมดแก้ไข และอีเมลตรงกับอีเมลเดิมของผู้ใช้คนนี้ -> ไม่ถือว่าซ้ำ
+  if (props.isEditing) {
+    const originalEmail = props.initialData?.email?.trim().toLowerCase();
+    if (originalEmail && targetEmail === originalEmail) {
+      return false;
+    }
+  }
+
+  const currentUserId = Number(props.initialData?.id ?? localForm.value?.id);
+  return userStore.allUsers.some(
+    (u) =>
+      u.email?.trim().toLowerCase() === targetEmail &&
+      (!props.isEditing || (currentUserId ? Number(u.id) !== currentUserId : true)),
+  );
+};
 
 // backend ตีความ teamId = 0 ว่า "ไม่สังกัดทีม" (multipart ส่ง null ตรงๆ ไม่ได้)
 const NO_TEAM_ID = 0;

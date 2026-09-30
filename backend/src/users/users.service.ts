@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -14,6 +14,11 @@ export class UsersService {
   ) { }
 
   async create(createUserDto: CreateUserDto) {
+    const existingUser = await this.findByEmail(createUserDto.email);
+    if (existingUser) {
+      throw new ConflictException('อีเมลนี้ถูกใช้งานในระบบแล้ว');
+    }
+
     const saltOrRounds = 10;
     const hash = await bcrypt.hash(createUserDto.password, saltOrRounds);
     createUserDto.password = hash;
@@ -124,6 +129,15 @@ export class UsersService {
 
   async update(id: number, updateUserDto: UpdateUserDto) {
     const user = await this.findOne(id);
+
+    if (updateUserDto.email && updateUserDto.email !== user.email) {
+      const existingUser = await this.usersRepository.findOne({
+        where: { email: updateUserDto.email, id: Not(id) },
+      });
+      if (existingUser) {
+        throw new ConflictException('อีเมลนี้ถูกใช้งานในระบบแล้ว');
+      }
+    }
 
     if (updateUserDto.password) {
       const saltOrRounds = 10;

@@ -191,6 +191,8 @@ export default {
     phoneInvalid: 'Please enter a complete 10-digit phone number',
     email: 'Email',
     emailRequired: 'Please enter an email',
+    emailInvalid: 'Invalid email format (e.g. example@mail.com)',
+    emailDuplicate: 'This email is already registered in the system',
     password: 'Password',
     passwordRequired: 'Please enter a password',
     lineId: 'Line ID',
