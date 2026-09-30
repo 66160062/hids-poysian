@@ -213,45 +213,61 @@
         <q-icon name="business" size="64px" class="q-mb-md" />
         <div>{{ t('adminManage.teamManagement.noBranchesFound') }}</div>
       </div>
-      <div v-else class="row q-col-gutter-md">
-        <div v-for="branch in filteredBranches" :key="branch.branchId" class="col-12 col-sm-6 col-md-4 card-stagger">
-          <q-card
-            flat
-            bordered
-            tabindex="0"
-            role="button"
-            class="branch-card cursor-pointer"
-            v-ripple
-            @click="openBranchForm(branch)"
-            @keyup.enter="openBranchForm(branch)"
-          >
-            <q-card-section class="row items-center no-wrap q-pa-md">
-              <q-avatar size="48px" color="indigo-1" text-color="indigo-9">
-                <img v-if="branch.logoUrl" :src="getImageUrl(branch.logoUrl)" />
-                <q-icon v-else name="business" />
-              </q-avatar>
-              <div class="col q-ml-md" style="min-width: 0">
-                <div class="text-weight-bold text-dark ellipsis" style="font-size: 17px">
-                  {{ branch.branchName || t('adminManage.teamManagement.branchFallbackLabel', { id: branch.branchId }) }}
+      <div v-else>
+        <div class="row q-col-gutter-md">
+          <div v-for="branch in paginatedBranches" :key="branch.branchId" class="col-12 col-sm-6 col-md-4 card-stagger">
+            <q-card
+              flat
+              bordered
+              tabindex="0"
+              role="button"
+              class="branch-card cursor-pointer"
+              v-ripple
+              @click="openBranchForm(branch)"
+              @keyup.enter="openBranchForm(branch)"
+            >
+              <q-card-section class="row items-center no-wrap q-pa-md">
+                <q-avatar size="48px" color="indigo-1" text-color="indigo-9">
+                  <img v-if="branch.logoUrl" :src="getImageUrl(branch.logoUrl)" />
+                  <q-icon v-else name="business" />
+                </q-avatar>
+                <div class="col q-ml-md" style="min-width: 0">
+                  <div class="text-weight-bold text-dark ellipsis" style="font-size: 17px">
+                    {{ branch.branchName || t('adminManage.teamManagement.branchFallbackLabel', { id: branch.branchId }) }}
+                  </div>
+                  <div class="text-caption text-grey-6 ellipsis">
+                    {{ t('adminManage.branchManagement.jobMappingHint') }}
+                  </div>
                 </div>
-                <div class="text-caption text-grey-6 ellipsis">
-                  {{ t('adminManage.branchManagement.jobMappingHint') }}
-                </div>
-              </div>
-              <q-btn flat round dense icon="edit" color="blue" class="q-ml-sm" @click.stop="openBranchForm(branch)" />
-            </q-card-section>
-            <q-separator color="grey-2" inset />
-            <q-card-actions class="row q-px-md q-py-sm q-gutter-x-sm">
-              <q-badge color="blue-1" text-color="blue-9" class="tag-badge">
-                <q-icon name="groups" size="14px" class="q-mr-xs" />
-                {{ t('adminManage.teamManagement.branchTeamCount', { n: branchTeamCount(branch.branchId) }) }}
-              </q-badge>
-              <q-badge color="grey-2" text-color="grey-8" class="tag-badge">
-                <q-icon name="person" size="14px" class="q-mr-xs" />
-                {{ t('adminManage.teamManagement.branchMemberCount', { n: branchMemberCount(branch.branchId) }) }}
-              </q-badge>
-            </q-card-actions>
-          </q-card>
+                <q-btn flat round dense icon="edit" color="blue" class="q-ml-sm" @click.stop="openBranchForm(branch)" />
+              </q-card-section>
+              <q-separator color="grey-2" inset />
+              <q-card-actions class="row q-px-md q-py-sm q-gutter-x-sm">
+                <q-badge color="blue-1" text-color="blue-9" class="tag-badge">
+                  <q-icon name="groups" size="14px" class="q-mr-xs" />
+                  {{ t('adminManage.teamManagement.branchTeamCount', { n: branchTeamCount(branch.branchId) }) }}
+                </q-badge>
+                <q-badge color="grey-2" text-color="grey-8" class="tag-badge">
+                  <q-icon name="person" size="14px" class="q-mr-xs" />
+                  {{ t('adminManage.teamManagement.branchMemberCount', { n: branchMemberCount(branch.branchId) }) }}
+                </q-badge>
+              </q-card-actions>
+            </q-card>
+          </div>
+        </div>
+
+        <!-- Pagination for Branches (9 items per page) -->
+        <div v-if="filteredBranches.length > 0" class="row justify-center q-mt-lg q-pb-xl">
+          <q-pagination
+            v-model="currentBranchPage"
+            :max="branchTotalPages || 1"
+            :max-pages="5"
+            boundary-numbers
+            direction-links
+            color="primary"
+            active-color="primary"
+            active-text-color="white"
+          />
         </div>
       </div>
     </div>
@@ -262,37 +278,70 @@
         <q-icon name="person_search" size="64px" class="q-mb-md" />
         <div>{{ t('adminManage.customerManagement.noCustomersFound') }}</div>
       </div>
-      <div v-else class="row q-col-gutter-md">
-        <div
-          v-for="customer in filteredCustomers"
-          :key="customer.id"
-          class="col-12 col-sm-6 col-md-4 card-stagger"
-        >
-          <AdminCustomerCard
-            :customer="customer"
-            @edit="openEditCustomerForm"
-            @delete="confirmDeleteCustomer"
+      <div v-else>
+        <div class="row q-col-gutter-md">
+          <div
+            v-for="customer in paginatedCustomers"
+            :key="customer.id"
+            class="col-12 col-sm-6 col-md-4 card-stagger"
+          >
+            <AdminCustomerCard
+              :customer="customer"
+              @edit="openEditCustomerForm"
+              @delete="confirmDeleteCustomer"
+            />
+          </div>
+        </div>
+
+        <!-- Pagination for Customers (9 items per page) -->
+        <div v-if="filteredCustomers.length > 0" class="row justify-center q-mt-lg q-pb-xl">
+          <q-pagination
+            v-model="currentCustomerPage"
+            :max="customerTotalPages || 1"
+            :max-pages="5"
+            boundary-numbers
+            direction-links
+            color="primary"
+            active-color="primary"
+            active-text-color="white"
           />
         </div>
       </div>
     </div>
 
+    <!-- Teams View -->
     <div v-else class="q-px-md q-pt-sm q-pb-md">
       <div v-if="!teamStore.isLoading && teamStore.teams.length === 0" class="text-center q-py-xl text-grey-6">
         <q-icon name="groups" size="64px" class="q-mb-md" />
         <div>{{ t('adminManage.teamManagement.noTeamsFound') }}</div>
       </div>
-      <div v-else class="row q-col-gutter-md">
-        <div
-          v-for="team in teamStore.teams"
-          :key="team.team_Id"
-          class="col-12 col-sm-6 col-md-4 card-stagger"
-        >
-          <AdminTeamCard
-            :team="team"
-            :memberCount="getTeamMembers(team.team_Id).length"
-            @edit="openEditForm"
-            @delete="confirmDelete"
+      <div v-else>
+        <div class="row q-col-gutter-md">
+          <div
+            v-for="team in teamStore.teams"
+            :key="team.team_Id"
+            class="col-12 col-sm-6 col-md-4 card-stagger"
+          >
+            <AdminTeamCard
+              :team="team"
+              :memberCount="getTeamMembers(team.team_Id).length"
+              @edit="openEditForm"
+              @delete="confirmDelete"
+            />
+          </div>
+        </div>
+
+        <!-- Pagination for Teams (9 items per page) -->
+        <div v-if="teamStore.teams.length > 0" class="row justify-center q-mt-lg q-pb-xl">
+          <q-pagination
+            v-model="currentTeamPage"
+            :max="teamTotalPages || 1"
+            :max-pages="5"
+            boundary-numbers
+            direction-links
+            color="primary"
+            active-color="primary"
+            active-text-color="white"
           />
         </div>
       </div>
@@ -756,10 +805,26 @@ const unassignedInspectorOptions = computed(() => {
     .map((u) => ({ label: u.fullName, value: u.id }));
 });
 
-const loadTeams = async () => {
+const currentTeamPage = ref(1);
+const teamTotalPages = computed(() => teamStore.meta.totalPages || 1);
+
+const currentBranchPage = ref(1);
+const branchTotalPages = computed(() => Math.ceil(filteredBranches.value.length / 9) || 1);
+const paginatedBranches = computed(() =>
+  filteredBranches.value.slice((currentBranchPage.value - 1) * 9, currentBranchPage.value * 9),
+);
+
+const currentCustomerPage = ref(1);
+const customerTotalPages = computed(() => Math.ceil(filteredCustomers.value.length / 9) || 1);
+const paginatedCustomers = computed(() =>
+  filteredCustomers.value.slice((currentCustomerPage.value - 1) * 9, currentCustomerPage.value * 9),
+);
+
+const loadTeams = async (page = currentTeamPage.value) => {
   try {
     await teamStore.fetchTeams({
-      all: true,
+      page,
+      limit: 9,
       search: searchQuery.value.trim() || undefined,
       branchId: selectedBranchId.value ?? undefined,
     });
@@ -769,21 +834,35 @@ const loadTeams = async () => {
   }
 };
 
+watch(currentTeamPage, (newPage) => {
+  void loadTeams(newPage);
+});
+
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 watch(searchQuery, () => {
+  currentBranchPage.value = 1;
+  currentCustomerPage.value = 1;
   if (viewMode.value !== 'teams') return;
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => {
-    void loadTeams();
+    currentTeamPage.value = 1;
+    void loadTeams(1);
   }, 400);
 });
 
 watch(
   () => branchStore.getPageBranch('teams'),
   () => {
-    void loadTeams();
+    currentTeamPage.value = 1;
+    void loadTeams(1);
   },
 );
+
+watch(viewMode, () => {
+  currentBranchPage.value = 1;
+  currentCustomerPage.value = 1;
+  currentTeamPage.value = 1;
+});
 
 const localForm = ref<{
   team_name: string;
