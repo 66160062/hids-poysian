@@ -9,7 +9,7 @@ import { AdminGuard } from 'src/auth/admin.guard';
 /**
  * AdminController — จัดการเส้นทาง HTTP สำหรับระบบ Admin
  *
- * ⚠️ ตาม Skill: Controller ทำหน้าที่ routing เท่านั้น
+ *  ตาม Skill: Controller ทำหน้าที่ routing เท่านั้น
  *    Logic ทั้งหมดอยู่ใน AdminService
  */
 @ApiTags('admin')
