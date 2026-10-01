@@ -16,6 +16,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -35,6 +36,7 @@ export class UsersController {
     private readonly storageService: StorageService,
   ) {}
   @Post()
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'สร้างผู้ใช้งานใหม่' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ description: 'ข้อมูลผู้ใช้งาน', type: CreateUserDto })
@@ -77,6 +79,7 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'อัปเดตข้อมูลผู้ใช้งาน' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ description: 'ข้อมูลที่ต้องการแก้ไข', type: UpdateUserDto })
@@ -99,6 +102,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @UseGuards(AdminGuard)
   remove(@Param('id') id: string) {
     return this.usersService.remove(+id);
   }

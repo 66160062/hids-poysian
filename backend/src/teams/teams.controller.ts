@@ -9,15 +9,20 @@ import {
   UseInterceptors,
   UploadedFile,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
-import { ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { StorageService } from 'src/storage/storage.service';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
 
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
 @Controller('teams')
 export class TeamsController {
   constructor(
@@ -26,6 +31,7 @@ export class TeamsController {
   ) {}
 
   @Post()
+  @UseGuards(AdminGuard)
   @ApiConsumes('multipart/form-data')
   @ApiBody({ description: 'ข้อมูลทีม', type: CreateTeamDto })
   @UseInterceptors(FileInterceptor('logo_url', { storage: memoryStorage() }))
@@ -65,6 +71,7 @@ export class TeamsController {
   }
 
   @Patch(':id')
+  @UseGuards(AdminGuard)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('logo_url', { storage: memoryStorage() }))
   async update(
@@ -81,6 +88,7 @@ export class TeamsController {
   }
 
   @Delete(':id')
+  @UseGuards(AdminGuard)
   remove(@Param('id') id: string) {
     return this.teamsService.remove(+id);
   }

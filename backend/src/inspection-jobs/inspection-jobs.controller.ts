@@ -23,6 +23,7 @@ import { InspectionJobStatus } from './enums/inspection-job-status.enum';
 import { AuthService } from 'src/auth/auth.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { JobAccessGuard } from 'src/auth/job-access.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
 import { StorageService } from 'src/storage/storage.service';
 
 @Controller('inspection-jobs')
@@ -182,7 +183,7 @@ export class InspectionJobsController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   remove(@Param('id') id: string) {
     return this.inspectionJobsService.remove(+id);
   }
