@@ -37,67 +37,67 @@
         </div>
       </div>
 
-      <!-- Project Name & Status -->
-      <div class="row items-center justify-between no-wrap q-mb-xs q-mt-sm">
-        <div class="col ellipsis text-primary text-weight-bold" style="font-size: 20px; min-width: 0">
-          {{ t('adminJobs.inspection.projectLabel') }} {{ pickLocalized(job.projectName, job.projectNameEn) }}
-        </div>
-        <div class="row items-center q-gutter-x-sm" style="flex-shrink: 0">
-          <q-badge
-            v-if="isDefect(job.inspectionType)"
-            color="primary"
-            outline
-            :label="t('adminJobs.inspection.badgeInspection')"
-            class="q-px-sm q-py-xs type-badge"
-          />
-          <q-badge
-            v-else-if="isConstruction(job.inspectionType)"
-            color="warning"
-            outline
-            :label="t('adminJobs.inspection.badgeConstruction')"
-            class="q-px-sm q-py-xs type-badge"
-          />
-          <q-badge
-            class="status-badge"
-            :class="[getJobStatusBgClass(job.status), `text-${getJobStatusTextColor(job.status)}`]"
-          >
-            {{ jobStatusLabel(job.status) }}
-          </q-badge>
-        </div>
+      <!-- Project Name -->
+      <div class="text-primary text-weight-bold q-mt-sm q-mb-xs" style="font-size: 18px; line-height: 1.4; word-break: break-word">
+        {{ t('adminJobs.inspection.projectLabel') }} {{ pickLocalized(job.projectName, job.projectNameEn) }}
+      </div>
+
+      <!-- Inspection Type & Status Badges (Left-aligned) -->
+      <div class="row items-center q-gutter-x-sm q-mb-sm">
+        <q-badge
+          v-if="isDefect(job.inspectionType)"
+          color="primary"
+          outline
+          :label="t('adminJobs.inspection.badgeInspection')"
+          class="q-px-sm q-py-xs type-badge"
+        />
+        <q-badge
+          v-else-if="isConstruction(job.inspectionType)"
+          color="warning"
+          outline
+          :label="t('adminJobs.inspection.badgeConstruction')"
+          class="q-px-sm q-py-xs type-badge"
+        />
+        <q-badge
+          class="status-badge"
+          :class="[getJobStatusBgClass(job.status), `text-${getJobStatusTextColor(job.status)}`]"
+        >
+          {{ jobStatusLabel(job.status) }}
+        </q-badge>
       </div>
 
       <!-- Address & Type & Area & Map -->
       <div class="row items-center justify-between no-wrap q-mb-sm">
-        <div class="column q-gutter-y-sm">
-          <div class="row items-center q-gutter-x-sm">
-            <q-icon name="place" color="primary" size="18px" />
-            <span class="text-dark" style="font-size: 12px; font-weight: 500">
+        <div class="column q-gutter-y-sm col q-pr-sm" style="min-width: 0">
+          <div class="row items-start no-wrap q-gutter-x-sm">
+            <q-icon name="place" color="primary" size="18px" style="flex-shrink: 0; margin-top: 1px" />
+            <span class="text-dark" style="font-size: 12px; font-weight: 500; word-break: break-word; line-height: 1.5">
               : {{ job.address }}
             </span>
           </div>
-          <div class="row items-center q-gutter-x-sm">
-            <q-icon name="home" color="primary" size="18px" />
-            <span class="text-dark" style="font-size: 12px; font-weight: 500">
+          <div class="row items-center no-wrap q-gutter-x-sm">
+            <q-icon name="home" color="primary" size="18px" style="flex-shrink: 0" />
+            <span class="text-dark ellipsis" style="font-size: 12px; font-weight: 500">
               : {{ job.houseType }}
             </span>
           </div>
-          <div class="row items-center q-gutter-x-sm">
-            <q-icon name="open_in_full" color="primary" size="18px" />
+          <div class="row items-center no-wrap q-gutter-x-sm">
+            <q-icon name="open_in_full" color="primary" size="18px" style="flex-shrink: 0" />
             <span class="text-dark" style="font-size: 12px; font-weight: 500">
               : {{ job.area }} {{ t('adminJobs.inspection.sqm') }}
             </span>
           </div>
           <div
             v-if="job.appointmentDate && job.appointmentDate !== '-'"
-            class="row items-center q-gutter-x-sm"
+            class="row items-center no-wrap q-gutter-x-sm"
           >
-            <q-icon name="calendar_today" color="primary" size="18px" />
+            <q-icon name="calendar_today" color="primary" size="18px" style="flex-shrink: 0" />
             <span class="text-dark" style="font-size: 12px; font-weight: 500">
               : {{ job.appointmentDate }}
             </span>
           </div>
         </div>
-        <q-btn round outline color="primary" icon="location_on" size="md" @click="openGoogleMaps" />
+        <q-btn round outline color="primary" icon="location_on" size="md" style="flex-shrink: 0" @click="openGoogleMaps" />
       </div>
 
       <!-- House Plan -->

@@ -6,12 +6,17 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { DefectCategoriesService } from './defect-categories.service';
 import { CreateDefectCategoryDto } from './dto/create-defect-category.dto';
 import { UpdateDefectCategoryDto } from './dto/update-defect-category.dto';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
 
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
 @Controller('Defect-categories')
 export class DefectCategoriesController {
   constructor(
@@ -19,6 +24,7 @@ export class DefectCategoriesController {
   ) {}
 
   @Post()
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'สร้างหมวดหมู่หลักใหม่' })
   create(@Body() CreateDefectCategoryDto: CreateDefectCategoryDto) {
     return this.defectCategoriesService.create(CreateDefectCategoryDto);
@@ -37,6 +43,7 @@ export class DefectCategoriesController {
   }
 
   @Patch(':id')
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'อัปเดตข้อมูลหมวดหมู่หลักตาม ID' })
   update(
     @Param('id') id: string,
@@ -46,6 +53,7 @@ export class DefectCategoriesController {
   }
 
   @Delete(':id')
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'ลบหมวดหมู่หลัก' })
   remove(@Param('id') id: string) {
     return this.defectCategoriesService.remove(+id);

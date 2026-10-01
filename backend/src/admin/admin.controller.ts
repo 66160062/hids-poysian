@@ -1,16 +1,20 @@
-import { Controller, Get, Query, Post } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Query, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { DashboardResponse } from './dto/dashboard-response.dto';
 import { WorkListResponse } from './dto/work-list-response.dto';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
 
 /**
  * AdminController — จัดการเส้นทาง HTTP สำหรับระบบ Admin
  *
- * ⚠️ ตาม Skill: Controller ทำหน้าที่ routing เท่านั้น
+ *  ตาม Skill: Controller ทำหน้าที่ routing เท่านั้น
  *    Logic ทั้งหมดอยู่ใน AdminService
  */
 @ApiTags('admin')
+@ApiBearerAuth()
+@UseGuards(AuthGuard, AdminGuard)
 @Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
