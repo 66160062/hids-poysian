@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
 import { TeamsController } from './teams.controller';
 import { TeamsService } from './teams.service';
 import { StorageService } from 'src/storage/storage.service';
@@ -17,6 +18,7 @@ describe('TeamsController', () => {
       providers: [
         { provide: TeamsService, useValue: serviceMock },
         { provide: StorageService, useValue: storageMock },
+        { provide: JwtService, useValue: { verify: jest.fn() } },
       ],
     }).compile();
 

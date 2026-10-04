@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
 import { SubRoomsController } from './sub-rooms.controller';
 import { SubRoomsService } from './sub-rooms.service';
 
@@ -11,7 +12,10 @@ describe('SubRoomsController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SubRoomsController],
-      providers: [{ provide: SubRoomsService, useValue: serviceMock }],
+      providers: [
+        { provide: SubRoomsService, useValue: serviceMock },
+        { provide: JwtService, useValue: { verify: jest.fn() } },
+      ],
     }).compile();
 
     controller = module.get<SubRoomsController>(SubRoomsController);

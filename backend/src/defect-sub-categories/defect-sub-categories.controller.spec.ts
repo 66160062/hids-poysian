@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
 import { DefectSubCategoriesController } from './defect-sub-categories.controller';
 import { DefectSubCategoriesService } from './defect-sub-categories.service';
 
@@ -18,6 +19,7 @@ describe('DefectSubCategoriesController', () => {
       controllers: [DefectSubCategoriesController],
       providers: [
         { provide: DefectSubCategoriesService, useValue: serviceMock },
+        { provide: JwtService, useValue: { verify: jest.fn() } },
       ],
     }).compile();
 
