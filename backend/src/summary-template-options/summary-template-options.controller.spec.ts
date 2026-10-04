@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
 import { SummaryTemplateOptionsController } from './summary-template-options.controller';
 import { SummaryTemplateOptionsService } from './summary-template-options.service';
 
@@ -15,6 +16,7 @@ describe('SummaryTemplateOptionsController', () => {
       controllers: [SummaryTemplateOptionsController],
       providers: [
         { provide: SummaryTemplateOptionsService, useValue: serviceMock },
+        { provide: JwtService, useValue: { verify: jest.fn() } },
       ],
     }).compile();
 
