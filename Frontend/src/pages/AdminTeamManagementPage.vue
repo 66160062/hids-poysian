@@ -11,9 +11,9 @@
         </div>
       </div>
 
-      <!-- KPI Summary Cards (3 Cards) -->
+      <!-- KPI Summary Cards (2 or 3 Cards) -->
       <div class="row q-col-gutter-sm q-mb-md">
-        <div class="col-4">
+        <div :class="isSuperAdmin ? 'col-4' : 'col-6'">
           <q-card
             flat
             bordered
@@ -35,7 +35,7 @@
           </q-card>
         </div>
 
-        <div class="col-4">
+        <div v-if="isSuperAdmin" class="col-4">
           <q-card
             flat
             bordered
@@ -57,7 +57,7 @@
           </q-card>
         </div>
 
-        <div class="col-4">
+        <div :class="isSuperAdmin ? 'col-4' : 'col-6'">
           <q-card
             flat
             bordered
@@ -107,7 +107,7 @@
 
         <!-- Round Tune Filter Button -->
         <q-btn
-          v-if="viewMode === 'teams'"
+          v-if="isSuperAdmin && viewMode === 'teams'"
           round
           unelevated
           :color="selectedBranchId !== null ? 'primary' : 'white'"
@@ -500,7 +500,7 @@
               <q-input v-model="localForm.contact_info" outlined dense filled hide-bottom-space />
             </div>
 
-            <div>
+            <div v-if="isSuperAdmin">
               <div class="dialog-field-label">{{ t('adminManage.teamManagement.branchLabel') }}</div>
               <q-select
                 v-model="localForm.branchId"
@@ -704,6 +704,7 @@ import { useTeamStore } from 'src/stores/useTeam';
 import { useUserStore } from 'src/stores/useUser';
 import { useBranchStore, type Branch } from 'src/stores/useBranch';
 import { useCustomerStore, type Customer } from 'src/stores/useCustomer';
+import { useAuthStore } from 'src/stores/useAuth';
 import AdminTeamCard from 'src/components/AdminTeamCard.vue';
 import AdminCustomerCard from 'src/components/AdminCustomerCard.vue';
 import AdminCustomerFormDialog from 'src/components/AdminCustomerFormDialog.vue';
@@ -721,6 +722,8 @@ const teamStore = useTeamStore();
 const userStore = useUserStore();
 const branchStore = useBranchStore();
 const customerStore = useCustomerStore();
+const authStore = useAuthStore();
+const isSuperAdmin = computed(() => authStore.isSuperAdmin);
 
 const isFormMode = ref(false);
 const isEditing = ref(false);
@@ -744,6 +747,7 @@ function showTeamsView() {
 }
 
 function showBranchesView() {
+  if (!isSuperAdmin.value) return;
   viewMode.value = 'branches';
 }
 
@@ -1236,7 +1240,7 @@ function openCreateForm() {
     team_name: '',
     logo_url: '',
     contact_info: '',
-    branchId: selectedBranchId.value ?? null,
+    branchId: authStore.isBranchAdmin && authStore.userBranchId ? authStore.userBranchId : (selectedBranchId.value ?? null),
   };
   newTeamMemberIds.value = [];
   newMemberId.value = null;
@@ -1252,7 +1256,7 @@ function openEditForm(team: Team) {
     team_name: team.team_name,
     logo_url: team.logo_url || '',
     contact_info: team.contact_info || '',
-    branchId: team.branchId ?? null,
+    branchId: authStore.isBranchAdmin && authStore.userBranchId ? authStore.userBranchId : (team.branchId ?? null),
   };
   newTeamMemberIds.value = [];
   newMemberId.value = null;
@@ -1273,6 +1277,11 @@ async function onSave() {
   if (!isEditing.value && newTeamMemberIds.value.length === 0) {
     $q.notify({ type: 'warning', message: t('adminManage.teamManagement.selectAtLeastOneMember'), position: 'top' });
     return;
+  }
+
+  // Branch admin ต้อง lock branchId เป็นของตนเองเสมอ
+  if (authStore.isBranchAdmin && authStore.userBranchId) {
+    localForm.value.branchId = authStore.userBranchId;
   }
 
   $q.loading.show({ message: t('adminManage.teamManagement.saving') });

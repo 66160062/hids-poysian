@@ -250,11 +250,9 @@ export class AdminService {
           latestRound = sortedRounds[0];
         }
 
-        // กำหนดสถานะแสดงผลและสี (ใช้สถานะรอบตรวจ ถ้าไม่มีใช้สถานะงาน)
         const statusMapping = latestRound
           ? this.mapRoundStatus(
               latestRound.status,
-              job.status,
               latestRound.roundNumber,
             )
           : this.mapJobStatus(job.status);
@@ -1022,51 +1020,44 @@ export class AdminService {
         let statusTextColor = 'grey-8';
         let statusKey = 'waiting';
 
-        if (latestRound) {
-          if (
-            latestRound.status === 'COMPLETED' ||
-            latestRound.status === 'APPROVED'
-          ) {
-            // งานถูกปิดตอนแอดมินอนุมัติรอบที่ defect ผ่านครบ (ดู InspectionRoundsService.approveReport)
-            if (job.status === 'Completed') {
-              displayStatus = `เสร็จสิ้น ${latestRound.roundNumber}`;
-              statusBgClass = 'bg-green-1';
-              statusTextColor = 'positive';
-              statusKey = 'others';
-            } else {
-              displayStatus = 'กำลังดำเนินการ';
-              statusBgClass = 'bg-blue-1';
-              statusTextColor = 'primary';
-              statusKey = 'in_progress';
-            }
-          } else if (latestRound.status === 'SUBMITTED') {
-            displayStatus = 'รออนุมัติ';
-            statusBgClass = 'bg-orange-1';
-            statusTextColor = 'orange-8';
-            statusKey = 'waiting';
+        if (job.status === 'Completed') {
+          if (latestRound) {
+            const roundStatusInfo = this.mapRoundStatus(
+              latestRound.status,
+              latestRound.roundNumber,
+            );
+            displayStatus = roundStatusInfo.displayStatus;
+            statusBgClass = roundStatusInfo.statusBgClass;
+            statusTextColor = roundStatusInfo.statusTextColor;
+            statusKey = 'others';
           } else {
-            displayStatus = 'กำลังดำเนินการ';
-            statusBgClass = 'bg-blue-1';
-            statusTextColor = 'primary';
-            statusKey = 'in_progress';
+            const jobStatusInfo = this.mapJobStatus(job.status);
+            displayStatus = jobStatusInfo.displayStatus;
+            statusBgClass = jobStatusInfo.statusBgClass;
+            statusTextColor = jobStatusInfo.statusTextColor;
+            statusKey = 'others';
           }
+        } else if (latestRound && latestRound.status === 'SUBMITTED') {
+          const roundStatusInfo = this.mapRoundStatus(
+            latestRound.status,
+            latestRound.roundNumber,
+          );
+          displayStatus = roundStatusInfo.displayStatus;
+          statusBgClass = roundStatusInfo.statusBgClass;
+          statusTextColor = roundStatusInfo.statusTextColor;
+          statusKey = 'waiting';
         } else {
-          if (job.status === 'Active') {
-            displayStatus = 'กำลังดำเนินการ';
-            statusBgClass = 'bg-blue-1';
-            statusTextColor = 'primary';
-            statusKey = 'in_progress';
-          } else if (job.status === 'Completed') {
-            displayStatus = 'เสร็จสิ้น';
-            statusBgClass = 'bg-green-1';
-            statusTextColor = 'positive';
-            statusKey = 'others';
-          } else if (job.status === 'Cancelled') {
-            displayStatus = 'ยกเลิก';
-            statusBgClass = 'bg-red-1';
-            statusTextColor = 'negative';
-            statusKey = 'others';
-          }
+          const jobStatusInfo = this.mapJobStatus(job.status);
+          displayStatus = jobStatusInfo.displayStatus;
+          statusBgClass = jobStatusInfo.statusBgClass;
+          statusTextColor = jobStatusInfo.statusTextColor;
+          statusKey =
+            jobStatusInfo.statusCode === 'COMPLETED' ||
+            jobStatusInfo.statusCode === 'CANCELLED'
+              ? 'others'
+              : jobStatusInfo.statusCode === 'PENDING_APPROVAL'
+                ? 'waiting'
+                : 'in_progress';
         }
 
         // ข้อมูลทีม
@@ -1105,7 +1096,6 @@ export class AdminService {
    */
   private mapRoundStatus(
     status: string,
-    jobStatus: string,
     roundNumber?: number,
   ): {
     displayStatus: string;
@@ -1114,14 +1104,6 @@ export class AdminService {
     statusTextColor: string;
   } {
     if (status === 'COMPLETED' || status === 'APPROVED') {
-      if (jobStatus !== 'Completed') {
-        return {
-          displayStatus: STATUS_LABEL_TH.IN_PROGRESS,
-          statusCode: 'IN_PROGRESS',
-          statusBgClass: 'bg-blue-1',
-          statusTextColor: 'primary',
-        };
-      }
       return {
         displayStatus: roundNumber
           ? `${STATUS_LABEL_TH.COMPLETED} ${roundNumber}`

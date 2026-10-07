@@ -94,6 +94,7 @@ export default {
     filterAdmin: 'Admin',
     filterInspector: 'Inspector',
     roleAdmin: 'Admin',
+    roleSuperAdmin: 'Super Admin',
     roleInspector: 'Inspector',
     loading: 'Loading data...',
     noUsersFound: 'No users found',

@@ -11,7 +11,9 @@ import {
   UploadedFile,
   ParseIntPipe,
   Query,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -26,6 +28,13 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { StorageService } from 'src/storage/storage.service';
+
+interface JwtUser {
+  sub: number;
+  email: string;
+  role: string;
+  branchId: number | null;
+}
 
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
@@ -42,9 +51,14 @@ export class UsersController {
   @ApiBody({ description: 'ข้อมูลผู้ใช้งาน', type: CreateUserDto })
   @UseInterceptors(FileInterceptor('imageUrl', { storage: memoryStorage() }))
   async create(
+    @Req() req: Request & { user: JwtUser },
     @UploadedFile() file: Express.Multer.File,
     @Body() createUserDto: CreateUserDto,
   ) {
+    // Branch admin ต้อง assign user เข้าสาขาตัวเองเสมอ
+    if (req.user.role === 'admin' && req.user.branchId) {
+      createUserDto.branchId = req.user.branchId;
+    }
     return this.usersService.create({
       ...createUserDto,
       imageUrl: file
@@ -56,6 +70,7 @@ export class UsersController {
   @Get()
   @ApiOperation({ summary: 'ดึงรายชื่อผู้ใช้งานทั้งหมด พร้อมรองรับ pagination / search / filter' })
   findAll(
+    @Req() req: Request & { user: JwtUser },
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
@@ -63,12 +78,18 @@ export class UsersController {
     @Query('branchId') branchId?: string,
     @Query('all') all?: string,
   ) {
+    // Branch admin ต้องเห็นเฉพาะสาขาตัวเองเสมอ
+    const effectiveBranchId =
+      req.user.role === 'admin' && req.user.branchId
+        ? req.user.branchId
+        : branchId ? Number(branchId) : undefined;
+
     return this.usersService.findAll({
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
       search,
       role,
-      branchId: branchId ? Number(branchId) : undefined,
+      branchId: effectiveBranchId,
       all,
     });
   }
@@ -85,11 +106,17 @@ export class UsersController {
   @ApiBody({ description: 'ข้อมูลที่ต้องการแก้ไข', type: UpdateUserDto })
   @UseInterceptors(FileInterceptor('imageUrl', { storage: memoryStorage() }))
   async update(
+    @Req() req: Request & { user: JwtUser },
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File,
     @Body() updateUserDto: UpdateUserDto,
   ) {
     const updateData = { ...updateUserDto };
+
+    // Branch admin ต้อง lock branchId ของ user ที่แก้ไขเป็นสาขาตัวเองเสมอ
+    if (req.user.role === 'admin' && req.user.branchId) {
+      updateData.branchId = req.user.branchId;
+    }
 
     if (file) {
       updateData.imageUrl = await this.storageService.uploadImage(

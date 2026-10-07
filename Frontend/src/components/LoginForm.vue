@@ -98,7 +98,7 @@ const handleLogin = async () => {
 
     if (role === 'inspector') {
       await router.push('/inspector/Inspectsdashboard');
-    } else if (role === 'admin') {
+    } else if (role === 'admin' || role === 'super_admin') {
       await router.push('/admin');
     } else if (role === 'customer') {
       await router.push('/customer');

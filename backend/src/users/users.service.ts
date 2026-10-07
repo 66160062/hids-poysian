@@ -179,8 +179,8 @@ export class UsersService {
       }
     }
 
-    // If role is admin, they shouldn't belong to a team
-    if (user.role === 'admin') {
+    // If role is admin or super_admin, they shouldn't belong to a team
+    if (user.role === 'admin' || user.role === 'super_admin') {
       user.teamId = null;
       user.team = null;
     }

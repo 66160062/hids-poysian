@@ -305,8 +305,9 @@
             </template>
           </q-select>
 
-          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">{{ t('common.branch.label') }}</div>
+          <div v-if="isSuperAdmin" class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">{{ t('common.branch.label') }}</div>
           <q-select
+            v-if="isSuperAdmin"
             v-model="selectedBranchId"
             :options="branchOptions"
             emit-value
@@ -386,7 +387,7 @@
           {{ selectedTypeLabel }}
         </q-chip>
         <q-chip
-          v-if="selectedBranchId !== 'all'"
+          v-if="isSuperAdmin && selectedBranchId !== 'all'"
           removable
           @remove="selectedBranchId = 'all'"
           color="blue-1"
@@ -534,10 +535,12 @@ import { useI18n } from 'vue-i18n';
 import { useWorkListStore } from '../stores/useWorkList';
 import { useHouseTypeStore } from '../stores/useHouseType';
 import { useBranchStore } from 'src/stores/useBranch';
+import { useAuthStore } from 'src/stores/useAuth';
 import IconBounceSpinner from 'src/components/IconBounceSpinner.vue';
 import ConfirmActionDialog from 'src/components/ConfirmActionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { useLocalizedField } from 'src/composables/useLocalizedField';
+import { useJobStatus, roundStatusCode } from 'src/composables/useJobStatus';
 
 const workSpinner = createIconSpinner('business_center');
 const homeInspectionSpinner = createIconSpinner('search');
@@ -550,7 +553,10 @@ const { t } = useI18n();
 const workStore = useWorkListStore();
 const houseTypeStore = useHouseTypeStore();
 const { pickLocalized } = useLocalizedField();
+const { jobStatusLabel } = useJobStatus();
 const branchStore = useBranchStore();
+const authStore = useAuthStore();
+const isSuperAdmin = computed(() => authStore.isSuperAdmin);
 
 const loading = ref<boolean>(false);
 const error = ref<string>('');
@@ -617,7 +623,7 @@ const activeFilterCount = computed(() => {
   let count = 0;
   if (selectedType.value !== 'ทั้งหมด') count++;
   if (activeFilter.value !== 'all') count++;
-  if (selectedBranchId.value !== 'all') count++;
+  if (isSuperAdmin.value && selectedBranchId.value !== 'all') count++;
   return count;
 });
 
@@ -749,6 +755,7 @@ const tasks = computed<TaskItem[]>(() => {
       key: 'others',
     };
 
+    let finalStatusKey = meta.key;
     let finalStatusLabel = translatedStatusLabel(meta.key, meta.label);
     const badgeStyle = statusBadgeStyles[meta.key];
     let finalBgClass = badgeStyle?.bgClass ?? meta.bgClass;
@@ -757,17 +764,23 @@ const tasks = computed<TaskItem[]>(() => {
     // ค้นหารอบตรวจที่มีสถานะกำลังดำเนินการ (SCHEDULED หรือ Active)
     let latestActiveRoundDate = work.createdAt;
     if (work.rounds && work.rounds.length > 0) {
-      // เรียงรอบตรวจตาม id หรือวันที่สร้างจากมากไปน้อยเพื่อเอารอบล่าสุด
-      const sortedRounds = [...work.rounds].sort((a, b) => b.roundId - a.roundId);
+      // เรียงรอบตรวจตาม id หรือเลขรอบจากมากไปน้อยเพื่อเอารอบล่าสุด
+      const sortedRounds = [...work.rounds].sort(
+        (a, b) => (b.roundNumber ?? b.roundId) - (a.roundNumber ?? a.roundId),
+      );
+      const latestRound = sortedRounds[0];
+
       const activeRound = sortedRounds.find(
         (r) => r.status === 'SCHEDULED' || r.status === 'Active',
       );
       if (activeRound && activeRound.scheduledDate) {
         latestActiveRoundDate = activeRound.scheduledDate;
+      } else if (latestRound?.scheduledDate) {
+        latestActiveRoundDate = latestRound.scheduledDate;
       }
 
       const hasRound2OrMore = sortedRounds.some(
-        (r) => (r.roundNumber ?? 0) >= 2
+        (r) => (r.roundNumber ?? 0) >= 2,
       );
 
       // ถ้าผู้รับเหมาซ่อมเกิน 80% แล้ว และยังไม่มีการสร้างรอบ 2
@@ -775,17 +788,34 @@ const tasks = computed<TaskItem[]>(() => {
         finalStatusLabel = t('adminWork.workList.waitingRound2');
         finalBgClass = 'bg-orange-1';
         finalTextColor = 'orange-8';
+        finalStatusKey = 'Pending';
       }
-      // ถ้างานเสร็จสิ้นแล้ว (มีการอนุมัติรอบใดๆ เป็นรอบสุดท้าย หรืออนุมัติรอบ 2 ไปแล้ว)
+      // ถ้างานปิดสมบูรณ์แล้ว (work.status === 'Completed')
       else if (work.status === 'Completed') {
         const completedRound = sortedRounds.find(
           (r) => r.status === 'APPROVED' || r.status === 'COMPLETED',
         );
-        if (completedRound) {
-          finalStatusLabel = `${t('adminWork.workList.completed')} ${completedRound.roundNumber ?? ''}`.trim();
-        } else {
-          finalStatusLabel = `${t('adminWork.workList.completed')} ${sortedRounds[0]?.roundNumber ?? ''}`.trim();
-        }
+        const roundNum = completedRound?.roundNumber ?? latestRound?.roundNumber;
+        finalStatusLabel = roundNum
+          ? jobStatusLabel('COMPLETED', roundNum)
+          : t('adminWork.workList.completed');
+        finalBgClass = 'bg-green-1';
+        finalTextColor = 'green-9';
+        finalStatusKey = 'Completed';
+      }
+      // ถ้ารอบล่าสุดรออนุมัติ (SUBMITTED)
+      else if (latestRound && roundStatusCode(latestRound.status) === 'PENDING_APPROVAL') {
+        finalStatusLabel = jobStatusLabel('PENDING_APPROVAL');
+        finalBgClass = 'bg-orange-1';
+        finalTextColor = 'orange-8';
+        finalStatusKey = 'Pending';
+      }
+      // เมื่องานกำลังดำเนินการ (Active) ให้แสดง กำลังดำเนินการ
+      else if (work.status === 'Active') {
+        finalStatusLabel = jobStatusLabel('IN_PROGRESS');
+        finalBgClass = 'bg-blue-1';
+        finalTextColor = 'blue-9';
+        finalStatusKey = 'Active';
       }
     }
 
@@ -795,7 +825,7 @@ const tasks = computed<TaskItem[]>(() => {
       status: finalStatusLabel,
       statusBgClass: finalBgClass,
       statusTextColor: finalTextColor,
-      statusKey: meta.key,
+      statusKey: finalStatusKey,
       inspectionType: work.inspectionType || '',
       type: pickLocalized(work.houseType?.name, work.houseType?.nameEn) || t('adminWork.workList.unspecifiedType'),
       area: work.usableArea || 0,

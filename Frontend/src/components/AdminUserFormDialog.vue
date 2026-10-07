@@ -150,9 +150,12 @@
           </div>
 
           <!-- Branch Selection -->
-          <div v-if="localForm.role !== 'admin'">
+          <!-- แสดงเมื่อ: ไม่ใช่ branch admin (branch admin ใช้สาขาตัวเอง) AND role ไม่ใช่ super_admin (ไม่ต้องการสาขา) -->
+          <div v-if="!props.isBranchAdmin && localForm.role !== 'super_admin'">
             <div class="dialog-field-label">
-              {{ t('adminManage.teamManagement.branchLabel') || 'บริษัท / สาขา' }} <span class="text-negative">*</span>
+              {{ t('adminManage.teamManagement.branchLabel') || 'บริษัท / สาขา' }}
+              <!-- บังคับเลือกถ้าไม่ใช่ admin (branch admin ต้องมีสาขา) -->
+              <span v-if="localForm.role !== 'admin' || isSuperAdminCreatingAdmin" class="text-negative">*</span>
             </div>
             <q-select
               v-model="localForm.branchId"
@@ -162,7 +165,7 @@
               filled
               emit-value
               map-options
-              :rules="[(val) => !!val || t('adminManage.userManagement.branchRequired') || 'กรุณาเลือกสาขา']"
+              :rules="localForm.role !== 'admin' || isSuperAdminCreatingAdmin ? [(val) => !!val || t('adminManage.userManagement.branchRequired') || 'กรุณาเลือกสาขา'] : []"
               hide-bottom-space
             />
             <div
@@ -174,8 +177,8 @@
             </div>
           </div>
 
-          <!-- Team Selection (Editing only) -->
-          <div v-if="localForm.role !== 'admin' && isEditing">
+          <!-- Team Selection (not for admin/super_admin) -->
+          <div v-if="localForm.role !== 'admin' && localForm.role !== 'super_admin'">
             <div class="dialog-field-label">
               {{ t('components.adminUserFormDialog.team') || 'ทีม' }}
               <span class="text-grey-5">({{ t('components.adminUserFormDialog.optional') }})</span>
@@ -281,7 +284,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, nextTick } from 'vue';
+import { ref, watch, computed, nextTick, type PropType } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { QForm } from 'quasar';
 import { Cropper } from 'vue-advanced-cropper';
@@ -354,6 +357,15 @@ const props = defineProps({
     type: Array as () => Option[],
     default: () => [],
   },
+  // branch admin mode: ซ่อน branch selector, auto-assign branchId
+  isBranchAdmin: {
+    type: Boolean,
+    default: false,
+  },
+  lockedBranchId: {
+    type: Number as PropType<number | null>,
+    default: null,
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'save']);
@@ -412,6 +424,11 @@ const displayImageUrl = computed(() => {
   return null;
 });
 
+// super_admin กำลังสร้าง admin → ต้องเลือกสาขา
+const isSuperAdminCreatingAdmin = computed(
+  () => !props.isBranchAdmin && localForm.value.role === 'admin',
+);
+
 // Reset form when dialog opens
 watch(
   () => props.modelValue,
@@ -434,7 +451,9 @@ watch(
           password: '',
           lineId: '',
           role: 'inspector',
-          branchId: props.initialData.branchId ?? null,
+          // branch admin: auto-assign สาขาตัวเอง
+          branchId: props.isBranchAdmin ? props.lockedBranchId : (props.initialData.branchId ?? null),
+          teamId: NO_TEAM_ID,
           imageUrl: '',
         };
       }
@@ -447,12 +466,20 @@ watch(
   },
 );
 
-// clear team_id if role changes to admin
+// clear team_id if role changes to admin or super_admin
 watch(
   () => localForm.value.role,
   (newRole) => {
-    if (newRole === 'admin') {
+    if (newRole === 'admin' || newRole === 'super_admin') {
       localForm.value.teamId = NO_TEAM_ID;
+    }
+    // super_admin ไม่ต้องการสาขา → ล้าง branchId
+    if (newRole === 'super_admin') {
+      localForm.value.branchId = null;
+    }
+    // branch admin เปลี่ยน role เป็น admin แต่ lockedBranchId มีอยู่ → auto-fill
+    if (newRole === 'admin' && props.isBranchAdmin && props.lockedBranchId) {
+      localForm.value.branchId = props.lockedBranchId;
     }
   },
 );

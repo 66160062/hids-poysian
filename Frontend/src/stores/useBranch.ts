@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { api } from 'src/boot/axios';
 import { t } from 'src/boot/i18n';
+import { useAuthStore } from 'src/stores/useAuth';
 
 export interface Branch {
   branchId: number;
@@ -63,6 +64,11 @@ export const useBranchStore = defineStore('branch', () => {
   }
 
   function getPageBranch(pageKey: AdminPageKey): number | 'all' {
+    const authStore = useAuthStore();
+    // Branch admin ต้อง lock เป็น branchId ของตัวเองเสมอ
+    if (authStore.isBranchAdmin && authStore.userBranchId) {
+      return authStore.userBranchId;
+    }
     const local = localBranchOverrides.value[pageKey];
     if (local !== null && local !== undefined) {
       return local;

@@ -11,6 +11,13 @@ export const useAuthStore = defineStore('auth', () => {
   const isLogin = computed(() => !!token.value);
   const currentUser = computed(() => user.value);
 
+  // Role helpers
+  const isSuperAdmin = computed(() => user.value?.role === 'super_admin');
+  const isBranchAdmin = computed(
+    () => user.value?.role === 'admin' && !!user.value?.branchId,
+  );
+  const userBranchId = computed(() => user.value?.branchId ?? null);
+
   async function login(email: string, password: string): Promise<boolean> {
     try {
       console.log('Calling:', api.defaults.baseURL + '/auth/login');
@@ -43,5 +50,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   loadUserFromStorage();
 
-  return { user, token, isLogin, currentUser, login, logout };
+  return {
+    user,
+    token,
+    isLogin,
+    currentUser,
+    isSuperAdmin,
+    isBranchAdmin,
+    userBranchId,
+    login,
+    logout,
+  };
 });
+

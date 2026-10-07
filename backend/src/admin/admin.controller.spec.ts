@@ -36,7 +36,10 @@ describe('AdminController', () => {
   });
 
   it('forwards the date query param when loading the dashboard', () => {
-    controller.getDashboard('2026-08-01');
+    controller.getDashboard(
+      { user: { sub: 1, role: 'super_admin', email: 'admin@gmail.com', branchId: null } } as any,
+      '2026-08-01',
+    );
 
     expect(service.getDashboardData).toHaveBeenCalledWith(
       '2026-08-01',
