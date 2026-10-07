@@ -123,105 +123,132 @@
         </q-card-section>
       </q-card>
 
-      <!-- Contractor Progress Section -->
-      <div v-if="inspectionRounds.length > 0 && job.status === 'COMPLETED'" class="q-mb-lg">
-        <div class="row items-center justify-between q-mb-sm">
-          <div class="text-subtitle2 text-weight-bold">{{ t('adminJobs.construction.contractorProgressTitle') }}</div>
-          <div class="text-caption text-weight-bold" :class="job.contractorProgress >= 50 ? 'text-positive' : 'text-orange'">
-            {{ Math.round(job.contractorProgress) }}%
-          </div>
-        </div>
-        <q-linear-progress
-          rounded
-          size="10px"
-          :value="job.contractorProgress / 100"
-          :color="job.contractorProgress >= 50 ? 'positive' : 'orange'"
-          class="q-mb-xs"
-        />
-        <div class="text-caption text-grey-6 text-right">
-          {{ job.contractorProgress >= 50 ? t('adminJobs.construction.readyForRound2') : t('adminJobs.construction.waitFor50Percent') }}
-        </div>
-      </div>
-
       <!-- รอบการตรวจ Section -->
       <div class="text-subtitle2 text-weight-bold q-mb-sm">{{ t('adminJobs.construction.roundsTitle') }}</div>
-      <q-card flat bordered class="card-round">
-        <q-card-section v-if="inspectionRounds.length === 0" class="column items-center q-py-xl">
-          <q-icon name="playlist_add_check_circle" size="56px" color="grey-4" class="q-mb-md" />
-          <div class="text-body2 text-grey-6 text-center">
-            {{ t('adminJobs.construction.noRoundsYet') }}<br />
-            {{ t('adminJobs.construction.startFirstRoundHint') }}
-          </div>
-          <q-btn
-            unelevated
-            color="primary"
-            icon="add_circle"
-            :label="t('adminJobs.construction.createNewRound')"
-            class="q-mt-lg create-round-btn"
-            no-caps
-            @click="onCreateRound"
-          />
-        </q-card-section>
+      <div v-if="inspectionRounds.length === 0" class="column items-center q-py-xl bg-white card-round" style="border: 1px solid #e0e0e0;">
+        <q-icon name="playlist_add_check_circle" size="56px" color="grey-4" class="q-mb-md" />
+        <div class="text-body2 text-grey-6 text-center">
+          {{ t('adminJobs.construction.noRoundsYet') }}<br />
+          {{ t('adminJobs.construction.startFirstRoundHint') }}
+        </div>
+        <q-btn
+          unelevated
+          color="primary"
+          icon="add_circle"
+          :label="t('adminJobs.construction.createNewRound')"
+          class="q-mt-lg create-round-btn"
+          no-caps
+          @click="onCreateRound"
+        />
+      </div>
 
-        <template v-else>
-          <q-list separator>
-            <q-item
-              v-for="round in inspectionRounds"
-              :key="round.id"
-              clickable
-              v-ripple
-              class="q-py-md"
-              @click="openRoundReview(round)"
-            >
-              <q-item-section avatar>
-                <q-avatar color="primary" text-color="white" size="36px">
-                  {{ round.roundNumber }}
-                </q-avatar>
-              </q-item-section>
-              <q-item-section>
-                <q-item-label class="text-weight-medium"
-                  >{{ t('adminJobs.construction.roundNumberLabel', { number: round.roundNumber }) }}</q-item-label
+      <template v-else>
+        <div class="column q-gutter-y-md">
+          <q-card
+            v-for="round in inspectionRounds"
+            :id="`round-card-${round.id}`"
+            :key="round.id"
+            flat
+            bordered
+            class="q-pa-md round-card card-round"
+          >
+            <!-- Card Top Bar -->
+            <div class="row items-start justify-between no-wrap q-mb-xs">
+              <div>
+                <div class="row items-center">
+                  <div class="text-weight-bold" style="font-size: 14px; color: #333">
+                    {{ t('adminJobs.construction.roundNumberLabel', { number: round.roundNumber }) }}
+                  </div>
+                  <q-chip
+                    dense
+                    :color="getRoundStatusColor(round.status)"
+                    text-color="dark"
+                    class="text-caption text-weight-bold q-px-sm q-ml-md"
+                    style="min-height: 24px;"
+                  >
+                    {{ jobStatusLabel(round.status) }}
+                  </q-chip>
+                </div>
+                <div class="text-grey-7 q-mt-xs" style="font-size: 11px">
+                  {{ t('adminJobs.construction.datePrefix') }} {{ round.date }}
+                </div>
+                <div
+                  v-if="round.inspectors && round.inspectors.length"
+                  class="text-grey-7"
+                  style="font-size: 11px"
                 >
-                <q-item-label caption class="column q-gutter-y-xs">
-                  <span>{{ t('adminJobs.construction.datePrefix') }} {{ round.date }}</span>
-                  <span v-if="round.inspectors && round.inspectors.length" class="text-primary text-caption text-weight-medium">
-                    {{ t('adminJobs.construction.inspectorsPrefix') }} {{ round.inspectors.join(', ') }}
-                  </span>
-                </q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-chip
-                  dense
-                  :color="getRoundStatusColor(round.status)"
-                  text-color="dark"
-                  class="text-caption"
-                >
-                  {{ jobStatusLabel(round.status) }}
-                </q-chip>
-                <q-icon name="chevron_right" color="grey-5" class="q-mt-xs" />
-              </q-item-section>
-            </q-item>
-          </q-list>
-          <div class="q-pa-md">
-            <div :class="{ 'cursor-not-allowed': isLatestRoundNotCompleted }">
+                  {{ t('adminJobs.construction.inspectorsPrefix') }} {{ round.inspectors.join(', ') }}
+                </div>
+              </div>
+
               <q-btn
                 unelevated
-                color="primary"
-                icon="add_circle"
-                :label="t('adminJobs.construction.createNewRound')"
-                class="full-width create-round-btn"
+                color="positive"
+                icon="task_alt"
+                :label="approveButtonLabel(round)"
                 no-caps
-                :disable="isLatestRoundNotCompleted"
-                :style="isLatestRoundNotCompleted ? 'pointer-events: none;' : ''"
-                @click="onCreateRound"
+                no-wrap
+                dense
+                class="q-px-sm"
+                style="border-radius: 8px; height: 36px; white-space: nowrap; flex-shrink: 0; min-width: max-content;"
+                :disable="round.statusKey !== 'SUBMITTED'"
+                :loading="isApprovingRound && selectedRound?.id === round.id"
+                @click="onApproveRound(round)"
               />
-              <q-tooltip v-if="isLatestRoundNotCompleted" class="bg-red text-white" anchor="top middle" self="bottom middle">
-                {{ t('adminJobs.construction.closeRoundFirst') }}
-              </q-tooltip>
             </div>
+
+            <!-- Action Button 1: ไปจัดการฟอร์มตรวจเหมือน inspector -->
+            <q-btn
+              color="primary"
+              class="full-width q-mb-sm action-btn"
+              no-caps
+              align="between"
+              style="border-radius: 10px; height: 44px;"
+              @click="goToConstructionInspect(round)"
+            >
+              <span class="text-weight-bold q-ml-sm">
+                {{ t('adminJobs.construction.viewInspectionForm') }}
+              </span>
+              <q-icon name="chevron_right" size="24px" />
+            </q-btn>
+
+            <!-- Action Button 2: ดูรายงาน PDF -->
+            <q-btn
+              color="primary"
+              class="full-width action-btn"
+              no-caps
+              align="between"
+              style="border-radius: 10px; height: 44px;"
+              :disable="round.statusKey === 'SCHEDULED' || round.statusKey === 'DRAFT'"
+              @click="handleViewReport(round)"
+            >
+              <span class="text-weight-bold q-ml-sm">
+                {{ t('adminJobs.construction.viewReportPdf') }}
+              </span>
+              <q-icon name="chevron_right" size="24px" />
+            </q-btn>
+          </q-card>
+        </div>
+
+        <div class="q-mt-md">
+          <div :class="{ 'cursor-not-allowed': isLatestRoundNotCompleted }">
+            <q-btn
+              unelevated
+              color="primary"
+              icon="add_circle"
+              :label="t('adminJobs.construction.createNewRound')"
+              class="full-width create-round-btn"
+              no-caps
+              :disable="isLatestRoundNotCompleted"
+              :style="isLatestRoundNotCompleted ? 'pointer-events: none;' : ''"
+              @click="onCreateRound"
+            />
+            <q-tooltip v-if="isLatestRoundNotCompleted" class="bg-red text-white" anchor="top middle" self="bottom middle">
+              {{ t('adminJobs.construction.closeRoundFirst') }}
+            </q-tooltip>
           </div>
-        </template>
-      </q-card>
+        </div>
+      </template>
 
       <!-- Bottom spacing -->
       <div style="height: 32px" />
@@ -239,17 +266,6 @@
         </q-card-section>
       </q-card>
     </q-dialog>
-
-    <!-- Plan Position Dialog (Read-only) -->
-    <PlanPositionDialog
-      v-model="showPlanDialog"
-      :job-id="jobId"
-      :initial-plan-id="selectedDefectPlanId"
-      :initial-x="selectedDefect?.planX ?? null"
-      :initial-y="selectedDefect?.planY ?? null"
-      :initial-zone="selectedDefect?.locationZone ?? null"
-      readonly
-    />
 
     <!-- House Plan Viewer (ปุ่ม "ดูแปลน") -->
     <PlanPositionDialog v-model="showHousePlanDialog" :job-id="jobId" readonly />
@@ -298,16 +314,17 @@
               color="white"
               text-color="grey-8"
               style="border: 1px solid #e0e0e0"
+              class="custom-toggle"
               :options="[
-                {label: t('adminJobs.construction.morningSlot'), value: '09:00:00'},
-                {label: t('adminJobs.construction.afternoonSlot'), value: '13:00:00'}
+                { label: t('adminJobs.construction.morningSlot'), value: '09:00:00' },
+                { label: t('adminJobs.construction.afternoonSlot'), value: '13:00:00' },
               ]"
             />
           </div>
         </div>
 
-        <!-- Select Team vs Individuals Toggle -->
-        <div class="q-mb-md">
+        <!-- Assignment Mode Toggle -->
+        <div class="q-mb-sm">
           <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">{{ t('adminJobs.construction.assignmentModeLabel') }}</div>
           <q-btn-toggle
             v-model="assignmentMode"
@@ -318,64 +335,88 @@
             toggle-color="primary"
             color="white"
             text-color="grey-8"
-            :options="[
-              {label: t('adminJobs.construction.assignToTeam'), value: 'team'},
-              {label: t('adminJobs.construction.assignToIndividual'), value: 'individual'}
-            ]"
-            class="q-mb-md border-grey"
             style="border: 1px solid #e0e0e0"
+            class="custom-toggle"
+            :options="[
+              { label: t('adminJobs.construction.assignToTeam'), value: 'team' },
+              { label: t('adminJobs.construction.assignToIndividual'), value: 'individual' },
+            ]"
           />
         </div>
 
-        <!-- Select Team -->
-        <div v-if="assignmentMode === 'team'" class="q-mb-lg">
+        <!-- Mode: Team Selection -->
+        <div v-if="assignmentMode === 'team'" class="q-mb-md">
           <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">{{ t('adminJobs.construction.selectTeamLabel') }}</div>
           <q-select
-            borderless
-            dense
             v-model="selectedTeam"
             :options="branchTeamOptions"
+            emit-value
+            map-options
+            borderless
+            dense
             :placeholder="t('adminJobs.construction.searchTeamPlaceholder')"
             class="custom-select"
             popup-content-class="custom-dropdown-popup"
-            emit-value
-            map-options
           >
             <template v-slot:prepend>
-              <q-icon name="groups" color="grey-6" size="20px" class="q-ml-sm" />
+              <q-icon name="group" color="primary" size="20px" class="q-ml-sm" />
             </template>
           </q-select>
-        </div>
 
-        <!-- Build Inspection Team Field -->
-        <div class="q-mb-lg">
-          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">
-            {{ assignmentMode === 'team' ? t('adminJobs.construction.additionalInspectorsLabel') : t('adminJobs.construction.selectIndividualInspectorsLabel') }}
-          </div>
+          <!-- Additional Inspectors (Optional) -->
+          <div class="text-caption text-grey-7 text-weight-bold q-mt-md q-mb-xs field-label">{{ t('adminJobs.construction.additionalInspectorsLabel') }}</div>
           <q-select
-            borderless
-            dense
-            multiple
-            use-chips
-            use-input
             v-model="selectedInspectors"
             :options="filteredInspectorOptions"
+            use-input
+            use-chips
+            multiple
+            borderless
+            dense
             :placeholder="t('adminJobs.construction.searchInspectorsPlaceholder')"
             class="custom-select"
-            @filter="filterInspectors"
             popup-content-class="custom-dropdown-popup"
+            @filter="filterInspectors"
           >
             <template v-slot:prepend>
-              <q-icon name="person_search" color="grey-6" size="20px" class="q-ml-sm" />
+              <q-icon name="person_add" color="primary" size="20px" class="q-ml-sm" />
+            </template>
+            <template v-slot:no-option>
+              <q-item>
+                <q-item-section class="text-grey font-sub">{{ t('adminJobs.construction.startTypingHint') }}</q-item-section>
+              </q-item>
             </template>
           </q-select>
-          <div class="text-caption text-grey-5 q-mt-xs q-pl-sm font-sub">
-            {{ t('adminJobs.construction.startTypingHint') }}
-          </div>
         </div>
 
-        <!-- Dialog Actions -->
-        <q-card-actions class="row q-col-gutter-x-md q-px-none q-pb-none q-mt-lg">
+        <!-- Mode: Individual Selection -->
+        <div v-else class="q-mb-md">
+          <div class="text-caption text-grey-7 text-weight-bold q-mb-xs field-label">{{ t('adminJobs.construction.selectIndividualInspectorsLabel') }}</div>
+          <q-select
+            v-model="selectedInspectors"
+            :options="filteredInspectorOptions"
+            use-input
+            use-chips
+            multiple
+            borderless
+            dense
+            :placeholder="t('adminJobs.construction.searchInspectorsPlaceholder')"
+            class="custom-select"
+            popup-content-class="custom-dropdown-popup"
+            @filter="filterInspectors"
+          >
+            <template v-slot:prepend>
+              <q-icon name="person" color="primary" size="20px" class="q-ml-sm" />
+            </template>
+            <template v-slot:no-option>
+              <q-item>
+                <q-item-section class="text-grey font-sub">{{ t('adminJobs.construction.startTypingHint') }}</q-item-section>
+              </q-item>
+            </template>
+          </q-select>
+        </div>
+
+        <q-card-actions align="center" class="q-pt-sm q-px-none row q-col-gutter-sm">
           <div class="col-6">
             <q-btn
               outline
@@ -399,313 +440,7 @@
       </q-card>
     </q-dialog>
 
-    <!-- Review Round / Defect Dialog -->
-    <q-dialog v-model="showRoundReviewDialog" maximized transition-show="slide-up" transition-hide="slide-down">
-      <q-card class="bg-grey-1 column no-wrap full-height">
-        <q-toolbar class="bg-white shadow-1">
-          <q-btn flat round dense icon="close" v-close-popup />
-          <q-toolbar-title class="text-subtitle1 text-weight-bold">
-            {{ t('adminJobs.construction.reviewRoundTitle', { number: selectedRound?.roundNumber ?? '-' }) }}
-          </q-toolbar-title>
-
-          <q-btn
-            unelevated
-            color="warning"
-            icon="edit"
-            :label="t('adminJobs.construction.editInspection')"
-            no-caps
-            class="q-mr-sm"
-            @click="goToEditConstruction(selectedRound)"
-          />
-
-          <q-btn
-            unelevated
-            color="positive"
-            icon="verified"
-            :label="approvalButtonLabel"
-            no-caps
-            :disable="!canApproveSelectedRound"
-            :loading="isApprovingRound"
-            @click="confirmApproveRound"
-          />
-        </q-toolbar>
-
-        <q-card-section class="review-dialog-content col q-pa-md">
-          <div class="row q-col-gutter-md">
-            <div class="col-12 col-md-5">
-              <q-card flat bordered class="card-round review-panel">
-                <q-card-section class="row items-center justify-between">
-                  <div>
-                    <div class="text-subtitle2 text-weight-bold">{{ t('adminJobs.construction.defectListTitle') }}</div>
-                    <div class="text-caption text-grey-6">
-                      {{ roundDefects.length }} {{ t('adminJobs.construction.itemsSuffix') }}
-                    </div>
-                  </div>
-                  <q-chip v-if="selectedRound" dense :color="getRoundStatusColor(selectedRound.status)" text-color="dark">
-                    {{ jobStatusLabel(selectedRound.status) }}
-                  </q-chip>
-                </q-card-section>
-
-
-                <div v-if="isLoadingRoundDefects" class="column items-center q-pa-xl">
-                  <IconBounceSpinner icon="assignment" size="40px" color="primary" />
-                  <div class="text-caption text-grey-6 q-mt-sm">{{ t('adminJobs.construction.loadingDefects') }}</div>
-                </div>
-
-                <q-card-section v-else-if="roundDefectsError" class="column items-center q-py-xl">
-                  <q-icon name="error_outline" size="48px" color="negative" />
-                  <div class="text-body2 text-negative q-mt-sm text-center">{{ t(roundDefectsError) }}</div>
-                  <q-btn
-                    flat
-                    color="primary"
-                    icon="refresh"
-                    :label="t('adminJobs.construction.retry')"
-                    class="q-mt-sm"
-                    no-caps
-                    @click="retryFetchRoundDefects"
-                  />
-                </q-card-section>
-
-                <q-card-section v-else-if="roundDefects.length === 0" class="column items-center q-py-xl">
-                  <q-icon name="fact_check" size="48px" color="grey-4" />
-                  <div class="text-body2 text-grey-6 q-mt-sm text-center">{{ t('adminJobs.construction.noDefectsInRound') }}</div>
-                  <div class="text-caption text-grey-5 q-mt-xs text-center">
-                    {{ t('adminJobs.construction.checkInspectorSavedDefectsHint') }}
-                  </div>
-                </q-card-section>
-
-                <div v-else-if="!selectedGroupKey" class="column q-gutter-y-sm q-pa-sm">
-                  <InspectionItemCard
-                    v-for="item in groupedDefects"
-                    :key="item.groupKey"
-                    :groupedData="item"
-                    @clickCard="selectedGroupKey = item.groupKey"
-                  />
-                </div>
-
-                <div v-else class="column">
-                  <div class="row items-center q-pa-sm bg-grey-2" style="position: sticky; top: 0; z-index: 10;">
-                    <q-btn flat round dense icon="arrow_back" color="primary" @click="selectedGroupKey = null" />
-                    <div class="text-subtitle2 q-ml-sm text-weight-bold">{{ groupedDefects.find(g => g.groupKey === selectedGroupKey)?.roomName }}</div>
-                  </div>
-                  <q-list separator>
-                    <q-item
-                      v-for="defect in paginatedDefects"
-                      :key="defect.defectId"
-                      clickable
-                      v-ripple
-                      :active="selectedDefect?.defectId === defect.defectId"
-                      active-class="bg-blue-1 text-primary"
-                      @click="selectDefect(defect)"
-                    >
-                      <q-item-section avatar>
-                        <q-avatar rounded size="52px" color="grey-2">
-                          <q-img loading="eager" v-if="defect.imageUrl" :src="getImageUrl(defect.imageUrl) ?? ''" fit="cover" />
-                          <q-icon v-else name="image_not_supported" color="grey-5" />
-                        </q-avatar>
-                      </q-item-section>
-                      <q-item-section>
-                        <q-item-label class="text-weight-medium ellipsis">
-                          #{{ defect.defectId }} {{ getDefectRoomLabel(defect) }}
-                        </q-item-label>
-                        <q-item-label caption lines="2">
-                          {{ defect.description || '-' }}
-                        </q-item-label>
-                        <div class="row items-center q-gutter-xs q-mt-xs">
-                          <q-chip dense size="sm" :color="defect.severity === 'Major' ? 'red-1' : 'orange-1'" text-color="dark">
-                            {{ defect.severity }}
-                          </q-chip>
-                          <q-chip dense size="sm" color="grey-2" text-color="dark">
-                            {{ defectStatusLabel(defect.status) }}
-                          </q-chip>
-                          <q-icon
-                            :name="getDefectPlanId(defect) ? 'place' : 'location_off'"
-                            :color="getDefectPlanId(defect) ? 'positive' : 'warning'"
-                            size="20px"
-                          >
-                            <q-tooltip>
-                              {{ getDefectPlanId(defect) ? t('adminJobs.construction.planPinned') : t('adminJobs.construction.planNotPinned') }}
-                            </q-tooltip>
-                          </q-icon>
-                        </div>
-                      </q-item-section>
-                    </q-item>
-                  </q-list>
-
-                  <!-- Pagination -->
-                  <div class="row justify-center q-mt-md q-mb-md" v-if="totalPages > 1">
-                    <q-pagination
-                      v-model="currentPage"
-                      :max="totalPages"
-                      color="grey-8"
-                      active-color="primary"
-                      active-text-color="white"
-                      boundary-links
-                      direction-links
-                      gutter="sm"
-                    />
-                  </div>
-                </div>
-              </q-card>
-            </div>
-
-            <div class="col-12 col-md-7">
-              <q-card flat bordered class="card-round review-panel column no-wrap" style="height: 100%;">
-                <div class="col scroll">
-                  <q-card-section v-if="!selectedDefect" class="column items-center q-py-xl">
-                    <q-icon name="edit_note" size="56px" color="grey-4" />
-                    <div class="text-body2 text-grey-6 q-mt-sm text-center">
-                      {{ roundDefectsError ? t('adminJobs.construction.cannotEditLoadFailed') : t('adminJobs.construction.selectDefectToEdit') }}
-                    </div>
-                  </q-card-section>
-
-                  <template v-else>
-                    <q-card-section>
-                      <div class="row items-center justify-between q-mb-md">
-                        <div>
-                          <div class="text-subtitle2 text-weight-bold">
-                            {{ t('adminJobs.construction.editDefectTitle', { id: selectedDefect.defectId }) }}
-                          </div>
-                          <div class="text-caption text-grey-6">{{ getDefectRoomLabel(selectedDefect) }}</div>
-                          <div v-if="selectedDefectPlanId" class="q-mt-xs">
-                            <q-btn
-                              flat
-                              dense
-                              no-caps
-                              size="sm"
-                              color="primary"
-                              icon="place"
-                              :label="t('components.planPosition.viewButton')"
-                              class="bg-blue-1 text-primary q-px-sm"
-                              style="border-radius: 6px; font-weight: 500;"
-                              @click="showPlanDialog = true"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div class="q-mb-md text-center">
-                        <q-img
-                          v-if="selectedDefect.imageUrl"
-                          :src="getImageUrl(selectedDefect.imageUrl) ?? ''"
-                          style="max-height: 250px; border-radius: 8px; cursor: pointer"
-                          fit="contain"
-                          @click="viewDefectImage"
-                        >
-                          <template v-slot:error>
-                            <div class="absolute-full flex flex-center bg-grey-3 text-grey-7">
-                              {{ t('adminJobs.construction.imageLoadFailed') }}
-                            </div>
-                          </template>
-                        </q-img>
-                        <div v-else class="bg-grey-2 flex flex-center" style="height: 150px; border-radius: 8px">
-                          <q-icon name="image_not_supported" size="40px" color="grey-5" />
-                        </div>
-                      </div>
-
-                      <div class="column q-gutter-md">
-                        <q-input
-                          outlined
-                          dense
-                          type="textarea"
-                          rows="4"
-                          v-model="defectEditForm.description"
-                          :label="t('adminJobs.construction.defectDescriptionLabel')"
-                        />
-
-                        <q-select
-                          outlined
-                          dense
-                          emit-value
-                          map-options
-                          v-model="defectEditForm.severity"
-                          :options="severityOptions"
-                          :label="t('adminJobs.construction.severityLabel')"
-                        />
-
-                        <q-select
-                          outlined
-                          dense
-                          multiple
-                          use-chips
-                          emit-value
-                          map-options
-                          v-model="defectEditForm.subCategoryIds"
-                          :options="defectSubCategoryOptions"
-                          :loading="isLoadingDefectMaster"
-                          :label="t('adminJobs.construction.defectTypeLabel')"
-                        />
-
-                        <q-file
-                          outlined
-                          dense
-                          clearable
-                          accept="image/*"
-                          v-model="defectEditForm.file"
-                          :label="t('adminJobs.construction.changeDefectImage')"
-                        >
-                          <template #prepend>
-                            <q-icon name="image" />
-                          </template>
-                        </q-file>
-                      </div>
-                    </q-card-section>
-
-                    <q-separator />
-
-                    <q-card-actions align="right" class="q-pa-md">
-                      <q-btn flat color="grey-7" :label="t('adminJobs.construction.cancel')" no-caps @click="resetSelectedDefectForm" />
-                      <q-btn
-                        unelevated
-                        color="primary"
-                        icon="save"
-                        :label="t('adminJobs.construction.save')"
-                        no-caps
-                        :loading="isSavingDefect"
-                        @click="saveDefectChanges"
-                      />
-                    </q-card-actions>
-                  </template>
-                </div>
-
-                <!-- Report Management Section -->
-                <div class="col-auto bg-blue-grey-1 q-pa-md" style="border-radius: 0 0 16px 16px;">
-                  <div class="row items-center justify-between">
-                    <div class="text-subtitle2 text-weight-bold text-primary">{{ t('adminJobs.construction.reportManagementTitle') }}</div>
-                    <div class="row q-gutter-x-sm">
-                      <q-btn
-                        unelevated
-                        color="primary"
-                        icon="summarize"
-                        :label="t('adminJobs.construction.summarizeReport')"
-                        class="text-weight-bold"
-                        style="border-radius: 8px"
-                        no-caps
-                        @click="goToSummaryReport(selectedRound)"
-                      />
-                      <q-btn
-                        v-if="selectedRound?.summaryCompletedAt"
-                        outline
-                        color="primary"
-                        icon="visibility"
-                        :label="t('adminJobs.construction.viewReportPdf')"
-                        class="text-weight-bold"
-                        style="border-radius: 8px"
-                        no-caps
-                        :loading="isLoadingReport"
-                        @click="selectedRound && handleViewReport(selectedRound)"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </q-card>
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
-
-    <!-- Construction Report Dialog -->
+    <!-- Construction Report Dialog (PDF Full View) -->
     <q-dialog v-model="showReportDialog" maximized transition-show="slide-up" transition-hide="slide-down">
       <q-card class="bg-grey-1 column no-wrap full-height">
         <q-toolbar class="bg-white shadow-1">
@@ -723,27 +458,6 @@
             class="q-mr-sm"
             @click="constructionPdfRef?.printPdf()"
           />
-
-          <q-btn
-            unelevated
-            color="warning"
-            icon="edit"
-            :label="t('adminJobs.construction.editInspection')"
-            no-caps
-            class="q-mr-sm"
-            @click="goToEditConstruction(selectedRound)"
-          />
-
-          <q-btn
-            unelevated
-            color="positive"
-            icon="verified"
-            :label="approvalButtonLabel"
-            no-caps
-            :disable="!canApproveSelectedRound"
-            :loading="isApprovingRound"
-            @click="confirmApproveRound"
-          />
         </q-toolbar>
 
         <q-card-section class="col q-pa-md" style="overflow-y: auto;">
@@ -755,7 +469,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
@@ -765,8 +479,7 @@ import { useTeamStore } from '../stores/useTeam';
 import { useConstructionDailyReportStore } from 'src/stores/useConstructionDailyReport';
 import type { ExtendedConstructionReport } from 'src/stores/useConstructionDailyReport';
 import ConstructionReportPdf from 'src/components/ConstructionReportPdf.vue';
-import type { Defect, HousePlan } from 'src/models';
-import InspectionItemCard from '../components/InspectionItemCard.vue';
+import type { HousePlan } from 'src/models';
 import PlanPositionDialog from '../components/PlanPositionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { useLocalizedField } from 'src/composables/useLocalizedField';
@@ -781,21 +494,21 @@ const { jobStatusLabel } = useJobStatus();
 const { pickLocalized } = useLocalizedField();
 const constructionPdfRef = ref<InstanceType<typeof ConstructionReportPdf> | null>(null);
 
-const API_BASE_URL = import.meta.env.VITE_API_URL as string;
-
-function defectStatusLabel(status: string): string {
+const getRoundStatusColor = (status: string) => {
   switch (status) {
-    case 'verified':
-      return t('adminJobs.construction.statusVerified');
-    case 'repaired':
-      return t('adminJobs.construction.statusRepaired');
-    case 'rejected':
-      return t('adminJobs.construction.statusRejected');
-    case 'pending_repair':
+    case 'COMPLETED':
+      return 'green-2';
+    case 'PENDING_APPROVAL':
+      return 'orange-2';
+    case 'CANCELLED':
+      return 'red-2';
+    case 'IN_PROGRESS':
     default:
-      return t('adminJobs.construction.statusPendingRepair');
+      return 'blue-2';
   }
-}
+};
+
+const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 
 const getImageUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
@@ -869,18 +582,8 @@ interface RoundView {
   status: string;
   statusKey: string;
   inspectors?: string[];
-  summaryCompletedAt?: string | null;
+  summaryCompletedAt?: string | null | undefined;
 }
-
-interface DefectCategoryOption {
-  label: string;
-  value: number;
-}
-
-type AdminDefect = Defect & {
-  inspector?: { id?: number; fullName?: string };
-  round?: { roundId?: number };
-};
 
 interface TeamMemberChip {
   id: number;
@@ -905,132 +608,23 @@ const isLatestRoundNotCompleted = computed(() => {
   if (!latestRound) return false;
   return latestRound?.statusKey !== 'APPROVED' && latestRound?.statusKey !== 'CANCELLED';
 });
+
 const isSubmittingRound = ref(false);
-const isLoadingRoundDefects = ref(false);
-const isSavingDefect = ref(false);
 const isApprovingRound = ref(false);
-const isLoadingDefectMaster = ref(false);
 const jobData = ref<JobApiResponse | null>(null);
 const jobTeamMembers = ref<TeamMemberChip[]>([]);
-const roundDefects = ref<AdminDefect[]>([]);
-const roundDefectsError = ref('');
 const selectedRound = ref<RoundView | null>(null);
-const selectedDefect = ref<AdminDefect | null>(null);
-const showPlanDialog = ref(false);
-// /defects/round/:id doesn't return a flat planId, only the joined `plan` relation — mirrors useDefectlist.ts's fallback
-function getDefectPlanId(defect: AdminDefect | null): number | null {
-  return defect?.planId ?? defect?.plan?.planId ?? null;
-}
-const selectedDefectPlanId = computed(() => getDefectPlanId(selectedDefect.value));
-const defectSubCategoryOptions = ref<DefectCategoryOption[]>([]);
-const showRoundReviewDialog = ref(false);
-
-// Grouping and Pagination State
-interface GroupedDefectItem {
-  groupKey: string;
-  roomName: string;
-  roomId: number;
-  floorLabel: string;
-  roomType: string;
-  severity: string;
-  totalItems: number;
-  passCount: number;
-  failCount: number;
-  passPercentage: number;
-  failPercentage: number;
-  defects: AdminDefect[];
-}
-
-const getFloorLabel = (d: AdminDefect) => d.floor?.label ?? t('adminJobs.construction.floorNotSpecified');
-const getRoomName = (d: AdminDefect) =>
-  d.subRoom?.roomName ?? d.room?.roomName ?? t('adminJobs.construction.roomNotSpecified');
-const getRoomType = (d: AdminDefect) => d.room?.roomName ?? t('adminJobs.construction.roomTypeNotSpecified');
-
-const groupedDefects = computed<GroupedDefectItem[]>(() => {
-  const map = new Map<string, GroupedDefectItem>();
-
-  for (const defect of roundDefects.value) {
-    const key = `room__${getRoomName(defect)}__${getFloorLabel(defect)}`;
-
-    if (!map.has(key)) {
-      map.set(key, {
-        groupKey: key,
-        roomName: getRoomName(defect),
-        roomId: defect.room?.roomId ?? defect.defectId,
-        floorLabel: getFloorLabel(defect),
-        roomType: getRoomType(defect),
-        severity: defect.severity,
-        totalItems: 0,
-        passCount: 0,
-        failCount: 0,
-        passPercentage: 0,
-        failPercentage: 0,
-        defects: [],
-      });
-    }
-
-    const group = map.get(key)!;
-    group.totalItems++;
-    group.defects.push(defect);
-    if (defect.status === 'verified') group.passCount++;
-    else group.failCount++;
-  }
-
-  for (const g of map.values()) {
-    g.passPercentage = g.totalItems > 0 ? Math.round((g.passCount / g.totalItems) * 100) : 0;
-    g.failPercentage = 100 - g.passPercentage;
-  }
-
-  return [...map.values()];
-});
-
-const selectedGroupKey = ref<string | null>(null);
-
-const currentRoomDefects = computed(() => {
-  if (!selectedGroupKey.value) return [];
-  const group = groupedDefects.value.find(g => g.groupKey === selectedGroupKey.value);
-  return group?.defects ?? [];
-});
-
-const currentPage = ref(1);
-const itemsPerPage = 10;
-const totalPages = computed(() => Math.ceil(currentRoomDefects.value.length / itemsPerPage));
-
-const paginatedDefects = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage;
-  return currentRoomDefects.value.slice(start, start + itemsPerPage);
-});
-
-watch(selectedGroupKey, () => {
-  currentPage.value = 1;
-});
-
-watch(selectedRound, () => {
-  selectedGroupKey.value = null;
-});
-
-const defectEditForm = ref<{
-  description: string;
-  severity: string;
-  status: string;
-  subCategoryIds: number[];
-  file: File | null;
-}>({
-  description: '',
-  severity: 'Minor',
-  status: 'pending_repair',
-  subCategoryIds: [],
-  file: null,
-});
-
-const severityOptions = [
-  { label: 'Minor', value: 'Minor' },
-  { label: 'Major', value: 'Major' },
-];
 
 
+const approveButtonLabel = (round: RoundView) =>
+  round.statusKey === 'APPROVED'
+    ? t('adminJobs.construction.approved')
+    : t('adminJobs.construction.approve');
 
-
+const onApproveRound = (round: RoundView) => {
+  selectedRound.value = round;
+  confirmApproveRound();
+};
 
 const formatRoundDate = (dateStr: string) => {
   if (!dateStr) return '-';
@@ -1054,7 +648,7 @@ const formatRoundDate = (dateStr: string) => {
   return formattedDate;
 };
 
-const mapRoundToView = (round: RoundApiResponse) => {
+const mapRoundToView = (round: RoundApiResponse): RoundView => {
   let inspectors: string[] = [];
 
   if (round.teamMembers && round.teamMembers.length > 0) {
@@ -1067,7 +661,6 @@ const mapRoundToView = (round: RoundApiResponse) => {
       return t('adminJobs.construction.nameNotSpecified');
     });
   } else if (round.teamMember?.inspector?.fullName) {
-    // Fallback for old data structure if any
     inspectors = [round.teamMember.inspector.fullName];
   } else if (jobTeamMembers.value.length > 0) {
     inspectors = jobTeamMembers.value.map((m) => m.fullName);
@@ -1082,7 +675,7 @@ const mapRoundToView = (round: RoundApiResponse) => {
     status: roundStatusCode(round.status),
     statusKey: round.status,
     inspectors,
-    summaryCompletedAt: round.summaryCompletedAt,
+    summaryCompletedAt: round.summaryCompletedAt ?? null,
   };
 };
 
@@ -1116,33 +709,6 @@ function applyRounds(rounds: RoundApiResponse[]) {
   inspectionRounds.value = rounds.map(mapRoundToView);
 }
 
-/*
-async function fetchDefectMasterData() {
-  if (defectSubCategoryOptions.value.length > 0) return;
-
-  isLoadingDefectMaster.value = true;
-  try {
-    const { data } = await api.get<
-      { subCategoryId: number; name: string; category?: { name?: string } }[]
-    >('/defect-sub-categories');
-    defectSubCategoryOptions.value = data.map((item) => ({
-      value: item.subCategoryId,
-      label: item.category?.name ? `${item.category.name} - ${item.name}` : item.name,
-    }));
-  } catch (error) {
-    console.error('Failed to load defect master data:', error);
-    $q.notify({
-      message: 'โหลดประเภท defect ไม่สำเร็จ',
-      color: 'negative',
-      icon: 'error',
-      position: 'top',
-    });
-  } finally {
-    isLoadingDefectMaster.value = false;
-  }
-}
-*/
-
 async function loadPageData() {
   $q.loading.show({
     spinner: detailSpinner,
@@ -1155,22 +721,13 @@ async function loadPageData() {
       fetchJobDetails(),
       fetchTeamMembers(),
       fetchHousePlans(),
-      teamStore.fetchAllTeams() // ดึงข้อมูลทีมทั้งหมดไว้กรองตามสาขาของงาน
+      teamStore.fetchAllTeams(),
     ]);
     const rounds = await fetchRounds();
     applyRounds(rounds);
     await userStore.fetchUsers().catch((err) => {
       console.warn('Failed to fetch users for inspector picker:', err);
     });
-
-    // เข้ามาจากการแจ้งเตือน (มี roundId ใน query) ให้เปิด dialog รีวิวรอบนั้นให้เลย
-    const targetRoundId = Number(route.query.roundId);
-    if (targetRoundId) {
-      const targetRound = inspectionRounds.value.find((r) => r.id === targetRoundId);
-      if (targetRound) {
-        void openRoundReview(targetRound);
-      }
-    }
   } catch (error) {
     console.error('Failed to load job detail:', error);
     $q.notify({
@@ -1263,32 +820,13 @@ const job = computed(() => {
 });
 
 // Reactive inspection rounds
-const inspectionRounds = ref<{
-  id: number;
-  roundNumber: number;
-  date: string;
-  status: string;
-  statusKey: string;
-  inspectors?: string[];
-}[]>([]);
-
-const canApproveSelectedRound = computed(() => selectedRound.value?.statusKey === 'SUBMITTED');
-const approvalButtonLabel = computed(() =>
-  selectedRound.value?.statusKey === 'APPROVED'
-    ? t('adminJobs.construction.approved')
-    : t('adminJobs.construction.approve'),
-);
+const inspectionRounds = ref<RoundView[]>([]);
 
 const goBack = async () => {
   await router.push('/admin/work');
 };
 
-const goToSummaryReport = (round: { id: number } | null | undefined) => {
-  if (!round?.id) return;
-  void router.push(`/admin/report/${round.id}`);
-};
-
-const goToEditConstruction = (round: { id: number } | null | undefined) => {
+const goToConstructionInspect = (round: { id: number } | null | undefined) => {
   if (!round?.id) return;
   void router.push(`/admin/construction-inspect/${round.id}`);
 };
@@ -1300,7 +838,6 @@ const onEdit = async () => {
 const openGoogleMaps = () => {
   if (!jobData.value) return;
 
-  // ถ้าปักหมุดไว้ ให้ไปที่พิกัดนั้นตรงๆ
   const pinned = parseCoordinate(jobData.value.locationCoordinate);
   if (pinned) {
     window.open(buildGoogleMapsUrl(pinned), '_blank');
@@ -1318,7 +855,7 @@ const openGoogleMaps = () => {
     addr?.subDistrict ? `ต.${addr.subDistrict}` : '',
     addr?.district ? `อ.${addr.district}` : '',
     addr?.province ? `จ.${addr.province}` : '',
-    addr?.postalCode || ''
+    addr?.postalCode || '',
   ];
 
   const searchQuery = addressParts.filter(Boolean).join(' ');
@@ -1332,7 +869,7 @@ const openGoogleMaps = () => {
       message: t('adminJobs.construction.noAddressForMapSearch'),
       color: 'warning',
       position: 'top',
-      icon: 'warning'
+      icon: 'warning',
     });
   }
 };
@@ -1347,36 +884,9 @@ const viewProjectImage = () => {
   }
 };
 
-
-const viewDefectImage = () => {
-  if (!selectedDefect.value?.imageUrl) return;
-  currentImageUrl.value = getImageUrl(selectedDefect.value.imageUrl) ?? selectedDefect.value.imageUrl;
-  showImageDialog.value = true;
-};
-
-function getDefectRoomLabel(defect: AdminDefect) {
-  const floor = defect.floor?.label;
-  const room = defect.room?.roomName;
-  const subRoom = defect.subRoom?.roomName;
-  return [floor, room, subRoom].filter(Boolean).join(' / ') || t('adminJobs.construction.roomNotSpecified');
-}
-
-async function openRoundReview(round: RoundView) {
-  selectedRound.value = round;
-  selectedDefect.value = null;
-  roundDefects.value = [];
-  roundDefectsError.value = '';
-  showRoundReviewDialog.value = true;
-
-  await fetchRoundDefects(round.id);
-}
-
 async function handleViewReport(round: RoundView) {
-  if (!round.summaryCompletedAt) {
-    $q.notify({ type: 'warning', message: t('adminJobs.construction.summarizeReportFirst') });
-    return;
-  }
   isLoadingReport.value = true;
+  selectedRound.value = round;
   $q.loading.show({
     spinner: pdfSpinner,
     spinnerColor: 'primary',
@@ -1436,94 +946,6 @@ const viewPlan = () => {
   }
 };
 
-async function fetchRoundDefects(roundId: number) {
-  isLoadingRoundDefects.value = true;
-  roundDefectsError.value = '';
-  try {
-    const { data } = await api.get<AdminDefect[]>(`/defects/round/${roundId}`);
-    roundDefects.value = data;
-    selectedDefect.value = null;
-  } catch (error) {
-    console.error('Failed to load round defects:', error);
-    roundDefects.value = [];
-    selectedDefect.value = null;
-    roundDefectsError.value = 'adminJobs.construction.loadDefectsFailed';
-    $q.notify({
-      message: t('adminJobs.construction.loadDefectsFailed'),
-      color: 'negative',
-      icon: 'error',
-      position: 'top',
-    });
-  } finally {
-    isLoadingRoundDefects.value = false;
-  }
-}
-
-function retryFetchRoundDefects() {
-  if (!selectedRound.value) return;
-  void fetchRoundDefects(selectedRound.value.id);
-}
-
-function selectDefect(defect: AdminDefect) {
-  selectedDefect.value = defect;
-  defectEditForm.value = {
-    description: defect.description || '',
-    severity: defect.severity || 'Minor',
-    status: defect.status || 'pending_repair',
-    subCategoryIds: defect.subCategories?.map((item) => item.subCategoryId) ?? [],
-    file: null,
-  };
-}
-
-function resetSelectedDefectForm() {
-  if (selectedDefect.value) {
-    selectDefect(selectedDefect.value);
-  }
-}
-
-async function saveDefectChanges() {
-  if (!selectedDefect.value) return;
-
-  isSavingDefect.value = true;
-  try {
-    const formData = new FormData();
-    formData.append('description', defectEditForm.value.description || '-');
-    formData.append('severity', defectEditForm.value.severity);
-    formData.append('status', defectEditForm.value.status);
-    defectEditForm.value.subCategoryIds.forEach((id) => {
-      formData.append('subCategoryIds', String(id));
-    });
-    if (defectEditForm.value.file) {
-      formData.append('file', defectEditForm.value.file);
-    }
-
-    await api.patch(`/defects/${selectedDefect.value.defectId}`, formData);
-
-    if (selectedRound.value) {
-      await fetchRoundDefects(selectedRound.value.id);
-      const updated = roundDefects.value.find((d) => d.defectId === selectedDefect.value?.defectId);
-      if (updated) selectDefect(updated);
-    }
-
-    $q.notify({
-      message: t('adminJobs.construction.saveDefectSuccess'),
-      color: 'positive',
-      icon: 'check_circle',
-      position: 'top',
-    });
-  } catch (error) {
-    console.error('Failed to update defect:', error);
-    $q.notify({
-      message: t('adminJobs.construction.saveDefectFailed'),
-      color: 'negative',
-      icon: 'error',
-      position: 'top',
-    });
-  } finally {
-    isSavingDefect.value = false;
-  }
-}
-
 function confirmApproveRound() {
   if (!selectedRound.value) return;
 
@@ -1548,7 +970,7 @@ async function approveSelectedRound() {
     await api.patch(`/inspection-rounds/${selectedRound.value.id}/approve`);
     const rounds = await fetchRounds();
     applyRounds(rounds);
-    await fetchJobDetails(); // Fetch job details to update job status
+    await fetchJobDetails();
     const updatedRound = inspectionRounds.value.find((round) => round.id === selectedRound.value?.id);
     selectedRound.value = updatedRound ?? null;
 
@@ -1648,7 +1070,6 @@ const formatDateDisplay = (dateStr: string) => {
 };
 
 const onCreateRound = () => {
-  // เดิมเทียบกับสถานะของรอบล่าสุดเท่านั้น — เช็คว่ามีรอบก่อน กันงานที่ยังไม่มีรอบแต่ job.status เป็น Completed
   if (inspectionRounds.value.length > 0 && job.value.status === 'COMPLETED' && job.value.contractorProgress < 50) {
     $q.dialog({
       title: t('adminJobs.construction.confirmCreateRoundTitle'),
@@ -1670,8 +1091,7 @@ const openCreateRoundDialog = () => {
   scheduledDate.value = '';
   timeInput.value = '09:00:00';
   selectedInspectors.value = [];
-  
-  // Try to pre-fill from latest round if it exists
+
   const latestRoundRaw = jobData.value?.rounds?.sort((a: { roundId: number }, b: { roundId: number }) => b.roundId - a.roundId)[0];
   if (latestRoundRaw && latestRoundRaw.teamMembers && latestRoundRaw.teamMembers.length > 0) {
     const teamMember = latestRoundRaw.teamMembers[0];
@@ -1721,67 +1141,32 @@ const submitCreateRound = async () => {
     return;
   }
 
+  const nextRoundNumber = inspectionRounds.value.length + 1;
+  const combinedDateTime = `${scheduledDate.value} ${timeInput.value}`;
+
+  const payload = {
+    jobId: jobId.value,
+    roundNumber: nextRoundNumber,
+    scheduledDate: combinedDateTime,
+    teamId: assignmentMode.value === 'team' ? selectedTeam.value : null,
+    inspectorIds: selectedInspectors.value.map((i) => i.value),
+  };
+
   isSubmittingRound.value = true;
   try {
-    // 1. สร้างรอบการตรวจ โดยอิงจากโหมด
-    interface RoundPayload {
-      scheduledDate: string;
-      status: string;
-      teamId?: number;
-      inspectorId?: number;
-    }
+    await api.post('/inspection-rounds', payload);
+    showCreateRoundDialog.value = false;
 
-    const startTime = timeInput.value.split(' - ')[0];
-
-    const roundPayload: RoundPayload = {
-      scheduledDate: startTime ? `${scheduledDate.value} ${startTime}` : scheduledDate.value,
-      status: 'SCHEDULED',
-    };
-
-    if (assignmentMode.value === 'team' && selectedTeam.value) {
-      roundPayload.teamId = selectedTeam.value;
-    } else if (selectedInspectors.value.length > 0) {
-      // ถ้าไม่มีทีมให้เอาคนแรกเป็นตัวแทนสร้างรอบ
-      const firstInspector = selectedInspectors.value[0];
-      if (firstInspector) {
-        roundPayload.inspectorId = firstInspector.value;
-      }
-    }
-
-    const { data: createdRoundResp } = await api.post(`/daily-reports/${jobId.value}/rounds`, roundPayload);
-
-    // 2. สำหรับคนที่เหลือ ให้ยิงเข้า /assignments พร้อม roundId ของรอบที่เพิ่งสร้าง
-    // เพื่อผูกสิทธิ์เฉพาะรอบนี้ ไม่ปลดล็อกทั้ง job
-    let extraInspectors = selectedInspectors.value;
-    if (assignmentMode.value === 'individual' || (!selectedTeam.value && assignmentMode.value === 'team')) {
-      // ตัดคนแรกออก เพราะถูกส่งไปสร้างรอบแล้ว
-      extraInspectors = selectedInspectors.value.slice(1);
-    }
-
-    for (const inspector of extraInspectors) {
-      await api.post('/assignments', {
-        jobId: jobId.value,
-        inspectorId: inspector.value,
-        roundId: createdRoundResp.roundId,
-      });
-    }
-
-    await fetchTeamMembers();
-    const rounds = await fetchRounds();
-    applyRounds(rounds);
-    await fetchJobDetails();
-
-    const createdRound = inspectionRounds.value[inspectionRounds.value.length - 1];
     $q.notify({
-      message: t('adminJobs.construction.createRoundSuccess', {
-        number: createdRound?.roundNumber ?? '',
-      }),
+      message: t('adminJobs.construction.createRoundSuccess', { number: nextRoundNumber }),
       color: 'positive',
       icon: 'check_circle',
       position: 'top',
     });
 
-    showCreateRoundDialog.value = false;
+    const rounds = await fetchRounds();
+    applyRounds(rounds);
+    await fetchJobDetails();
   } catch (error) {
     console.error('Failed to create round:', error);
     $q.notify({
@@ -1794,109 +1179,62 @@ const submitCreateRound = async () => {
     isSubmittingRound.value = false;
   }
 };
-
-// status คือรหัสจาก useJobStatus (IN_PROGRESS/PENDING_APPROVAL/COMPLETED) ไม่ใช่ข้อความที่แสดง
-function getRoundStatusColor(status: string) {
-  switch (status) {
-    case 'IN_PROGRESS':
-      return 'orange-2';
-    case 'PENDING_APPROVAL':
-      return 'blue-2';
-    case 'COMPLETED':
-      return 'green-2';
-    default:
-      return 'grey-3';
-  }
-}
 </script>
 
 <style scoped>
 .header-bar {
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .job-back-icon {
-  position: relative;
-  z-index: 2;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .job-detail-title {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1;
-  pointer-events: none;
-  font-size: 21px;
-  letter-spacing: 0.01em;
+  font-size: 18px;
 }
 
 .detail-content {
+  padding: 16px;
   max-width: 600px;
   margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 16px;
-}
-@media (min-width: 1024px) {
-  .detail-content {
-    max-width: 820px;
-    padding: 24px 32px;
-  }
-}
-@media (min-width: 1440px) {
-  .detail-content {
-    max-width: 920px;
-  }
-}
-
-.review-dialog-content {
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
-  overflow-y: auto;
-}
-
-.review-panel {
-  min-height: 280px;
 }
 
 .card-round {
   border-radius: 16px;
-  border-color: #eeeeee;
+}
+
+.round-card {
+  border-radius: 16px;
+  background-color: #ffffff;
+}
+
+.action-btn {
+  font-size: 13px;
+  border-radius: 10px;
+  box-shadow: none;
 }
 
 .house-image-wrapper {
   width: 100%;
   height: 200px;
-  overflow: hidden;
 }
 
 .house-img {
   width: 100%;
-  height: 200px;
-  object-fit: cover;
+  height: 100%;
 }
 
 .house-img-placeholder {
   width: 100%;
-  height: 200px;
-}
-
-@media (min-width: 1024px) {
-  .house-image-wrapper,
-  .house-img,
-  .house-img-placeholder {
-    height: 280px;
-  }
+  height: 100%;
 }
 
 .map-btn {
-  background: #e8f0fe;
-  color: var(--q-primary);
-  border-radius: 12px;
   width: 40px;
   height: 40px;
 }
@@ -1913,6 +1251,7 @@ function getRoundStatusColor(status: string) {
   width: 100%;
   height: 100%;
 }
+
 .custom-toggle {
   border: 1px solid #e0e0e0;
   border-radius: 8px;
@@ -1922,6 +1261,7 @@ function getRoundStatusColor(status: string) {
 .custom-toggle :deep(.q-btn) {
   font-weight: 500;
 }
+
 .plan-thumb-empty {
   width: 100px;
   height: 80px;
@@ -2015,7 +1355,7 @@ function getRoundStatusColor(status: string) {
 }
 
 .submit-btn {
-  background: #2563EB !important; /* Vibrant primary blue from the mockup */
+  background: #2563EB !important;
   color: white !important;
   border-radius: 50px !important;
   font-weight: 600;

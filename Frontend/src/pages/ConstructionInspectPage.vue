@@ -331,7 +331,7 @@
         class="full-width text-weight-bold shadow-3 footer-btn"
         style="border-radius: 8px; height: 48px; font-size: 16px;"
         :loading="store.isSubmitting"
-        :disable="store.isSubmitting"
+        :disable="store.isSubmitting || (isEditMode && !isFormDirty)"
         @click="submitReport"
       />
     </q-footer>
@@ -656,7 +656,7 @@ async function loadExistingReport() {
         const fullUrl = img.imageUrl.startsWith('http') ? img.imageUrl : `${API_BASE_URL}${img.imageUrl}`;
         const filename = img.imageUrl.split('/').pop() || 'image.jpg';
         const file = await urlToFile(fullUrl, filename);
-        
+
         if (file) {
           if (img.imageType === 'PANORAMA') {
             panoramaFile.value = file;
@@ -673,6 +673,11 @@ async function loadExistingReport() {
       }
     }
   }
+
+  if (existingReport) {
+    isEditMode.value = true;
+  }
+  initialSnapshot.value = getFormSnapshot();
 }
 
 // สำหรับ Panorama View
@@ -1012,6 +1017,33 @@ const compressImage = async (file: File): Promise<File> => {
     return file;
   }
 };
+
+// Dirty checking for Edit Mode
+const isEditMode = ref(false);
+const initialSnapshot = ref<string>('');
+
+function getFormSnapshot(): string {
+  return JSON.stringify({
+    startTime: form.value.startTime,
+    endTime: form.value.endTime,
+    weather: form.value.weather,
+    workDetails: workDetails.value.map(w => ({ name: w.name, location: w.location, unit: w.unit, actual: w.actual })),
+    personnel: personnelList.value.map(p => ({ name: p.name, count: p.count, hours: p.hours })),
+    workers: workerList.value.map(w => ({ name: w.name, count: w.count, hours: w.hours })),
+    notes: notesList.value.map(n => ({ text: n.text, status: n.status })),
+    machines: machineList.value.map(m => ({ name: m.name, size: m.size, quantity: m.quantity, hours: m.hours })),
+    accidents: accidentList.value.map(a => ({ count: a.count })),
+    photosCount: photos.value.length,
+    photosNames: photos.value.map(p => `${p.file?.name}_${p.file?.size}_${p.workDetailName}`),
+    hasPanorama: !!panoramaFile.value,
+    panoramaName: panoramaFile.value ? `${panoramaFile.value.name}_${panoramaFile.value.size}` : '',
+  });
+}
+
+const isFormDirty = computed(() => {
+  if (!isEditMode.value) return true;
+  return getFormSnapshot() !== initialSnapshot.value;
+});
 
 // 7. Submit — แปลง form data เป็น API payload แล้วส่ง POST
 const submitReport = async () => {
