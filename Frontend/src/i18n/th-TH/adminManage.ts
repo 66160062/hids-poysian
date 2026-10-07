@@ -94,6 +94,7 @@ export default {
     filterAdmin: 'แอดมิน',
     filterInspector: 'ผู้ตรวจงาน',
     roleAdmin: 'เเอดมิน',
+    roleSuperAdmin: 'ซูเปอร์แอดมิน',
     roleInspector: 'ผู้ตรวจงาน',
     loading: 'กำลังโหลดข้อมูล...',
     noUsersFound: 'ไม่พบรายชื่อผู้ใช้งาน',

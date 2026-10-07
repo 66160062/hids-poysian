@@ -305,8 +305,9 @@
             </template>
           </q-select>
 
-          <div class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">{{ t('common.branch.label') }}</div>
+          <div v-if="isSuperAdmin" class="text-weight-medium text-grey-8 q-mb-sm" style="font-size: 14px">{{ t('common.branch.label') }}</div>
           <q-select
+            v-if="isSuperAdmin"
             v-model="selectedBranchId"
             :options="branchOptions"
             emit-value
@@ -386,7 +387,7 @@
           {{ selectedTypeLabel }}
         </q-chip>
         <q-chip
-          v-if="selectedBranchId !== 'all'"
+          v-if="isSuperAdmin && selectedBranchId !== 'all'"
           removable
           @remove="selectedBranchId = 'all'"
           color="blue-1"
@@ -534,6 +535,7 @@ import { useI18n } from 'vue-i18n';
 import { useWorkListStore } from '../stores/useWorkList';
 import { useHouseTypeStore } from '../stores/useHouseType';
 import { useBranchStore } from 'src/stores/useBranch';
+import { useAuthStore } from 'src/stores/useAuth';
 import IconBounceSpinner from 'src/components/IconBounceSpinner.vue';
 import ConfirmActionDialog from 'src/components/ConfirmActionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
@@ -553,6 +555,8 @@ const houseTypeStore = useHouseTypeStore();
 const { pickLocalized } = useLocalizedField();
 const { jobStatusLabel } = useJobStatus();
 const branchStore = useBranchStore();
+const authStore = useAuthStore();
+const isSuperAdmin = computed(() => authStore.isSuperAdmin);
 
 const loading = ref<boolean>(false);
 const error = ref<string>('');
@@ -619,7 +623,7 @@ const activeFilterCount = computed(() => {
   let count = 0;
   if (selectedType.value !== 'ทั้งหมด') count++;
   if (activeFilter.value !== 'all') count++;
-  if (selectedBranchId.value !== 'all') count++;
+  if (isSuperAdmin.value && selectedBranchId.value !== 'all') count++;
   return count;
 });
 

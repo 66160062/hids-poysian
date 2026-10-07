@@ -79,6 +79,7 @@ describe('InspectionJobsController', () => {
 
   it('treats the "all" status filter as no filter at all', () => {
     controller.findAll(
+      { user: { sub: 1, role: 'super_admin', branchId: null } } as any,
       1,
       10,
       'all',
@@ -102,6 +103,7 @@ describe('InspectionJobsController', () => {
 
   it('defaults page and limit when they are not numbers', () => {
     controller.findAll(
+      { user: { sub: 1, role: 'super_admin', branchId: null } } as any,
       undefined,
       undefined,
       'Active',
@@ -125,6 +127,7 @@ describe('InspectionJobsController', () => {
 
   it('leaves the project image url untouched when no new file is uploaded on update', async () => {
     await controller.update(
+      { user: { sub: 1, role: 'super_admin', branchId: null } } as any,
       '4',
       {},
       {

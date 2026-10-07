@@ -20,7 +20,7 @@
           </div>
         </div>
 
-        <div style="min-width: 180px; max-width: 240px;">
+        <div v-if="isSuperAdmin" style="min-width: 180px; max-width: 240px;">
           <q-select
             v-model="selectedBranchId"
             :options="branchOptions"
@@ -155,6 +155,7 @@ import TeamWorkloadCard from 'src/components/dashboard/TeamWorkloadCard.vue';
 import JobDrilldownCard from 'src/components/dashboard/JobDrilldownCard.vue';
 import OperationalPipelineCard from 'src/components/dashboard/OperationalPipelineCard.vue';
 import { useBranchStore } from 'src/stores/useBranch';
+import { useAuthStore } from 'src/stores/useAuth';
 import type {
   MonthlyTrendItem,
   JobDefectCategoryItem,
@@ -171,6 +172,8 @@ const $q = useQuasar();
 const { t } = useI18n();
 const error = ref<string>('');
 const branchStore = useBranchStore();
+const authStore = useAuthStore();
+const isSuperAdmin = computed(() => authStore.isSuperAdmin);
 
 const dashboard = ref<DashboardStats>({
   totalProjects: 0,

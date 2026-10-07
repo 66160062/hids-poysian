@@ -44,7 +44,11 @@ describe('UsersController', () => {
       size: 50,
     } as Express.Multer.File;
 
-    await controller.create(file, { email: 'a@b.com' } as never);
+    await controller.create(
+      { user: { sub: 1, role: 'super_admin', email: 'admin@gmail.com', branchId: null } } as any,
+      file,
+      { email: 'a@b.com' } as never,
+    );
 
     expect(storage.uploadImage).toHaveBeenCalledWith(file.buffer, 'users');
     expect(service.create).toHaveBeenCalledWith({
@@ -55,6 +59,7 @@ describe('UsersController', () => {
 
   it('falls back to the default avatar when no file is attached', async () => {
     await controller.create(
+      { user: { sub: 1, role: 'super_admin', email: 'admin@gmail.com', branchId: null } } as any,
       undefined as unknown as Express.Multer.File,
       { email: 'a@b.com' } as never,
     );
@@ -67,9 +72,14 @@ describe('UsersController', () => {
   });
 
   it('only overwrites imageUrl on update when a new file is attached', async () => {
-    await controller.update(1, undefined as unknown as Express.Multer.File, {
-      fullName: 'ใหม่',
-    });
+    await controller.update(
+      { user: { sub: 1, role: 'super_admin', email: 'admin@gmail.com', branchId: null } } as any,
+      1,
+      undefined as unknown as Express.Multer.File,
+      {
+        fullName: 'ใหม่',
+      },
+    );
 
     expect(storage.uploadImage).not.toHaveBeenCalled();
     expect(service.update).toHaveBeenCalledWith(1, { fullName: 'ใหม่' });

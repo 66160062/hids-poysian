@@ -7,6 +7,7 @@ export interface Meta {
   totalCount: number;
 }
 export enum UserRole {
+  SUPER_ADMIN = 'super_admin',
   ADMIN = 'admin',
   INSPECTOR = 'inspector',
 }

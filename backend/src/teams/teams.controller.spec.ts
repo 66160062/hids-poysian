@@ -38,7 +38,11 @@ describe('TeamsController', () => {
       size: 111,
     } as Express.Multer.File;
 
-    await controller.create(file, { teamName: 'ทีม A' } as never);
+    await controller.create(
+      { user: { sub: 1, role: 'super_admin', email: 'admin@gmail.com', branchId: null } } as any,
+      file,
+      { teamName: 'ทีม A' } as never,
+    );
 
     expect(storage.uploadImage).toHaveBeenCalledWith(file.buffer, 'teams');
     expect(service.create).toHaveBeenCalledWith({
@@ -49,6 +53,7 @@ describe('TeamsController', () => {
 
   it('sends a null logo_url when no file is attached', async () => {
     await controller.create(
+      { user: { sub: 1, role: 'super_admin', email: 'admin@gmail.com', branchId: null } } as any,
       undefined as unknown as Express.Multer.File,
       { teamName: 'ทีม B' } as never,
     );

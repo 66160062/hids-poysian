@@ -17,7 +17,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { AdminGuard } from 'src/auth/admin.guard';
+import { SuperAdminGuard } from 'src/auth/super-admin.guard';
 import { BranchesService } from './branches.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
@@ -46,7 +46,7 @@ export class BranchesController {
   }
 
   @Post()
-  @UseGuards(AdminGuard)
+  @UseGuards(SuperAdminGuard)
   @UseInterceptors(FileInterceptor('logo', { storage: memoryStorage() }))
   create(
     @Body() dto: CreateBranchDto,
@@ -56,7 +56,7 @@ export class BranchesController {
   }
 
   @Patch(':id')
-  @UseGuards(AdminGuard)
+  @UseGuards(SuperAdminGuard)
   @UseInterceptors(FileInterceptor('logo', { storage: memoryStorage() }))
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -67,7 +67,7 @@ export class BranchesController {
   }
 
   @Delete(':id')
-  @UseGuards(AdminGuard)
+  @UseGuards(SuperAdminGuard)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.branches.remove(id);
   }
