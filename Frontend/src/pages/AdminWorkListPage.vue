@@ -707,7 +707,7 @@ const kpiCompletedCount = computed(() => {
   return tasks.value.filter((t) => t.statusKey === 'Completed' || t.status.includes('เสร็จ')).length;
 });
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 9;
 
 // ==========================================
 // 🎯 Interface สำหรับข้อมูล TaskItem
