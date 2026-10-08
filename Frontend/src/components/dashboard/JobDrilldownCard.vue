@@ -53,30 +53,9 @@
 
       <!-- Job Content When Selected -->
       <div v-else>
-        <!-- 1. Top Meta Banner & House Health Score -->
-        <div class="job-meta-banner q-pa-sm q-mb-md bg-grey-1 row items-center justify-between" style="border-radius: 12px;">
-          <div class="row items-center q-gutter-x-sm q-gutter-y-xs wrap">
-            <span class="text-weight-bold text-dark" style="font-size: 14px;">
-              {{ currentJob.title }}
-            </span>
-            <q-badge color="white" text-color="grey-9" class="q-px-sm q-py-xs shadow-1 text-caption">
-              <q-icon name="person" size="13px" class="q-mr-xs text-primary" />
-              {{ currentJob.customerName }}
-            </q-badge>
-            <q-badge v-if="currentJob.inspectorName" color="white" text-color="indigo-9" class="q-px-sm q-py-xs shadow-1 text-caption">
-              <q-icon name="badge" size="13px" class="q-mr-xs text-indigo-7" />
-              {{ t('adminWork.dashboard.inspectorLabel') }} {{ currentJob.inspectorName }}
-            </q-badge>
-            <q-badge v-if="currentJob.contractorName" color="white" text-color="orange-9" class="q-px-sm q-py-xs shadow-1 text-caption">
-              <q-icon name="handyman" size="13px" class="q-mr-xs text-warning" />
-              {{ currentJob.contractorName }}
-            </q-badge>
-            <q-badge v-if="currentJob.roundNumber" color="indigo-1" text-color="primary" class="q-px-sm q-py-xs text-caption text-weight-bold">
-              {{ t('adminWork.dashboard.roundBadge', { round: currentJob.roundNumber }) }}
-            </q-badge>
-          </div>
-
-          <div class="row items-center q-gutter-x-sm q-mt-xs q-mt-md-none">
+        <!-- 1. House Health Score & Job Detail Action -->
+        <div class="row items-center justify-between q-mb-md">
+          <div class="row items-center q-gutter-x-sm">
             <!-- House Health Score Badge (Sales Pitch) -->
             <div
               class="health-score-badge row items-center q-px-sm q-py-xs"
@@ -90,7 +69,9 @@
                 {{ t('adminWork.dashboard.houseHealthScore') }}: {{ t('adminWork.dashboard.pendingSummaryScore') }}
               </span>
             </div>
+          </div>
 
+          <div>
             <q-btn
               flat
               dense
@@ -179,11 +160,8 @@
           <div class="col-12 col-sm-6 col-lg-3">
             <div class="sub-card q-pa-sm bg-grey-1 full-height column justify-between" style="border-radius: 12px;">
               <div>
-                <div class="text-caption text-weight-bold text-grey-9 q-mb-xs">
+                <div class="text-caption text-weight-bold text-grey-9 q-mb-sm">
                   {{ t('adminWork.dashboard.safetyShield') }}
-                </div>
-                <div class="text-caption text-grey-6 q-mb-sm" style="font-size: 11px;">
-                  คัดกรองจุดเสี่ยงความปลอดภัย
                 </div>
               </div>
 
@@ -191,9 +169,9 @@
                 <!-- Major Box -->
                 <div class="col-6">
                   <div class="severity-pill bg-red-1 text-center q-pa-xs" style="border-radius: 8px;">
-                    <div class="row items-center justify-center text-negative text-caption text-weight-bold">
-                      <q-icon name="warning" size="14px" class="q-mr-xs" />
-                      {{ t('adminWork.dashboard.majorDefects') }}
+                    <div class="row items-center justify-center no-wrap text-negative text-caption text-weight-bold q-mb-xs">
+                      <q-icon name="warning" size="14px" class="q-mr-xs shrink-0" />
+                      <span class="ellipsis" style="font-size: 11px;">{{ t('adminWork.dashboard.majorDefects') }}</span>
                     </div>
                     <div class="text-h6 text-weight-bolder text-negative" style="line-height: 1.1;">
                       {{ currentJob.majorCount || 0 }}
@@ -207,9 +185,9 @@
                 <!-- Minor Box -->
                 <div class="col-6">
                   <div class="severity-pill bg-blue-1 text-center q-pa-xs" style="border-radius: 8px;">
-                    <div class="row items-center justify-center text-primary text-caption text-weight-bold">
-                      <q-icon name="info" size="14px" class="q-mr-xs" />
-                      {{ t('adminWork.dashboard.minorDefects') }}
+                    <div class="row items-center justify-center no-wrap text-primary text-caption text-weight-bold q-mb-xs">
+                      <q-icon name="info" size="14px" class="q-mr-xs shrink-0" />
+                      <span class="ellipsis" style="font-size: 11px;">{{ t('adminWork.dashboard.minorDefects') }}</span>
                     </div>
                     <div class="text-h6 text-weight-bolder text-primary" style="line-height: 1.1;">
                       {{ currentJob.minorCount || 0 }}
@@ -256,19 +234,54 @@
                 </div>
               </div>
 
-              <!-- Legend Metrics -->
-              <div class="row q-col-gutter-xs text-caption">
-                <div class="col-4 text-center">
-                  <div class="text-weight-bolder text-positive">{{ currentJob.resolution.verified }}</div>
-                  <div class="text-grey-6" style="font-size: 10px;">{{ t('adminWork.dashboard.legendVerified', { pct: verifiedPct }) }}</div>
+              <!-- 3 Mini Resolution Metric Cards -->
+              <div class="row q-col-gutter-xs">
+                <!-- ตรวจผ่าน -->
+                <div class="col-4">
+                  <div class="severity-pill bg-green-1 text-center q-pa-xs" style="border-radius: 8px;">
+                    <div class="row items-center justify-center no-wrap text-positive text-caption text-weight-bold q-mb-xs">
+                      <q-icon name="check_circle" size="13px" class="q-mr-xs shrink-0" />
+                      <span class="ellipsis" style="font-size: 11px;">{{ t('adminWork.dashboard.statusVerifiedShort') }}</span>
+                    </div>
+                    <div class="text-h6 text-weight-bolder text-positive" style="line-height: 1.1;">
+                      {{ currentJob.resolution.verified }}
+                    </div>
+                    <div class="text-caption text-grey-6" style="font-size: 10px;">
+                      {{ verifiedPct }}%
+                    </div>
+                  </div>
                 </div>
-                <div class="col-4 text-center">
-                  <div class="text-weight-bolder text-primary">{{ currentJob.resolution.repaired }}</div>
-                  <div class="text-grey-6" style="font-size: 10px;">{{ t('adminWork.dashboard.legendRepaired', { pct: repairedPct }) }}</div>
+
+                <!-- รอตรวจ -->
+                <div class="col-4">
+                  <div class="severity-pill bg-blue-1 text-center q-pa-xs" style="border-radius: 8px;">
+                    <div class="row items-center justify-center no-wrap text-primary text-caption text-weight-bold q-mb-xs">
+                      <q-icon name="schedule" size="13px" class="q-mr-xs shrink-0" />
+                      <span class="ellipsis" style="font-size: 11px;">{{ t('adminWork.dashboard.statusRepairedShort') }}</span>
+                    </div>
+                    <div class="text-h6 text-weight-bolder text-primary" style="line-height: 1.1;">
+                      {{ currentJob.resolution.repaired }}
+                    </div>
+                    <div class="text-caption text-grey-6" style="font-size: 10px;">
+                      {{ repairedPct }}%
+                    </div>
+                  </div>
                 </div>
-                <div class="col-4 text-center">
-                  <div class="text-weight-bolder text-orange-9">{{ currentJob.resolution.pending }}</div>
-                  <div class="text-grey-6" style="font-size: 10px;">{{ t('adminWork.dashboard.legendPending', { pct: pendingPct }) }}</div>
+
+                <!-- รอซ่อม -->
+                <div class="col-4">
+                  <div class="severity-pill bg-orange-1 text-center q-pa-xs" style="border-radius: 8px;">
+                    <div class="row items-center justify-center no-wrap text-orange-9 text-caption text-weight-bold q-mb-xs">
+                      <q-icon name="build" size="13px" class="q-mr-xs shrink-0" />
+                      <span class="ellipsis" style="font-size: 11px;">{{ t('adminWork.dashboard.statusPendingShort') }}</span>
+                    </div>
+                    <div class="text-h6 text-weight-bolder text-orange-9" style="line-height: 1.1;">
+                      {{ currentJob.resolution.pending }}
+                    </div>
+                    <div class="text-caption text-grey-6" style="font-size: 10px;">
+                      {{ pendingPct }}%
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

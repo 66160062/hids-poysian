@@ -1,5 +1,5 @@
 <template>
-  <q-card flat bordered class="team-workload-card bg-white shadow-1">
+  <q-card flat bordered class="team-workload-card bg-white shadow-1 full-height">
     <div class="q-pa-md">
       <div class="row items-center justify-between q-mb-md">
         <div class="row items-center">

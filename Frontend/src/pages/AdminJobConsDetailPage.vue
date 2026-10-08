@@ -1070,21 +1070,7 @@ const formatDateDisplay = (dateStr: string) => {
 };
 
 const onCreateRound = () => {
-  if (inspectionRounds.value.length > 0 && job.value.status === 'COMPLETED' && job.value.contractorProgress < 50) {
-    $q.dialog({
-      title: t('adminJobs.construction.confirmCreateRoundTitle'),
-      message: t('adminJobs.construction.confirmCreateRoundMessage', {
-        percent: Math.round(job.value.contractorProgress),
-      }),
-      cancel: { label: t('adminJobs.construction.cancel'), flat: true, color: 'grey-7' },
-      ok: { label: t('adminJobs.construction.confirmCreate'), color: 'primary' },
-      persistent: true,
-    }).onOk(() => {
-      openCreateRoundDialog();
-    });
-  } else {
-    openCreateRoundDialog();
-  }
+  openCreateRoundDialog();
 };
 
 const openCreateRoundDialog = () => {
@@ -1141,32 +1127,66 @@ const submitCreateRound = async () => {
     return;
   }
 
-  const nextRoundNumber = inspectionRounds.value.length + 1;
-  const combinedDateTime = `${scheduledDate.value} ${timeInput.value}`;
-
-  const payload = {
-    jobId: jobId.value,
-    roundNumber: nextRoundNumber,
-    scheduledDate: combinedDateTime,
-    teamId: assignmentMode.value === 'team' ? selectedTeam.value : null,
-    inspectorIds: selectedInspectors.value.map((i) => i.value),
-  };
-
   isSubmittingRound.value = true;
   try {
-    await api.post('/inspection-rounds', payload);
-    showCreateRoundDialog.value = false;
+    interface RoundPayload {
+      scheduledDate: string;
+      status: string;
+      teamId?: number;
+      inspectorId?: number;
+    }
 
+    const roundPayload: RoundPayload = {
+      scheduledDate: timeInput.value
+        ? `${scheduledDate.value} ${timeInput.value}`
+        : scheduledDate.value,
+      status: 'SCHEDULED',
+    };
+
+    if (assignmentMode.value === 'team' && selectedTeam.value) {
+      roundPayload.teamId = selectedTeam.value;
+    } else if (selectedInspectors.value.length > 0) {
+      const firstInspector = selectedInspectors.value[0];
+      if (firstInspector) {
+        roundPayload.inspectorId = firstInspector.value;
+      }
+    }
+
+    const { data: createdRound } = await api.post<{ roundId: number }>(
+      `/daily-reports/${jobId.value}/rounds`,
+      roundPayload,
+    );
+
+    let extraInspectors = selectedInspectors.value;
+    if (
+      assignmentMode.value === 'individual' ||
+      (!selectedTeam.value && assignmentMode.value === 'team')
+    ) {
+      extraInspectors = selectedInspectors.value.slice(1);
+    }
+
+    for (const inspector of extraInspectors) {
+      await api.post('/assignments', {
+        jobId: jobId.value,
+        inspectorId: inspector.value,
+        roundId: createdRound.roundId,
+      });
+    }
+
+    showCreateRoundDialog.value = false;
+    await fetchJobDetails();
+    const rounds = await fetchRounds();
+    applyRounds(rounds);
+
+    const latestRound = inspectionRounds.value[inspectionRounds.value.length - 1];
     $q.notify({
-      message: t('adminJobs.construction.createRoundSuccess', { number: nextRoundNumber }),
+      message: t('adminJobs.construction.createRoundSuccess', {
+        number: latestRound?.roundNumber ?? '',
+      }),
       color: 'positive',
       icon: 'check_circle',
       position: 'top',
     });
-
-    const rounds = await fetchRounds();
-    applyRounds(rounds);
-    await fetchJobDetails();
   } catch (error) {
     console.error('Failed to create round:', error);
     $q.notify({

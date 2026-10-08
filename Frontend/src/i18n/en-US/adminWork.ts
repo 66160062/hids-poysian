@@ -188,8 +188,11 @@ export default {
     jobNotFound: 'Could not find this job. Please reload the page and try again.',
   },
   dashboard: {
-    monthlyTrendTitle: 'Monthly Inspection Trends',
-    monthlyTrendSubtitle: 'Comparing home inspection vs construction over the past 6 months',
+    monthlyTrendTitle: 'Business Growth Trends',
+    monthlyTrendSubtitle: 'Comparing home inspection vs construction workloads',
+    timeframeWeekly: 'Weekly',
+    timeframeMonthly: 'Monthly',
+    timeframeYearly: 'Yearly',
     noTrendData: 'No trend data available for this period',
     defectCategoryTitle: 'Top Defect Categories',
     defectCategorySubtitle: 'System-wide breakdown of recorded defects',
@@ -247,5 +250,8 @@ export default {
     legendVerified: 'Verified ({pct}%)',
     legendRepaired: 'Re-check ({pct}%)',
     legendPending: 'To repair ({pct}%)',
+    statusVerifiedShort: 'Verified',
+    statusRepairedShort: 'Re-check',
+    statusPendingShort: 'To repair',
   },
 };

@@ -1,7 +1,8 @@
 <template>
   <q-card flat bordered class="monthly-trend-card bg-white shadow-1">
     <div class="q-pa-md">
-      <div class="row items-center justify-between q-mb-sm">
+      <!-- Header -->
+      <div class="row items-center justify-between q-mb-sm wrap q-gutter-y-xs">
         <div class="row items-center">
           <q-avatar size="32px" class="bg-blue-1 text-primary q-mr-sm" style="border-radius: 8px;">
             <q-icon name="bar_chart" size="20px" />
@@ -16,14 +17,32 @@
           </div>
         </div>
 
-        <div class="row items-center q-gutter-x-md">
-          <div class="row items-center text-caption text-grey-7">
-            <span class="legend-dot bg-primary q-mr-xs"></span>
-            <span>{{ t('adminWork.main.homeInspectionJob') }}</span>
-          </div>
-          <div class="row items-center text-caption text-grey-7">
-            <span class="legend-dot bg-orange q-mr-xs"></span>
-            <span>{{ t('adminWork.main.constructionJob') }}</span>
+        <div class="row items-center q-gutter-sm">
+          <!-- Timeframe Selector Toggle (Weekly / Monthly / Yearly) -->
+          <q-btn-toggle
+            v-model="timeframe"
+            no-caps
+            rounded
+            unelevated
+            dense
+            toggle-color="primary"
+            toggle-text-color="white"
+            color="grey-2"
+            text-color="grey-8"
+            class="timeframe-toggle text-caption"
+            :options="timeframeOptions"
+          />
+
+          <!-- Legends -->
+          <div class="row items-center q-gutter-x-sm q-ml-sm">
+            <div class="row items-center text-caption text-grey-7">
+              <span class="legend-dot bg-primary q-mr-xs"></span>
+              <span>{{ t('adminWork.main.homeInspectionJob') }}</span>
+            </div>
+            <div class="row items-center text-caption text-grey-7">
+              <span class="legend-dot bg-orange-9 q-mr-xs"></span>
+              <span>{{ t('adminWork.main.constructionJob') }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -41,7 +60,7 @@
           <div class="bars-container">
             <div
               v-for="(item, index) in trendList"
-              :key="item.monthKey || index"
+              :key="item.key || index"
               class="month-group"
             >
               <div class="bars-wrapper">
@@ -53,7 +72,7 @@
                     :style="{ height: `${getBarHeight(item.homeInspection)}%` }"
                   >
                     <q-tooltip class="bg-dark text-white text-caption">
-                      {{ item.monthLabel }}: {{ t('adminWork.main.homeInspectionJob') }} {{ item.homeInspection }} {{ t('adminWork.dashboard.jobsUnit') }}
+                      {{ item.label }}: {{ t('adminWork.main.homeInspectionJob') }} {{ item.homeInspection }} {{ t('adminWork.dashboard.jobsUnit') }}
                     </q-tooltip>
                   </div>
                 </div>
@@ -65,12 +84,12 @@
                     :style="{ height: `${getBarHeight(item.construction)}%` }"
                   >
                     <q-tooltip class="bg-dark text-white text-caption">
-                      {{ item.monthLabel }}: {{ t('adminWork.main.constructionJob') }} {{ item.construction }} {{ t('adminWork.dashboard.jobsUnit') }}
+                      {{ item.label }}: {{ t('adminWork.main.constructionJob') }} {{ item.construction }} {{ t('adminWork.dashboard.jobsUnit') }}
                     </q-tooltip>
                   </div>
                 </div>
               </div>
-              <div class="month-label">{{ item.monthLabel }}</div>
+              <div class="month-label">{{ item.label }}</div>
             </div>
           </div>
         </div>
@@ -85,17 +104,41 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { MonthlyTrendItem } from 'src/types/dashboard';
+import type { MonthlyTrendItem, BusinessTrendOverview, TrendItem } from 'src/types/dashboard';
 
 const props = defineProps<{
-  trends?: MonthlyTrendItem[] | undefined;
+  trends?: MonthlyTrendItem[] | BusinessTrendOverview | undefined;
 }>();
 
 const { t } = useI18n();
 
-const trendList = computed(() => props.trends || []);
+const timeframe = ref<'weekly' | 'monthly' | 'yearly'>('monthly');
+
+const timeframeOptions = computed(() => [
+  { label: t('adminWork.dashboard.timeframeWeekly'), value: 'weekly' },
+  { label: t('adminWork.dashboard.timeframeMonthly'), value: 'monthly' },
+  { label: t('adminWork.dashboard.timeframeYearly'), value: 'yearly' },
+]);
+
+const trendList = computed<TrendItem[]>(() => {
+  if (!props.trends) return [];
+  if (Array.isArray(props.trends)) {
+    return props.trends.map((item) => ({
+      key: item.monthKey,
+      label: item.monthLabel,
+      homeInspection: item.homeInspection,
+      construction: item.construction,
+      total: item.total,
+    }));
+  }
+
+  const overview = props.trends;
+  if (timeframe.value === 'weekly') return overview.weekly || [];
+  if (timeframe.value === 'yearly') return overview.yearly || [];
+  return overview.monthly || [];
+});
 
 const maxCount = computed(() => {
   if (!trendList.value.length) return 10;
@@ -125,6 +168,11 @@ function getBarHeight(val: number): number {
   height: 10px;
   border-radius: 3px;
   display: inline-block;
+}
+
+.timeframe-toggle {
+  font-size: 11px;
+  border-radius: 16px;
 }
 
 .chart-container {

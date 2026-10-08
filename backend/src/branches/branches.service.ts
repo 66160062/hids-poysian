@@ -18,7 +18,7 @@ export class BranchesService {
   findAll() {
     return this.branches.find({
       where: { status: 'active' },
-      order: { branchName: 'ASC' },
+      order: { updatedAt: 'DESC', branchId: 'DESC' },
     });
   }
 

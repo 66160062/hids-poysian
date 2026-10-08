@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
   DeleteDateColumn,
   ManyToOne,
   JoinColumn,
@@ -28,6 +29,9 @@ export class Team {
 
   @CreateDateColumn()
   created_at!: Date;
+
+  @UpdateDateColumn()
+  updated_at!: Date;
 
   @DeleteDateColumn()
   deleted_at!: Date;

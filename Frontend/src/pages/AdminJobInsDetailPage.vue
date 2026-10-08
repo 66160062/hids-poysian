@@ -317,7 +317,7 @@
       </q-card>
 
       <!-- Contractor Progress Section -->
-      <div v-if="inspectionRounds.length > 0 && job.status === 'COMPLETED'" class="q-mb-lg">
+      <div v-if="hasApprovedRound && !isJobClosed" class="q-mb-lg">
         <div class="row items-center justify-between q-mb-sm">
           <div class="text-subtitle2 text-weight-bold">
             {{ t('adminJobs.inspection.contractorProgressTitle') }}
@@ -895,6 +895,9 @@ const isLatestRoundNotCompleted = computed(() => {
 // กันข้อมูลเก่าที่ job ค้าง Completed ทั้งที่รอบล่าสุดยังรออนุมัติ ไม่ให้ขึ้นว่าปิดงานแล้ว
 const isJobClosed = computed(
   () => jobData.value?.status === 'Completed' && !isLatestRoundNotCompleted.value,
+);
+const hasApprovedRound = computed(() =>
+  inspectionRounds.value.some((r) => r.statusKey === 'APPROVED'),
 );
 const cannotCreateRound = computed(() => isJobClosed.value || isLatestRoundNotCompleted.value);
 
@@ -1528,8 +1531,7 @@ const formatDateDisplay = (dateStr: string) => {
 };
 
 const onCreateRound = () => {
-  // เดิมเทียบกับสถานะของรอบล่าสุดเท่านั้น — เช็คว่ามีรอบก่อน กันงานที่ยังไม่มีรอบแต่ job.status เป็น Completed
-  if (inspectionRounds.value.length > 0 && job.value.status === 'COMPLETED' && job.value.contractorProgress < 50) {
+  if (hasApprovedRound.value && !isJobClosed.value && job.value.contractorProgress < 50) {
     $q.dialog({
       title: t('adminJobs.inspection.confirmCreateRoundTitle'),
       message: t('adminJobs.inspection.confirmCreateRoundMessage', {

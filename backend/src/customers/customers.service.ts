@@ -16,15 +16,19 @@ export class CustomersService {
   }
 
   findAll() {
-    return this.customersRepo.find();
+    return this.customersRepo.find({
+      order: { updatedAt: 'DESC', customerId: 'DESC' },
+    });
   }
 
   findOne(id: number) {
     return this.customersRepo.findOneByOrFail({ customerId: id });
   }
 
-  update(id: number, updateCustomerDto: UpdateCustomerDto) {
-    return this.customersRepo.update({ customerId: id }, updateCustomerDto);
+  async update(id: number, updateCustomerDto: UpdateCustomerDto) {
+    const customer = await this.customersRepo.findOneByOrFail({ customerId: id });
+    Object.assign(customer, updateCustomerDto);
+    return this.customersRepo.save(customer);
   }
 
   remove(id: number) {

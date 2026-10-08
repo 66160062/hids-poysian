@@ -103,20 +103,22 @@ export const useCustomerStore = defineStore('customer', () => {
         preferredLocale: payload.preferredLocale || undefined,
       });
       const idx = customers.value.findIndex(c => c.id === id);
+      const updatedCustomer: Customer = {
+        id,
+        name: payload.name,
+        phone: payload.phone,
+        phone2: payload.phone2,
+        phone3: payload.phone3,
+        email: payload.email,
+        email2: payload.email2,
+        email3: payload.email3,
+        lineId: payload.lineId,
+        preferredLocale: payload.preferredLocale,
+      };
       if (idx !== -1) {
-        customers.value.splice(idx, 1, {
-          id,
-          name: payload.name,
-          phone: payload.phone,
-          phone2: payload.phone2,
-          phone3: payload.phone3,
-          email: payload.email,
-          email2: payload.email2,
-          email3: payload.email3,
-          lineId: payload.lineId,
-          preferredLocale: payload.preferredLocale,
-        });
+        customers.value.splice(idx, 1);
       }
+      customers.value.unshift(updatedCustomer);
       return response.data;
     } catch (error) {
       console.error('Failed to update customer', error);

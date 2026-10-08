@@ -111,6 +111,15 @@ export const useBranchStore = defineStore('branch', () => {
       : await api.post<Branch>('/branches', formData);
 
     await fetchBranches();
+    if (id) {
+      const idx = branches.value.findIndex((b) => b.branchId === id);
+      if (idx > 0) {
+        const removed = branches.value.splice(idx, 1)[0];
+        if (removed) {
+          branches.value.unshift(removed);
+        }
+      }
+    }
     return response.data;
   };
 
