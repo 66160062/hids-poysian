@@ -48,11 +48,22 @@ describe('CustomersService', () => {
   });
 
   it('updates a customer by id', async () => {
+    customersRepo.findOneByOrFail.mockResolvedValue({
+      customerId: 4,
+      fullName: 'Old Name',
+    });
+    customersRepo.save.mockResolvedValue({
+      customerId: 4,
+      fullName: 'Somchai',
+    });
+
     await service.update(4, { fullName: 'Somchai' });
 
-    expect(customersRepo.update).toHaveBeenCalledWith(
-      { customerId: 4 },
-      { fullName: 'Somchai' },
+    expect(customersRepo.findOneByOrFail).toHaveBeenCalledWith({
+      customerId: 4,
+    });
+    expect(customersRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ customerId: 4, fullName: 'Somchai' }),
     );
   });
 

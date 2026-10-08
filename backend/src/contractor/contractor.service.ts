@@ -17,7 +17,9 @@ export class ContractorService {
   }
 
   async findAll() {
-    return await this.contractorRepo.find();
+    return await this.contractorRepo.find({
+      order: { updatedAt: 'DESC', contractorId: 'DESC' },
+    });
   }
 
   async findOne(id: number) {
@@ -25,10 +27,9 @@ export class ContractorService {
   }
 
   async update(id: number, updateContractorDto: UpdateContractorDto) {
-    return await this.contractorRepo.update(
-      { contractorId: id },
-      updateContractorDto,
-    );
+    const contractor = await this.contractorRepo.findOneByOrFail({ contractorId: id });
+    Object.assign(contractor, updateContractorDto);
+    return await this.contractorRepo.save(contractor);
   }
 
   async remove(id: number) {

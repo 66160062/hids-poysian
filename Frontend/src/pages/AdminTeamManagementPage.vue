@@ -11,9 +11,9 @@
         </div>
       </div>
 
-      <!-- KPI Summary Cards (2 or 3 Cards) -->
-      <div class="row q-col-gutter-sm q-mb-md">
-        <div :class="isSuperAdmin ? 'col-4' : 'col-6'">
+      <!-- KPI Summary Cards -->
+      <div class="kpi-row row no-wrap q-col-gutter-sm q-mb-md">
+        <div class="kpi-col col">
           <q-card
             flat
             bordered
@@ -35,7 +35,7 @@
           </q-card>
         </div>
 
-        <div v-if="isSuperAdmin" class="col-4">
+        <div v-if="isSuperAdmin" class="kpi-col col">
           <q-card
             flat
             bordered
@@ -57,7 +57,7 @@
           </q-card>
         </div>
 
-        <div :class="isSuperAdmin ? 'col-4' : 'col-6'">
+        <div class="kpi-col col">
           <q-card
             flat
             bordered
@@ -78,6 +78,28 @@
             </q-card-section>
           </q-card>
         </div>
+
+        <div class="kpi-col col">
+          <q-card
+            flat
+            bordered
+            class="kpi-card bg-white shadow-1 cursor-pointer"
+            :class="{ 'kpi-card--active': viewMode === 'contractors' }"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="showContractorsView"
+            @keyup.enter="showContractorsView"
+          >
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar color="amber-1" text-color="amber-10" icon="engineering" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminManage.teamManagement.kpiTotalContractors') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ contractorStore.contractors.length }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
 
       <!-- Search Bar & Round Tune Filter Button -->
@@ -92,7 +114,9 @@
               ? t('adminManage.teamManagement.searchBranchPlaceholder')
               : viewMode === 'customers'
                 ? t('adminManage.customerManagement.searchPlaceholder')
-                : t('adminManage.teamManagement.searchPlaceholder')
+                : viewMode === 'contractors'
+                  ? t('adminManage.contractorManagement.searchPlaceholder')
+                  : t('adminManage.teamManagement.searchPlaceholder')
           "
           class="col search-input"
           hide-bottom-space
@@ -173,7 +197,9 @@
                 ? t('adminManage.branchManagement.addBranch')
                 : viewMode === 'customers'
                   ? t('adminManage.customerManagement.addNew')
-                  : t('adminManage.teamManagement.addNewTeam')
+                  : viewMode === 'contractors'
+                    ? t('adminManage.contractorManagement.addNew')
+                    : t('adminManage.teamManagement.addNewTeam')
             "
             class="full-width action-btn-primary shadow-1"
             no-caps
@@ -182,7 +208,9 @@
                 ? openBranchForm()
                 : viewMode === 'customers'
                   ? openCustomerForm()
-                  : openCreateForm()
+                  : viewMode === 'contractors'
+                    ? openContractorForm()
+                    : openCreateForm()
             "
           />
         </div>
@@ -309,6 +337,43 @@
       </div>
     </div>
 
+    <!-- Contractors View -->
+    <div v-else-if="viewMode === 'contractors'" class="q-px-md q-pt-sm q-pb-md">
+      <div v-if="!contractorStore.isLoading && filteredContractors.length === 0" class="text-center q-py-xl text-grey-6">
+        <q-icon name="engineering" size="64px" class="q-mb-md" />
+        <div>{{ t('adminManage.contractorManagement.noContractorsFound') }}</div>
+      </div>
+      <div v-else>
+        <div class="row q-col-gutter-md">
+          <div
+            v-for="contractor in paginatedContractors"
+            :key="contractor.contractorId"
+            class="col-12 col-sm-6 col-md-4 card-stagger"
+          >
+            <AdminContractorCard
+              :contractor="contractor"
+              @edit="openEditContractorForm"
+              @delete="confirmDeleteContractor"
+            />
+          </div>
+        </div>
+
+        <!-- Pagination for Contractors (9 items per page) -->
+        <div v-if="filteredContractors.length > 0" class="row justify-center q-mt-lg q-pb-xl">
+          <q-pagination
+            v-model="currentContractorPage"
+            :max="contractorTotalPages || 1"
+            :max-pages="5"
+            boundary-numbers
+            direction-links
+            color="primary"
+            active-color="primary"
+            active-text-color="white"
+          />
+        </div>
+      </div>
+    </div>
+
     <!-- Teams View -->
     <div v-else class="q-px-md q-pt-sm q-pb-md">
       <div v-if="!teamStore.isLoading && teamStore.teams.length === 0" class="text-center q-py-xl text-grey-6">
@@ -346,71 +411,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Integrated Branch Management Dialog -->
-    <q-dialog v-model="showBranchManagementDialog">
-      <q-card style="width: 100%; max-width: 540px; border-radius: 20px" class="q-pa-md">
-        <q-card-section class="row items-center justify-between q-pb-xs">
-          <div class="row items-center">
-            <q-avatar color="indigo-1" text-color="indigo-9" icon="business" size="40px" class="q-mr-sm" />
-            <div>
-              <div class="text-subtitle1 text-weight-bold text-dark">
-                {{ editingBranchId !== null ? t('adminManage.branchManagement.editTitle') : t('adminManage.branchManagement.addTitle') }}
-              </div>
-              <div class="text-caption text-grey-6">{{ t('adminManage.teamManagement.manageBranchesSubtitle') }}</div>
-            </div>
-          </div>
-          <q-btn flat round dense icon="close" color="grey-6" v-close-popup />
-        </q-card-section>
-
-        <q-separator class="q-my-sm" />
-
-        <!-- Add/Edit Branch Form inside Dialog -->
-        <q-card-section>
-          <q-form class="q-gutter-sm" @submit="handleSaveBranch">
-            <q-input
-              v-model="branchNameInput"
-              outlined
-              dense
-              bg-color="white"
-              :label="t('adminManage.branchManagement.nameLabel')"
-              :rules="[(val) => !!val.trim() || t('adminManage.userManagement.fillRequiredFields')]"
-              hide-bottom-space
-            />
-            <q-file
-              v-model="branchLogoFileInput"
-              outlined
-              dense
-              bg-color="white"
-              accept="image/*"
-              :label="t('adminManage.branchManagement.logoLabel')"
-              clearable
-              hide-bottom-space
-            >
-              <template #prepend>
-                <q-icon name="image" />
-              </template>
-            </q-file>
-
-            <div class="row justify-end q-gutter-x-sm q-mt-xs">
-              <q-btn
-                flat
-                color="grey-7"
-                :label="t('adminManage.teamManagement.cancelLabel')"
-                v-close-popup
-              />
-              <q-btn
-                type="submit"
-                color="primary"
-                unelevated
-                :label="editingBranchId !== null ? t('adminManage.teamManagement.saveButton') : t('adminManage.branchManagement.addBranch')"
-                :loading="savingBranch"
-              />
-            </div>
-          </q-form>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
 
     <!-- Standard Team Form Dialog -->
     <q-dialog v-model="isFormMode" persistent>
@@ -686,12 +686,30 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+    <!-- Branch Form Dialog -->
+    <AdminBranchFormDialog
+      v-model="showBranchManagementDialog"
+      :isEditing="editingBranchId !== null"
+      :initialData="branchFormData"
+      :saving="savingBranch"
+      @save="handleSaveBranch"
+    />
+
     <!-- Customer Form Dialog -->
     <AdminCustomerFormDialog
       v-model="showCustomerDialog"
       :isEditing="isEditingCustomer"
       :initialData="customerFormData"
       @save="onSaveCustomer"
+    />
+
+    <!-- Contractor Form Dialog -->
+    <AdminContractorFormDialog
+      v-model="showContractorDialog"
+      :isEditing="isEditingContractor"
+      :initialData="contractorFormData"
+      :saving="savingContractor"
+      @save="handleSaveContractor"
     />
   </q-page>
 </template>
@@ -704,10 +722,14 @@ import { useTeamStore } from 'src/stores/useTeam';
 import { useUserStore } from 'src/stores/useUser';
 import { useBranchStore, type Branch } from 'src/stores/useBranch';
 import { useCustomerStore, type Customer } from 'src/stores/useCustomer';
+import { useContractorStore, type Contractor, type ContractorPayload } from 'src/stores/useContractor';
 import { useAuthStore } from 'src/stores/useAuth';
 import AdminTeamCard from 'src/components/AdminTeamCard.vue';
 import AdminCustomerCard from 'src/components/AdminCustomerCard.vue';
 import AdminCustomerFormDialog from 'src/components/AdminCustomerFormDialog.vue';
+import AdminContractorCard from 'src/components/AdminContractorCard.vue';
+import AdminContractorFormDialog from 'src/components/AdminContractorFormDialog.vue';
+import AdminBranchFormDialog from 'src/components/AdminBranchFormDialog.vue';
 import ConfirmActionDialog from 'src/components/ConfirmActionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { Cropper } from 'vue-advanced-cropper';
@@ -722,6 +744,7 @@ const teamStore = useTeamStore();
 const userStore = useUserStore();
 const branchStore = useBranchStore();
 const customerStore = useCustomerStore();
+const contractorStore = useContractorStore();
 const authStore = useAuthStore();
 const isSuperAdmin = computed(() => authStore.isSuperAdmin);
 
@@ -739,7 +762,7 @@ const selectedBranchId = computed<number | null>({
     branchStore.setPageBranch('teams', val ?? 'all');
   },
 });
-const viewMode = ref<'teams' | 'branches' | 'customers'>('teams');
+const viewMode = ref<'teams' | 'branches' | 'customers' | 'contractors'>('teams');
 
 function showTeamsView() {
   viewMode.value = 'teams';
@@ -753,6 +776,10 @@ function showBranchesView() {
 
 function showCustomersView() {
   viewMode.value = 'customers';
+}
+
+function showContractorsView() {
+  viewMode.value = 'contractors';
 }
 
 const allTeamsList = computed(() => (teamStore.allTeams.length > 0 ? teamStore.allTeams : teamStore.teams));
@@ -824,6 +851,12 @@ const paginatedCustomers = computed(() =>
   filteredCustomers.value.slice((currentCustomerPage.value - 1) * 9, currentCustomerPage.value * 9),
 );
 
+const currentContractorPage = ref(1);
+const contractorTotalPages = computed(() => Math.ceil(filteredContractors.value.length / 9) || 1);
+const paginatedContractors = computed(() =>
+  filteredContractors.value.slice((currentContractorPage.value - 1) * 9, currentContractorPage.value * 9),
+);
+
 const loadTeams = async (page = currentTeamPage.value) => {
   try {
     await teamStore.fetchTeams({
@@ -846,6 +879,7 @@ let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 watch(searchQuery, () => {
   currentBranchPage.value = 1;
   currentCustomerPage.value = 1;
+  currentContractorPage.value = 1;
   if (viewMode.value !== 'teams') return;
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => {
@@ -865,6 +899,7 @@ watch(
 watch(viewMode, () => {
   currentBranchPage.value = 1;
   currentCustomerPage.value = 1;
+  currentContractorPage.value = 1;
   currentTeamPage.value = 1;
 });
 
@@ -918,22 +953,20 @@ const branchFilterChips = computed(() => {
 // Integrated Branch Management Dialog State
 const showBranchManagementDialog = ref(false);
 const editingBranchId = ref<number | null>(null);
-const branchNameInput = ref('');
-const branchLogoFileInput = ref<File | null>(null);
+const branchFormData = ref<Partial<Branch> | null>(null);
 const savingBranch = ref(false);
 
 function openBranchForm(branch?: Branch) {
   editingBranchId.value = branch?.branchId ?? null;
-  branchNameInput.value = branch?.branchName || '';
-  branchLogoFileInput.value = null;
+  branchFormData.value = branch ? { ...branch } : null;
   showBranchManagementDialog.value = true;
 }
 
-async function handleSaveBranch() {
-  if (!branchNameInput.value.trim()) return;
+async function handleSaveBranch(payload: { branchName: string; logoFile: File | null }) {
+  if (!payload.branchName) return;
   savingBranch.value = true;
   try {
-    await branchStore.saveBranch(editingBranchId.value, branchNameInput.value.trim(), branchLogoFileInput.value);
+    await branchStore.saveBranch(editingBranchId.value, payload.branchName, payload.logoFile);
     $q.notify({ type: 'positive', message: t('adminManage.branchManagement.saveSuccess') });
     showBranchManagementDialog.value = false;
   } catch (err) {
@@ -965,6 +998,7 @@ onMounted(async () => {
       loadTeams(),
       userStore.fetchAllUsers(),
       customerStore.fetchCustomers(),
+      contractorStore.fetchContractors(),
     ]);
   } finally {
     $q.loading.hide();
@@ -992,6 +1026,18 @@ const filteredCustomers = computed(() => {
     const emailMatch = [c.email, c.email2, c.email3].some((e) => e && e.toLowerCase().includes(keyword));
     const lineMatch = (c.lineId || '').toLowerCase().includes(keyword);
     return nameMatch || phoneMatch || emailMatch || lineMatch;
+  });
+});
+
+const filteredContractors = computed(() => {
+  const keyword = searchQuery.value.trim().toLowerCase();
+  if (!keyword) return contractorStore.contractors;
+  return contractorStore.contractors.filter((c) => {
+    const nameMatch = (c.fullName || '').toLowerCase().includes(keyword);
+    const phoneMatch = (c.phoneNumber || '').toLowerCase().includes(keyword);
+    const emailMatch = (c.email || '').toLowerCase().includes(keyword);
+    const companyMatch = (c.companyName || '').toLowerCase().includes(keyword);
+    return nameMatch || phoneMatch || emailMatch || companyMatch;
   });
 });
 
@@ -1072,6 +1118,80 @@ const confirmDeleteCustomer = (customer: Customer) => {
         console.error('Delete customer error:', error);
         const msg = error?.response?.data?.message || error?.message || 'Error';
         $q.notify({ type: 'negative', message: t('adminManage.customerManagement.deleteFailed', { msg }) });
+      })
+      .finally(() => {
+        $q.loading.hide();
+      });
+  });
+};
+
+// Contractor Dialog & Handlers
+const showContractorDialog = ref(false);
+const isEditingContractor = ref(false);
+const editingContractorId = ref<number | null>(null);
+const contractorFormData = ref<Partial<Contractor>>({});
+const savingContractor = ref(false);
+
+const openContractorForm = () => {
+  isEditingContractor.value = false;
+  editingContractorId.value = null;
+  contractorFormData.value = {};
+  showContractorDialog.value = true;
+};
+
+const openEditContractorForm = (contractor: Contractor) => {
+  isEditingContractor.value = true;
+  editingContractorId.value = contractor.contractorId;
+  contractorFormData.value = { ...contractor };
+  showContractorDialog.value = true;
+};
+
+const handleSaveContractor = async (payload: ContractorPayload) => {
+  savingContractor.value = true;
+  try {
+    if (isEditingContractor.value && editingContractorId.value !== null) {
+      await contractorStore.updateContractor(editingContractorId.value, payload);
+      $q.notify({ type: 'positive', message: t('adminManage.contractorManagement.editSuccess'), icon: 'check_circle' });
+    } else {
+      await contractorStore.createContractor(payload);
+      $q.notify({ type: 'positive', message: t('adminManage.contractorManagement.addSuccess'), icon: 'check_circle' });
+    }
+    showContractorDialog.value = false;
+    await contractorStore.fetchContractors();
+  } catch (err) {
+    const error = err as Error & { response?: { data?: { message?: string } } };
+    console.error('Save contractor error:', error);
+    const msg = error?.response?.data?.message || error?.message || 'Error';
+    $q.notify({ type: 'negative', message: t('adminManage.contractorManagement.saveFailed', { msg }) });
+  } finally {
+    savingContractor.value = false;
+  }
+};
+
+const confirmDeleteContractor = (contractor: Contractor) => {
+  $q.dialog({
+    component: ConfirmActionDialog,
+    componentProps: {
+      title: t('adminManage.contractorManagement.confirmDeleteTitle'),
+      message: t('adminManage.contractorManagement.confirmDeleteMessage', { name: contractor.fullName }),
+      icon: 'delete',
+      color: 'negative',
+      confirmLabel: t('adminManage.contractorManagement.confirmDeleteOk'),
+      cancelLabel: t('adminManage.contractorManagement.confirmDeleteCancel'),
+    },
+  }).onOk(() => {
+    $q.loading.show({ message: t('adminManage.contractorManagement.deleting') });
+    contractorStore
+      .deleteContractor(contractor.contractorId)
+      .then(() => {
+        $q.notify({ type: 'positive', message: t('adminManage.contractorManagement.deleteSuccess'), icon: 'check_circle' });
+        void contractorStore.fetchContractors();
+      })
+      .catch((err) => {
+        const error = err as Error & { response?: { data?: { message?: string } } };
+        console.error('Delete contractor error:', error);
+        const msg = error?.response?.data?.message || error?.message || 'Error';
+        $q.notify({ type: 'negative', message: t('adminManage.contractorManagement.deleteFailed', { msg }) });
       })
       .finally(() => {
         $q.loading.hide();
@@ -1374,12 +1494,56 @@ function confirmDelete(team: Team) {
 }
 
 .kpi-card {
+  height: 100%;
   border-radius: 16px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .kpi-card:hover {
   transform: translateY(-2px);
+}
+
+.kpi-col {
+  min-width: 0;
+}
+
+/* มือถือ: การ์ด KPI ทั้งหมดอยู่แถวเดียวกัน จัดเนื้อหาเป็นแนวตั้งให้พอดีความกว้าง */
+@media (max-width: 599.98px) {
+  .kpi-row {
+    --kpi-gap: 6px;
+    margin-left: calc(-1 * var(--kpi-gap));
+  }
+  .kpi-row > .kpi-col {
+    padding-left: var(--kpi-gap);
+  }
+  .kpi-row .q-card__section {
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    padding: 8px 2px;
+  }
+  .kpi-row .q-avatar {
+    font-size: 30px !important;
+  }
+  .kpi-row .q-card__section > div:not(.q-avatar) {
+    margin-left: 0;
+    margin-top: 4px;
+    min-width: 0;
+    width: 100%;
+  }
+  .kpi-row .text-caption {
+    font-size: 10px;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .kpi-row .text-h6 {
+    font-size: 1rem;
+    line-height: 1.3;
+  }
 }
 
 .kpi-card.kpi-card--active {
