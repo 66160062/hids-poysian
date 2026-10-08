@@ -1070,21 +1070,7 @@ const formatDateDisplay = (dateStr: string) => {
 };
 
 const onCreateRound = () => {
-  if (inspectionRounds.value.length > 0 && job.value.status === 'COMPLETED' && job.value.contractorProgress < 50) {
-    $q.dialog({
-      title: t('adminJobs.construction.confirmCreateRoundTitle'),
-      message: t('adminJobs.construction.confirmCreateRoundMessage', {
-        percent: Math.round(job.value.contractorProgress),
-      }),
-      cancel: { label: t('adminJobs.construction.cancel'), flat: true, color: 'grey-7' },
-      ok: { label: t('adminJobs.construction.confirmCreate'), color: 'primary' },
-      persistent: true,
-    }).onOk(() => {
-      openCreateRoundDialog();
-    });
-  } else {
-    openCreateRoundDialog();
-  }
+  openCreateRoundDialog();
 };
 
 const openCreateRoundDialog = () => {
