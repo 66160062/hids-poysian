@@ -13,6 +13,8 @@ import {
   DashboardStatusCount,
   DashboardTaskItem,
   MonthlyTrendItem,
+  TrendItem,
+  BusinessTrendOverview,
   JobDrilldownItem,
   JobDefectCategoryItem,
   JobDefectResolution,
@@ -350,9 +352,54 @@ export class AdminService {
       'พ.ย.',
       'ธ.ค.',
     ];
-    const monthlyTrends: MonthlyTrendItem[] = [];
     const now = new Date(targetDate);
 
+    // 5.1 Weekly Trends (7 วันย้อนหลัง)
+    const weeklyTrends: TrendItem[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const day = d.getDate();
+      const key = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const label = `${day} ${monthNamesTh[m]}`;
+
+      let homeCount = 0;
+      let constCount = 0;
+
+      for (const job of allJobs) {
+        const jobDate = new Date(job.createdAt);
+        if (
+          jobDate.getFullYear() === y &&
+          jobDate.getMonth() === m &&
+          jobDate.getDate() === day
+        ) {
+          const inspectionType = job.inspectionType || '';
+          const isConstruction =
+            inspectionType === 'CONSTRUCTION_INSPECTION' ||
+            inspectionType === 'ตรวจก่อสร้าง' ||
+            inspectionType === 'Construction' ||
+            inspectionType === 'งานก่อสร้าง';
+          if (isConstruction) {
+            constCount++;
+          } else {
+            homeCount++;
+          }
+        }
+      }
+
+      weeklyTrends.push({
+        key,
+        label,
+        homeInspection: homeCount,
+        construction: constCount,
+        total: homeCount + constCount,
+      });
+    }
+
+    // 5.2 Monthly Trends (6 เดือนล่าสุด)
+    const monthlyTrends: MonthlyTrendItem[] = [];
+    const monthlyTrendItems: TrendItem[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const y = d.getFullYear();
@@ -380,6 +427,14 @@ export class AdminService {
         }
       }
 
+      const item: TrendItem = {
+        key: monthKey,
+        label: monthLabel,
+        homeInspection: homeCount,
+        construction: constCount,
+        total: homeCount + constCount,
+      };
+      monthlyTrendItems.push(item);
       monthlyTrends.push({
         monthKey,
         monthLabel,
@@ -388,6 +443,48 @@ export class AdminService {
         total: homeCount + constCount,
       });
     }
+
+    // 5.3 Yearly Trends (5 ปีย้อนหลัง)
+    const yearlyTrends: TrendItem[] = [];
+    for (let i = 4; i >= 0; i--) {
+      const y = now.getFullYear() - i;
+      const key = String(y);
+      const label = `${y + 543}`;
+
+      let homeCount = 0;
+      let constCount = 0;
+
+      for (const job of allJobs) {
+        const jobDate = new Date(job.createdAt);
+        if (jobDate.getFullYear() === y) {
+          const inspectionType = job.inspectionType || '';
+          const isConstruction =
+            inspectionType === 'CONSTRUCTION_INSPECTION' ||
+            inspectionType === 'ตรวจก่อสร้าง' ||
+            inspectionType === 'Construction' ||
+            inspectionType === 'งานก่อสร้าง';
+          if (isConstruction) {
+            constCount++;
+          } else {
+            homeCount++;
+          }
+        }
+      }
+
+      yearlyTrends.push({
+        key,
+        label,
+        homeInspection: homeCount,
+        construction: constCount,
+        total: homeCount + constCount,
+      });
+    }
+
+    const trends: BusinessTrendOverview = {
+      weekly: weeklyTrends,
+      monthly: monthlyTrendItems,
+      yearly: yearlyTrends,
+    };
 
     // ========================================
     // 6. ดึงข้อมูล Defects จากรอบล่าสุด (Latest Round) ของแต่ละโครงการ
@@ -935,6 +1032,7 @@ export class AdminService {
       calendarEvents,
       tasks,
       monthlyTrends,
+      trends,
       jobDrilldowns,
       teamWorkloads,
       propertyTypes,
