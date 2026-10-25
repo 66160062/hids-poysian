@@ -12,7 +12,7 @@ import puppeteer from 'puppeteer';
 import { createHash } from 'crypto';
 
 // สูตรเดียวกับ computeDataHash ตอนไม่มีทั้ง defect และแบบสรุปการตรวจ
-const EMPTY_DATA_HASH = createHash('sha256').update('##[]').digest('hex');
+const EMPTY_DATA_HASH = createHash('sha256').update('##[]##null').digest('hex');
 
 // อ้างตัว mock ไว้ครั้งเดียว แทนการแตะ puppeteer.launch ตรงๆ ทุกจุด (ติด unbound-method)
 // puppeteer ถูก mock ทั้งโมดูล (Backend/__mocks__/puppeteer.js) launch จึงเป็น jest.fn ธรรมดา
@@ -48,6 +48,7 @@ describe('ReportsService', () => {
   let service: ReportsService;
   let roundRepo: {
     find: jest.Mock;
+    findOne: jest.Mock;
     findOneBy: jest.Mock;
     findOneByOrFail: jest.Mock;
     save: jest.Mock;
@@ -62,6 +63,7 @@ describe('ReportsService', () => {
   beforeEach(async () => {
     roundRepo = {
       find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue(null),
       findOneBy: jest.fn(),
       findOneByOrFail: jest.fn(),
       save: jest.fn(),
@@ -193,6 +195,51 @@ describe('ReportsService', () => {
       await expect(service.getCachedReportUrl(1)).resolves.toEqual({
         url: 'https://example.com/reports/cached.pdf',
         generatedAt,
+        isStale: true,
+      });
+      expect(regenerateSpy).toHaveBeenCalledWith(1, 'th-TH');
+    });
+
+    it.each([
+      'branchName',
+      'phoneNumber',
+      'mailAddress',
+      'facebook',
+      'line',
+      'logoUrl',
+    ])('marks the PDF stale when branch %s changes', async (field) => {
+      const branch = {
+        branchId: 1,
+        branchName: 'Poysian_Chonburi',
+        phoneNumber: null,
+        mailAddress: null,
+        facebook: null,
+        line: null,
+        logoUrl: null,
+      };
+      roundRepo.findOne.mockResolvedValue({ job: { branchId: 1, branch } });
+      const page = createMockPage();
+      launchMock.mockResolvedValue(createMockBrowser(page));
+      roundRepo.findOneBy.mockResolvedValue({ roundId: 1 });
+      roundRepo.findOneByOrFail.mockResolvedValue({ roundId: 1 });
+
+      regenerateSpy.mockRestore();
+      await service.regenerateIfChanged(1);
+      regenerateSpy = jest
+        .spyOn(service, 'regenerateIfChanged')
+        .mockResolvedValue(null);
+      const [[saved]] = roundRepo.save.mock.calls as [
+        [Partial<InspectionRound>],
+      ];
+      roundRepo.findOneBy.mockResolvedValue(saved);
+      await expect(service.getCachedReportUrl(1)).resolves.toMatchObject({
+        isStale: false,
+      });
+
+      roundRepo.findOne.mockResolvedValue({
+        job: { branchId: 1, branch: { ...branch, [field]: 'updated-value' } },
+      });
+      await expect(service.getCachedReportUrl(1)).resolves.toMatchObject({
         isStale: true,
       });
       expect(regenerateSpy).toHaveBeenCalledWith(1, 'th-TH');

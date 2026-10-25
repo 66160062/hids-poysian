@@ -486,7 +486,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
   // ไฟล์ที่แนบไปกับอีเมลอนุมัติจะเป็นเล่มที่ไม่มีหน้าสรุป ทั้งที่ UI ขึ้นว่า "ล่าสุดแล้ว"
   // entity ตัวนี้ไม่มี updatedAt จึง hash จากเนื้อหาที่ถูก render จริงแทน (ครอบทั้งเพิ่ม/แก้/ลบ/เปลี่ยนรูป)
   private async computeDataHash(roundId: number): Promise<string> {
-    const [defects, summaryItems] = await Promise.all([
+    const [defects, summaryItems, round] = await Promise.all([
       this.defectRepo.find({
         where: { round: { roundId } },
         select: ['defectId', 'updatedAt'],
@@ -496,6 +496,10 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
         where: { round: { roundId } },
         relations: ['template', 'option'],
         order: { itemId: 'ASC' },
+      }),
+      this.roundRepo.findOne({
+        where: { roundId },
+        relations: ['job', 'job.branch'],
       }),
     ]);
 
@@ -514,8 +518,24 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       ]),
     );
 
+    // ข้อมูลสาขาแสดงทั้งโลโก้และ footer — แก้ข้อมูลติดต่อแล้วต้องสร้าง PDF ใหม่ด้วย
+    const branch = round?.job?.branch;
+    const branchPart = JSON.stringify(
+      round?.job
+        ? [
+            round.job.branchId ?? null,
+            branch?.branchName ?? null,
+            branch?.phoneNumber ?? null,
+            branch?.mailAddress ?? null,
+            branch?.facebook ?? null,
+            branch?.line ?? null,
+            branch?.logoUrl ?? null,
+          ]
+        : null,
+    );
+
     return createHash('sha256')
-      .update(`${defectPart}##${summaryPart}`)
+      .update(`${defectPart}##${summaryPart}##${branchPart}`)
       .digest('hex');
   }
 

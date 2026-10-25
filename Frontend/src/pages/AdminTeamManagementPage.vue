@@ -275,6 +275,7 @@
               :rules="[(val) => !!val.trim() || t('adminManage.userManagement.fillRequiredFields')]"
               hide-bottom-space
             />
+            <BranchContactFields v-model="branchContactInput" />
             <q-file
               v-model="branchLogoFileInput"
               outlined
@@ -593,7 +594,8 @@ import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { useTeamStore } from 'src/stores/useTeam';
 import { useUserStore } from 'src/stores/useUser';
-import { useBranchStore, type Branch } from 'src/stores/useBranch';
+import { useBranchStore, branchContacts, type Branch } from 'src/stores/useBranch';
+import BranchContactFields from 'src/components/BranchContactFields.vue';
 import AdminTeamCard from 'src/components/AdminTeamCard.vue';
 import ConfirmActionDialog from 'src/components/ConfirmActionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
@@ -755,11 +757,11 @@ const branchFormOptions = computed(() => {
 const branchFilterChips = computed(() => {
   void locale.value;
   return [
-    { label: t('adminManage.teamManagement.allBranchesOption'), value: null, count: teamStore.teams.length },
+    { label: t('adminManage.teamManagement.allBranchesOption'), value: null, count: teamStore.allTeams.length },
     ...branchStore.branches.map((b) => ({
       label: b.branchName || t('adminManage.teamManagement.branchFallbackLabel', { id: b.branchId }),
       value: b.branchId,
-      count: teamStore.teams.filter((t) => t.branchId === b.branchId).length,
+      count: teamStore.allTeams.filter((t) => t.branchId === b.branchId).length,
     })),
   ];
 });
@@ -768,12 +770,14 @@ const branchFilterChips = computed(() => {
 const showBranchManagementDialog = ref(false);
 const editingBranchId = ref<number | null>(null);
 const branchNameInput = ref('');
+const branchContactInput = ref(branchContacts());
 const branchLogoFileInput = ref<File | null>(null);
 const savingBranch = ref(false);
 
 function openBranchForm(branch?: Branch) {
   editingBranchId.value = branch?.branchId ?? null;
   branchNameInput.value = branch?.branchName || '';
+  branchContactInput.value = branchContacts(branch);
   branchLogoFileInput.value = null;
   showBranchManagementDialog.value = true;
 }
@@ -782,7 +786,7 @@ async function handleSaveBranch() {
   if (!branchNameInput.value.trim()) return;
   savingBranch.value = true;
   try {
-    await branchStore.saveBranch(editingBranchId.value, branchNameInput.value.trim(), branchLogoFileInput.value);
+    await branchStore.saveBranch(editingBranchId.value, branchNameInput.value.trim(), branchLogoFileInput.value, branchContactInput.value);
     $q.notify({ type: 'positive', message: t('adminManage.branchManagement.saveSuccess') });
     showBranchManagementDialog.value = false;
   } catch (err) {
