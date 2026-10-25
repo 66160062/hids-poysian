@@ -48,7 +48,9 @@ export class TranslationService {
     texts: (string | null | undefined)[],
     concurrency = DEFAULT_CONCURRENCY,
   ): Promise<(string | null)[]> {
-    const results: (string | null)[] = new Array(texts.length).fill(null);
+    const results: (string | null)[] = new Array<string | null>(
+      texts.length,
+    ).fill(null);
     let next = 0;
 
     const worker = async () => {

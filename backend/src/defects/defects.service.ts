@@ -25,6 +25,7 @@ import {
 import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { NotificationType } from 'src/notifications/entities/notification.entity';
+import { DefectNoteTranslator } from './defect-note-translator.service';
 
 type LinkTokenPayload = {
   project_id: number;
@@ -66,6 +67,7 @@ export class DefectsService {
 
     private readonly activityLogsService: ActivityLogsService,
     private readonly notificationsService: NotificationsService,
+    private readonly noteTranslator: DefectNoteTranslator,
   ) {}
 
   // ประกอบข้อความ "ห้องนั่งเล่น • ห้องนอนชั้น2" จาก room/subRoom ของ defect ที่ผ่านการ save แล้ว
@@ -176,6 +178,11 @@ export class DefectsService {
 
     const saved = await this.defectsRepo.save(defect);
 
+    // แปลหมายเหตุเป็นอังกฤษตามหลัง ไม่รอผล — ผู้ตรวจบันทึกได้ทันทีแม้ LLM ช้าหรือล่ม
+    void this.noteTranslator.translateAndStore(saved.defectId, {
+      description: saved.description,
+    });
+
     this.logDefectActivity(saved, {
       type: ActivityLogType.DEFECT_CREATED,
       color: 'purple',
@@ -234,7 +241,12 @@ export class DefectsService {
     }
 
     // Assign primitive properties
+    const descriptionChanged =
+      updateDefectDto.description !== undefined &&
+      updateDefectDto.description !== defect.description;
     defect.description = updateDefectDto.description ?? defect.description;
+    // คำแปลเดิมใช้กับข้อความใหม่ไม่ได้ ล้างทิ้งแล้วแปลใหม่หลังบันทึก
+    if (descriptionChanged) defect.descriptionEn = null;
     defect.severity = updateDefectDto.severity ?? defect.severity;
     defect.status = updateDefectDto.status ?? defect.status;
     if (updateDefectDto.imageUrl) defect.imageUrl = updateDefectDto.imageUrl;
@@ -276,7 +288,13 @@ export class DefectsService {
       defect.subCategories = subCategories;
     }
 
-    return this.defectsRepo.save(defect);
+    const saved = await this.defectsRepo.save(defect);
+    if (descriptionChanged) {
+      void this.noteTranslator.translateAndStore(saved.defectId, {
+        description: saved.description,
+      });
+    }
+    return saved;
   }
 
   async contractorUpdate(
@@ -325,7 +343,11 @@ export class DefectsService {
     const wasAlreadyRepaired = defect.status === DefectStatus.REPAIRED;
 
     defect.status = DefectStatus.REPAIRED;
+    const noteChanged =
+      contractorUpdateDto.note !== undefined &&
+      contractorUpdateDto.note !== defect.contractorNote;
     defect.contractorNote = contractorUpdateDto.note ?? defect.contractorNote;
+    if (noteChanged) defect.contractorNoteEn = null;
     defect.updatedBy = {
       contractorId: assignedContractorId,
     } as Contractor;
@@ -338,6 +360,12 @@ export class DefectsService {
     }
 
     const saved = await this.defectsRepo.save(defect);
+
+    if (noteChanged) {
+      void this.noteTranslator.translateAndStore(saved.defectId, {
+        contractorNote: saved.contractorNote,
+      });
+    }
 
     void this.activityLogsService.log(
       job.jobId,

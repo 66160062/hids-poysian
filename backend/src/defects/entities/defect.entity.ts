@@ -32,6 +32,10 @@ export class Defect {
   @Column({ type: 'text', nullable: true, default: '-' })
   description!: string;
 
+  // คำแปลอังกฤษของ description — สร้างแบบ async หลังบันทึก (ดู DefectNoteTranslator) null = ยังไม่แปล/แปลไม่สำเร็จ
+  @Column({ type: 'text', nullable: true })
+  descriptionEn!: string | null;
+
   @Column({ type: 'varchar', length: 50 })
   severity!: string;
 
@@ -53,6 +57,9 @@ export class Defect {
 
   @Column({ type: 'text', nullable: true })
   contractorNote!: string;
+
+  @Column({ type: 'text', nullable: true })
+  contractorNoteEn!: string | null;
 
   @Column({
     type: 'varchar',

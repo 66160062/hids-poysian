@@ -368,7 +368,7 @@
                 <span class="label">{{ t('reports.defect.itemsLabel') }}</span>
                 <span>{{ defect.subCategories?.map((s) => localizedName(s)).join(', ') }}</span>
                 <span class="label">{{ t('reports.defect.noteLabel') }}</span>
-                <span>{{ defect.description }}</span>
+                <span>{{ defectNote(defect) }}</span>
                 <span class="label">{{ t('reports.defect.statusLabel') }}</span>
                 <span>
                   {{
@@ -446,7 +446,7 @@
                   <span class="label">{{ t('reports.defect.itemsLabel') }}</span>
                   <span>{{ defect.subCategories?.map((s) => localizedName(s)).join(', ') }}</span>
                   <span class="label">{{ t('reports.defect.noteLabel') }}</span>
-                  <span>{{ defect.description }}</span>
+                  <span>{{ defectNote(defect) }}</span>
                   <span class="label">{{ t('reports.defect.statusLabel') }}</span>
                   <span>{{ defect.status === 'pending_repair' ? t('reports.defect.statusPendingRepair') : defect.status }}</span>
                 </div>
@@ -657,7 +657,7 @@
                     <span v-if="item.defect.subCategories && item.defect.subCategories.length">
                       {{ item.defect.subCategories.map((s) => localizedName(s)).join(', ') }}
                     </span>
-                    <span v-else>{{ item.defect.description || '-' }}</span>
+                    <span v-else>{{ defectNote(item.defect) || '-' }}</span>
                   </td>
                   <td class="text-center">
                     <span
@@ -768,9 +768,9 @@
           </div>
         </div>
 
-        <div v-if="round.aiSummaryText" class="q-mx-md q-pa-md ai-summary-box">
+        <div v-if="aiSummaryDisplay" class="q-mx-md q-pa-md ai-summary-box">
           <div class="text-caption text-weight-bold text-grey-8 q-mb-xs">{{ t('reports.defect.aiSummaryTitle') }}</div>
-          <div class="text-body2" style="line-height: 1.6">{{ round.aiSummaryText }}</div>
+          <div class="text-body2" style="line-height: 1.6">{{ aiSummaryDisplay }}</div>
         </div>
 
         <div class="pdf-footer">
@@ -1293,8 +1293,20 @@ const allDefectChunks = computed(() => {
   return pages;
 });
 
+// PDF ภาษาอังกฤษใช้สรุปฉบับอังกฤษ ถ้ายังไม่มี (สร้างไม่สำเร็จ/ข้อมูลเก่า) ให้ใช้ฉบับไทยแทนดีกว่าไม่มีสรุปเลย
+const aiSummaryDisplay = computed(() =>
+  locale.value === 'en-US' && props.round.aiSummaryTextEn
+    ? props.round.aiSummaryTextEn
+    : props.round.aiSummaryText,
+);
+
+// หมายเหตุ defect: ภาษาอังกฤษใช้คำแปลที่เก็บไว้ ถ้ายังไม่มีคำแปลให้แสดงข้อความไทยเดิม
+function defectNote(defect: { description: string; descriptionEn?: string | null }) {
+  return locale.value === 'en-US' && defect.descriptionEn ? defect.descriptionEn : defect.description;
+}
+
 const hasAiSummary = computed(
-  () => props.round.completionPercent != null || !!props.round.aiSummaryText,
+  () => props.round.completionPercent != null || !!aiSummaryDisplay.value,
 );
 
 // Compute plan pages for PDF - groups defects by planId, only plans with pinned defects

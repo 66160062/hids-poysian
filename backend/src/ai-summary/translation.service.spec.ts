@@ -42,7 +42,9 @@ describe('TranslationService', () => {
     await expect(service.toEnglish('สีผนังไม่เรียบ')).resolves.toBe(
       'Wall paint is uneven',
     );
-    expect(llm.generate.mock.calls[0][0]).toContain('สีผนังไม่เรียบ');
+    expect((llm.generate.mock.calls[0] as string[])[0]).toContain(
+      'สีผนังไม่เรียบ',
+    );
   });
 
   it('skips the LLM for text that needs no translation', async () => {
