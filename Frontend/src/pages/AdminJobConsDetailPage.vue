@@ -22,7 +22,10 @@
           :class="job.projectImage ? 'cursor-pointer' : ''"
           @click="viewProjectImage"
         >
-          <q-img loading="eager" v-if="job.projectImage" :src="job.projectImage" class="house-img" fit="cover" />
+          <template v-if="job.projectImage">
+            <q-img loading="eager" :src="job.projectImage" fit="cover" height="100%" class="house-img-bg" />
+            <q-img loading="eager" :src="job.projectImage" fit="contain" height="100%" class="house-img-fg" />
+          </template>
           <div v-else class="house-img-placeholder row items-center justify-center bg-grey-2">
             <q-icon name="home" size="64px" color="grey-4" />
           </div>
@@ -1244,9 +1247,21 @@ const submitCreateRound = async () => {
   height: 200px;
 }
 
-.house-img {
-  width: 100%;
-  height: 100%;
+/* รูปเต็มภาพไม่ถูกตัด (contain) ส่วนที่เหลือเติมด้วยรูปเดียวกันเบลอเป็นพื้นหลัง */
+.house-img-bg {
+  position: absolute;
+  inset: 0;
+  filter: blur(20px) brightness(0.65) saturate(1.15);
+  transform: scale(1.15);
+}
+
+.house-img-fg {
+  position: absolute;
+  inset: 0;
+}
+
+.house-img-fg :deep(.q-img__image) {
+  background-color: transparent;
 }
 
 .house-img-placeholder {
@@ -1268,8 +1283,10 @@ const submitCreateRound = async () => {
 }
 
 .plan-img {
+  position: relative;
   width: 100%;
   height: 100%;
+  overflow: hidden;
 }
 
 .custom-toggle {

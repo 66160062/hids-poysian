@@ -6,8 +6,8 @@
 
       <div v-else-if="jobData" class="q-px-lg q-pb-md col column">
         <div class="house-img-frame q-mb-md q-mt-sm">
-          <q-img loading="eager" :src="houseImageSrc" fit="cover" class="house-img-bg" />
-          <q-img loading="eager" :src="houseImageSrc" fit="contain" class="house-img-fg" />
+          <q-img loading="eager" :src="houseImageSrc" fit="cover" height="100%" class="house-img-bg" />
+          <q-img loading="eager" :src="houseImageSrc" fit="contain" height="100%" class="house-img-fg" />
         </div>
 
         <div class="row items-center justify-between no-wrap q-mb-xs">

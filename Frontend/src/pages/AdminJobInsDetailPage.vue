@@ -29,8 +29,8 @@
         @keyup.enter="viewProjectImage"
       >
         <template v-if="job.projectImage">
-          <q-img loading="eager" :src="job.projectImage" fit="cover" class="house-img-bg" />
-          <q-img loading="eager" :src="job.projectImage" fit="contain" class="house-img-fg" />
+          <q-img loading="eager" :src="job.projectImage" fit="cover" height="100%" class="house-img-bg" />
+          <q-img loading="eager" :src="job.projectImage" fit="contain" height="100%" class="house-img-fg" />
         </template>
         <div v-else class="house-img-placeholder row items-center justify-center bg-grey-2">
           <q-icon name="home" size="64px" color="grey-4" />
