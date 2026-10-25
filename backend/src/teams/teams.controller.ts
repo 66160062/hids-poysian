@@ -16,7 +16,12 @@ import type { Request } from 'express';
 import { TeamsService } from './teams.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+} from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { StorageService } from 'src/storage/storage.service';
@@ -62,7 +67,9 @@ export class TeamsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'ดึงรายชื่อทีมทั้งหมด พร้อมรองรับ pagination / search / filter' })
+  @ApiOperation({
+    summary: 'ดึงรายชื่อทีมทั้งหมด พร้อมรองรับ pagination / search / filter',
+  })
   findAll(
     @Req() req: Request & { user: JwtUser },
     @Query('page') page?: string,
@@ -74,7 +81,9 @@ export class TeamsController {
     const effectiveBranchId =
       req.user?.role === 'admin' && req.user?.branchId
         ? req.user.branchId
-        : branchId ? Number(branchId) : undefined;
+        : branchId
+          ? Number(branchId)
+          : undefined;
 
     return this.teamsService.findAll({
       page: page ? Number(page) : undefined,

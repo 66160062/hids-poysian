@@ -114,9 +114,10 @@ describe('TeamsService', () => {
     });
     teamsRepo.save.mockImplementation((value) => value);
 
-    await expect(
-      service.update(8, { branchId: 0 } as never),
-    ).resolves.toMatchObject({ team_Id: 8, branchId: null });
+    await expect(service.update(8, { branchId: 0 })).resolves.toMatchObject({
+      team_Id: 8,
+      branchId: null,
+    });
   });
 
   it('deactivates a team instead of deleting the row, and unassigns its members', async () => {

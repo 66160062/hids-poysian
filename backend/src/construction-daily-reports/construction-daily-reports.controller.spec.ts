@@ -97,7 +97,7 @@ describe('ConstructionDailyReportsController', () => {
 
   it('serves a round report once round access is verified', async () => {
     authServiceMock.verifyRoundAccess.mockResolvedValue({ sub: 1 });
-    service.findByRound.mockResolvedValue(null as never);
+    service.findByRound.mockResolvedValue(null);
     const app = testingModule.createNestApplication();
     await app.init();
 

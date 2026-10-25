@@ -40,10 +40,9 @@ export class InspectionJobsController {
   @ApiConsumes('multipart/form-data')
   @ApiBody({ description: 'ข้อมูลการตรวจ', type: CreateInspectionJobDto })
   @UseInterceptors(
-    FileFieldsInterceptor(
-      [{ name: 'projectImageUrl', maxCount: 1 }],
-      { storage: memoryStorage() },
-    ),
+    FileFieldsInterceptor([{ name: 'projectImageUrl', maxCount: 1 }], {
+      storage: memoryStorage(),
+    }),
   )
   async create(
     @UploadedFiles()
@@ -51,7 +50,10 @@ export class InspectionJobsController {
       projectImageUrl?: Express.Multer.File[];
     },
     @Body() createInspectionJobDto: CreateInspectionJobDto,
-    @Req() req: Request & { user?: { sub: number; role?: string; branchId?: number | null } },
+    @Req()
+    req: Request & {
+      user?: { sub: number; role?: string; branchId?: number | null };
+    },
   ) {
     const projectImage = files?.projectImageUrl?.[0];
 
@@ -76,7 +78,10 @@ export class InspectionJobsController {
   @Get()
   @UseGuards(AuthGuard)
   findAll(
-    @Req() req: Request & { user?: { sub: number; role?: string; branchId?: number | null } },
+    @Req()
+    req: Request & {
+      user?: { sub: number; role?: string; branchId?: number | null };
+    },
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('status') status?: string,
@@ -93,7 +98,9 @@ export class InspectionJobsController {
     const effectiveBranchId =
       req.user?.role === 'admin' && req.user?.branchId
         ? req.user.branchId
-        : branchId ? Number(branchId) : undefined;
+        : branchId
+          ? Number(branchId)
+          : undefined;
 
     return this.inspectionJobsService.findAll(
       Number(page) || 1,
@@ -111,7 +118,10 @@ export class InspectionJobsController {
   @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'ข้อมูลสถานะงานและจำนวน' })
   getStatusMetadata(
-    @Req() req: Request & { user?: { sub: number; role?: string; branchId?: number | null } },
+    @Req()
+    req: Request & {
+      user?: { sub: number; role?: string; branchId?: number | null };
+    },
     @Query('search') search?: string,
     @Query('type') type?: string,
     @Query('inspectionType') inspectionType?: string,
@@ -120,7 +130,9 @@ export class InspectionJobsController {
     const effectiveBranchId =
       req.user?.role === 'admin' && req.user?.branchId
         ? req.user.branchId
-        : branchId ? Number(branchId) : undefined;
+        : branchId
+          ? Number(branchId)
+          : undefined;
 
     return this.inspectionJobsService.getStatusMetadata(
       search,
@@ -172,13 +184,15 @@ export class InspectionJobsController {
   @ApiConsumes('multipart/form-data')
   @ApiBody({ description: 'ข้อมูลการตรวจ', type: UpdateInspectionJobDto })
   @UseInterceptors(
-    FileFieldsInterceptor(
-      [{ name: 'projectImageUrl', maxCount: 1 }],
-      { storage: memoryStorage() },
-    ),
+    FileFieldsInterceptor([{ name: 'projectImageUrl', maxCount: 1 }], {
+      storage: memoryStorage(),
+    }),
   )
   async update(
-    @Req() req: Request & { user?: { sub: number; role?: string; branchId?: number | null } },
+    @Req()
+    req: Request & {
+      user?: { sub: number; role?: string; branchId?: number | null };
+    },
     @Param('id') id: string,
     @UploadedFiles()
     files: {

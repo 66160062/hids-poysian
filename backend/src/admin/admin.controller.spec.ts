@@ -37,7 +37,14 @@ describe('AdminController', () => {
 
   it('forwards the date query param when loading the dashboard', () => {
     controller.getDashboard(
-      { user: { sub: 1, role: 'super_admin', email: 'admin@gmail.com', branchId: null } } as any,
+      {
+        user: {
+          sub: 1,
+          role: 'super_admin',
+          email: 'admin@gmail.com',
+          branchId: null,
+        },
+      } as any,
       '2026-08-01',
     );
 

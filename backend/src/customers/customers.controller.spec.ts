@@ -28,7 +28,8 @@ describe('CustomersController', () => {
           useValue: {
             verify: jest.fn((token: string) => {
               if (token === 'admin-token') return { sub: 1, role: 'admin' };
-              if (token === 'link-token') return { project_id: 1, role: 'customer' };
+              if (token === 'link-token')
+                return { project_id: 1, role: 'customer' };
               throw new Error('invalid token');
             }),
           },

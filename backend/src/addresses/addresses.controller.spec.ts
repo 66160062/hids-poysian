@@ -8,7 +8,10 @@ describe('AddressesController', () => {
   let controller: AddressesController;
   let testingModule: TestingModule;
   let service: jest.Mocked<
-    Pick<AddressesService, 'create' | 'findAll' | 'findOne' | 'update' | 'remove'>
+    Pick<
+      AddressesService,
+      'create' | 'findAll' | 'findOne' | 'update' | 'remove'
+    >
   >;
 
   beforeEach(async () => {
@@ -29,7 +32,8 @@ describe('AddressesController', () => {
           useValue: {
             verify: jest.fn((token: string) => {
               if (token === 'admin-token') return { sub: 1, role: 'admin' };
-              if (token === 'link-token') return { project_id: 1, role: 'customer' };
+              if (token === 'link-token')
+                return { project_id: 1, role: 'customer' };
               throw new Error('invalid token');
             }),
           },
@@ -65,7 +69,11 @@ describe('AddressesController', () => {
 
   it('requires an admin token to read and edit addresses', async () => {
     service.findAll.mockResolvedValue([]);
-    service.update.mockResolvedValue({ raw: [], generatedMaps: [], affected: 1 });
+    service.update.mockResolvedValue({
+      raw: [],
+      generatedMaps: [],
+      affected: 1,
+    });
     const app = testingModule.createNestApplication();
     await app.init();
 

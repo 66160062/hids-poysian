@@ -179,18 +179,16 @@ describe('AdminService', () => {
     });
 
     it('keys the status breakdown by status code in display order', async () => {
-      jobsRepo.find.mockImplementation(
-        ({ take }: { take?: number }) => {
-          if (!take) {
-            return Promise.resolve([
-              { status: 'Draft', inspectionType: '', houseType: null },
-              { status: 'Active', inspectionType: '', houseType: null },
-              { status: 'Active', inspectionType: '', houseType: null },
-            ]);
-          }
-          return Promise.resolve([]);
-        },
-      );
+      jobsRepo.find.mockImplementation(({ take }: { take?: number }) => {
+        if (!take) {
+          return Promise.resolve([
+            { status: 'Draft', inspectionType: '', houseType: null },
+            { status: 'Active', inspectionType: '', houseType: null },
+            { status: 'Active', inspectionType: '', houseType: null },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
       roundsRepo.find.mockResolvedValue([]);
 
       const result = await service.getDashboardData('2026-08-01');
@@ -213,8 +211,20 @@ describe('AdminService', () => {
                 inspectionType: 'ตรวจบ้าน',
                 customer: { fullName: 'คุณสมชาย' },
                 rounds: [
-                  { roundId: 101, roundNumber: 1, scheduledDate: null, teamMembers: [] },
-                  { roundId: 102, roundNumber: 2, status: 'SCHEDULED', completionPercent: 80, scheduledDate: null, teamMembers: [] },
+                  {
+                    roundId: 101,
+                    roundNumber: 1,
+                    scheduledDate: null,
+                    teamMembers: [],
+                  },
+                  {
+                    roundId: 102,
+                    roundNumber: 2,
+                    status: 'SCHEDULED',
+                    completionPercent: 80,
+                    scheduledDate: null,
+                    teamMembers: [],
+                  },
                 ],
               },
               {
@@ -224,7 +234,14 @@ describe('AdminService', () => {
                 inspectionType: 'ตรวจบ้าน',
                 customer: { fullName: 'คุณสมหญิง' },
                 rounds: [
-                  { roundId: 201, roundNumber: 1, status: 'SUBMITTED', completionPercent: 95, scheduledDate: null, teamMembers: [] },
+                  {
+                    roundId: 201,
+                    roundNumber: 1,
+                    status: 'SUBMITTED',
+                    completionPercent: 95,
+                    scheduledDate: null,
+                    teamMembers: [],
+                  },
                 ],
               },
             ]);
@@ -239,8 +256,14 @@ describe('AdminService', () => {
           status: 'verified',
           round: { roundId: 102, job: { jobId: 10 } },
           subCategories: [
-            { name: 'งานสี', category: { name: 'งานโครงสร้าง', nameEn: 'Structure' } },
-            { name: 'รอยร้าว', category: { name: 'งานโครงสร้าง', nameEn: 'Structure' } },
+            {
+              name: 'งานสี',
+              category: { name: 'งานโครงสร้าง', nameEn: 'Structure' },
+            },
+            {
+              name: 'รอยร้าว',
+              category: { name: 'งานโครงสร้าง', nameEn: 'Structure' },
+            },
           ],
         },
         {
@@ -248,7 +271,10 @@ describe('AdminService', () => {
           status: 'pending_repair',
           round: { roundId: 102, job: { jobId: 10 } },
           subCategories: [
-            { name: 'ท่อน้ำตัน', category: { name: 'งานสุขาภิบาล', nameEn: 'Sanitary' } },
+            {
+              name: 'ท่อน้ำตัน',
+              category: { name: 'งานสุขาภิบาล', nameEn: 'Sanitary' },
+            },
           ],
         },
       ]);
@@ -276,8 +302,16 @@ describe('AdminService', () => {
 
       expect(result.topDefectCategories).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ categoryName: 'งานโครงสร้าง', count: 1, percentage: 50 }),
-          expect.objectContaining({ categoryName: 'งานสุขาภิบาล', count: 1, percentage: 50 }),
+          expect.objectContaining({
+            categoryName: 'งานโครงสร้าง',
+            count: 1,
+            percentage: 50,
+          }),
+          expect.objectContaining({
+            categoryName: 'งานสุขาภิบาล',
+            count: 1,
+            percentage: 50,
+          }),
         ]),
       );
 
@@ -315,7 +349,9 @@ describe('AdminService', () => {
                     roundId: 1,
                     roundNumber: 1,
                     status: 'SCHEDULED',
-                    teamMembers: [{ team: { team_Id: 1, team_name: 'ทีมชลบุรี A' } }],
+                    teamMembers: [
+                      { team: { team_Id: 1, team_name: 'ทีมชลบุรี A' } },
+                    ],
                   },
                 ],
               },
@@ -328,7 +364,9 @@ describe('AdminService', () => {
                     roundId: 3,
                     roundNumber: 1,
                     status: 'IN_PROGRESS',
-                    teamMembers: [{ team: { team_Id: 1, team_name: 'ทีมชลบุรี A' } }],
+                    teamMembers: [
+                      { team: { team_Id: 1, team_name: 'ทีมชลบุรี A' } },
+                    ],
                   },
                 ],
               },
@@ -340,7 +378,9 @@ describe('AdminService', () => {
                   {
                     roundId: 2,
                     roundNumber: 1,
-                    teamMembers: [{ team: { team_Id: 2, team_name: 'ทีมระยอง B' } }],
+                    teamMembers: [
+                      { team: { team_Id: 2, team_name: 'ทีมระยอง B' } },
+                    ],
                   },
                 ],
               },
@@ -501,7 +541,10 @@ describe('AdminService', () => {
 
       expect(result).toEqual({ synced: 1 });
       expect(jobsRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'Completed', completedAt: approvedAt }),
+        expect.objectContaining({
+          status: 'Completed',
+          completedAt: approvedAt,
+        }),
       );
     });
 

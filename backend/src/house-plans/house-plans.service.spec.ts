@@ -136,9 +136,9 @@ describe('HousePlansService', () => {
     it('throws NotFoundException if plan does not exist', async () => {
       housePlansRepo.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.update(999, { name: 'แปลนชั้น 2' }),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.update(999, { name: 'แปลนชั้น 2' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('renames the plan and saves it', async () => {

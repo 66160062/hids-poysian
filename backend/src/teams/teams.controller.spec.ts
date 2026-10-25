@@ -39,7 +39,14 @@ describe('TeamsController', () => {
     } as Express.Multer.File;
 
     await controller.create(
-      { user: { sub: 1, role: 'super_admin', email: 'admin@gmail.com', branchId: null } } as any,
+      {
+        user: {
+          sub: 1,
+          role: 'super_admin',
+          email: 'admin@gmail.com',
+          branchId: null,
+        },
+      } as any,
       file,
       { teamName: 'ทีม A' } as never,
     );
@@ -53,7 +60,14 @@ describe('TeamsController', () => {
 
   it('sends a null logo_url when no file is attached', async () => {
     await controller.create(
-      { user: { sub: 1, role: 'super_admin', email: 'admin@gmail.com', branchId: null } } as any,
+      {
+        user: {
+          sub: 1,
+          role: 'super_admin',
+          email: 'admin@gmail.com',
+          branchId: null,
+        },
+      } as any,
       undefined as unknown as Express.Multer.File,
       { teamName: 'ทีม B' } as never,
     );
