@@ -292,11 +292,19 @@
                 no-caps
                 class="share-copy-btn"
                 :loading="isCopyingContractor"
+                :disable="!hasContractor"
                 @click="copyShareLink('contractor')"
-              />
+              >
+                <q-tooltip v-if="!hasContractor">
+                  {{ t('adminJobs.inspection.contractorRequiredForLink') }}
+                </q-tooltip>
+              </q-btn>
             </div>
             <div class="row items-center justify-between q-mt-xs">
-              <div class="text-caption text-grey-5">
+              <div v-if="!hasContractor" class="text-caption text-negative">
+                {{ t('adminJobs.inspection.contractorRequiredForLink') }}
+              </div>
+              <div v-else class="text-caption text-grey-5">
                 {{ t('adminJobs.inspection.contractorLinkNote') }}
               </div>
               <q-btn
@@ -736,7 +744,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, nextTick } from 'vue';
+import { computed, ref, onMounted, nextTick, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
@@ -858,6 +866,7 @@ interface ShareLinkResponse {
 }
 
 interface ContractorShareStatusResponse {
+  has_contractor?: boolean;
   contractor_share_enabled: boolean;
   token: string | null;
 }
@@ -937,6 +946,15 @@ const customerShareUrl = ref('');
 const contractorShareUrl = ref('');
 const customerLinkExpiresAt = ref<number | null>(null);
 const contractorShareEnabled = ref(false);
+// ลิงก์ผู้รับเหมาออกได้เมื่อมีผู้รับเหมาของงานแล้วเท่านั้น (backend บังคับด้วย)
+const hasContractor = ref(false);
+watch(
+  () => jobData.value?.contractor,
+  (contractor) => {
+    if (jobData.value) hasContractor.value = !!contractor;
+  },
+  { immediate: true },
+);
 const isCopyingCustomer = ref(false);
 const isCopyingContractor = ref(false);
 const isRevokingContractor = ref(false);
@@ -958,6 +976,7 @@ async function fetchContractorShareStatus() {
   const { data } = await api.get<ContractorShareStatusResponse>(
     `/inspection-jobs/${jobId.value}/contractor-share`,
   );
+  hasContractor.value = data.has_contractor ?? hasContractor.value;
   contractorShareEnabled.value = data.contractor_share_enabled;
   contractorShareUrl.value =
     data.contractor_share_enabled && data.token ? buildShareUrl('contractor', data.token) : '';
@@ -975,6 +994,16 @@ async function loadShareLinks() {
 }
 
 async function copyShareLink(role: ShareLinkRole) {
+  if (role === 'contractor' && !hasContractor.value) {
+    $q.notify({
+      message: t('adminJobs.inspection.contractorRequiredForLink'),
+      color: 'warning',
+      icon: 'info',
+      position: 'top',
+    });
+    return;
+  }
+
   const loadingRef = role === 'customer' ? isCopyingCustomer : isCopyingContractor;
   loadingRef.value = true;
 

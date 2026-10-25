@@ -19,6 +19,7 @@ export default {
     enabled: 'Enabled',
     disabled: 'Disabled',
     contractorLinkPlaceholder: 'Tap copy link to enable',
+    contractorRequiredForLink: 'Add the contractor details for this job before copying or sharing the contractor link',
     contractorLinkNote: 'Does not expire automatically · Admin can revoke access anytime',
     revokeLink: 'Revoke Link',
     contractorProgressTitle: 'Contractor Repair Progress',
