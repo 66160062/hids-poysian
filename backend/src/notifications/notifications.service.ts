@@ -6,6 +6,7 @@ import { Notification, NotificationType } from './entities/notification.entity';
 export interface CreateNotificationInput {
   type: NotificationType;
   message: string;
+  messageEn?: string;
   recipientRole?: string;
   recipientUserId?: number;
   jobId?: number;
@@ -27,6 +28,7 @@ export class NotificationsService {
       const notification = this.notificationsRepo.create({
         type: input.type,
         message: input.message,
+        messageEn: input.messageEn ?? null,
         recipientRole: input.recipientRole ?? null,
         recipientUser: input.recipientUserId
           ? { id: input.recipientUserId }

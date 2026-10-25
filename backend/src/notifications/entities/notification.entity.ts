@@ -26,6 +26,10 @@ export class Notification {
   @Column({ type: 'varchar', length: 500 })
   message!: string;
 
+  // ฉบับภาษาอังกฤษของ message — null = แถวเก่า หน้าจอจะแสดงฉบับไทยแทน
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  messageEn!: string | null;
+
   @Column({ type: 'boolean', default: false })
   isRead!: boolean;
 

@@ -385,6 +385,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       type: ActivityLogType.REPORT_PDF_UPDATED,
       color: 'orange',
       title: `อัปเดตรายงาน PDF รอบที่ ${round.roundNumber} แล้ว`,
+      titleEn: `PDF report for round ${round.roundNumber} updated`,
     });
 
     // บอกเวลาที่ใช้ไปด้วย เพราะรายงานที่ defect เยอะ (หลักร้อย) ใช้เวลาระดับนาที — ถ้าไม่ log ไว้

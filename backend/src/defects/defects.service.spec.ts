@@ -120,6 +120,46 @@ describe('DefectsService', () => {
       expect.objectContaining({
         type: 'defect_created',
         sub: 'ห้องนั่งเล่น • ห้องนอนชั้น2',
+        titleEn: 'New defect found',
+        // ไม่มี roomNameEn ในข้อมูล จึงใช้ชื่อไทยเป็นตัวแทนแทนที่จะไม่มีตำแหน่ง
+        subEn: 'ห้องนั่งเล่น • ห้องนอนชั้น2',
+      }),
+    );
+  });
+
+  it('uses the English room names for the English activity sub when they exist', async () => {
+    repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7 });
+    repoMock.findBy.mockResolvedValue([]);
+    roomsRepo.findOneByOrFail.mockResolvedValue({
+      roomId: 3,
+      roomName: 'ห้องน้ำ',
+      roomNameEn: 'Bathroom',
+    });
+    subRoomsRepo.findOneBy.mockResolvedValue({
+      subRoomId: 5,
+      roomName: 'ห้องนอนเล็ก',
+      roomNameEn: 'Small bedroom',
+    });
+    defectsRepo.create.mockImplementation((value) => value);
+    defectsRepo.save.mockImplementation((value) => ({
+      ...value,
+      defectId: 99,
+    }));
+
+    await service.create({
+      roundId: 7,
+      subCategoryIds: [],
+      inspectorId: 1,
+      roomId: 3,
+      subRoomId: 5,
+      floorId: 1,
+    } as never);
+
+    expect(activityLogsService.logForRound).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({
+        sub: 'ห้องน้ำ • ห้องนอนเล็ก',
+        subEn: 'Bathroom • Small bedroom',
       }),
     );
   });
@@ -570,7 +610,7 @@ describe('DefectsService', () => {
         floorId: 1,
         severity: 'Minor',
         description: 'สีผนังไม่เรียบ',
-      } as never);
+      });
 
       expect(noteTranslator.translateAndStore).toHaveBeenCalledWith(99, {
         description: 'สีผนังไม่เรียบ',

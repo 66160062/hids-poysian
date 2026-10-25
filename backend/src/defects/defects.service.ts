@@ -78,6 +78,15 @@ export class DefectsService {
     return parts.length ? parts.join(' • ') : undefined;
   }
 
+  // ฉบับอังกฤษของข้อความตำแหน่งเดียวกัน — ใช้ roomNameEn ถ้ามี ไม่งั้นใช้ชื่อไทย (ยังดีกว่าไม่มีตำแหน่ง)
+  private buildLocationSubEn(defect: Defect): string | undefined {
+    const parts = [
+      defect.room?.roomNameEn || defect.room?.roomName,
+      defect.subRoom?.roomNameEn || defect.subRoom?.roomName,
+    ].filter((part): part is string => !!part);
+    return parts.length ? parts.join(' • ') : undefined;
+  }
+
   private logDefectActivity(defect: Defect, entry: LogEntryInput) {
     const roundId = defect.round?.roundId;
     if (!roundId) return;
@@ -188,6 +197,8 @@ export class DefectsService {
       color: 'purple',
       title: 'พบข้อบกพร่องใหม่',
       sub: this.buildLocationSub(saved),
+      titleEn: 'New defect found',
+      subEn: this.buildLocationSubEn(saved),
     });
 
     return saved;
@@ -374,6 +385,8 @@ export class DefectsService {
         color: 'green',
         title: 'ผู้รับเหมาแก้ไขข้อบกพร่องแล้ว',
         sub: this.buildLocationSub(saved),
+        titleEn: 'Contractor repaired a defect',
+        subEn: this.buildLocationSubEn(saved),
       },
       saved.round?.roundId,
     );
@@ -383,6 +396,7 @@ export class DefectsService {
         saved.round.roundId,
         job.jobId,
         job.projectName,
+        job.projectNameEn,
       );
     }
 
@@ -393,6 +407,7 @@ export class DefectsService {
     roundId: number,
     jobId: number,
     projectName?: string,
+    projectNameEn?: string | null,
   ) {
     try {
       const round = await this.roundsRepo.findOneBy({ roundId });
@@ -414,6 +429,7 @@ export class DefectsService {
         type: NotificationType.ALERT,
         recipientRole: 'admin',
         message: `${projectName ?? 'โครงการ'}: ผู้รับเหมาซ่อมแล้ว ${repaired}/${total} รายการ (${percent}%)`,
+        messageEn: `${projectNameEn || projectName || 'Project'}: contractor has repaired ${repaired}/${total} items (${percent}%)`,
         jobId,
         roundId,
       });

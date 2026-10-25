@@ -75,6 +75,34 @@ describe('ActivityLogsService', () => {
       });
     });
 
+    it('stores the English title and sub next to the Thai ones', async () => {
+      const result = await service.log(12, {
+        type: ActivityLogType.DEFECT_CREATED,
+        color: 'purple',
+        title: 'พบข้อบกพร่องใหม่',
+        sub: 'ห้องนอนเล็ก • ห้องน้ำ',
+        titleEn: 'New defect found',
+        subEn: 'Small bedroom • Bathroom',
+      });
+
+      expect(result).toMatchObject({
+        title: 'พบข้อบกพร่องใหม่',
+        titleEn: 'New defect found',
+        sub: 'ห้องนอนเล็ก • ห้องน้ำ',
+        subEn: 'Small bedroom • Bathroom',
+      });
+    });
+
+    it('stores null English text when none is given (old callers keep working)', async () => {
+      const result = await service.log(12, {
+        type: ActivityLogType.ROUND_APPROVED,
+        color: 'green',
+        title: 'ลูกค้าอนุมัติรายงานรอบที่ 1 แล้ว',
+      });
+
+      expect(result).toMatchObject({ titleEn: null, subEn: null });
+    });
+
     it('returns null instead of throwing when the repository save fails', async () => {
       activityLogRepo.save.mockRejectedValueOnce(new Error('db error'));
 
@@ -157,6 +185,52 @@ describe('ActivityLogsService', () => {
           sub: 'ห้องนอน 2',
         }),
       ]);
+    });
+
+    it('appends the count to the English title too, and keeps the English sub', async () => {
+      queryBuilder.getRawMany.mockResolvedValue([
+        {
+          activityId: 3,
+          type: ActivityLogType.DEFECT_CREATED,
+          color: 'purple',
+          title: 'พบข้อบกพร่องใหม่',
+          sub: 'ห้องนอน 2',
+          titleEn: 'New defect found',
+          subEn: 'Bedroom 2',
+          createdAt: new Date('2026-08-12T10:00:00Z'),
+          eventCount: '4',
+        },
+      ]);
+
+      const [item] = await service.findByJob(12);
+
+      expect(item).toMatchObject({
+        title: 'พบข้อบกพร่องใหม่ 4 จุด',
+        titleEn: 'New defect found (4 items)',
+        subEn: 'Bedroom 2',
+      });
+    });
+
+    it('returns null English text for old rows that were never translated', async () => {
+      queryBuilder.getRawMany.mockResolvedValue([
+        {
+          activityId: 3,
+          type: ActivityLogType.DEFECT_CREATED,
+          color: 'purple',
+          title: 'พบข้อบกพร่องใหม่',
+          sub: null,
+          titleEn: null,
+          subEn: null,
+          createdAt: new Date('2026-08-12T10:00:00Z'),
+          eventCount: '3',
+        },
+      ]);
+
+      const [item] = await service.findByJob(12);
+
+      expect(item).toMatchObject({ title: 'พบข้อบกพร่องใหม่ 3 จุด' });
+      expect(item.titleEn).toBeNull();
+      expect(item.subEn).toBeNull();
     });
 
     it('leaves the title untouched when only one event happened that day', async () => {
