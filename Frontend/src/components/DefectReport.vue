@@ -533,7 +533,7 @@
               </div>
               <div v-if="topic.note" class="summary-answer">
                 <span class="summary-answer-group">{{ t('reports.defect.noteLabel') }}</span>
-                {{ topic.note }}
+                {{ pickLocalized(topic.note, topic.noteEn) }}
               </div>
             </div>
             <div class="summary-topic-photos">
@@ -877,6 +877,7 @@ interface SummaryTopic {
   labelEn?: string | null;
   answers: SummaryAnswerGroup[];
   note: string;
+  noteEn: string;
   photos: string[];
 }
 
@@ -1642,7 +1643,7 @@ const summaryCategories = computed<SummaryCategory[]>(() => {
       if (!topicsByCategory.has(category)) topicsByCategory.set(category, { categoryEn, topics: new Map() });
       const topics = topicsByCategory.get(category)!.topics;
       if (!topics.has(templateId)) {
-        topics.set(templateId, { templateId, label, labelEn, answers: [], note: '', photos: [] });
+        topics.set(templateId, { templateId, label, labelEn, answers: [], note: '', noteEn: '', photos: [] });
       }
       const topic = topics.get(templateId)!;
 
@@ -1660,7 +1661,10 @@ const summaryCategories = computed<SummaryCategory[]>(() => {
       }
       answer.values.push({ th: item.option.value, en: item.option.valueEn ?? null });
       // หน้ากรอกบันทึกหมายเหตุเดียวกันซ้ำลงทุกตัวเลือกที่ติ้ก เก็บค่าเดียวพอ ไม่งั้นพิมพ์ซ้ำหลายรอบ
-      if (!topic.note && item.detailValue?.trim()) topic.note = item.detailValue.trim();
+      if (!topic.note && item.detailValue?.trim()) {
+        topic.note = item.detailValue.trim();
+        topic.noteEn = item.detailValueEn?.trim() ?? '';
+      }
     });
 
   return [...topicsByCategory.entries()].map(([category, { categoryEn, topics }]) => ({

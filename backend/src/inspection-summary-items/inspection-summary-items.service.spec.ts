@@ -30,7 +30,10 @@ describe('InspectionSummaryItemsService', () => {
   let roundsRepo: { findOneByOrFail: jest.Mock };
   let templatesRepo: { findOneByOrFail: jest.Mock; findBy: jest.Mock };
   let optionsRepo: { findOneByOrFail: jest.Mock; findBy: jest.Mock };
-  let deleteQb: Record<'delete' | 'from' | 'where' | 'andWhere' | 'execute', jest.Mock>;
+  let deleteQb: Record<
+    'delete' | 'from' | 'where' | 'andWhere' | 'execute',
+    jest.Mock
+  >;
   let manager: {
     createQueryBuilder: jest.Mock;
     create: jest.Mock;
@@ -251,6 +254,7 @@ describe('InspectionSummaryItemsService', () => {
 
   describe('replaceForRound', () => {
     beforeEach(() => {
+      itemsRepo.find.mockResolvedValue([]);
       roundsRepo.findOneByOrFail.mockResolvedValue({ roundId: 7 });
       templatesRepo.findBy.mockResolvedValue([
         { templateId: 1 },
@@ -304,6 +308,53 @@ describe('InspectionSummaryItemsService', () => {
       ]);
     });
 
+    it('keeps the English translation of a note whose text did not change', async () => {
+      itemsRepo.find.mockResolvedValue([
+        {
+          itemId: 50,
+          template: { templateId: 2 },
+          detailValue: 'หมายเหตุ',
+          detailValueEn: 'A note',
+        },
+      ]);
+
+      const result = await service.replaceForRound(7, [
+        { templateId: 2, optionId: 30, detailValue: 'หมายเหตุ' },
+        { templateId: 1, optionId: 10, detailValue: 'หมายเหตุ' },
+      ]);
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          template: { templateId: 2 },
+          detailValueEn: 'A note',
+        }),
+        // หัวข้ออื่นที่ข้อความเหมือนกันไม่ใช่แถวเดิม ต้องรอแปลใหม่
+        expect.objectContaining({
+          template: { templateId: 1 },
+          detailValueEn: null,
+        }),
+      ]);
+    });
+
+    it('drops the translation when the note text was edited', async () => {
+      itemsRepo.find.mockResolvedValue([
+        {
+          itemId: 50,
+          template: { templateId: 2 },
+          detailValue: 'หมายเหตุเดิม',
+          detailValueEn: 'Old note',
+        },
+      ]);
+
+      const result = await service.replaceForRound(7, [
+        { templateId: 2, optionId: 30, detailValue: 'หมายเหตุใหม่' },
+      ]);
+
+      expect(result).toEqual([
+        expect.objectContaining({ detailValueEn: null }),
+      ]);
+    });
+
     it('clears the round without saving when the item list is empty', async () => {
       const result = await service.replaceForRound(7, []);
 
@@ -318,6 +369,37 @@ describe('InspectionSummaryItemsService', () => {
       ).rejects.toThrow(BadRequestException);
 
       expect(dataSource.transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('update', () => {
+    it('clears the English translation when the note text changes', async () => {
+      itemsRepo.findOneByOrFail.mockResolvedValue({
+        itemId: 3,
+        detailValue: 'เดิม',
+        detailValueEn: 'Old',
+      });
+      itemsRepo.save.mockImplementation((value) => value);
+
+      const result = await service.update(3, { detailValue: 'ใหม่' });
+
+      expect(result).toMatchObject({
+        detailValue: 'ใหม่',
+        detailValueEn: null,
+      });
+    });
+
+    it('keeps the translation when the note text is unchanged', async () => {
+      itemsRepo.findOneByOrFail.mockResolvedValue({
+        itemId: 3,
+        detailValue: 'เดิม',
+        detailValueEn: 'Old',
+      });
+      itemsRepo.save.mockImplementation((value) => value);
+
+      const result = await service.update(3, { detailValue: 'เดิม' });
+
+      expect(result).toMatchObject({ detailValueEn: 'Old' });
     });
   });
 });

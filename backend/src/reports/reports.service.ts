@@ -18,6 +18,7 @@ import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity';
 import { AiSummaryService } from 'src/ai-summary/ai-summary.service';
 import { DefectNoteTranslator } from 'src/defects/defect-note-translator.service';
+import { SummaryNoteTranslator } from 'src/inspection-summary-items/summary-note-translator.service';
 
 const DEBOUNCE_MS = 30_000;
 // เพดานเวลารอนับจากครั้งแรกที่ schedule — กันเคสที่มีคนแก้ถี่กว่า DEBOUNCE_MS ต่อเนื่อง
@@ -70,6 +71,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     private readonly activityLogsService: ActivityLogsService,
     private readonly aiSummaryService: AiSummaryService,
     private readonly defectNoteTranslator: DefectNoteTranslator,
+    private readonly summaryNoteTranslator: SummaryNoteTranslator,
   ) {}
 
   onModuleInit(): void {
@@ -310,6 +312,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     if (locale === 'en-US') {
       try {
         await this.defectNoteTranslator.translateMissingForRound(roundId);
+        await this.summaryNoteTranslator.translateMissingForRound(roundId);
       } catch (error) {
         this.logger.warn(
           `รอบตรวจ ${roundId}: แปลหมายเหตุที่ขาดไม่สำเร็จ (ไม่กระทบการสร้าง PDF) — ${error instanceof Error ? error.message : String(error)}`,
@@ -570,9 +573,10 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       .digest('hex');
 
     // คำแปลถูกเขียนโดยไม่เลื่อน updatedAt จึงต้องนับเข้า hash ของ PDF อังกฤษเอง
-    const translationPart = JSON.stringify(
+    const translationPart = JSON.stringify([
       defects.map((d) => [d.descriptionEn ?? '', d.contractorNoteEn ?? '']),
-    );
+      summaryItems.map((item) => item.detailValueEn ?? ''),
+    ]);
     const en = createHash('sha256')
       .update(`${base}##${translationPart}`)
       .digest('hex');

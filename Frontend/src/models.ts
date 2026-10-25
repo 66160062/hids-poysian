@@ -156,6 +156,7 @@ export interface InspectionSummaryItem {
   refItemId?: number | null;
   refItem?: Pick<InspectionSummaryItem, 'itemId'> | null;
   detailValue?: string;
+  detailValueEn?: string | null;
   photoUrl?: string | null;
 }
 

@@ -9,6 +9,7 @@ import { StorageService } from 'src/storage/storage.service';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { AiSummaryService } from 'src/ai-summary/ai-summary.service';
 import { DefectNoteTranslator } from 'src/defects/defect-note-translator.service';
+import { SummaryNoteTranslator } from 'src/inspection-summary-items/summary-note-translator.service';
 import puppeteer from 'puppeteer';
 import { createHash } from 'crypto';
 
@@ -61,6 +62,7 @@ describe('ReportsService', () => {
   let activityLogsService: { logForRound: jest.Mock };
   let aiSummaryService: { generateIfChanged: jest.Mock };
   let noteTranslator: { translateMissingForRound: jest.Mock };
+  let summaryNoteTranslator: { translateMissingForRound: jest.Mock };
 
   beforeEach(async () => {
     roundRepo = {
@@ -88,6 +90,10 @@ describe('ReportsService', () => {
       translateMissingForRound: jest.fn().mockResolvedValue(0),
     };
 
+    summaryNoteTranslator = {
+      translateMissingForRound: jest.fn().mockResolvedValue(0),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReportsService,
@@ -102,6 +108,7 @@ describe('ReportsService', () => {
         { provide: ActivityLogsService, useValue: activityLogsService },
         { provide: AiSummaryService, useValue: aiSummaryService },
         { provide: DefectNoteTranslator, useValue: noteTranslator },
+        { provide: SummaryNoteTranslator, useValue: summaryNoteTranslator },
       ],
     }).compile();
 
@@ -509,6 +516,9 @@ describe('ReportsService', () => {
 
       await service.regenerateIfChanged(1, 'en-US');
       expect(noteTranslator.translateMissingForRound).toHaveBeenCalledWith(1);
+      expect(
+        summaryNoteTranslator.translateMissingForRound,
+      ).toHaveBeenCalledWith(1);
     });
 
     it('still renders the English pdf when filling in translations fails', async () => {
