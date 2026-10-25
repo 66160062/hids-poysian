@@ -61,7 +61,10 @@
     <q-page-container class="bg-white">
       <router-view v-slot="{ Component }">
         <transition name="page-fade" mode="out-in">
-          <component :is="Component" />
+          <!-- เก็บหน้าแดชบอร์ดไว้ไม่ให้ถูกทำลาย สลับแท็บกลับมาจะได้เห็นของเดิมทันที (แต่ละหน้ารีเฟรชเองใน onActivated) -->
+          <keep-alive :include="keptAlivePages">
+            <component :is="Component" />
+          </keep-alive>
         </transition>
       </router-view>
     </q-page-container>
@@ -102,6 +105,10 @@ import { useAuthStore } from 'src/stores/useAuth';
 import { api } from 'src/boot/axios';
 import LanguageToggle from 'src/components/LanguageToggle.vue';
 import { useInspectorJobEditDialog } from 'src/composables/useInspectorJobEditDialog';
+
+// หน้าแดชบอร์ดที่เก็บไว้ใน <keep-alive> — เพิ่มชื่อที่นี่ได้เฉพาะหน้าที่รีเฟรชข้อมูลเองใน onActivated ไม่งั้นจะค้างข้อมูลเก่า
+// ชื่อมาจากชื่อไฟล์ของหน้า (script setup ตั้ง name ให้อัตโนมัติ)
+const keptAlivePages = ['InspectorDashboardPage', 'ConstructorDashboardPage'];
 
 const jobEditDialog = useInspectorJobEditDialog();
 

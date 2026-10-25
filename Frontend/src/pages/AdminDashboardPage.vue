@@ -144,7 +144,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onActivated, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
@@ -155,6 +155,7 @@ import TeamWorkloadCard from 'src/components/dashboard/TeamWorkloadCard.vue';
 import JobDrilldownCard from 'src/components/dashboard/JobDrilldownCard.vue';
 import OperationalPipelineCard from 'src/components/dashboard/OperationalPipelineCard.vue';
 import { useBranchStore } from 'src/stores/useBranch';
+import { cacheKey, peekCache, setCache } from 'src/utils/responseCache';
 import { useAuthStore } from 'src/stores/useAuth';
 import type {
   MonthlyTrendItem,
@@ -224,49 +225,58 @@ watch(
   },
 );
 
+function applyDashboardData(data: DashboardStats): void {
+  dashboard.value = {
+    totalProjects: data.totalProjects || 0,
+    inProgress: data.inProgress || 0,
+    singleHouse: data.singleHouse || 0,
+    townhouse: data.townhouse || 0,
+    condo: data.condo || 0,
+    construction: data.construction || 0,
+    totalDefects: data.totalDefects || 0,
+    overallCompletionRate: data.overallCompletionRate || 0,
+    avgCompletionScore: data.avgCompletionScore ?? null,
+    scheduledThisMonth: data.scheduledThisMonth || 0,
+    pendingApprovalCount: data.pendingApprovalCount || 0,
+    completedCount: data.completedCount || 0,
+    deliverySuccessRate: data.deliverySuccessRate || 0,
+    homeStatusBreakdown: data.homeStatusBreakdown || [],
+    constructionStatusBreakdown: data.constructionStatusBreakdown || [],
+  };
+
+  branches.value = Array.isArray(data.branches) ? data.branches : [];
+  businessTrends.value = data.trends || (Array.isArray(data.monthlyTrends) ? data.monthlyTrends : []);
+  topDefectCategories.value = Array.isArray(data.topDefectCategories) ? data.topDefectCategories : [];
+  overallDefectResolution.value = data.overallDefectResolution;
+  teamWorkloads.value = Array.isArray(data.teamWorkloads) ? data.teamWorkloads : [];
+  jobDrilldowns.value = Array.isArray(data.jobDrilldowns) ? data.jobDrilldowns : [];
+  operationalPipeline.value = data.operationalPipeline;
+}
+
+// เคยโหลดสาขานี้แล้ว → โชว์ของเดิมทันทีแล้วรีเฟรชเบื้องหลัง ไม่ต้องบังด้วย spinner เต็มจอ
 async function fetchDashboardData(): Promise<void> {
-  $q.loading.show({
-    spinner: chartSpinner,
-    spinnerColor: 'primary',
-    spinnerSize: 70,
-    backgroundColor: 'white',
-  });
+  const params: { branchId?: number } = {};
+  if (selectedBranchId.value !== 'all') {
+    params.branchId = selectedBranchId.value;
+  }
+  const key = cacheKey('/admin/dashboard:business', params);
+  const cached = peekCache<DashboardStats>(key);
+  if (cached) {
+    applyDashboardData(cached);
+  } else {
+    $q.loading.show({
+      spinner: chartSpinner,
+      spinnerColor: 'primary',
+      spinnerSize: 70,
+      backgroundColor: 'white',
+    });
+  }
   error.value = '';
 
   try {
-    const params: { branchId?: number } = {};
-    if (selectedBranchId.value !== 'all') {
-      params.branchId = selectedBranchId.value;
-    }
-
     const res: AxiosResponse<DashboardStats> = await api.get<DashboardStats>('/admin/dashboard', { params });
-    const data: DashboardStats = res.data;
-
-    dashboard.value = {
-      totalProjects: data.totalProjects || 0,
-      inProgress: data.inProgress || 0,
-      singleHouse: data.singleHouse || 0,
-      townhouse: data.townhouse || 0,
-      condo: data.condo || 0,
-      construction: data.construction || 0,
-      totalDefects: data.totalDefects || 0,
-      overallCompletionRate: data.overallCompletionRate || 0,
-      avgCompletionScore: data.avgCompletionScore ?? null,
-      scheduledThisMonth: data.scheduledThisMonth || 0,
-      pendingApprovalCount: data.pendingApprovalCount || 0,
-      completedCount: data.completedCount || 0,
-      deliverySuccessRate: data.deliverySuccessRate || 0,
-      homeStatusBreakdown: data.homeStatusBreakdown || [],
-      constructionStatusBreakdown: data.constructionStatusBreakdown || [],
-    };
-
-    branches.value = Array.isArray(data.branches) ? data.branches : [];
-    businessTrends.value = data.trends || (Array.isArray(data.monthlyTrends) ? data.monthlyTrends : []);
-    topDefectCategories.value = Array.isArray(data.topDefectCategories) ? data.topDefectCategories : [];
-    overallDefectResolution.value = data.overallDefectResolution;
-    teamWorkloads.value = Array.isArray(data.teamWorkloads) ? data.teamWorkloads : [];
-    jobDrilldowns.value = Array.isArray(data.jobDrilldowns) ? data.jobDrilldowns : [];
-    operationalPipeline.value = data.operationalPipeline;
+    setCache(key, res.data);
+    applyDashboardData(res.data);
   } catch (err: unknown) {
     error.value = t('adminWork.main.loadError');
     console.error('fetchDashboardData error:', err);
@@ -277,6 +287,17 @@ async function fetchDashboardData(): Promise<void> {
 
 onMounted(() => {
   void branchStore.fetchBranches();
+  void fetchDashboardData();
+});
+
+// อยู่ใน <keep-alive> ของ layout: onActivated ยิงทุกครั้งที่สลับแท็บกลับมา รวมถึงครั้งแรกหลัง mount
+// (ซึ่ง onMounted โหลดไปแล้ว) จึงข้ามครั้งแรก ครั้งถัดไปรีเฟรชเบื้องหลังเงียบๆ (ข้อมูลเดิมยังโชว์อยู่)
+let firstActivation = true;
+onActivated(() => {
+  if (firstActivation) {
+    firstActivation = false;
+    return;
+  }
   void fetchDashboardData();
 });
 </script>

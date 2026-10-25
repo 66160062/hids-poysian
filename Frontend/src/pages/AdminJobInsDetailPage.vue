@@ -745,6 +745,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, nextTick, watch } from 'vue';
+import { cacheKey, peekCache, setCache } from 'src/utils/responseCache';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
@@ -1167,17 +1168,42 @@ function applyRounds(rounds: RoundApiResponse[]) {
   inspectionRounds.value = rounds.map(mapRoundToView);
 }
 
+// ภาพรวมของหน้านี้ตอนโหลดครั้งล่าสุด — เปิดงานเดิมซ้ำ (กดเข้า/ย้อนกลับ) จะโชว์ของเดิมทันทีแล้วรีเฟรชเบื้องหลัง
+interface PageSnapshot {
+  job: JobApiResponse | null;
+  team: TeamMemberChip[];
+  plans: HousePlan[];
+  rounds: RoundApiResponse[];
+}
+const pageCacheKey = computed(() => cacheKey(`admin-job-ins:${jobId.value}`));
+
 async function loadPageData() {
-  isLoading.value = true;
+  const snapshot = peekCache<PageSnapshot>(pageCacheKey.value);
+  if (snapshot) {
+    jobData.value = snapshot.job;
+    jobTeamMembers.value = snapshot.team;
+    housePlans.value = snapshot.plans;
+    applyRounds(snapshot.rounds);
+    isLoading.value = false;
+  } else {
+    isLoading.value = true;
+  }
   try {
-    await Promise.all([
+    // fetchRounds ไม่ได้ใช้ผลของสี่ตัวแรก จึงยิงพร้อมกันได้ ไม่ต้องรอเป็นรอบที่สอง
+    const [, , , , rounds] = await Promise.all([
       fetchJobDetails(),
       fetchTeamMembers(),
       fetchHousePlans(),
       teamStore.fetchAllTeams(), // ดึงข้อมูลทีมทั้งหมดไว้กรองตามสาขาของงาน
+      fetchRounds(),
     ]);
-    const rounds = await fetchRounds();
     applyRounds(rounds);
+    setCache<PageSnapshot>(pageCacheKey.value, {
+      job: jobData.value,
+      team: jobTeamMembers.value,
+      plans: housePlans.value,
+      rounds,
+    });
 
     // สองอย่างนี้ไม่ได้ใช้ตอน render การ์ดรอบตรวจ (users = ตัวเลือกผู้ตรวจใน dialog สร้างรอบ,
     // share links = การ์ดด้านล่าง) ปล่อยโหลดเบื้องหลังเพื่อไม่ให้ค้าง spinner ตอนกดย้อนกลับเข้าหน้านี้
@@ -1218,12 +1244,15 @@ const viewPlan = () => {
 };
 
 onMounted(() => {
-  $q.loading.show({
-    spinner: homeInspectionSpinner,
-    spinnerColor: 'primary',
-    spinnerSize: 70,
-    backgroundColor: 'white',
-  });
+  // มีข้อมูลเดิมให้โชว์แล้ว → ไม่ต้องบังด้วย spinner เต็มจอ
+  if (peekCache(pageCacheKey.value) === undefined) {
+    $q.loading.show({
+      spinner: homeInspectionSpinner,
+      spinnerColor: 'primary',
+      spinnerSize: 70,
+      backgroundColor: 'white',
+    });
+  }
   void loadPageData().finally(() => {
     $q.loading.hide();
     void scrollToNotifiedRound();

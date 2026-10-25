@@ -299,7 +299,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onActivated, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import AdminUserCard from 'src/components/AdminUserCard.vue';
@@ -471,12 +471,15 @@ const defaultForm = (): Partial<User> & { teamId?: number | undefined; branchId?
 });
 
 onMounted(async () => {
-  $q.loading.show({
-    spinner: userSpinner,
-    spinnerColor: 'primary',
-    spinnerSize: 70,
-    backgroundColor: 'white',
-  });
+  // store ยังมีรายชื่อค้างจากรอบก่อน → โชว์ของเดิมทันทีแล้วรีเฟรชเบื้องหลัง ไม่ต้องบังด้วย spinner เต็มจอ
+  if (userStore.users.length === 0) {
+    $q.loading.show({
+      spinner: userSpinner,
+      spinnerColor: 'primary',
+      spinnerSize: 70,
+      backgroundColor: 'white',
+    });
+  }
   void branchStore.fetchBranches().catch(() => {
     $q.notify({ type: 'negative', message: t('adminManage.userManagement.fetchBranchesFailed') });
   });
@@ -489,6 +492,17 @@ onMounted(async () => {
   } finally {
     $q.loading.hide();
   }
+});
+
+// อยู่ใน <keep-alive> ของ AdminScreen: onActivated ยิงทุกครั้งที่สลับแท็บกลับมา รวมถึงครั้งแรกหลัง mount
+// (ซึ่ง onMounted โหลดไปแล้ว) จึงข้ามครั้งแรก ครั้งถัดไปรีเฟรชเบื้องหลังเงียบๆ (ข้อมูลเดิมยังโชว์อยู่)
+let firstActivation = true;
+onActivated(() => {
+  if (firstActivation) {
+    firstActivation = false;
+    return;
+  }
+  void Promise.all([userStore.fetchAllUsers(), loadUsers(), teamStore.fetchAllTeams()]);
 });
 
 const openCreateDialog = () => {

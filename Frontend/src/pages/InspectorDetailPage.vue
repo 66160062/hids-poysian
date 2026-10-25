@@ -512,6 +512,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
+import { cacheKey, peekCache, setCache } from 'src/utils/responseCache';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
@@ -577,10 +578,10 @@ const isSavingJobEdit = ref(false);
 interface HousePlanItem {
   planId?: number;
   url: string;
-  isUploading?: boolean;
   name: string;
   // null = ผู้ใช้พิมพ์ชื่อเอง ไม่มีชื่ออังกฤษ (ไม่ให้ชื่อ default อังกฤษเดิมค้างอยู่หลังแก้ชื่อ)
   nameEn?: string | null;
+  isUploading?: boolean;
 }
 const housePlans = ref<HousePlanItem[]>([]);
 const housePlanFileInput = ref<HTMLInputElement | null>(null);
@@ -635,7 +636,6 @@ async function handleHousePlanFilesChange(event: Event) {
   }
 }
 
-async function removeHousePlan(index: number) {
 async function renameHousePlan(index: number) {
   const plan = housePlans.value[index];
   if (!plan) return;
@@ -655,6 +655,7 @@ async function renameHousePlan(index: number) {
   }
 }
 
+async function removeHousePlan(index: number) {
   const plan = housePlans.value[index];
   if (!plan) return;
   if (plan.planId) {
@@ -745,7 +746,7 @@ async function saveJobEdit() {
     if (editForm.value.projectImageFile) formData.append('projectImageUrl', editForm.value.projectImageFile);
 
     await workListStore.updateJob(job.jobId, formData);
-    await fetchJobDetails();
+    await fetchJobDetails(true);
 
     $q.notify({
       color: 'positive',
@@ -901,11 +902,23 @@ function startInspection() {
 }
 
 // === API Calls ===
-async function fetchJobDetails() {
-  loading.value = true;
+// เคยเปิดงานนี้แล้ว → โชว์ข้อมูลเดิมทันทีแล้วรีเฟรชเบื้องหลัง ไม่ต้องรอ spinner ใหม่ทุกครั้งที่กดเข้า/ย้อนกลับ
+// force = หลังแก้ไข/ส่งงาน ที่ต้องการสถานะล่าสุดจริงๆ ไม่ใช้ของเก่าแสดงคั่น
+const jobCacheKey = cacheKey(`/inspection-rounds/${roundId}`);
+
+async function fetchJobDetails(force = false) {
+  const cached = force ? undefined : peekCache<typeof jobData.value>(jobCacheKey);
+  if (cached) {
+    jobData.value = cached;
+    loading.value = false;
+    void loadHousePlans();
+  } else {
+    loading.value = true;
+  }
   try {
     const res = await api.get(`/inspection-rounds/${roundId}`);
     jobData.value = res.data;
+    setCache(jobCacheKey, res.data);
     void loadHousePlans();
   } catch (error) {
     console.error('Error fetching job details:', error);
@@ -955,7 +968,7 @@ async function executeSubmit() {
   $q.loading.show();
   try {
     await api.patch(`/inspection-rounds/${roundId}/submit`);
-    await fetchJobDetails(); // รีเฟรชข้อมูล ดึงสถานะใหม่มาแสดง
+    await fetchJobDetails(true); // รีเฟรชข้อมูล ดึงสถานะใหม่มาแสดง
     $q.notify({ color: 'positive', message: t('inspector.detail.notifySubmitSuccess'), position: 'top' });
   } catch (error) {
     console.error('Submit Error:', error);
@@ -989,12 +1002,16 @@ const onSubmit = () => {
 };
 
 onMounted(() => {
-  $q.loading.show({
-    spinner: jobDetailSpinner,
-    spinnerColor: 'primary',
-    spinnerSize: 70,
-    backgroundColor: 'white',
-  });
+  // มีข้อมูลเดิมให้โชว์แล้ว → ไม่ต้องบังด้วย spinner เต็มจอ
+  const warm = peekCache(jobCacheKey) !== undefined;
+  if (!warm) {
+    $q.loading.show({
+      spinner: jobDetailSpinner,
+      spinnerColor: 'primary',
+      spinnerSize: 70,
+      backgroundColor: 'white',
+    });
+  }
   void fetchJobDetails().finally(() => {
     $q.loading.hide();
   });

@@ -473,6 +473,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
+import { cacheKey, peekCache, setCache } from 'src/utils/responseCache';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
@@ -712,25 +713,52 @@ function applyRounds(rounds: RoundApiResponse[]) {
   inspectionRounds.value = rounds.map(mapRoundToView);
 }
 
+// ภาพรวมของหน้านี้ตอนโหลดครั้งล่าสุด — เปิดงานเดิมซ้ำ (กดเข้า/ย้อนกลับ) จะโชว์ของเดิมทันทีแล้วรีเฟรชเบื้องหลัง
+interface PageSnapshot {
+  job: JobApiResponse | null;
+  team: TeamMemberChip[];
+  plans: HousePlan[];
+  rounds: RoundApiResponse[];
+}
+const pageCacheKey = computed(() => cacheKey(`admin-job-cons:${jobId.value}`));
+
 async function loadPageData() {
-  $q.loading.show({
-    spinner: detailSpinner,
-    spinnerColor: 'primary',
-    spinnerSize: 70,
-    backgroundColor: 'white',
-  });
+  const snapshot = peekCache<PageSnapshot>(pageCacheKey.value);
+  if (snapshot) {
+    jobData.value = snapshot.job;
+    jobTeamMembers.value = snapshot.team;
+    housePlans.value = snapshot.plans;
+    applyRounds(snapshot.rounds);
+  } else {
+    $q.loading.show({
+      spinner: detailSpinner,
+      spinnerColor: 'primary',
+      spinnerSize: 70,
+      backgroundColor: 'white',
+    });
+  }
   try {
-    await Promise.all([
+    // fetchRounds ไม่ได้ใช้ผลของสี่ตัวแรก จึงยิงพร้อมกันได้ ไม่ต้องรอเป็นรอบที่สอง
+    const [, , , , rounds] = await Promise.all([
       fetchJobDetails(),
       fetchTeamMembers(),
       fetchHousePlans(),
       teamStore.fetchAllTeams(),
+      fetchRounds(),
     ]);
-    const rounds = await fetchRounds();
     applyRounds(rounds);
-    await userStore.fetchUsers().catch((err) => {
-      console.warn('Failed to fetch users for inspector picker:', err);
+    setCache<PageSnapshot>(pageCacheKey.value, {
+      job: jobData.value,
+      team: jobTeamMembers.value,
+      plans: housePlans.value,
+      rounds,
     });
+    // users = ตัวเลือกผู้ตรวจใน dialog สร้างรอบ ไม่ได้ใช้ตอน render หน้า — โหลดเบื้องหลังไม่ให้ค้าง spinner
+    if (userStore.users.length === 0) {
+      void userStore.fetchUsers().catch((err) => {
+        console.warn('Failed to fetch users for inspector picker:', err);
+      });
+    }
   } catch (error) {
     console.error('Failed to load job detail:', error);
     $q.notify({
@@ -1243,8 +1271,10 @@ const submitCreateRound = async () => {
 }
 
 .house-image-wrapper {
+  position: relative;
   width: 100%;
   height: 200px;
+  overflow: hidden;
 }
 
 /* รูปเต็มภาพไม่ถูกตัด (contain) ส่วนที่เหลือเติมด้วยรูปเดียวกันเบลอเป็นพื้นหลัง */
@@ -1283,10 +1313,8 @@ const submitCreateRound = async () => {
 }
 
 .plan-img {
-  position: relative;
   width: 100%;
   height: 100%;
-  overflow: hidden;
 }
 
 .custom-toggle {

@@ -40,7 +40,10 @@
     <q-page-container>
       <router-view v-slot="{ Component }">
         <transition name="jump" mode="out-in">
-          <component :is="Component" />
+          <!-- เก็บหน้าแท็บหลักไว้ไม่ให้ถูกทำลาย สลับแท็บกลับมาจะได้เห็นของเดิมทันที (แต่ละหน้ารีเฟรชเองใน onActivated) -->
+          <keep-alive :include="keptAlivePages">
+            <component :is="Component" />
+          </keep-alive>
         </transition>
       </router-view>
     </q-page-container>
@@ -72,6 +75,17 @@ import { useI18n } from 'vue-i18n';
 import { useAuthStore } from 'src/stores/useAuth';
 import { api } from 'src/boot/axios';
 import LanguageToggle from 'src/components/LanguageToggle.vue';
+
+// หน้าแท็บหลักที่เก็บไว้ใน <keep-alive> — เพิ่มชื่อที่นี่ได้เฉพาะหน้าที่รีเฟรชข้อมูลเองใน onActivated ไม่งั้นจะค้างข้อมูลเก่า
+// ชื่อมาจากชื่อไฟล์ของหน้า (script setup ตั้ง name ให้อัตโนมัติ)
+const keptAlivePages = [
+  'AdminMainPage',
+  'AdminWorkListPage',
+  'AdminDashboardPage',
+  'AdminUserManagementPage',
+  'AdminTeamManagementPage',
+  'MasterDataPage',
+];
 
 const { t, locale } = useI18n({ useScope: 'global' });
 const route = useRoute();
