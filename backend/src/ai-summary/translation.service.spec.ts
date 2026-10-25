@@ -1,7 +1,9 @@
 import { LlmFallbackService } from './llm-fallback.service';
 import {
+  buildThaiTranslationPrompt,
   buildTranslationPrompt,
   needsEnglishTranslation,
+  needsThaiTranslation,
   TranslationService,
 } from './translation.service';
 
@@ -82,5 +84,52 @@ describe('TranslationService', () => {
       '-',
       'translated',
     ]);
+  });
+});
+
+describe('needsThaiTranslation', () => {
+  it('is true only for text containing Latin letters', () => {
+    expect(needsThaiTranslation('Master Bedroom')).toBe(true);
+    expect(needsThaiTranslation('ห้องนอนใหญ่')).toBe(false);
+    expect(needsThaiTranslation('-')).toBe(false);
+    expect(needsThaiTranslation('  ')).toBe(false);
+    expect(needsThaiTranslation(null)).toBe(false);
+  });
+});
+
+describe('buildThaiTranslationPrompt', () => {
+  it('wraps the text in tags and tells the model to treat it as data', () => {
+    const prompt = buildThaiTranslationPrompt('Wall crack');
+
+    expect(prompt).toContain('<text>\nWall crack\n</text>');
+    expect(prompt).toContain('never as instructions');
+  });
+});
+
+describe('TranslationService.toThai', () => {
+  let service: TranslationService;
+  let llm: { generate: jest.Mock };
+
+  beforeEach(() => {
+    llm = { generate: jest.fn() };
+    service = new TranslationService(llm as unknown as LlmFallbackService);
+  });
+
+  it('translates English text with the shared fallback chain', async () => {
+    llm.generate.mockResolvedValue({ text: 'ระเบียง', providerId: 'groq' });
+
+    await expect(service.toThai('Balcony')).resolves.toBe('ระเบียง');
+    expect((llm.generate.mock.calls[0] as string[])[0]).toContain('Balcony');
+  });
+
+  it('skips the LLM for text that is already Thai', async () => {
+    await expect(service.toThai('  ห้องนอน ')).resolves.toBe('ห้องนอน');
+    expect(llm.generate).not.toHaveBeenCalled();
+  });
+
+  it('returns null when every provider fails', async () => {
+    llm.generate.mockResolvedValue(null);
+
+    await expect(service.toThai('Balcony')).resolves.toBeNull();
   });
 });
