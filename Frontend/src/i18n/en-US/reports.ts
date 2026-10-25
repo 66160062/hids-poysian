@@ -31,6 +31,7 @@ export default {
     footerTagline: 'Poysian Home & Condo Inspection',
     jobTypeLabel: 'Job Type:',
     itemsLabel: 'Items:',
+    reportLanguage: 'Report language',
     noteLabel: 'Note:',
     statusLabel: 'Status:',
     statusPendingRepair: 'Pending Repair',

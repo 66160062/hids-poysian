@@ -59,6 +59,20 @@
       >
         <q-tooltip>{{ t('common.resetZoom') || 'ขนาดจริง 100%' }}</q-tooltip>
       </q-btn>
+      <q-separator vertical class="q-mx-xs" style="height: 18px" />
+      <q-btn-toggle
+        v-model="locale"
+        :options="reportLanguageOptions"
+        dense
+        unelevated
+        no-caps
+        size="sm"
+        toggle-color="primary"
+        color="grey-3"
+        text-color="dark"
+        class="report-language-toggle"
+        :aria-label="t('reports.defect.reportLanguage')"
+      />
     </div>
 
     <!-- Scaler container that matches the scaled height & width -->
@@ -793,13 +807,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
-import { useLocalizedField, localizedName } from 'src/composables/useLocalizedField';
+import messages from 'src/i18n';
 
-const { t, locale } = useI18n();
-const { pickLocalized } = useLocalizedField();
+// ภาษาของรายงานแยกจากภาษาของระบบ: เริ่มจากภาษาระบบ (หรือ ?lang= ของหน้า print) แล้วสลับเองได้จากปุ่มบนรายงาน
+// โดยไม่เปลี่ยนภาษาของเมนู/หน้าที่ครอบอยู่ — t, locale และชื่อสองภาษาทั้งหมดในไฟล์นี้จึงอ้างจาก scope ของคอมโพเนนต์นี้
+const { locale: appLocale } = useI18n({ useScope: 'global' });
+const { t, locale } = useI18n({
+  useScope: 'local',
+  inheritLocale: false,
+  locale: appLocale.value,
+  fallbackLocale: 'en-US',
+  messages,
+});
+
+const reportLanguageOptions = [
+  { label: 'TH', value: 'th-TH' },
+  { label: 'EN', value: 'en-US' },
+];
+
+// กฎเดียวกับ useLocalizedField แต่อ่านจาก locale ของรายงาน ไม่ใช่ locale ของระบบ
+function pickLocalized(th: string | null | undefined, en: string | null | undefined): string {
+  if (locale.value === 'en-US' && en) return en;
+  return th || en || '';
+}
+
+function localizedName(item: { name?: string | null; nameEn?: string | null } | null | undefined): string {
+  return pickLocalized(item?.name, item?.nameEn);
+}
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
 import { clusterPlanPins } from 'src/utils/planPinClusters';
 import PoysianLogo from 'src/assets/Logos/Poysian.png';
@@ -1064,6 +1101,7 @@ async function checkReportFreshness() {
   try {
     const { data } = await api.get<{ isStale: boolean }>(
       `/inspection-rounds/${props.round.roundId}/report`,
+      { params: { lang: locale.value } },
     );
     isReportStale.value = data.isStale;
     if (!data.isStale && freshnessTimer) {
@@ -1074,6 +1112,20 @@ async function checkReportFreshness() {
     // เช็คไม่สำเร็จ ไม่โชว์ banner ผิดๆ ปล่อยผ่านเงียบๆ
   }
 }
+
+function startFreshnessPolling() {
+  if (freshnessTimer) clearInterval(freshnessTimer);
+  void checkReportFreshness();
+  freshnessTimer = setInterval(() => void checkReportFreshness(), 8000);
+}
+
+// PDF แต่ละภาษามี cache และ hash แยกกัน — สลับภาษาแล้วต้องเช็คของภาษาใหม่ (และเริ่ม polling ใหม่
+// เพราะ polling เดิมถูกหยุดไปแล้วถ้าฉบับภาษาก่อนหน้า "ล่าสุด" แล้ว)
+watch(locale, () => {
+  if (!props.checkFreshness) return;
+  isReportStale.value = false;
+  startFreshnessPolling();
+});
 
 onMounted(() => {
   fitWidth();
@@ -1099,8 +1151,7 @@ onMounted(() => {
   }
 
   if (props.checkFreshness) {
-    void checkReportFreshness();
-    freshnessTimer = setInterval(() => void checkReportFreshness(), 8000);
+    startFreshnessPolling();
   }
   void useBranchStore().fetchBranches();
 });
