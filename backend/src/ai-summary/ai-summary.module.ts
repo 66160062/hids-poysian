@@ -4,6 +4,8 @@ import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round
 import { Defect } from 'src/defects/entities/defect.entity';
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
 import { AiSummaryService } from './ai-summary.service';
+import { LlmFallbackService } from './llm-fallback.service';
+import { TranslationService } from './translation.service';
 import { ProviderRegistryService } from './providers/provider-registry.service';
 import { ClaudeProvider } from './providers/claude.provider';
 import { GeminiProvider } from './providers/gemini.provider';
@@ -17,12 +19,14 @@ import { OllamaProvider } from './providers/ollama.provider';
   ],
   providers: [
     AiSummaryService,
+    LlmFallbackService,
+    TranslationService,
     ProviderRegistryService,
     ClaudeProvider,
     GeminiProvider,
     GroqProvider,
     OllamaProvider,
   ],
-  exports: [AiSummaryService],
+  exports: [AiSummaryService, TranslationService],
 })
 export class AiSummaryModule {}

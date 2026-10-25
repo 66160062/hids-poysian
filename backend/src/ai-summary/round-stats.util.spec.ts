@@ -156,3 +156,91 @@ describe('buildSummaryPrompt', () => {
     expect(prompt).toContain('ไม่มี');
   });
 });
+
+describe('buildSummaryPrompt (en-US)', () => {
+  it('is written in English and embeds the exact computed percent', () => {
+    const prompt = buildSummaryPrompt(
+      baseStats({ completionPercent: 87 }),
+      'en-US',
+    );
+
+    expect(prompt).toContain('Write the summary in English');
+    expect(prompt).toContain('Overall home completion: 87%');
+    expect(prompt).not.toContain('ห้ามคำนวณใหม่');
+  });
+
+  it('uses the English names from the database when they exist', () => {
+    const prompt = buildSummaryPrompt(
+      baseStats({
+        topCategories: [{ name: 'งานสี', nameEn: 'Painting', count: 3 }],
+        topFloors: [{ name: 'ชั้น 2', nameEn: 'Floor 2', count: 3 }],
+        failedSystems: [
+          {
+            category: 'งานระบบไฟฟ้า',
+            label: 'มิเตอร์ไฟฟ้า',
+            value: 'ยังไม่ได้ติดตั้ง',
+            labelEn: 'Electric meter',
+            valueEn: 'Not installed',
+          },
+        ],
+      }),
+      'en-US',
+    );
+
+    expect(prompt).toContain('Painting (3 items)');
+    expect(prompt).toContain('Floor 2 (3 items)');
+    expect(prompt).toContain('Electric meter (Not installed)');
+  });
+
+  it('falls back to the Thai name and asks the model to translate it', () => {
+    const prompt = buildSummaryPrompt(
+      baseStats({ topCategories: [{ name: 'งานสี', count: 3 }] }),
+      'en-US',
+    );
+
+    expect(prompt).toContain('งานสี (3 items)');
+    expect(prompt).toContain('translate it into natural English');
+  });
+
+  it('tells the model not to mention system checks when none were filled in', () => {
+    const prompt = buildSummaryPrompt(
+      baseStats({ systemScore: null, systemAssessedCount: 0 }),
+      'en-US',
+    );
+
+    expect(prompt).toContain('do not mention it');
+  });
+});
+
+describe('buildRoundStats (english names)', () => {
+  it('keeps the first English name seen for each Thai category and floor', () => {
+    const stats = buildRoundStats({
+      defects: [
+        defect({
+          categoryName: 'งานสี',
+          categoryNameEn: 'Painting',
+          floorName: 'ชั้น 1',
+          floorNameEn: 'Floor 1',
+        }),
+        defect({
+          categoryName: 'งานสี',
+          categoryNameEn: null,
+          floorName: 'ชั้น 1',
+        }),
+      ],
+      summaryItems: [],
+      ...HOUSE,
+    });
+
+    expect(stats.topCategories[0]).toMatchObject({
+      name: 'งานสี',
+      nameEn: 'Painting',
+      count: 2,
+    });
+    expect(stats.topFloors[0]).toMatchObject({
+      name: 'ชั้น 1',
+      nameEn: 'Floor 1',
+      count: 2,
+    });
+  });
+});

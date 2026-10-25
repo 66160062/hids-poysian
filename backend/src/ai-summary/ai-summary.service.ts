@@ -5,10 +5,12 @@ import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round
 import { Defect } from 'src/defects/entities/defect.entity';
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
 import { ProviderRegistryService } from './providers/provider-registry.service';
+import { LlmFallbackService } from './llm-fallback.service';
 import {
   buildRoundStats,
   buildSummaryPrompt,
   RoundStats,
+  SummaryLocale,
 } from './round-stats.util';
 
 @Injectable()
@@ -23,6 +25,7 @@ export class AiSummaryService {
     @InjectRepository(InspectionSummaryItem)
     private readonly summaryItemRepo: Repository<InspectionSummaryItem>,
     private readonly providerRegistry: ProviderRegistryService,
+    private readonly llm: LlmFallbackService,
   ) {}
 
   async computeStats(roundId: number): Promise<RoundStats> {
@@ -49,15 +52,20 @@ export class AiSummaryService {
         severity: d.severity,
         status: d.status,
         categoryName: d.subCategories?.[0]?.category?.name ?? 'ไม่ระบุประเภท',
+        categoryNameEn: d.subCategories?.[0]?.category?.nameEn,
         // ใช้ทุกหมวดที่ defect จุดนี้ผูกอยู่มาคิดความสำคัญ ไม่ใช่แค่หมวดแรก
         categoryNames:
           d.subCategories?.map((s) => s.category?.name ?? '') ?? [],
         floorName: d.floor?.label ?? 'ไม่ระบุชั้น',
+        floorNameEn: d.floor?.labelEn,
       })),
       summaryItems: summaryItems.map((item) => ({
         category: item.template?.category ?? '',
         label: item.template?.label ?? '',
         optionValue: item.option?.value ?? '',
+        categoryEn: item.template?.categoryEn,
+        labelEn: item.template?.labelEn,
+        optionValueEn: item.option?.valueEn,
       })),
       usableArea: round?.job?.usableArea,
       floorCount: Number.isNaN(floorCount) ? null : floorCount,
@@ -66,18 +74,21 @@ export class AiSummaryService {
 
   // เรียกจาก ReportsService ทุกครั้งที่จะ render PDF ใหม่ — ใช้ hash เดียวกับที่ PDF ใช้เช็คว่าข้อมูล defect เปลี่ยนจริงไหม
   // เพื่อไม่ต้องยิง LLM API ซ้ำเวลาข้อมูลไม่เปลี่ยน (ประหยัด cost และ rate limit)
+  // สรุปไทยกับอังกฤษเก็บ hash แยกกัน: ถ้าฉบับใดล้มเหลวจะถูกลองใหม่รอบหน้า โดยไม่ต้องยิงฉบับที่สำเร็จแล้วซ้ำ
   async generateIfChanged(roundId: number, dataHash: string): Promise<void> {
     const round = await this.roundRepo.findOneBy({ roundId });
     if (!round) return;
-    if (round.aiSummaryDataHash === dataHash) {
+
+    const thaiFresh = round.aiSummaryDataHash === dataHash;
+    const englishFresh = round.aiSummaryEnDataHash === dataHash;
+    if (thaiFresh && englishFresh) {
       this.logger.log(
         `รอบตรวจ ${roundId}: ข้อมูล defect ไม่เปลี่ยน ข้าม AI summary`,
       );
       return;
     }
 
-    const chain = this.providerRegistry.getFallbackChain();
-    if (chain.length === 0) {
+    if (!this.llm.hasProviders()) {
       this.logger.warn(
         `รอบตรวจ ${roundId}: ไม่มี AI provider ที่ configure ไว้ (ตั้ง ANTHROPIC_API_KEY/GEMINI_API_KEY/GROQ_API_KEY/OLLAMA_MODEL) ข้าม AI summary`,
       );
@@ -85,40 +96,41 @@ export class AiSummaryService {
     }
 
     const stats = await this.computeStats(roundId);
-    const prompt = buildSummaryPrompt(stats);
+    // ยังบันทึกคะแนนความสมบูรณ์ไว้ได้แม้ AI text จะล้มเหลวทุกตัว เพราะคำนวณจากสูตร ไม่ต้องพึ่ง LLM
+    applyScore(round, stats);
 
-    // ไล่ลองตาม fallback chain ทีละตัว — ตัวไหน error/rate-limit ก็ข้ามไปตัวถัดไปทันที
-    // ไม่ต้องรอ manual switch เหมือนก่อนหน้าที่พึ่ง provider เดียว
-    for (const provider of chain) {
-      try {
-        const result = await provider.generate(prompt);
-        const text = result.text.trim();
-        // reasoning model บางตัว (เช่น gpt-oss ผ่าน Groq) คืนข้อความว่างเปล่าเมื่อ token หมดตอน reasoning
-        // ถือเป็นความล้มเหลว ไม่งั้นจะบันทึกสรุปเปล่าลงรายงานที่ส่งให้ลูกค้า
-        if (!text) {
-          throw new Error('ได้ข้อความสรุปว่างเปล่ากลับมา');
-        }
-
-        applyScore(round, stats);
-        round.aiSummaryText = text;
-        round.aiSummaryProvider = provider.id;
+    if (!thaiFresh) {
+      const thai = await this.llm.generate(
+        buildSummaryPrompt(stats, 'th-TH'),
+        `รอบตรวจ ${roundId} (th-TH)`,
+      );
+      if (thai) {
+        round.aiSummaryText = thai.text;
+        round.aiSummaryProvider = thai.providerId;
         round.aiSummaryDataHash = dataHash;
         round.aiSummaryGeneratedAt = new Date();
-        await this.roundRepo.save(round);
-        return;
-      } catch (error) {
-        this.logger.warn(
-          `รอบตรวจ ${roundId}: ${provider.id} ล้มเหลว ลอง provider ถัดไปใน fallback chain`,
-          error instanceof Error ? error.message : String(error),
+      } else {
+        this.logger.error(
+          `รอบตรวจ ${roundId}: AI provider ทุกตัวใน fallback chain ล้มเหลว (ฉบับไทย) บันทึกแค่ % ความสมบูรณ์`,
         );
       }
     }
 
-    this.logger.error(
-      `รอบตรวจ ${roundId}: AI provider ทุกตัวใน fallback chain ล้มเหลว บันทึกแค่ % ความสมบูรณ์`,
-    );
-    // ยังบันทึกคะแนนความสมบูรณ์ไว้ได้แม้ AI text จะล้มเหลวทุกตัว เพราะคำนวณจากสูตร ไม่ต้องพึ่ง LLM
-    applyScore(round, stats);
+    if (!englishFresh) {
+      const english = await this.llm.generate(
+        buildSummaryPrompt(stats, 'en-US'),
+        `รอบตรวจ ${roundId} (en-US)`,
+      );
+      if (english) {
+        round.aiSummaryTextEn = english.text;
+        round.aiSummaryEnDataHash = dataHash;
+      } else {
+        this.logger.error(
+          `รอบตรวจ ${roundId}: AI provider ทุกตัวใน fallback chain ล้มเหลว (ฉบับอังกฤษ) ใช้ฉบับไทยแทนไปก่อน`,
+        );
+      }
+    }
+
     await this.roundRepo.save(round);
   }
 
@@ -126,6 +138,7 @@ export class AiSummaryService {
   async generateWithProvider(
     roundId: number,
     providerId: string,
+    locale: SummaryLocale = 'th-TH',
   ): Promise<{ stats: RoundStats; text: string; provider: string }> {
     const provider = this.providerRegistry.getById(providerId);
     if (!provider?.isConfigured()) {
@@ -133,13 +146,17 @@ export class AiSummaryService {
     }
 
     const stats = await this.computeStats(roundId);
-    const result = await provider.generate(buildSummaryPrompt(stats));
+    const result = await provider.generate(buildSummaryPrompt(stats, locale));
 
     const round = await this.roundRepo.findOneByOrFail({ roundId });
     applyScore(round, stats);
-    round.aiSummaryText = result.text.trim();
-    round.aiSummaryProvider = provider.id;
-    round.aiSummaryGeneratedAt = new Date();
+    if (locale === 'en-US') {
+      round.aiSummaryTextEn = result.text.trim();
+    } else {
+      round.aiSummaryText = result.text.trim();
+      round.aiSummaryProvider = provider.id;
+      round.aiSummaryGeneratedAt = new Date();
+    }
     await this.roundRepo.save(round);
 
     return { stats, text: result.text.trim(), provider: provider.id };
