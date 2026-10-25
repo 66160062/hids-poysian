@@ -19,5 +19,5 @@ export class UpdateHousePlanDto {
   @IsOptional()
   @IsString()
   @MaxLength(255)
-  nameEn?: string;
+  nameEn?: string | null;
 }

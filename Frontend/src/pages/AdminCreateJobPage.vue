@@ -611,6 +611,7 @@
               class="custom-input plan-name-field q-mt-xs"
               :disable="plan.isUploading"
               :placeholder="t('adminWork.createJob.planNamePlaceholder')"
+              @update:model-value="plan.nameEn = null"
               @blur="renameHousePlan(planIdx)"
               @keyup.enter="($event.target as HTMLInputElement).blur()"
             />
@@ -905,7 +906,8 @@ interface HousePlanItem {
   url: string;
   file?: File;
   name: string;
-  nameEn?: string;
+  // null = ผู้ใช้พิมพ์ชื่อเอง ไม่มีชื่ออังกฤษ (ไม่ให้ชื่อ default อังกฤษเดิมค้างอยู่หลังแก้ชื่อ)
+  nameEn?: string | null;
   isUploading?: boolean;
 }
 const housePlans = ref<HousePlanItem[]>([]);
@@ -915,7 +917,7 @@ const triggerPlanUpload = () => {
   planFileInput.value?.click();
 };
 
-const uploadHousePlan = async (jobId: number, file: File, name: string, nameEn?: string) => {
+const uploadHousePlan = async (jobId: number, file: File, name: string, nameEn?: string | null) => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('name', name);
@@ -975,7 +977,7 @@ const renameHousePlan = async (index: number) => {
   if (!plan.planId) return;
 
   try {
-    await api.patch(`/house-plans/${plan.planId}`, { name: plan.name, nameEn: plan.nameEn });
+    await api.patch(`/house-plans/${plan.planId}`, { name: plan.name.trim(), nameEn: plan.nameEn ?? null });
   } catch (error) {
     console.error('Failed to rename house plan', error);
     $q.notify({ message: t('adminWork.createJob.saveError'), color: 'negative', position: 'top' });

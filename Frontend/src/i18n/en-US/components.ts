@@ -51,6 +51,9 @@ export default {
     uploadPlanSuccess: 'Plan image uploaded successfully',
     uploadPlanPartialSuccess: 'Uploaded {success}/{total} photos successfully',
     uploadPlanFailed: 'Unable to upload plan image',
+    savePlansButton: 'Save Plans ({count})',
+    pendingPlansHint: 'Take or choose plan photos, then name each one before saving',
+    renamePlanFailed: 'Unable to rename the plan',
     defaultPlanName: 'House Plan {n}',
   },
   inspectorCalendar: {

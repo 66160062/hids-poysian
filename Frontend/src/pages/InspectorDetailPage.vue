@@ -410,6 +410,17 @@
                     @click.stop="removeHousePlan(planIdx)"
                   />
                 </q-card>
+                <q-input
+                  v-model="plan.name"
+                  dense
+                  filled
+                  class="q-mt-xs"
+                  :disable="plan.isUploading"
+                  :placeholder="t('adminWork.createJob.planNamePlaceholder')"
+                  @update:model-value="plan.nameEn = null"
+                  @blur="renameHousePlan(planIdx)"
+                  @keyup.enter="($event.target as HTMLInputElement).blur()"
+                />
               </div>
               <div class="col-6 col-sm-4">
                 <q-card
@@ -567,6 +578,9 @@ interface HousePlanItem {
   planId?: number;
   url: string;
   isUploading?: boolean;
+  name: string;
+  // null = ผู้ใช้พิมพ์ชื่อเอง ไม่มีชื่ออังกฤษ (ไม่ให้ชื่อ default อังกฤษเดิมค้างอยู่หลังแก้ชื่อ)
+  nameEn?: string | null;
 }
 const housePlans = ref<HousePlanItem[]>([]);
 const housePlanFileInput = ref<HTMLInputElement | null>(null);
@@ -576,7 +590,12 @@ async function loadHousePlans() {
   if (!jobId) return;
   try {
     const { data } = await api.get<HousePlan[]>(`/inspection-jobs/${jobId}/house-plans`);
-    housePlans.value = data.map((p) => ({ planId: p.planId, url: getImageUrl(p.imageUrl) || p.imageUrl }));
+    housePlans.value = data.map((p) => ({
+      planId: p.planId,
+      url: getImageUrl(p.imageUrl) || p.imageUrl,
+      name: p.name,
+      nameEn: p.nameEn ?? null,
+    }));
   } catch (error) {
     console.error('Failed to load house plans', error);
   }
@@ -595,7 +614,7 @@ async function handleHousePlanFilesChange(event: Event) {
 
   for (const file of files) {
     const { th: name, en: nameEn } = defaultPlanNames(housePlans.value.length + 1);
-    const item: HousePlanItem = { url: URL.createObjectURL(file), isUploading: true };
+    const item: HousePlanItem = { url: URL.createObjectURL(file), name, nameEn, isUploading: true };
     housePlans.value.push(item);
     try {
       const formData = new FormData();
@@ -617,6 +636,25 @@ async function handleHousePlanFilesChange(event: Event) {
 }
 
 async function removeHousePlan(index: number) {
+async function renameHousePlan(index: number) {
+  const plan = housePlans.value[index];
+  if (!plan) return;
+
+  if (!plan.name.trim()) {
+    const defaults = defaultPlanNames(index + 1);
+    plan.name = defaults.th;
+    plan.nameEn = defaults.en;
+  }
+  if (!plan.planId) return;
+
+  try {
+    await api.patch(`/house-plans/${plan.planId}`, { name: plan.name.trim(), nameEn: plan.nameEn ?? null });
+  } catch (error) {
+    console.error('Failed to rename house plan', error);
+    $q.notify({ message: t('inspector.detail.editSaveFailed'), color: 'negative', position: 'top' });
+  }
+}
+
   const plan = housePlans.value[index];
   if (!plan) return;
   if (plan.planId) {
