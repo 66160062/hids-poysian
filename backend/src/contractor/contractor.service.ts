@@ -27,7 +27,9 @@ export class ContractorService {
   }
 
   async update(id: number, updateContractorDto: UpdateContractorDto) {
-    const contractor = await this.contractorRepo.findOneByOrFail({ contractorId: id });
+    const contractor = await this.contractorRepo.findOneByOrFail({
+      contractorId: id,
+    });
     Object.assign(contractor, updateContractorDto);
     return await this.contractorRepo.save(contractor);
   }

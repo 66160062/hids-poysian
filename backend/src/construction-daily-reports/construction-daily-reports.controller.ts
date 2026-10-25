@@ -15,6 +15,7 @@ import { memoryStorage } from 'multer';
 import { Request } from 'express';
 import { ConstructionDailyReportsService } from './construction-daily-reports.service';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { RoundAccessGuard } from 'src/auth/round-access.guard';
 
 @ApiTags('construction-daily-reports')
 @Controller('construction-daily-reports')
@@ -66,6 +67,7 @@ export class ConstructionDailyReportsController {
   }
 
   @Get('round/:roundId')
+  @UseGuards(RoundAccessGuard)
   @ApiOperation({ summary: 'ดึงรายงานก่อสร้างล่าสุดตาม roundId' })
   findByRound(@Param('roundId') roundId: string) {
     return this.service.findByRound(+roundId);

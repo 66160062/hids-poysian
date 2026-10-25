@@ -97,7 +97,7 @@
                   <div class="col q-ml-md min-width-0">
                     <div class="row no-wrap items-start">
                       <div class="col notif-message" :class="{ 'text-weight-bold': !item.isRead }">
-                        {{ item.message }}
+                        {{ notificationText(item) }}
                       </div>
                       <q-icon
                         v-if="!item.isRead"
@@ -295,7 +295,7 @@
             </div>
 
             <div class="text-h5 text-weight-bold text-dark q-mb-md">
-              {{ selectedNotification.message }}
+              {{ notificationText(selectedNotification) }}
             </div>
 
             <div class="row items-center text-grey-6 q-mb-lg" style="font-size: 14px;">
@@ -335,14 +335,22 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useLocalizedField } from 'src/composables/useLocalizedField';
 import { api } from 'src/boot/axios';
 
 const router = useRouter();
 const { t } = useI18n();
+const { pickLocalized } = useLocalizedField();
+
+// แจ้งเตือนเก่าที่ยังไม่มีฉบับอังกฤษจะแสดงข้อความไทยแทน
+function notificationText(n: { message: string; messageEn?: string | null }) {
+  return pickLocalized(n.message, n.messageEn);
+}
 
 interface NotificationItem {
   notificationId: number;
   message: string;
+  messageEn?: string | null;
   type: string;
   isRead: boolean;
   createdAt: string;
@@ -452,7 +460,9 @@ const filteredNotifications = computed(() => {
 
   if (searchTerm.value) {
     const term = searchTerm.value.toLowerCase();
-    result = result.filter((n) => n.message.toLowerCase().includes(term));
+    result = result.filter((n) =>
+      `${n.message} ${n.messageEn ?? ''}`.toLowerCase().includes(term),
+    );
   }
 
   result.sort((a, b) => {

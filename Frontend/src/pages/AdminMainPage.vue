@@ -304,7 +304,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onActivated, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
@@ -313,6 +313,7 @@ import type { AxiosResponse } from 'axios';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { useJobStatus, type JobStatusCode } from 'src/composables/useJobStatus';
 import { useBranchStore } from 'src/stores/useBranch';
+import { cacheKey, peekCache, setCache } from 'src/utils/responseCache';
 import { useAuthStore } from 'src/stores/useAuth';
 import type {
   BranchOption,
@@ -565,56 +566,70 @@ interface DashboardApiResponse extends DashboardStats {
   tasks: TaskItem[];
 }
 
+function applyAdminDashboard(data: DashboardApiResponse): void {
+  dashboard.value = {
+    totalProjects: data.totalProjects,
+    inProgress: data.inProgress,
+    singleHouse: data.singleHouse,
+    townhouse: data.townhouse,
+    condo: data.condo,
+    construction: data.construction,
+    homeStatusBreakdown: Array.isArray(data.homeStatusBreakdown)
+      ? data.homeStatusBreakdown
+      : [],
+    constructionStatusBreakdown: Array.isArray(data.constructionStatusBreakdown)
+      ? data.constructionStatusBreakdown
+      : [],
+  };
+
+  branches.value = Array.isArray(data.branches) ? data.branches : [];
+
+  if (data.calendarEvents && Array.isArray(data.calendarEvents)) {
+    calendarEvents.value = data.calendarEvents;
+  } else {
+    calendarEvents.value = [];
+  }
+
+  if (data.tasks && Array.isArray(data.tasks)) {
+    tasks.value = data.tasks;
+    currentPage.value = 1;
+  } else {
+    tasks.value = [];
+  }
+}
+
+function adminDashboardRequest(): { key: string; params: { date: string; branchId?: number } } {
+  // สร้าง date parameter ตามเดือนที่แสดงบนปฏิทิน
+  const dateParam: string = `${displayYear.value}-${String(displayMonth.value + 1).padStart(2, '0')}-01`;
+  const params: { date: string; branchId?: number } = { date: dateParam };
+  if (selectedBranchId.value !== 'all') {
+    params.branchId = selectedBranchId.value;
+  }
+  return { key: cacheKey('/admin/dashboard', params), params };
+}
+
+// เคยโหลดเดือน/สาขานี้แล้ว → โชว์ของเดิมทันทีแล้วรีเฟรชเบื้องหลัง ไม่ต้องบังด้วย spinner เต็มจอ
 async function fetchAdminDashboard(): Promise<void> {
-  $q.loading.show({
-    spinner: homeSpinner,
-    spinnerColor: 'primary',
-    spinnerSize: 70,
-    backgroundColor: 'white',
-  });
+  const { key, params } = adminDashboardRequest();
+  const cached = peekCache<DashboardApiResponse>(key);
+  if (cached) {
+    applyAdminDashboard(cached);
+  } else {
+    $q.loading.show({
+      spinner: homeSpinner,
+      spinnerColor: 'primary',
+      spinnerSize: 70,
+      backgroundColor: 'white',
+    });
+  }
   error.value = '';
 
   try {
-    // สร้าง date parameter ตามเดือนที่แสดงบนปฏิทิน
-    const dateParam: string = `${displayYear.value}-${String(displayMonth.value + 1).padStart(2, '0')}-01`;
-    const params: { date: string; branchId?: number } = { date: dateParam };
-    if (selectedBranchId.value !== 'all') {
-      params.branchId = selectedBranchId.value;
-    }
     const res: AxiosResponse<DashboardApiResponse> = await api.get<DashboardApiResponse>('/admin/dashboard', {
       params,
     });
-    const data: DashboardApiResponse = res.data;
-
-    dashboard.value = {
-      totalProjects: data.totalProjects,
-      inProgress: data.inProgress,
-      singleHouse: data.singleHouse,
-      townhouse: data.townhouse,
-      condo: data.condo,
-      construction: data.construction,
-      homeStatusBreakdown: Array.isArray(data.homeStatusBreakdown)
-        ? data.homeStatusBreakdown
-        : [],
-      constructionStatusBreakdown: Array.isArray(data.constructionStatusBreakdown)
-        ? data.constructionStatusBreakdown
-        : [],
-    };
-
-    branches.value = Array.isArray(data.branches) ? data.branches : [];
-
-    if (data.calendarEvents && Array.isArray(data.calendarEvents)) {
-      calendarEvents.value = data.calendarEvents;
-    } else {
-      calendarEvents.value = [];
-    }
-
-    if (data.tasks && Array.isArray(data.tasks)) {
-      tasks.value = data.tasks;
-      currentPage.value = 1;
-    } else {
-      tasks.value = [];
-    }
+    setCache(key, res.data);
+    applyAdminDashboard(res.data);
   } catch (err: unknown) {
     error.value = t('adminWork.main.loadError');
     console.error('fetchAdminDashboard error:', err);
@@ -624,6 +639,17 @@ async function fetchAdminDashboard(): Promise<void> {
 }
 
 onMounted((): void => {
+  void fetchAdminDashboard();
+});
+
+// อยู่ใน <keep-alive> ของ layout: onActivated ยิงทุกครั้งที่สลับแท็บกลับมา รวมถึงครั้งแรกหลัง mount
+// (ซึ่ง onMounted โหลดไปแล้ว) จึงข้ามครั้งแรก ครั้งถัดไปรีเฟรชเบื้องหลังเงียบๆ (ข้อมูลเดิมยังโชว์อยู่)
+let firstActivation = true;
+onActivated(() => {
+  if (firstActivation) {
+    firstActivation = false;
+    return;
+  }
   void fetchAdminDashboard();
 });
 </script>

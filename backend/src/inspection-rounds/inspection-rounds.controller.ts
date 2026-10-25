@@ -23,6 +23,7 @@ import { RoundAccessGuard } from 'src/auth/round-access.guard';
 import { InspectorSelfOrAdminGuard } from 'src/auth/inspector-self-or-admin.guard';
 import { ReportsService, ReportLocale } from 'src/reports/reports.service';
 import { AiSummaryService } from 'src/ai-summary/ai-summary.service';
+import type { SummaryLocale } from 'src/ai-summary/round-stats.util';
 
 @Controller('inspection-rounds')
 export class InspectionRoundsController {
@@ -86,8 +87,10 @@ export class InspectionRoundsController {
   generateAiSummary(
     @Param('id') id: string,
     @Body('provider') provider: string,
+    @Body('lang') lang?: string,
   ) {
-    return this.aiSummaryService.generateWithProvider(+id, provider);
+    const locale: SummaryLocale = lang === 'en-US' ? 'en-US' : 'th-TH';
+    return this.aiSummaryService.generateWithProvider(+id, provider, locale);
   }
 
   // จุดที่ inspector บอกว่า "ตรวจ/แก้ไขรอบนี้เสร็จแล้ว" — ก่อนหน้านี้ defect แต่ละตัวที่เพิ่ม/แก้/ลบ
@@ -138,10 +141,9 @@ export class InspectionRoundsController {
   @Patch(':id/job-info')
   @UseGuards(RoundAccessGuard)
   @UseInterceptors(
-    FileFieldsInterceptor(
-      [{ name: 'projectImageUrl', maxCount: 1 }],
-      { storage: memoryStorage() },
-    ),
+    FileFieldsInterceptor([{ name: 'projectImageUrl', maxCount: 1 }], {
+      storage: memoryStorage(),
+    }),
   )
   updateJobInfo(
     @Param('id') id: string,

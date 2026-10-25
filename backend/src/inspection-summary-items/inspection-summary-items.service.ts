@@ -83,6 +83,8 @@ export class InspectionSummaryItemsService {
       });
     }
     if (dto.detailValue !== undefined) {
+      // คำแปลเดิมใช้กับข้อความใหม่ไม่ได้ ล้างทิ้งให้แปลใหม่ตอน render PDF อังกฤษ
+      if (dto.detailValue !== item.detailValue) item.detailValueEn = null;
       item.detailValue = dto.detailValue;
     }
 
@@ -210,6 +212,21 @@ export class InspectionSummaryItemsService {
     const templateById = new Map(templates.map((t) => [t.templateId, t]));
     const optionById = new Map(options.map((o) => [o.optionId, o]));
 
+    const previous = await this.itemsRepo.find({
+      where: { round: { roundId }, photoUrl: IsNull() },
+      relations: ['template'],
+      select: { itemId: true, detailValue: true, detailValueEn: true },
+    });
+    const translationByKey = new Map<string, string>();
+    for (const old of previous) {
+      if (old.detailValueEn && old.template) {
+        translationByKey.set(
+          `${old.template.templateId}|${old.detailValue}`,
+          old.detailValueEn,
+        );
+      }
+    }
+
     const rows = items.map((item) => {
       const template = templateById.get(item.templateId);
       const option = optionById.get(item.optionId);
@@ -218,7 +235,20 @@ export class InspectionSummaryItemsService {
           `ไม่พบหัวข้อ ${item.templateId} หรือตัวเลือก ${item.optionId}`,
         );
       }
-      return { round, template, option, detailValue: item.detailValue ?? '' };
+      const detailValue = item.detailValue ?? '';
+      return {
+        round,
+        template,
+        option,
+        detailValue,
+        // ยกคำแปลเดิมมาใช้ต่อถ้าหัวข้อและข้อความเหมือนเดิม — ไม่งั้นทุกครั้งที่กดบันทึกแบบสรุป
+        // (ลบแล้วสร้างใหม่ทั้งรอบ) หมายเหตุทุกอันจะต้องถูกส่งไปแปลซ้ำ
+        detailValueEn:
+          detailValue.trim() !== ''
+            ? (translationByKey.get(`${template.templateId}|${detailValue}`) ??
+              null)
+            : null,
+      };
     });
 
     // ต้องเก็บ item ประเภทรูปไว้ เพราะรายการที่ส่งมาแทนที่เป็นแค่คำตอบ ไม่รวมรูปที่อัปโหลดแยกไว้

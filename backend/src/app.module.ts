@@ -68,6 +68,7 @@ import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { ActivityLog } from './activity-logs/entities/activity-log.entity';
 import { Assignment } from './assignments/entities/assignment.entity';
 import { AiSummaryModule } from './ai-summary/ai-summary.module';
+import { TranslateModule } from './translate/translate.module';
 import { HousePlan } from './house-plans/entities/house-plan.entity';
 import { HousePlansModule } from './house-plans/house-plans.module';
 @Module({
@@ -130,6 +131,7 @@ import { HousePlansModule } from './house-plans/house-plans.module';
     }),
     StorageModule,
     AiSummaryModule,
+    TranslateModule,
     ReportsModule,
     ActivityLogsModule,
     AuthModule,

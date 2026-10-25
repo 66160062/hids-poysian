@@ -715,12 +715,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, onActivated, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { useTeamStore } from 'src/stores/useTeam';
 import { useUserStore } from 'src/stores/useUser';
-import { useBranchStore, type Branch } from 'src/stores/useBranch';
+import { useBranchStore, type Branch, type BranchContacts } from 'src/stores/useBranch';
 import { useCustomerStore, type Customer } from 'src/stores/useCustomer';
 import { useContractorStore, type Contractor, type ContractorPayload } from 'src/stores/useContractor';
 import { useAuthStore } from 'src/stores/useAuth';
@@ -941,11 +941,11 @@ const branchFormOptions = computed(() => {
 const branchFilterChips = computed(() => {
   void locale.value;
   return [
-    { label: t('adminManage.teamManagement.allBranchesOption'), value: null, count: teamStore.teams.length },
+    { label: t('adminManage.teamManagement.allBranchesOption'), value: null, count: allTeamsList.value.length },
     ...branchStore.branches.map((b) => ({
       label: b.branchName || t('adminManage.teamManagement.branchFallbackLabel', { id: b.branchId }),
       value: b.branchId,
-      count: teamStore.teams.filter((t) => t.branchId === b.branchId).length,
+      count: allTeamsList.value.filter((t) => t.branchId === b.branchId).length,
     })),
   ];
 });
@@ -962,11 +962,11 @@ function openBranchForm(branch?: Branch) {
   showBranchManagementDialog.value = true;
 }
 
-async function handleSaveBranch(payload: { branchName: string; logoFile: File | null }) {
+async function handleSaveBranch(payload: { branchName: string; logoFile: File | null; contacts: BranchContacts }) {
   if (!payload.branchName) return;
   savingBranch.value = true;
   try {
-    await branchStore.saveBranch(editingBranchId.value, payload.branchName, payload.logoFile);
+    await branchStore.saveBranch(editingBranchId.value, payload.branchName, payload.logoFile, payload.contacts);
     $q.notify({ type: 'positive', message: t('adminManage.branchManagement.saveSuccess') });
     showBranchManagementDialog.value = false;
   } catch (err) {
@@ -983,12 +983,15 @@ const cropSourceUrl = ref('');
 const cropperRef = ref<InstanceType<typeof Cropper> | null>(null);
 
 onMounted(async () => {
-  $q.loading.show({
-    spinner: teamSpinner,
-    spinnerColor: 'primary',
-    spinnerSize: 70,
-    backgroundColor: 'white',
-  });
+  // store ยังมีทีมค้างจากรอบก่อน → โชว์ของเดิมทันทีแล้วรีเฟรชเบื้องหลัง ไม่ต้องบังด้วย spinner เต็มจอ
+  if (teamStore.teams.length === 0) {
+    $q.loading.show({
+      spinner: teamSpinner,
+      spinnerColor: 'primary',
+      spinnerSize: 70,
+      backgroundColor: 'white',
+    });
+  }
   void branchStore.fetchBranches().catch(() => {
     $q.notify({ type: 'negative', message: t('adminManage.teamManagement.fetchBranchesFailed'), position: 'top' });
   });
@@ -1003,6 +1006,23 @@ onMounted(async () => {
   } finally {
     $q.loading.hide();
   }
+});
+
+// อยู่ใน <keep-alive> ของ AdminScreen: onActivated ยิงทุกครั้งที่สลับแท็บกลับมา รวมถึงครั้งแรกหลัง mount
+// (ซึ่ง onMounted โหลดไปแล้ว) จึงข้ามครั้งแรก ครั้งถัดไปรีเฟรชเบื้องหลังเงียบๆ (ข้อมูลเดิมยังโชว์อยู่)
+let firstActivation = true;
+onActivated(() => {
+  if (firstActivation) {
+    firstActivation = false;
+    return;
+  }
+  void Promise.all([
+    teamStore.fetchAllTeams(),
+    loadTeams(),
+    userStore.fetchAllUsers(),
+    customerStore.fetchCustomers(),
+    contractorStore.fetchContractors(),
+  ]);
 });
 
 const getImageUrl = (url?: string | null) => {

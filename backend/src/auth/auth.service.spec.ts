@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { IsNull } from 'typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
@@ -20,6 +24,7 @@ describe('AuthService', () => {
   };
   let jobsRepo: {
     findOneBy: jest.Mock;
+    findOne: jest.Mock;
     save: jest.Mock;
   };
   let assignmentsRepo: { findOne: jest.Mock };
@@ -34,6 +39,7 @@ describe('AuthService', () => {
     };
     jobsRepo = {
       findOneBy: jest.fn(),
+      findOne: jest.fn(),
       save: jest.fn(),
     };
     assignmentsRepo = { findOne: jest.fn() };
@@ -95,8 +101,9 @@ describe('AuthService', () => {
   });
 
   it('generates an admin-controlled contractor link token', async () => {
-    jobsRepo.findOneBy.mockResolvedValue({
+    jobsRepo.findOne.mockResolvedValue({
       jobId: 12,
+      contractor: { contractorId: 5 },
       contractorShareGeneration: 1,
       contractorShareEnabled: false,
       contractorShareToken: null,
@@ -123,8 +130,9 @@ describe('AuthService', () => {
   });
 
   it('reuses existing contractor link token when still enabled', async () => {
-    jobsRepo.findOneBy.mockResolvedValue({
+    jobsRepo.findOne.mockResolvedValue({
       jobId: 12,
+      contractor: { contractorId: 5 },
       contractorShareGeneration: 2,
       contractorShareEnabled: true,
       contractorShareToken: 'existing-token',
@@ -138,6 +146,68 @@ describe('AuthService', () => {
     });
 
     expect(jobsRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('refuses to create a contractor link while the job has no contractor', async () => {
+    jobsRepo.findOne.mockResolvedValue({
+      jobId: 12,
+      contractor: null,
+      contractorShareGeneration: 1,
+      contractorShareEnabled: false,
+      contractorShareToken: null,
+    });
+
+    await expect(service.generateLinkToken(12, 'contractor')).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(jwtService.signAsync).not.toHaveBeenCalled();
+    expect(jobsRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('also refuses to hand out an existing contractor link when the contractor is missing', async () => {
+    jobsRepo.findOne.mockResolvedValue({
+      jobId: 12,
+      contractor: null,
+      contractorShareGeneration: 2,
+      contractorShareEnabled: true,
+      contractorShareToken: 'existing-token',
+    });
+
+    await expect(service.generateLinkToken(12, 'contractor')).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('does not require a contractor for the customer link', async () => {
+    await expect(
+      service.generateLinkToken(12, 'customer'),
+    ).resolves.toMatchObject({ role: 'customer' });
+    expect(jobsRepo.findOne).not.toHaveBeenCalled();
+  });
+
+  it('reports whether the job has a contractor in the share status', async () => {
+    jobsRepo.findOne.mockResolvedValue({
+      jobId: 12,
+      contractor: null,
+      contractorShareEnabled: false,
+      contractorShareToken: null,
+    });
+    await expect(service.getContractorShareStatus(12)).resolves.toEqual({
+      has_contractor: false,
+      contractor_share_enabled: false,
+      token: null,
+    });
+
+    jobsRepo.findOne.mockResolvedValue({
+      jobId: 12,
+      contractor: { contractorId: 5 },
+      contractorShareEnabled: true,
+      contractorShareToken: 'tok',
+    });
+    await expect(service.getContractorShareStatus(12)).resolves.toMatchObject({
+      has_contractor: true,
+      token: 'tok',
+    });
   });
 
   it('creates a real JWT that expires in 1 year for customer links', async () => {

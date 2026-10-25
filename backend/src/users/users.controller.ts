@@ -68,7 +68,10 @@ export class UsersController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'ดึงรายชื่อผู้ใช้งานทั้งหมด พร้อมรองรับ pagination / search / filter' })
+  @ApiOperation({
+    summary:
+      'ดึงรายชื่อผู้ใช้งานทั้งหมด พร้อมรองรับ pagination / search / filter',
+  })
   findAll(
     @Req() req: Request & { user: JwtUser },
     @Query('page') page?: string,
@@ -82,7 +85,9 @@ export class UsersController {
     const effectiveBranchId =
       req.user.role === 'admin' && req.user.branchId
         ? req.user.branchId
-        : branchId ? Number(branchId) : undefined;
+        : branchId
+          ? Number(branchId)
+          : undefined;
 
     return this.usersService.findAll({
       page: page ? Number(page) : undefined,

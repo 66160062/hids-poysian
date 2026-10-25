@@ -14,14 +14,20 @@ const PUBLIC_URL_PREFIX = `/storage/v1/object/public/${BUCKET}/`;
 // หลายเท่า พอคูณรูปหลายร้อยใบ ไฟล์ PDF จะทะลุเพดานอัปโหลดของ Storage (ดู ReportsService)
 const THUMB_FOLDER = 'thumbs';
 const THUMB_QUALITY = 72;
+// รูปย่อละเอียด (≥900px) ใช้ในเล่มรายงานเล็ก ที่ไฟล์ยังเหลือที่ให้ — บีบน้อยลงให้คมขึ้น
+const HIGH_RES_THUMB_WIDTH = 900;
+const HIGH_RES_THUMB_QUALITY = 85;
 // จำกัดความกว้างที่ยอมให้ขอ กันคนยิง endpoint สร้างไฟล์มั่วๆ เต็ม bucket — มีเฉพาะที่รายงานใช้จริง
 // (รูป defect 600, รูปหลักฐานในหน้าสรุป 400) ส่วนโลโก้สาขา รูปหน้าปก และแปลนบ้านใช้ต้นฉบับ
 // เพราะมีไม่กี่ใบต่อเล่ม ไม่ได้ทำให้ไฟล์บวม แต่เป็นรูปที่คนซูมดูจริง
-const ALLOWED_THUMB_WIDTHS = [400, 600];
+const ALLOWED_THUMB_WIDTHS = [400, 600, HIGH_RES_THUMB_WIDTH];
 
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
+  // path รูปย่อที่ยืนยันแล้วว่ามีอยู่ใน Storage — ข้ามการ list ซ้ำทุก request (แต่ละครั้งคือ round trip ไปโซล)
+  // เป็นแค่ cache ในหน่วยความจำ: รีสตาร์ทแล้วหายก็แค่เช็กใหม่รอบเดียว
+  private readonly knownThumbs = new Set<string>();
   private readonly client = createClient(
     process.env.SUPABASE_URL ?? '',
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
@@ -55,7 +61,10 @@ export class StorageService {
     }
 
     const thumbPath = this.thumbPathFor(originalPath, width);
-    if (await this.exists(thumbPath)) return this.publicUrlFor(thumbPath);
+    if (this.knownThumbs.has(thumbPath) || (await this.exists(thumbPath))) {
+      this.knownThumbs.add(thumbPath);
+      return this.publicUrlFor(thumbPath);
+    }
 
     const { data, error } = await this.client.storage
       .from(BUCKET)
@@ -69,7 +78,12 @@ export class StorageService {
     const resized = await sharp(Buffer.from(await data.arrayBuffer()))
       .rotate()
       .resize({ width, withoutEnlargement: true })
-      .webp({ quality: THUMB_QUALITY })
+      .webp({
+        quality:
+          width >= HIGH_RES_THUMB_WIDTH
+            ? HIGH_RES_THUMB_QUALITY
+            : THUMB_QUALITY,
+      })
       .toBuffer();
 
     // upsert เพราะอาจมีอีก request สร้างไฟล์เดียวกันแซงไปก่อน ซึ่งไม่ใช่ปัญหา ผลลัพธ์เหมือนกัน
@@ -85,6 +99,7 @@ export class StorageService {
       );
     }
 
+    this.knownThumbs.add(thumbPath);
     return this.publicUrlFor(thumbPath);
   }
 
@@ -102,6 +117,7 @@ export class StorageService {
       ...ALLOWED_THUMB_WIDTHS.map((w) => this.thumbPathFor(path, w)),
     ];
 
+    paths.forEach((p) => this.knownThumbs.delete(p));
     const { error } = await this.client.storage.from(BUCKET).remove(paths);
     if (error) {
       this.logger.warn(
@@ -152,6 +168,9 @@ export class StorageService {
       .from(BUCKET)
       .upload(path, buffer, {
         contentType,
+        // ชื่อไฟล์เป็น uuid ใหม่ทุกครั้ง เนื้อหาไม่เปลี่ยนแน่นอน — ให้เบราว์เซอร์/CDN จำไว้ 1 ปี
+        // (ค่าเริ่มต้นแค่ 1 ชั่วโมง ทำให้กลับมาดูรูปเดิมวันถัดไปต้องโหลดใหม่หมด)
+        cacheControl: '31536000',
         upsert: false,
       });
 

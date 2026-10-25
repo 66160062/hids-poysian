@@ -57,7 +57,9 @@ describe('InspectionJobsController', () => {
   });
 
   it('uploads the project image and forwards its url when attached', async () => {
-    storage.uploadImage.mockResolvedValueOnce('https://example.com/project.jpg');
+    storage.uploadImage.mockResolvedValueOnce(
+      'https://example.com/project.jpg',
+    );
     const projectImageUrl = [
       { buffer: Buffer.from('p') },
     ] as Express.Multer.File[];

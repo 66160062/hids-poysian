@@ -528,7 +528,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onActivated, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
@@ -975,21 +975,25 @@ function onDeleteClick(task: TaskItem) {
 // ==========================================
 // โหลดข้อมูลจริง แยกออกจาก loading.value เพื่อไม่ให้ตอน mount ครั้งแรก
 // ขึ้นซ้อนกับ $q.loading แบบเต็มจอ (ดู onMounted ด้านล่าง)
+function currentJobParams() {
+  return {
+    page: currentPage.value,
+    limit: PAGE_SIZE,
+    status: activeFilter.value,
+    search: searchTerm.value,
+    type: selectedType.value,
+    sort: sortOrder.value,
+    ...getBranchParams(),
+    ...(selectedJobType.value !== 'ทั้งหมด' && { inspectionType: selectedJobType.value }),
+  };
+}
+
 async function loadWorkListData(): Promise<void> {
   error.value = '';
 
   try {
     await Promise.all([
-      workStore.fetchJobs({
-        page: currentPage.value,
-        limit: PAGE_SIZE,
-        status: activeFilter.value,
-        search: searchTerm.value,
-        type: selectedType.value,
-        sort: sortOrder.value,
-        ...getBranchParams(),
-        ...(selectedJobType.value !== 'ทั้งหมด' && { inspectionType: selectedJobType.value }),
-      }),
+      workStore.fetchJobs(currentJobParams()),
       houseTypeStore.houseTypes.length === 0 ? houseTypeStore.fetchHouseTypes() : Promise.resolve(),
     ]);
   } catch (err: unknown) {
@@ -1012,17 +1016,32 @@ onMounted(async (): Promise<void> => {
   void branchStore.fetchBranches().catch(() => {
     $q.notify({ type: 'negative', message: t('common.branch.loadError') });
   });
-  $q.loading.show({
-    spinner: workSpinner,
-    spinnerColor: 'primary',
-    spinnerSize: 70,
-    backgroundColor: 'white',
-  });
+  // กลับเข้ามาด้วย filter เดิมและใน store มีรายการอยู่แล้ว → โชว์ของเดิมทันที รีเฟรชเบื้องหลัง
+  const warm = workStore.hasJobsFor(currentJobParams());
+  if (!warm) {
+    $q.loading.show({
+      spinner: workSpinner,
+      spinnerColor: 'primary',
+      spinnerSize: 70,
+      backgroundColor: 'white',
+    });
+  }
   try {
     await Promise.all([workStore.fetchAbsoluteJobCounts(getBranchParams()), loadWorkListData()]);
   } finally {
     $q.loading.hide();
   }
+});
+
+// อยู่ใน <keep-alive> ของ layout: onActivated ยิงทุกครั้งที่สลับแท็บกลับมา รวมถึงครั้งแรกหลัง mount
+// (ซึ่ง onMounted โหลดไปแล้ว) จึงข้ามครั้งแรก ครั้งถัดไปรีเฟรชเบื้องหลังเงียบๆ (รายการเดิมและ filter ยังอยู่)
+let firstActivation = true;
+onActivated(() => {
+  if (firstActivation) {
+    firstActivation = false;
+    return;
+  }
+  void Promise.all([workStore.fetchAbsoluteJobCounts(getBranchParams()), loadWorkListData()]);
 });
 
 function getBranchParams(): { branchId?: number } {

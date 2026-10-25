@@ -69,6 +69,9 @@ export const useWorkListStore = defineStore('workList', () => {
   const works = ref<Work[]>([]);
   const statusMeta = ref<StatusMeta[]>([]);
   const isLoading = ref(false);
+  // query ของรายการที่ค้างอยู่ใน works — หน้ารายการใช้เช็กว่ากลับเข้ามาด้วย filter เดิมไหม
+  // ถ้าตรงก็โชว์ของเดิมได้เลยแล้วรีเฟรชเบื้องหลัง ไม่ต้องบังด้วย spinner เต็มจอ
+  const lastJobsKey = ref<string | null>(null);
 
   const meta = ref({
     total: 0,
@@ -108,6 +111,9 @@ export const useWorkListStore = defineStore('workList', () => {
     }
   };
 
+  const hasJobsFor = (params: object): boolean =>
+    lastJobsKey.value !== null && lastJobsKey.value === JSON.stringify(params);
+
   const fetchJobs = async (params: { page?: number, limit?: number, status?: string, search?: string, type?: string, sort?: string, inspectionType?: string, branchId?: number } = {}) => {
     isLoading.value = true;
     try {
@@ -121,6 +127,8 @@ export const useWorkListStore = defineStore('workList', () => {
           ? response.data
           : (response.data.data || []);
       }
+
+      lastJobsKey.value = JSON.stringify(params);
 
       const metaParams: { search?: string, type?: string, inspectionType?: string, branchId?: number } = {};
       if (params.search) metaParams.search = params.search;
@@ -185,5 +193,5 @@ export const useWorkListStore = defineStore('workList', () => {
     }
   };
 
-  return { works, statusMeta, meta, absoluteJobCounts, isLoading, fetchJobs, fetchJobById, fetchStatusMeta, fetchAbsoluteJobCounts, createJob, removeJob, updateJob, isProjectNameTaken };
+  return { works, statusMeta, meta, absoluteJobCounts, isLoading, hasJobsFor, fetchJobs, fetchJobById, fetchStatusMeta, fetchAbsoluteJobCounts, createJob, removeJob, updateJob, isProjectNameTaken };
 });

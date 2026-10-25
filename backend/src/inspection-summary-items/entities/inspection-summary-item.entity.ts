@@ -46,6 +46,10 @@ export class InspectionSummaryItem {
   @Column({ type: 'text', nullable: true })
   detailValue!: string;
 
+  // คำแปลอังกฤษของ detailValue — สร้างตอนจะ render PDF อังกฤษ (ดู SummaryNoteTranslator) null = ยังไม่แปล
+  @Column({ type: 'text', nullable: true })
+  detailValueEn!: string | null;
+
   // มีค่า = แถวนี้คือรูปหลักฐาน 1 รูป
   @Column({ type: 'text', nullable: true })
   photoUrl?: string | null;

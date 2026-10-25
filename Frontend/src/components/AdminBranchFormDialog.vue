@@ -42,6 +42,9 @@
             </q-input>
           </div>
 
+          <!-- Contact Fields -->
+          <BranchContactFields v-model="localContacts" />
+
           <!-- Logo Upload Section -->
           <div>
             <div class="dialog-field-label">
@@ -104,7 +107,8 @@
 import { ref, watch, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { QForm } from 'quasar';
-import type { Branch } from 'src/stores/useBranch';
+import { branchContacts, type Branch, type BranchContacts } from 'src/stores/useBranch';
+import BranchContactFields from 'src/components/BranchContactFields.vue';
 
 const { t } = useI18n();
 
@@ -117,12 +121,13 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', val: boolean): void;
-  (e: 'save', payload: { branchName: string; logoFile: File | null }): void;
+  (e: 'save', payload: { branchName: string; logoFile: File | null; contacts: BranchContacts }): void;
 }>();
 
 const formRef = ref<QForm | null>(null);
 const localBranchName = ref('');
 const localLogoFile = ref<File | null>(null);
+const localContacts = ref<BranchContacts>(branchContacts());
 const tempPreviewUrl = ref('');
 
 const getImageUrl = (url?: string | null) => {
@@ -157,6 +162,7 @@ watch(
       }
       localBranchName.value = props.initialData?.branchName || '';
       localLogoFile.value = null;
+      localContacts.value = branchContacts(props.initialData as Branch | null | undefined);
     }
   },
   { immediate: true },
@@ -170,6 +176,7 @@ const onSave = async () => {
   emit('save', {
     branchName: localBranchName.value.trim(),
     logoFile: localLogoFile.value,
+    contacts: localContacts.value,
   });
 };
 </script>

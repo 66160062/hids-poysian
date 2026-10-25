@@ -26,7 +26,9 @@ export class CustomersService {
   }
 
   async update(id: number, updateCustomerDto: UpdateCustomerDto) {
-    const customer = await this.customersRepo.findOneByOrFail({ customerId: id });
+    const customer = await this.customersRepo.findOneByOrFail({
+      customerId: id,
+    });
     Object.assign(customer, updateCustomerDto);
     return this.customersRepo.save(customer);
   }

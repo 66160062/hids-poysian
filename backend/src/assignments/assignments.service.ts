@@ -36,7 +36,6 @@ export class AssignmentsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  
   async assign(dto: CreateAssignmentDto) {
     const job = await this.jobsRepo.findOne({ where: { jobId: dto.jobId } });
     if (!job) {
@@ -84,6 +83,7 @@ export class AssignmentsService {
       type: NotificationType.INFO,
       recipientUserId: inspector.id,
       message: `คุณได้รับมอบหมายงานตรวจ: ${job.projectName}`,
+      messageEn: `You have been assigned an inspection job: ${job.projectNameEn || job.projectName}`,
       jobId: job.jobId,
     });
     return saved;

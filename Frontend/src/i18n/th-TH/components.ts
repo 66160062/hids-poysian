@@ -50,6 +50,9 @@ export default {
     uploadPlanSuccess: 'อัปโหลดรูปแปลนสำเร็จ',
     uploadPlanPartialSuccess: 'อัปโหลดสำเร็จ {success}/{total} รูป',
     uploadPlanFailed: 'ไม่สามารถอัปโหลดรูปแปลนได้',
+    savePlansButton: 'บันทึกแปลน ({count})',
+    pendingPlansHint: 'ถ่ายรูปหรือเลือกรูปแปลน แล้วตั้งชื่อแต่ละรูปก่อนบันทึก',
+    renamePlanFailed: 'ไม่สามารถเปลี่ยนชื่อแปลนได้',
     defaultPlanName: 'แปลนบ้าน {n}',
   },
   inspectorCalendar: {

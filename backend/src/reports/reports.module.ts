@@ -5,6 +5,8 @@ import { Defect } from 'src/defects/entities/defect.entity';
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
 import { AuthModule } from 'src/auth/auth.module';
 import { ReportsService } from './reports.service';
+import { DefectNoteTranslator } from 'src/defects/defect-note-translator.service';
+import { SummaryNoteTranslator } from 'src/inspection-summary-items/summary-note-translator.service';
 
 @Global()
 @Module({
@@ -13,7 +15,7 @@ import { ReportsService } from './reports.service';
     TypeOrmModule.forFeature([InspectionRound, Defect, InspectionSummaryItem]),
     AuthModule,
   ],
-  providers: [ReportsService],
+  providers: [ReportsService, DefectNoteTranslator, SummaryNoteTranslator],
   exports: [ReportsService],
 })
 export class ReportsModule {}

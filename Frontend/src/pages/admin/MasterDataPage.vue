@@ -389,25 +389,16 @@
             {{ t('adminManage.masterData.inlineFormTitle') }}
           </div>
           <q-form class="row q-col-gutter-sm items-center" @submit="handleInlineAddSubCategory">
-            <div class="col-12 col-sm-5">
-              <q-input
-                v-model="inlineSubCategoryForm.name"
+            <div class="col-12 col-sm-10">
+              <AdminMasterDataBilingualField
+                v-model:th="inlineSubCategoryForm.name"
+                v-model:en="inlineSubCategoryForm.nameEn"
+                :th-placeholder="t('adminManage.masterData.inlineFormNameTh')"
+                :en-placeholder="t('adminManage.masterData.inlineFormNameEn')"
+                :th-required-message="t('adminManage.masterData.subCategoryNameRequired')"
+                horizontal
                 dense
-                outlined
                 bg-color="white"
-                :placeholder="t('adminManage.masterData.inlineFormNameTh')"
-                hide-bottom-space
-                :rules="[(val) => !!val || t('adminManage.masterData.subCategoryNameRequired')]"
-              />
-            </div>
-            <div class="col-12 col-sm-5">
-              <q-input
-                v-model="inlineSubCategoryForm.nameEn"
-                dense
-                outlined
-                bg-color="white"
-                :placeholder="t('adminManage.masterData.inlineFormNameEn')"
-                hide-bottom-space
               />
             </div>
             <div class="col-12 col-sm-2 text-right">
@@ -465,21 +456,15 @@
       :title="isEdit ? t('adminManage.masterData.editRoomTitle') : t('adminManage.masterData.addRoomTitle')"
       @submit="saveRoom"
     >
-      <div>
-        <div class="dialog-field-label">{{ t('adminManage.masterData.roomNameThLabel') }}</div>
-        <q-input
-          v-model="roomForm.roomName"
-          outlined
-          dense
-          filled
-          hide-bottom-space
-          :rules="[(val) => !!val || t('adminManage.masterData.roomNameRequired')]"
-        />
-      </div>
-      <div>
-        <div class="dialog-field-label">{{ t('adminManage.masterData.roomNameEnLabel') }}</div>
-        <q-input v-model="roomForm.roomNameEn" outlined dense filled hide-bottom-space />
-      </div>
+      <AdminMasterDataBilingualField
+        v-model:th="roomForm.roomName"
+        v-model:en="roomForm.roomNameEn"
+        :th-label="t('adminManage.masterData.roomNameThLabel')"
+        :en-label="t('adminManage.masterData.roomNameEnLabel')"
+        :th-required-message="t('adminManage.masterData.roomNameRequired')"
+        dense
+        filled
+      />
     </AdminMasterDataFormDialog>
 
     <!-- Dialog 2: SubRoom Dialog -->
@@ -492,21 +477,15 @@
       :title="isEdit ? t('adminManage.masterData.editSubRoomTitle') : t('adminManage.masterData.addSubRoomTitle')"
       @submit="saveSubRoom"
     >
-      <div>
-        <div class="dialog-field-label">{{ t('adminManage.masterData.subRoomNameThLabel') }}</div>
-        <q-input
-          v-model="subRoomForm.roomName"
-          outlined
-          dense
-          filled
-          hide-bottom-space
-          :rules="[(val) => !!val || t('adminManage.masterData.subRoomNameRequired')]"
-        />
-      </div>
-      <div>
-        <div class="dialog-field-label">{{ t('adminManage.masterData.subRoomNameEnLabel') }}</div>
-        <q-input v-model="subRoomForm.roomNameEn" outlined dense filled hide-bottom-space />
-      </div>
+      <AdminMasterDataBilingualField
+        v-model:th="subRoomForm.roomName"
+        v-model:en="subRoomForm.roomNameEn"
+        :th-label="t('adminManage.masterData.subRoomNameThLabel')"
+        :en-label="t('adminManage.masterData.subRoomNameEnLabel')"
+        :th-required-message="t('adminManage.masterData.subRoomNameRequired')"
+        dense
+        filled
+      />
     </AdminMasterDataFormDialog>
 
     <!-- Dialog 3: Category Dialog -->
@@ -519,21 +498,15 @@
       :title="isEdit ? t('adminManage.masterData.editCategoryTitle') : t('adminManage.masterData.addCategoryTitle')"
       @submit="saveCategory"
     >
-      <div>
-        <div class="dialog-field-label">{{ t('adminManage.masterData.categoryNameThLabel') }}</div>
-        <q-input
-          v-model="categoryForm.name"
-          outlined
-          dense
-          filled
-          hide-bottom-space
-          :rules="[(val) => !!val || t('adminManage.masterData.categoryNameRequired')]"
-        />
-      </div>
-      <div>
-        <div class="dialog-field-label">{{ t('adminManage.masterData.categoryNameEnLabel') }}</div>
-        <q-input v-model="categoryForm.nameEn" outlined dense filled hide-bottom-space />
-      </div>
+      <AdminMasterDataBilingualField
+        v-model:th="categoryForm.name"
+        v-model:en="categoryForm.nameEn"
+        :th-label="t('adminManage.masterData.categoryNameThLabel')"
+        :en-label="t('adminManage.masterData.categoryNameEnLabel')"
+        :th-required-message="t('adminManage.masterData.categoryNameRequired')"
+        dense
+        filled
+      />
     </AdminMasterDataFormDialog>
 
     <!-- Dialog 4: SubCategory Dialog -->
@@ -562,32 +535,27 @@
           :rules="[(val) => !!val || t('adminManage.masterData.parentCategoryRequired')]"
         />
       </div>
-      <div>
-        <div class="dialog-field-label">{{ t('adminManage.masterData.subCategoryNameThLabel') }}</div>
-        <q-input
-          v-model="subCategoryForm.name"
-          outlined
-          dense
-          filled
-          hide-bottom-space
-          :rules="[(val) => !!val || t('adminManage.masterData.subCategoryNameRequired')]"
-        />
-      </div>
-      <div>
-        <div class="dialog-field-label">{{ t('adminManage.masterData.subCategoryNameEnLabel') }}</div>
-        <q-input v-model="subCategoryForm.nameEn" outlined dense filled hide-bottom-space />
-      </div>
+      <AdminMasterDataBilingualField
+        v-model:th="subCategoryForm.name"
+        v-model:en="subCategoryForm.nameEn"
+        :th-label="t('adminManage.masterData.subCategoryNameThLabel')"
+        :en-label="t('adminManage.masterData.subCategoryNameEnLabel')"
+        :th-required-message="t('adminManage.masterData.subCategoryNameRequired')"
+        dense
+        filled
+      />
     </AdminMasterDataFormDialog>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onActivated, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import IconBounceSpinner from 'src/components/IconBounceSpinner.vue';
 import AdminMasterDataCard from 'src/components/AdminMasterDataCard.vue';
 import AdminMasterDataFormDialog from 'src/components/AdminMasterDataFormDialog.vue';
+import AdminMasterDataBilingualField from 'src/components/AdminMasterDataBilingualField.vue';
 import { useMasterDataStore } from 'src/stores/useMasterData';
 import type {
   Room,
@@ -606,7 +574,8 @@ const activeTab = ref<TabType>('defectCategories');
 const searchQuery = ref('');
 const selectedCategoryFilter = ref<number | 'ALL'>('ALL');
 const saving = ref(false);
-const initialLoading = ref(true);
+// store ยังมีข้อมูลค้างจากรอบก่อน → ไม่ต้องบังด้วย spinner โหลดใหม่เบื้องหลังเอา
+const initialLoading = ref(store.rooms.length === 0 && store.defectCategories.length === 0);
 const isEdit = ref(false);
 const editId = ref<number | null>(null);
 
@@ -640,6 +609,17 @@ onMounted(async () => {
   } finally {
     initialLoading.value = false;
   }
+});
+
+// อยู่ใน <keep-alive> ของ AdminScreen: onActivated ยิงทุกครั้งที่สลับแท็บกลับมา รวมถึงครั้งแรกหลัง mount
+// (ซึ่ง onMounted โหลดไปแล้ว) จึงข้ามครั้งแรก ครั้งถัดไปรีเฟรชเบื้องหลังเงียบๆ (ข้อมูลเดิมยังโชว์อยู่)
+let firstActivation = true;
+onActivated(() => {
+  if (firstActivation) {
+    firstActivation = false;
+    return;
+  }
+  void store.fetchAll();
 });
 
 // Reset pagination pages on search or tab change

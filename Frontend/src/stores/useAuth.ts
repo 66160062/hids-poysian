@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { api } from 'src/boot/axios';
 import { LocalStorage } from 'quasar';
 import type { User } from 'src/models.ts';
+import { invalidateCache } from 'src/utils/responseCache';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null);
@@ -23,6 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
       console.log('Calling:', api.defaults.baseURL + '/auth/login');
       const res = await api.post('/auth/login', { email, password });
 
+      invalidateCache();
       user.value = res.data.user;
       token.value = res.data.access_token;
 
@@ -37,6 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function logout() {
+    invalidateCache(); // ไม่ให้ข้อมูลของผู้ใช้เดิมไปโผล่ให้คนที่ล็อกอินต่อ
     user.value = null;
     token.value = null;
     LocalStorage.remove('user');

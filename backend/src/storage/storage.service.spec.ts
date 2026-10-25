@@ -47,7 +47,7 @@ describe('StorageService', () => {
       expect(client.storage.from().upload).toHaveBeenCalledWith(
         expect.stringMatching(/^defects\/test-uuid\.webp$/),
         Buffer.from('resized'),
-        { contentType: 'image/webp', upsert: false },
+        { contentType: 'image/webp', cacheControl: '31536000', upsert: false },
       );
     });
 
@@ -111,6 +111,23 @@ describe('StorageService', () => {
       expect(mockBucket().download).not.toHaveBeenCalled();
       expect(mockBucket().upload).not.toHaveBeenCalled();
       expect(url).toBe('https://example.com/mock.jpg');
+    });
+
+    // ครั้งแรกเช็กกับ Storage ครั้งเดียว หลังจากนั้นจำไว้ในหน่วยความจำ ไม่ต้อง list ซ้ำทุก request
+    it('remembers a confirmed thumbnail and skips the existence check next time', async () => {
+      mockBucket().list.mockImplementation(
+        (_folder: string, opts: { search: string }) =>
+          Promise.resolve({ data: [{ name: opts.search }], error: null }),
+      );
+
+      await service.ensureThumbnail(ORIGINAL, 600);
+      await service.ensureThumbnail(ORIGINAL, 600);
+
+      expect(mockBucket().list).toHaveBeenCalledTimes(1);
+    });
+
+    it('accepts the 900px width used by small reports', () => {
+      expect(StorageService.isAllowedThumbWidth(900)).toBe(true);
     });
 
     it('returns the url untouched when it is not a file in our bucket', async () => {

@@ -17,6 +17,8 @@ import { StorageService } from 'src/storage/storage.service';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity';
 import { AiSummaryService } from 'src/ai-summary/ai-summary.service';
+import { DefectNoteTranslator } from 'src/defects/defect-note-translator.service';
+import { SummaryNoteTranslator } from 'src/inspection-summary-items/summary-note-translator.service';
 
 const DEBOUNCE_MS = 30_000;
 // เพดานเวลารอนับจากครั้งแรกที่ schedule — กันเคสที่มีคนแก้ถี่กว่า DEBOUNCE_MS ต่อเนื่อง
@@ -35,8 +37,18 @@ const REPORT_ROOT_SELECTOR = '[data-report-ready]';
 
 // ความกว้างรูปย่อที่หน้ารายงานขอใช้ — ต้องตรงกับที่ resolveImageUrl ใน DefectReport.vue ส่งมา
 // ไม่งั้น warm ไว้แล้วก็ไม่ถูกใช้ แล้วหน้า print จะไปย่อเองตอนโหลดซึ่งช้ากว่ามาก
-const DEFECT_THUMB_WIDTH = 600;
+// เล่มที่ defect ไม่เกิน HIGH_QUALITY_MAX_DEFECTS ใช้รูปย่อ 900px (คมกว่า) เล่มใหญ่ใช้ 600px กัน PDF ทะลุเพดานอัปโหลด
+// ต้องตรงกับ defectThumbWidth ใน DefectReport.vue
+const HIGH_QUALITY_MAX_DEFECTS = 40;
+const DEFECT_THUMB_WIDTH_HIGH = 900;
+const DEFECT_THUMB_WIDTH_COMPACT = 600;
 const SUMMARY_THUMB_WIDTH = 400;
+
+export function defectThumbWidthFor(defectCount: number): number {
+  return defectCount <= HIGH_QUALITY_MAX_DEFECTS
+    ? DEFECT_THUMB_WIDTH_HIGH
+    : DEFECT_THUMB_WIDTH_COMPACT;
+}
 const THUMB_WARM_CONCURRENCY = 6;
 
 export type ReportLocale = 'th-TH' | 'en-US';
@@ -68,6 +80,8 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     private readonly jwtService: JwtService,
     private readonly activityLogsService: ActivityLogsService,
     private readonly aiSummaryService: AiSummaryService,
+    private readonly defectNoteTranslator: DefectNoteTranslator,
+    private readonly summaryNoteTranslator: SummaryNoteTranslator,
   ) {}
 
   onModuleInit(): void {
@@ -217,7 +231,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       };
     }
 
-    const currentHash = await this.computeDataHash(roundId);
+    const currentHash = await this.computeDataHash(roundId, locale);
     const isStale = currentHash !== cachedHash;
 
     if (isStale) this.ensureRegenerationQueued(roundId, locale);
@@ -303,7 +317,24 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       return cachedUrl;
     }
 
-    const hash = await this.computeDataHash(roundId);
+    // PDF อังกฤษแสดงคำแปลหมายเหตุ จึงเก็บตกคำแปลที่ยังขาด (defect เก่า/ตอนบันทึกที่ LLM ล่ม) ก่อนคิด hash
+    // เพื่อให้ฉบับแรกที่ render มีคำแปลครบเท่าที่แปลได้ — พังก็ไม่กระทบ แค่แสดงข้อความไทยแทน
+    if (locale === 'en-US') {
+      try {
+        await this.defectNoteTranslator.translateMissingForRound(roundId);
+        await this.summaryNoteTranslator.translateMissingForRound(roundId);
+      } catch (error) {
+        this.logger.warn(
+          `รอบตรวจ ${roundId}: แปลหมายเหตุที่ขาดไม่สำเร็จ (ไม่กระทบการสร้าง PDF) — ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
+    // baseHash ไม่รวมคำแปล ใช้เป็นตัวตัดสินว่าต้องสร้างสรุป AI ใหม่ไหม (คำแปลหมายเหตุไม่กระทบเนื้อสรุป)
+    // ส่วน hash ของ PDF ฉบับอังกฤษรวมคำแปลด้วย เพื่อให้ไฟล์ถูกสร้างใหม่เมื่อคำแปลมาถึงทีหลัง
+    const { base: baseHash, en: enHash } =
+      await this.computeDataHashes(roundId);
+    const hash = locale === 'en-US' ? enHash : baseHash;
 
     if (hash === cachedHash) {
       this.logger.log(
@@ -319,10 +350,10 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     );
 
     // สร้าง % ความสมบูรณ์ + สรุป AI ท้ายเล่มก่อน render เพื่อให้หน้า print มีข้อมูลพร้อมตอน Puppeteer จับภาพ
-    // ใช้ hash เดียวกับ PDF เพื่อข้ามการเรียก LLM ซ้ำเวลาข้อมูลไม่เปลี่ยน — ใช้ hash เดียวกันทั้งสอง locale
-    // เพราะ AI summary text เก็บที่เดียว ไม่ได้ทำสองภาษา
+    // ใช้ baseHash เพื่อข้ามการเรียก LLM ซ้ำเวลาข้อมูลไม่เปลี่ยน — ใช้ตัวเดียวกันทั้งสอง locale
+    // เพราะ AI summary สร้างทั้งฉบับไทยและอังกฤษพร้อมกัน (hash แยกภาษาเก็บอยู่ในรอบตรวจ ดู AiSummaryService)
     try {
-      await this.aiSummaryService.generateIfChanged(roundId, hash);
+      await this.aiSummaryService.generateIfChanged(roundId, baseHash);
     } catch (error) {
       this.logger.error(
         `รอบตรวจ ${roundId}: สร้าง AI summary ไม่สำเร็จ (ไม่กระทบการสร้าง PDF)`,
@@ -364,6 +395,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       type: ActivityLogType.REPORT_PDF_UPDATED,
       color: 'orange',
       title: `อัปเดตรายงาน PDF รอบที่ ${round.roundNumber} แล้ว`,
+      titleEn: `PDF report for round ${round.roundNumber} updated`,
     });
 
     // บอกเวลาที่ใช้ไปด้วย เพราะรายงานที่ defect เยอะ (หลักร้อย) ใช้เวลาระดับนาที — ถ้าไม่ log ไว้
@@ -390,10 +422,11 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       }),
     ]);
 
+    const defectWidth = defectThumbWidthFor(defects.length);
     const queue: { url: string; width: number }[] = [
       ...defects
         .filter((d) => d.imageUrl)
-        .map((d) => ({ url: d.imageUrl, width: DEFECT_THUMB_WIDTH })),
+        .map((d) => ({ url: d.imageUrl, width: defectWidth })),
       ...summaryItems
         .filter((i) => i.photoUrl)
         .map((i) => ({
@@ -456,7 +489,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
         continue;
       }
 
-      const hash = await this.computeDataHash(round.roundId);
+      const hash = await this.computeDataHash(round.roundId, 'th-TH');
       if (hash === round.lastPdfHash) {
         this.sweepFailedAt.delete(round.roundId);
         continue;
@@ -485,17 +518,34 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
   // และช่างกรอกมัน "หลัง" กดยืนยันผลตรวจ ซึ่งเป็นจังหวะที่ PDF ถูก render ไปแล้ว — ถ้าไม่นับเข้า hash
   // ไฟล์ที่แนบไปกับอีเมลอนุมัติจะเป็นเล่มที่ไม่มีหน้าสรุป ทั้งที่ UI ขึ้นว่า "ล่าสุดแล้ว"
   // entity ตัวนี้ไม่มี updatedAt จึง hash จากเนื้อหาที่ถูก render จริงแทน (ครอบทั้งเพิ่ม/แก้/ลบ/เปลี่ยนรูป)
-  private async computeDataHash(roundId: number): Promise<string> {
-    const [defects, summaryItems] = await Promise.all([
+  //
+  // คืน 2 ค่า: base (ฉบับไทย + ใช้กับสรุป AI) และ en (รวมคำแปลหมายเหตุที่ใช้ใน PDF อังกฤษ)
+  // ฉบับไทยต้องไม่รวมคำแปล ไม่งั้นทุกครั้งที่แปลเสร็จ PDF ไทยและสรุป AI จะถูกสร้างใหม่โดยไม่จำเป็น
+  private async computeDataHash(
+    roundId: number,
+    locale: ReportLocale,
+  ): Promise<string> {
+    const hashes = await this.computeDataHashes(roundId);
+    return locale === 'en-US' ? hashes.en : hashes.base;
+  }
+
+  private async computeDataHashes(
+    roundId: number,
+  ): Promise<{ base: string; en: string }> {
+    const [defects, summaryItems, round] = await Promise.all([
       this.defectRepo.find({
         where: { round: { roundId } },
-        select: ['defectId', 'updatedAt'],
+        select: ['defectId', 'updatedAt', 'descriptionEn', 'contractorNoteEn'],
         order: { defectId: 'ASC' },
       }),
       this.summaryItemRepo.find({
         where: { round: { roundId } },
         relations: ['template', 'option'],
         order: { itemId: 'ASC' },
+      }),
+      this.roundRepo.findOne({
+        where: { roundId },
+        relations: ['job', 'job.branch'],
       }),
     ]);
 
@@ -514,9 +564,36 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       ]),
     );
 
-    return createHash('sha256')
-      .update(`${defectPart}##${summaryPart}`)
+    // ข้อมูลสาขาแสดงทั้งโลโก้และ footer — แก้ข้อมูลติดต่อแล้วต้องสร้าง PDF ใหม่ด้วย
+    const branch = round?.job?.branch;
+    const branchPart = JSON.stringify(
+      round?.job
+        ? [
+            round.job.branchId ?? null,
+            branch?.branchName ?? null,
+            branch?.phoneNumber ?? null,
+            branch?.mailAddress ?? null,
+            branch?.facebook ?? null,
+            branch?.line ?? null,
+            branch?.logoUrl ?? null,
+          ]
+        : null,
+    );
+
+    const base = createHash('sha256')
+      .update(`${defectPart}##${summaryPart}##${branchPart}`)
       .digest('hex');
+
+    // คำแปลถูกเขียนโดยไม่เลื่อน updatedAt จึงต้องนับเข้า hash ของ PDF อังกฤษเอง
+    const translationPart = JSON.stringify([
+      defects.map((d) => [d.descriptionEn ?? '', d.contractorNoteEn ?? '']),
+      summaryItems.map((item) => item.detailValueEn ?? ''),
+    ]);
+    const en = createHash('sha256')
+      .update(`${base}##${translationPart}`)
+      .digest('hex');
+
+    return { base, en };
   }
 
   // reuse browser ตัวเดิมข้าม render — launch ใหม่ทุกครั้งกินเวลาหลักวินาทีและ RAM อีกก้อนโดยไม่จำเป็น

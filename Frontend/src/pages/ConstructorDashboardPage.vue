@@ -75,6 +75,7 @@ import type { InspectionRound } from 'src/models';
 import PropertyCard from 'src/components/PropertyCard.vue';
 import InspectorCalendar from 'src/components/InspectorCalendar.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
+import { cacheKey, peekCache, setCache } from 'src/utils/responseCache';
 
 const consDashboardSpinner = createIconSpinner('construction');
 
@@ -130,6 +131,16 @@ function onMonthChanged(date: Date): void {
 }
 
 // ── Data Fetching ─────────────────────────────────────────────
+function currentEndpoint(): string {
+  const inspectorId = authStore.currentUser?.id ?? 0;
+  const dateParam = isMonthlyView.value
+    ? toLocalDateStr(currentMonth.value)
+    : toLocalDateStr(selectedDate.value);
+  return isMonthlyView.value
+    ? `/inspection-rounds/month/${inspectorId}?date=${dateParam}`
+    : `/inspection-rounds/week/${inspectorId}?date=${dateParam}`;
+}
+
 async function fetchRounds(): Promise<void> {
   const inspectorId = authStore.currentUser?.id ?? 0;
   if (!inspectorId) {
@@ -137,17 +148,18 @@ async function fetchRounds(): Promise<void> {
     return;
   }
 
-  loading.value = true;
-  try {
-    const dateParam = isMonthlyView.value
-      ? toLocalDateStr(currentMonth.value)
-      : toLocalDateStr(selectedDate.value);
-    const endpoint = isMonthlyView.value
-      ? `/inspection-rounds/month/${inspectorId}?date=${dateParam}`
-      : `/inspection-rounds/week/${inspectorId}?date=${dateParam}`;
+  const endpoint = currentEndpoint();
 
+  // เคยโหลดช่วงเวลานี้แล้ว → โชว์ของเดิมทันทีแล้วรีเฟรชเบื้องหลัง
+  const cachedRounds = peekCache<InspectionRound[]>(cacheKey(endpoint));
+  if (cachedRounds) rounds.value = cachedRounds;
+
+  loading.value = !cachedRounds;
+  try {
     const res = await api.get(endpoint);
-    rounds.value = Array.isArray(res.data) ? res.data : [];
+    const data = Array.isArray(res.data) ? res.data : [];
+    rounds.value = data;
+    setCache(cacheKey(endpoint), data);
   } catch (e: unknown) {
     if (e instanceof Error) {
       console.error('fetchRounds error:', e.message);
@@ -191,13 +203,20 @@ function getBangkokHour(dateStr: string): number {
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────
+// อยู่ใน <keep-alive> ของ layout: onActivated ยิงทุกครั้งที่สลับแท็บกลับมา รวมถึงครั้งแรกหลัง mount
+// (ซึ่ง onMounted โหลดไปแล้ว) จึงข้ามครั้งแรก ครั้งถัดไปรีเฟรชเบื้องหลังเงียบๆ
+let firstActivation = true;
+
 onMounted(async () => {
-  $q.loading.show({
-    spinner: consDashboardSpinner,
-    spinnerColor: 'primary',
-    spinnerSize: 70,
-    backgroundColor: 'white',
-  });
+  const warm = peekCache(cacheKey(currentEndpoint())) !== undefined;
+  if (!warm) {
+    $q.loading.show({
+      spinner: consDashboardSpinner,
+      spinnerColor: 'primary',
+      spinnerSize: 70,
+      backgroundColor: 'white',
+    });
+  }
   try {
     await fetchRounds();
   } finally {
@@ -206,6 +225,10 @@ onMounted(async () => {
 });
 
 onActivated(() => {
+  if (firstActivation) {
+    firstActivation = false;
+    return;
+  }
   void fetchRounds();
 });
 </script>

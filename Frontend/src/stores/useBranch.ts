@@ -20,6 +20,17 @@ export interface BranchOption {
   value: number;
 }
 
+export type BranchContacts = Pick<Branch, 'phoneNumber' | 'mailAddress' | 'facebook' | 'line'>;
+
+export function branchContacts(branch?: Branch | null): BranchContacts {
+  return {
+    phoneNumber: branch?.phoneNumber ?? '',
+    mailAddress: branch?.mailAddress ?? '',
+    facebook: branch?.facebook ?? '',
+    line: branch?.line ?? '',
+  };
+}
+
 function getStoredBranchId(): number | 'all' {
   const raw = sessionStorage.getItem('adminSelectedBranchId');
   const branchId = Number(raw);
@@ -101,9 +112,15 @@ export const useBranchStore = defineStore('branch', () => {
     id: number | null,
     name: string,
     logo: File | null,
+    contacts?: BranchContacts,
   ): Promise<Branch> => {
     const formData = new FormData();
     formData.append('branchName', name);
+    if (contacts) {
+      for (const [field, value] of Object.entries(contacts)) {
+        formData.append(field, value?.trim() ?? '');
+      }
+    }
     if (logo) formData.append('logo', logo);
 
     const response = id

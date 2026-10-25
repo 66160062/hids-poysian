@@ -4,6 +4,7 @@ import { isAxiosError } from 'axios';
 import type { Category, DefectSubCategory, RoomTemplate, SubCategory, Defect } from 'src/models.ts';
 import { api } from 'src/boot/axios';
 import { t } from 'src/boot/i18n';
+import { localizedText } from 'src/composables/useLocalizedField';
 
 // ── Optimistic save/edit sync tracking ──────────────────────
 // key: real defectId (edit) or a negative temp id (create, until fetchDefects pulls in the real row)
@@ -56,6 +57,22 @@ const getRoomName = (d: Defect) =>
   t('common.unspecified.room');
 
 const getRoomType = (d: Defect) => d.room?.roomName ?? t('common.unspecified.roomType');
+
+// ค่าข้างบนใช้เป็น "key" (groupKey, ค่า filter) จึงคงเป็นชื่อไทยเสมอ ไม่เปลี่ยนตามภาษา —
+// ถ้าเอาชื่ออังกฤษไปทำ key สลับภาษาตอนมี filter/เปิดหน้าห้องค้างอยู่แล้ว key จะไม่ตรงกัน
+// ส่วน 3 ตัวนี้ใช้แสดงผลเท่านั้น: ชื่ออังกฤษถ้ามีและภาษาเป็นอังกฤษ ไม่งั้นใช้ชื่อไทย
+const displayFloorLabel = (d: Defect) =>
+  d.floor ? localizedText(d.floor.label, d.floor.labelEn) : t('common.unspecified.floor');
+
+const displayRoomName = (d: Defect) =>
+  d.subRoom
+    ? localizedText(d.subRoom.roomName, d.subRoom.roomNameEn)
+    : d.room
+      ? localizedText(d.room.roomName, d.room.roomNameEn)
+      : t('common.unspecified.room');
+
+const displayRoomType = (d: Defect) =>
+  d.room ? localizedText(d.room.roomName, d.room.roomNameEn) : t('common.unspecified.roomType');
 
 // เวลาที่ defect ตัวนี้ถูกแก้ไข/เพิ่มล่าสุด — ใช้ updatedAt ก่อน (ครอบคลุมทั้งแก้ไขและเพิ่มใหม่) fallback เป็น createdAt
 const getLastActivity = (d: Defect) => {
@@ -111,14 +128,23 @@ export const useInspectionStore = defineStore('inspection', () => {
   // ── computed ใหม่: ตัวเลือกสำหรับ FilterBottomSheet ────────
 
   const availableFloors = computed(() => {
-    const labels = [...new Set(defects.value.map(getFloorLabel))];
-    return labels
-      .sort((a, b) => a.localeCompare(b, 'th'))
-      .map((label) => ({ value: label, label }));
+    const byKey = new Map<string, string>();
+    for (const d of defects.value) {
+      if (!byKey.has(getFloorLabel(d))) byKey.set(getFloorLabel(d), displayFloorLabel(d));
+    }
+    return [...byKey.entries()]
+      .sort(([a], [b]) => a.localeCompare(b, 'th'))
+      .map(([value, label]) => ({ value, label }));
   });
 
   const availableRoomTypes = computed(() => {
-    return [...new Set(defects.value.map(getRoomType))].sort();
+    const byKey = new Map<string, string>();
+    for (const d of defects.value) {
+      if (!byKey.has(getRoomType(d))) byKey.set(getRoomType(d), displayRoomType(d));
+    }
+    return [...byKey.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([value, label]) => ({ value, label }));
   });
 
   const availableSeverityLevels = computed(() => {
@@ -141,7 +167,10 @@ export const useInspectionStore = defineStore('inspection', () => {
         return (
           getRoomName(d).toLowerCase().includes(q) ||
           getRoomType(d).toLowerCase().includes(q) ||
-          getFloorLabel(d).toLowerCase().includes(q)
+          getFloorLabel(d).toLowerCase().includes(q) ||
+          displayRoomName(d).toLowerCase().includes(q) ||
+          displayRoomType(d).toLowerCase().includes(q) ||
+          displayFloorLabel(d).toLowerCase().includes(q)
         );
       });
     }
@@ -172,8 +201,8 @@ export const useInspectionStore = defineStore('inspection', () => {
           groupKey: key,
           roomName: buildGroupLabel(defect),
           roomId: defect.room?.roomId ?? defect.defectId,
-          floorLabel: getFloorLabel(defect),
-          roomType: getRoomType(defect),
+          floorLabel: displayFloorLabel(defect),
+          roomType: displayRoomType(defect),
           severity: defect.severity,
           totalItems: 0,
           passCount: 0,
@@ -248,11 +277,11 @@ export const useInspectionStore = defineStore('inspection', () => {
   function buildGroupLabel(d: Defect): string {
     switch (filter.value.groupBy) {
       case 'floor':
-        return getFloorLabel(d);
+        return displayFloorLabel(d);
       case 'severity':
         return SEVERITY_LABEL[d.severity] ?? d.severity;
       default:
-        return getRoomName(d);
+        return displayRoomName(d);
     }
   }
 

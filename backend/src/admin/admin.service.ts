@@ -253,10 +253,7 @@ export class AdminService {
         }
 
         const statusMapping = latestRound
-          ? this.mapRoundStatus(
-              latestRound.status,
-              latestRound.roundNumber,
-            )
+          ? this.mapRoundStatus(latestRound.status, latestRound.roundNumber)
           : this.mapJobStatus(job.status);
 
         const iconMapping = this.mapHouseTypeIcon(job.houseType?.name ?? '');
@@ -405,7 +402,7 @@ export class AdminService {
       const y = d.getFullYear();
       const m = d.getMonth();
       const monthKey = `${y}-${String(m + 1).padStart(2, '0')}`;
-      const monthLabel = `${monthNamesTh[m]} ${((y + 543) % 100)}`;
+      const monthLabel = `${monthNamesTh[m]} ${(y + 543) % 100}`;
 
       let homeCount = 0;
       let constCount = 0;
@@ -599,9 +596,7 @@ export class AdminService {
           majorCount: 0,
           minorCount: 0,
           contractorName:
-            defect.updatedBy?.companyName ??
-            defect.updatedBy?.fullName ??
-            null,
+            defect.updatedBy?.companyName ?? defect.updatedBy?.fullName ?? null,
         });
       }
 
@@ -633,14 +628,8 @@ export class AdminService {
       }
 
       for (const catName of seenCategories) {
-        globalCategories.set(
-          catName,
-          (globalCategories.get(catName) || 0) + 1,
-        );
-        entry.categories.set(
-          catName,
-          (entry.categories.get(catName) || 0) + 1,
-        );
+        globalCategories.set(catName, (globalCategories.get(catName) || 0) + 1);
+        entry.categories.set(catName, (entry.categories.get(catName) || 0) + 1);
       }
     }
 
@@ -922,8 +911,7 @@ export class AdminService {
       for (const round of sortedRounds) {
         const members = round.teamMembers || [];
         for (const member of members) {
-          const tId =
-            member.team?.team_Id ?? member.inspector?.team?.team_Id;
+          const tId = member.team?.team_Id ?? member.inspector?.team?.team_Id;
           const tName =
             member.team?.team_name ?? member.inspector?.team?.team_name;
           if (tId) {
@@ -975,17 +963,17 @@ export class AdminService {
       }
     }
 
-    const teamWorkloads: TeamWorkloadItem[] = Array.from(
-      teamMap.entries(),
-    ).map(([teamId, data]) => ({
-      teamId,
-      teamName: data.teamName,
-      scheduledCount: data.scheduled,
-      inProgressCount: data.inProgress,
-      pendingApprovalCount: data.pendingApproval,
-      completedCount: data.completed,
-      totalCount: data.total,
-    }));
+    const teamWorkloads: TeamWorkloadItem[] = Array.from(teamMap.entries()).map(
+      ([teamId, data]) => ({
+        teamId,
+        teamName: data.teamName,
+        scheduledCount: data.scheduled,
+        inProgressCount: data.inProgress,
+        pendingApprovalCount: data.pendingApproval,
+        completedCount: data.completed,
+        totalCount: data.total,
+      }),
+    );
 
     const totalTypes = totalProjects || 1;
     const propertyTypes: PropertyTypeItem[] = [

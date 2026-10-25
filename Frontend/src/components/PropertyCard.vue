@@ -125,7 +125,7 @@ const statusBadgeStyle = (status: string) => statusBadgeStyles[status] ?? { bgCl
   <q-card v-if="item && item.job" flat bordered class="q-mb-md property-card q-mx-auto cursor-pointer" @click="goToInspectionInfo(item.roundId)" v-ripple>
     <q-card-section class="row no-wrap items-stretch" style="padding: 16px">
       <div class="col-auto column" style="padding-right: 16px">
-        <q-img loading="eager"
+        <q-img loading="lazy"
           :src="
             item.job.projectImageUrl
               ? getImageUrl(item.job.projectImageUrl)

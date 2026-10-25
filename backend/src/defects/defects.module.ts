@@ -11,6 +11,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from 'src/auth/auth.module';
 import { DefectAccessGuard } from './guards/defect-access.guard';
 import { NotificationsModule } from 'src/notifications/notifications.module';
+import { DefectNoteTranslator } from './defect-note-translator.service';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { NotificationsModule } from 'src/notifications/notifications.module';
     NotificationsModule,
   ],
   controllers: [DefectsController],
-  providers: [DefectsService, DefectAccessGuard],
+  providers: [DefectsService, DefectAccessGuard, DefectNoteTranslator],
   exports: [DefectsService],
 })
 export class DefectsModule {}

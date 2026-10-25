@@ -17,6 +17,9 @@ import { User } from 'src/users/entities/user.entity';
 import * as bcrypt from 'bcrypt';
 
 const CUSTOMER_LINK_EXPIRES_IN_SECONDS = 365 * 24 * 60 * 60;
+export const CONTRACTOR_REQUIRED_FOR_LINK_MESSAGE =
+  'ต้องระบุข้อมูลผู้รับเหมาของงานนี้ก่อน จึงจะสร้างหรือส่งลิงก์ผู้รับเหมาได้';
+
 const CONTRACTOR_LINK_EXPIRES_IN_SECONDS = 365 * 24 * 60 * 60;
 
 @Injectable()
@@ -46,7 +49,12 @@ export class AuthService {
 
   async login(email: string, password: string) {
     const user = await this.validateUser(email, password);
-    const payload = { sub: user.id, email: user.email, role: user.role, branchId: user.branchId ?? null };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      branchId: user.branchId ?? null,
+    };
     return {
       access_token: await this.jwtService.signAsync(payload),
       user: {
@@ -106,9 +114,18 @@ export class AuthService {
   }
 
   private async generateContractorLinkToken(projectId: number) {
-    const job = await this.jobsRepo.findOneBy({ jobId: projectId });
+    const job = await this.jobsRepo.findOne({
+      where: { jobId: projectId },
+      relations: ['contractor'],
+    });
     if (!job) {
       throw new NotFoundException(`ไม่พบโครงการ ID ${projectId}`);
+    }
+
+    // ลิงก์ผู้รับเหมาใช้แจ้งซ่อมในนามผู้รับเหมาของงาน — ถ้างานยังไม่ระบุผู้รับเหมา หน้าแจ้งซ่อมจะส่งไม่ได้
+    // จึงต้องกรอกข้อมูลผู้รับเหมาก่อนถึงออกลิงก์ได้ (รวมกรณีมีลิงก์เดิมค้างอยู่ด้วย)
+    if (!job.contractor) {
+      throw new BadRequestException(CONTRACTOR_REQUIRED_FOR_LINK_MESSAGE);
     }
 
     if (job.contractorShareEnabled && job.contractorShareToken) {
@@ -152,12 +169,17 @@ export class AuthService {
   }
 
   async getContractorShareStatus(projectId: number) {
-    const job = await this.jobsRepo.findOneBy({ jobId: projectId });
+    const job = await this.jobsRepo.findOne({
+      where: { jobId: projectId },
+      relations: ['contractor'],
+    });
     if (!job) {
       throw new NotFoundException(`ไม่พบโครงการ ID ${projectId}`);
     }
 
     return {
+      // ให้ UI ปิดปุ่มคัดลอกลิงก์ตั้งแต่ต้นเมื่อยังไม่มีผู้รับเหมา
+      has_contractor: !!job.contractor,
       contractor_share_enabled: job.contractorShareEnabled,
       token: job.contractorShareEnabled ? job.contractorShareToken : null,
     };
