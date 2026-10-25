@@ -4,6 +4,7 @@ import { DailyReportsService } from './daily-reports.service';
 import { CreateDailyReportDto } from './dto/create-daily-report.dto';
 import { CreateDailyReportRoundDto } from './dto/create-daily-report-round.dto';
 import { JobAccessGuard } from 'src/auth/job-access.guard';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @ApiTags('daily-reports')
 @Controller('daily-reports')
@@ -11,6 +12,7 @@ export class DailyReportsController {
   constructor(private readonly dailyReportsService: DailyReportsService) {}
 
   @Post()
+  @UseGuards(AuthGuard)
   create(@Body() createDailyReportDto: CreateDailyReportDto) {
     return this.dailyReportsService.create(createDailyReportDto);
   }
@@ -23,6 +25,7 @@ export class DailyReportsController {
   }
 
   @Post(':id/rounds')
+  @UseGuards(AuthGuard)
   createRound(
     @Param('id') id: string,
     @Body() createRoundDto: CreateDailyReportRoundDto,
@@ -31,6 +34,7 @@ export class DailyReportsController {
   }
 
   @Get(':id/clone')
+  @UseGuards(AuthGuard)
   @ApiOperation({
     summary: 'Clone latest daily report round with summary items',
   })

@@ -2,8 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DailyReportsController } from './daily-reports.controller';
 import { DailyReportsService } from './daily-reports.service';
 import { AuthService } from 'src/auth/auth.service';
+import { JwtService } from '@nestjs/jwt';
+import { jwtServiceMock } from 'src/auth/testing/jwt-service.mock';
+import request from 'supertest';
 
 describe('DailyReportsController', () => {
+  let testingModule: TestingModule;
   let controller: DailyReportsController;
   let service: jest.Mocked<
     Pick<
@@ -19,16 +23,19 @@ describe('DailyReportsController', () => {
       cloneLatestRound: jest.fn(),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
+    testingModule = await Test.createTestingModule({
       controllers: [DailyReportsController],
       providers: [
         { provide: DailyReportsService, useValue: serviceMock },
         { provide: AuthService, useValue: { verifyJobAccess: jest.fn() } },
+        { provide: JwtService, useValue: jwtServiceMock },
       ],
     }).compile();
 
-    controller = module.get<DailyReportsController>(DailyReportsController);
-    service = module.get(DailyReportsService);
+    controller = testingModule.get<DailyReportsController>(
+      DailyReportsController,
+    );
+    service = testingModule.get(DailyReportsService);
   });
 
   it('should be defined', () => {
@@ -53,5 +60,24 @@ describe('DailyReportsController', () => {
     controller.cloneLatestRound('4');
 
     expect(service.cloneLatestRound).toHaveBeenCalledWith(4);
+  });
+
+  it('requires a staff token to create reports, create rounds or clone a round', async () => {
+    const app = testingModule.createNestApplication();
+    await app.init();
+
+    try {
+      await request(app.getHttpServer()).post('/daily-reports').expect(401);
+      await request(app.getHttpServer())
+        .post('/daily-reports/4/rounds')
+        .expect(401);
+      await request(app.getHttpServer())
+        .get('/daily-reports/4/clone')
+        .expect(401);
+      expect(service.createRound).not.toHaveBeenCalled();
+      expect(service.cloneLatestRound).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
   });
 });

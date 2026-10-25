@@ -6,12 +6,17 @@ import {
   Body,
   Param,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { InspectionTeamMembersService } from './inspection-team-members.service';
 import { CreateInspectionTeamMemberDto } from './dto/create-inspection-team-member.dto';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
 
 @ApiTags('assignments')
+@ApiBearerAuth()
+@UseGuards(AuthGuard, AdminGuard)
 @Controller('assignments')
 export class InspectionTeamMembersController {
   constructor(

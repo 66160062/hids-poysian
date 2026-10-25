@@ -1,8 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AssignmentsController } from './assignments.controller';
 import { AssignmentsService } from './assignments.service';
+import { JwtService } from '@nestjs/jwt';
+import { jwtServiceMock } from 'src/auth/testing/jwt-service.mock';
+import request from 'supertest';
 
 describe('AssignmentsController', () => {
+  let testingModule: TestingModule;
   let controller: AssignmentsController;
   let service: jest.Mocked<
     Pick<AssignmentsService, 'findByJob' | 'findByProject' | 'remove'>
@@ -15,13 +19,18 @@ describe('AssignmentsController', () => {
       remove: jest.fn(),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
+    testingModule = await Test.createTestingModule({
       controllers: [AssignmentsController],
-      providers: [{ provide: AssignmentsService, useValue: serviceMock }],
+      providers: [
+        { provide: AssignmentsService, useValue: serviceMock },
+        { provide: JwtService, useValue: jwtServiceMock },
+      ],
     }).compile();
 
-    controller = module.get<AssignmentsController>(AssignmentsController);
-    service = module.get(AssignmentsService);
+    controller = testingModule.get<AssignmentsController>(
+      AssignmentsController,
+    );
+    service = testingModule.get(AssignmentsService);
   });
 
   it('should be defined', () => {
@@ -38,5 +47,24 @@ describe('AssignmentsController', () => {
     controller.remove(5);
 
     expect(service.remove).toHaveBeenCalledWith(5);
+  });
+
+  it('rejects requests without a token or with a non-admin token', async () => {
+    const app = testingModule.createNestApplication();
+    await app.init();
+
+    try {
+      await request(app.getHttpServer()).get('/assignments/job/1').expect(401);
+      await request(app.getHttpServer())
+        .get('/assignments/job/1')
+        .set('Authorization', 'Bearer link-token')
+        .expect(403);
+      await request(app.getHttpServer())
+        .get('/assignments/job/1')
+        .set('Authorization', 'Bearer inspector-token')
+        .expect(403);
+    } finally {
+      await app.close();
+    }
   });
 });
