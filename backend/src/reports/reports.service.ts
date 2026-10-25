@@ -37,8 +37,18 @@ const REPORT_ROOT_SELECTOR = '[data-report-ready]';
 
 // ความกว้างรูปย่อที่หน้ารายงานขอใช้ — ต้องตรงกับที่ resolveImageUrl ใน DefectReport.vue ส่งมา
 // ไม่งั้น warm ไว้แล้วก็ไม่ถูกใช้ แล้วหน้า print จะไปย่อเองตอนโหลดซึ่งช้ากว่ามาก
-const DEFECT_THUMB_WIDTH = 600;
+// เล่มที่ defect ไม่เกิน HIGH_QUALITY_MAX_DEFECTS ใช้รูปย่อ 900px (คมกว่า) เล่มใหญ่ใช้ 600px กัน PDF ทะลุเพดานอัปโหลด
+// ต้องตรงกับ defectThumbWidth ใน DefectReport.vue
+const HIGH_QUALITY_MAX_DEFECTS = 40;
+const DEFECT_THUMB_WIDTH_HIGH = 900;
+const DEFECT_THUMB_WIDTH_COMPACT = 600;
 const SUMMARY_THUMB_WIDTH = 400;
+
+export function defectThumbWidthFor(defectCount: number): number {
+  return defectCount <= HIGH_QUALITY_MAX_DEFECTS
+    ? DEFECT_THUMB_WIDTH_HIGH
+    : DEFECT_THUMB_WIDTH_COMPACT;
+}
 const THUMB_WARM_CONCURRENCY = 6;
 
 export type ReportLocale = 'th-TH' | 'en-US';
@@ -412,10 +422,11 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       }),
     ]);
 
+    const defectWidth = defectThumbWidthFor(defects.length);
     const queue: { url: string; width: number }[] = [
       ...defects
         .filter((d) => d.imageUrl)
-        .map((d) => ({ url: d.imageUrl, width: DEFECT_THUMB_WIDTH })),
+        .map((d) => ({ url: d.imageUrl, width: defectWidth })),
       ...summaryItems
         .filter((i) => i.photoUrl)
         .map((i) => ({

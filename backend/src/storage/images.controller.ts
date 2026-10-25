@@ -36,6 +36,9 @@ export class ImagesController {
     try {
       const url = await this.storageService.ensureThumbnail(src, width);
       // redirect ไปไฟล์บน Storage ตรงๆ ให้เบราว์เซอร์/CDN cache เอง backend จึงไม่ต้องส่ง bytes ซ้ำทุกครั้ง
+      // path รูปย่อคำนวณจาก (ต้นฉบับ + ความกว้าง) แบบตายตัว ปลายทางจึงไม่เปลี่ยน — ให้เบราว์เซอร์จำ redirect
+      // ไว้ด้วย รูปเดิมรอบถัดไปจะไม่ต้องวนมาถาม backend อีก
+      res.setHeader('Cache-Control', 'public, max-age=86400');
       res.redirect(302, url);
     } catch (error) {
       // ย่อไม่สำเร็จก็ส่งต้นฉบับไปแทน ดีกว่าปล่อยให้รูปในรายงานหายไปทั้งใบ

@@ -101,17 +101,12 @@
           <img loading="eager" :src="reportLogo" style="height: 100px; object-fit: contain" />
         </div>
 
+        <!-- รูปปกแสดงเต็มภาพ (contain) มีรูปเดียวกันเบลอเป็นพื้นหลังเติมช่องว่าง — เหมือนหน้าดูงาน ไม่ถูกตัดขอบ -->
         <div class="row justify-center q-mb-sm">
-          <img
-            loading="eager"
-            :src="
-              resolveImageUrl(
-                round.job.projectImageUrl,
-                'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600',
-              )
-            "
-            style="width: 95%; max-height: 150px; object-fit: cover; border-radius: 8px"
-          />
+          <div class="cover-frame">
+            <img loading="eager" :src="coverImageSrc" class="cover-img-bg" />
+            <img loading="eager" :src="coverImageSrc" class="cover-img-fg" />
+          </div>
         </div>
 
         <div class="row q-col-gutter-md q-px-md q-mb-sm">
@@ -373,7 +368,7 @@
           <div v-for="defect in chunk" :key="defect.defectId" class="defect-card">
             <div class="badge-id">#{{ defect.defectId }}</div>
             <div class="badge-main" style="background: #ef4444">{{ defect.severity }}</div>
-            <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image', 600)" class="defect-img" />
+            <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image', defectThumbWidth)" class="defect-img" />
             <div class="card-body">
               <div class="room-title">{{ getRoomShortName(defect) }}</div>
               <div class="info-grid">
@@ -452,7 +447,7 @@
               >
                 {{ defect.severity }}
               </div>
-              <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image', 600)" class="defect-img" />
+              <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image', defectThumbWidth)" class="defect-img" />
               <div class="card-body">
                 <div class="info-grid">
                   <span class="label">{{ t('reports.defect.jobTypeLabel') }}</span>
@@ -863,7 +858,7 @@ const addressLocation = computed(() =>
 // ค่า default เก่าในฐานข้อมูลที่ไม่เคยมีไฟล์จริงรองรับ (ข้อมูลเสียของระบบเดิม) — แทนที่ด้วยรูปจริงที่อัปโหลดเก็บไว้ใน Supabase Storage แล้ว
 const LEGACY_IMAGE_REPLACEMENTS: Record<string, string> = {
   '/defect-images/unknown.jpg':
-    'https://wduuxuwwbesgrcmcsnxq.supabase.co/storage/v1/object/public/hids-uploads/defects/unknown2.jpg',
+    'https://pwjxgoybmcnxmnoabjye.supabase.co/storage/v1/object/public/hids-uploads/defects/unknown2.jpg',
 };
 
 // ต้นฉบับใน Storage เก็บที่ 1920px ซึ่งใหญ่กว่าที่หน้านี้แสดงจริงหลายเท่า พอฝังลง PDF ที่มีรูป
@@ -969,6 +964,18 @@ const stickerLegend = computed<StickerMeta[]>(() => [
     description: t('reports.defect.categories.other.description'),
   },
 ]);
+// รายงานที่ defect ไม่เยอะใช้รูปย่อละเอียดกว่า (รูปคมขึ้น) ส่วนเล่มใหญ่ลดลงเพื่อไม่ให้ไฟล์ PDF ทะลุเพดานอัปโหลด
+// ต้องตรงกับ defectThumbWidthFor ใน reports.service.ts ไม่งั้นรูปย่อที่ warm ไว้ไม่ถูกใช้ แล้วหน้า print ต้องย่อเองตอนโหลด
+const HIGH_QUALITY_MAX_DEFECTS = 40;
+const defectThumbWidth = computed(() => (props.defects.length <= HIGH_QUALITY_MAX_DEFECTS ? 900 : 600));
+
+const coverImageSrc = computed(() =>
+  resolveImageUrl(
+    props.round.job.projectImageUrl,
+    'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600',
+  ),
+);
+
 const reportLogo = computed(() => {
   const logoUrl = props.round.job.branch?.logoUrl;
   if (!logoUrl) return PoysianLogo;
@@ -2139,10 +2146,34 @@ const summaryPages = computed(() => {
   overflow: hidden;
 }
 
+.cover-frame {
+  position: relative;
+  width: 95%;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.cover-img-bg,
+.cover-img-fg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.cover-img-bg {
+  object-fit: cover;
+  filter: blur(14px) brightness(0.7) saturate(1.15);
+  transform: scale(1.15); /* ขยายเล็กน้อยกันขอบเบลอเป็นเส้นจางๆ */
+}
+.cover-img-fg {
+  object-fit: contain;
+}
+
 .card-logo-watermark-img {
   position: absolute;
-  bottom: 0px;
-  right: 10px;
+  bottom: 16px; /* ยกขึ้นจากขอบล่างของการ์ด ไม่ให้ชื่อสาขาใต้โลโก้ชิดขอบ */
+  left: 50%;
+  transform: translateX(-50%); /* กึ่งกลางพื้นที่ว่างใต้ข้อมูลของการ์ด แทนที่จะชิดมุมขวาล่าง */
   opacity: 0.3;
   width: 60px;
   object-fit: contain;
