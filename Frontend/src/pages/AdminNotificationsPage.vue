@@ -1,34 +1,29 @@
 <template>
-  <q-layout view="lHh Lpr lFf" class="bg-grey-1">
-    <q-header class="bg-white text-dark">
-      <q-toolbar class="q-px-sm">
-        <q-btn
-          flat
-          round
-          dense
-          icon="chevron_left"
-          color="primary"
-          :aria-label="t('adminManage.notifications.back')"
-          @click="router.back"
-        />
-        <q-space />
-        <q-toolbar-title class="text-center text-weight-bold text-body1 absolute-center">
-          {{ t('adminManage.notifications.title') }}
-        </q-toolbar-title>
-        <q-space />
-        <q-btn
-          flat
-          color="primary"
-          :label="t('adminManage.notifications.markAllRead')"
-          class="text-weight-bold"
-          @click="markAllAsRead"
-        />
-      </q-toolbar>
-    </q-header>
+  <q-page class="admin-notifications-page bg-grey-1">
+    <!-- Header -->
+    <div class="header-bar bg-white row items-center justify-between q-px-md q-py-sm sticky-top">
+      <q-btn
+        flat
+        round
+        dense
+        icon="chevron_left"
+        color="primary"
+        :aria-label="t('adminManage.notifications.back')"
+        @click="router.back"
+      />
+      <div class="text-center text-weight-bold text-body1">
+        {{ t('adminManage.notifications.title') }}
+      </div>
+      <q-btn
+        flat
+        color="primary"
+        :label="t('adminManage.notifications.markAllRead')"
+        class="text-weight-bold"
+        @click="markAllAsRead"
+      />
+    </div>
 
-    <q-page-container>
-      <q-page class="admin-notifications-page bg-grey-1">
-        <div class="q-px-md q-pt-lg">
+    <div class="q-px-md q-pt-lg">
 
           <!-- Search + Filter -->
           <div class="row q-gutter-x-sm no-wrap items-center q-mb-md">
@@ -168,9 +163,6 @@
             </div>
           </div>
         </div>
-      </q-page>
-    </q-page-container>
-  </q-layout>
 
   <!-- Filter Dialog -->
   <q-dialog
@@ -336,6 +328,7 @@
       </q-scroll-area>
     </q-card>
   </q-dialog>
+  </q-page>
 </template>
 
 <script setup lang="ts">
@@ -535,6 +528,13 @@ const markAllAsRead = async () => {
   max-width: 600px;
   margin: 0 auto;
   min-height: 100vh;
+}
+
+.sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
 .search-input {

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 
@@ -20,7 +21,10 @@ describe('AdminController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AdminController],
-      providers: [{ provide: AdminService, useValue: serviceMock }],
+      providers: [
+        { provide: AdminService, useValue: serviceMock },
+        { provide: JwtService, useValue: { verify: jest.fn() } },
+      ],
     }).compile();
 
     controller = module.get<AdminController>(AdminController);
@@ -32,7 +36,10 @@ describe('AdminController', () => {
   });
 
   it('forwards the date query param when loading the dashboard', () => {
-    controller.getDashboard('2026-08-01');
+    controller.getDashboard(
+      { user: { sub: 1, role: 'super_admin', email: 'admin@gmail.com', branchId: null } } as any,
+      '2026-08-01',
+    );
 
     expect(service.getDashboardData).toHaveBeenCalledWith(
       '2026-08-01',

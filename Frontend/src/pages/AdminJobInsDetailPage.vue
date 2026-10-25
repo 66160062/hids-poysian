@@ -37,67 +37,78 @@
         </div>
       </div>
 
-      <!-- Project Name & Status -->
-      <div class="row items-center justify-between no-wrap q-mb-xs q-mt-sm">
-        <div class="col ellipsis text-primary text-weight-bold" style="font-size: 20px; min-width: 0">
-          {{ t('adminJobs.inspection.projectLabel') }} {{ pickLocalized(job.projectName, job.projectNameEn) }}
-        </div>
-        <div class="row items-center q-gutter-x-sm" style="flex-shrink: 0">
-          <q-badge
-            v-if="isDefect(job.inspectionType)"
-            color="primary"
-            outline
-            :label="t('adminJobs.inspection.badgeInspection')"
-            class="q-px-sm q-py-xs type-badge"
-          />
-          <q-badge
-            v-else-if="isConstruction(job.inspectionType)"
-            color="warning"
-            outline
-            :label="t('adminJobs.inspection.badgeConstruction')"
-            class="q-px-sm q-py-xs type-badge"
-          />
-          <q-badge
-            class="status-badge"
-            :class="[getJobStatusBgClass(job.status), `text-${getJobStatusTextColor(job.status)}`]"
-          >
-            {{ jobStatusLabel(job.status) }}
-          </q-badge>
-        </div>
+      <!-- Project Name -->
+      <div class="text-primary text-weight-bold q-mt-sm q-mb-xs" style="font-size: 18px; line-height: 1.4; word-break: break-word">
+        {{ t('adminJobs.inspection.projectLabel') }} {{ pickLocalized(job.projectName, job.projectNameEn) }}
+      </div>
+
+      <!-- Inspection Type & Status Chips (Left-aligned) -->
+      <div class="row items-center q-gutter-x-md q-mb-sm">
+        <q-chip
+          v-if="isDefect(job.inspectionType)"
+          outline
+          color="primary"
+          text-color="primary"
+          dense
+          class="text-caption text-weight-bold q-px-sm"
+          style="min-height: 24px;"
+        >
+          {{ t('adminJobs.inspection.badgeInspection') }}
+        </q-chip>
+        <q-chip
+          v-else-if="isConstruction(job.inspectionType)"
+          outline
+          color="warning"
+          text-color="warning"
+          dense
+          class="text-caption text-weight-bold q-px-sm"
+          style="min-height: 24px;"
+        >
+          {{ t('adminJobs.inspection.badgeConstruction') }}
+        </q-chip>
+        <q-chip
+          dense
+          :color="getRoundStatusColor(job.status)"
+          text-color="dark"
+          class="text-caption text-weight-bold q-px-sm"
+          style="min-height: 24px;"
+        >
+          {{ jobStatusLabel(job.status, job.roundNumber) }}
+        </q-chip>
       </div>
 
       <!-- Address & Type & Area & Map -->
       <div class="row items-center justify-between no-wrap q-mb-sm">
-        <div class="column q-gutter-y-sm">
-          <div class="row items-center q-gutter-x-sm">
-            <q-icon name="place" color="primary" size="18px" />
-            <span class="text-dark" style="font-size: 12px; font-weight: 500">
+        <div class="column q-gutter-y-sm col q-pr-sm" style="min-width: 0">
+          <div class="row items-start no-wrap q-gutter-x-sm">
+            <q-icon name="place" color="primary" size="18px" style="flex-shrink: 0; margin-top: 1px" />
+            <span class="text-dark" style="font-size: 12px; font-weight: 500; word-break: break-word; line-height: 1.5">
               : {{ job.address }}
             </span>
           </div>
-          <div class="row items-center q-gutter-x-sm">
-            <q-icon name="home" color="primary" size="18px" />
-            <span class="text-dark" style="font-size: 12px; font-weight: 500">
+          <div class="row items-center no-wrap q-gutter-x-sm">
+            <q-icon name="home" color="primary" size="18px" style="flex-shrink: 0" />
+            <span class="text-dark ellipsis" style="font-size: 12px; font-weight: 500">
               : {{ job.houseType }}
             </span>
           </div>
-          <div class="row items-center q-gutter-x-sm">
-            <q-icon name="open_in_full" color="primary" size="18px" />
+          <div class="row items-center no-wrap q-gutter-x-sm">
+            <q-icon name="open_in_full" color="primary" size="18px" style="flex-shrink: 0" />
             <span class="text-dark" style="font-size: 12px; font-weight: 500">
               : {{ job.area }} {{ t('adminJobs.inspection.sqm') }}
             </span>
           </div>
           <div
             v-if="job.appointmentDate && job.appointmentDate !== '-'"
-            class="row items-center q-gutter-x-sm"
+            class="row items-center no-wrap q-gutter-x-sm"
           >
-            <q-icon name="calendar_today" color="primary" size="18px" />
+            <q-icon name="calendar_today" color="primary" size="18px" style="flex-shrink: 0" />
             <span class="text-dark" style="font-size: 12px; font-weight: 500">
               : {{ job.appointmentDate }}
             </span>
           </div>
         </div>
-        <q-btn round outline color="primary" icon="location_on" size="md" @click="openGoogleMaps" />
+        <q-btn round outline color="primary" icon="location_on" size="md" style="flex-shrink: 0" @click="openGoogleMaps" />
       </div>
 
       <!-- House Plan -->
@@ -306,7 +317,7 @@
       </q-card>
 
       <!-- Contractor Progress Section -->
-      <div v-if="inspectionRounds.length > 0 && job.status === 'COMPLETED'" class="q-mb-lg">
+      <div v-if="hasApprovedRound && !isJobClosed" class="q-mb-lg">
         <div class="row items-center justify-between q-mb-sm">
           <div class="text-subtitle2 text-weight-bold">
             {{ t('adminJobs.inspection.contractorProgressTitle') }}
@@ -367,19 +378,22 @@
           >
             <div class="row items-start justify-between no-wrap q-mb-xs">
               <div>
-                <div class="row items-center">
+                <div class="row items-center flex-wrap">
                   <div class="text-weight-bold" style="font-size: 14px; color: #333">
                     {{ t('adminJobs.inspection.roundNumberLabel', { number: round.roundNumber }) }}
                   </div>
-                  <q-badge
-                    class="status-badge q-ml-md"
-                    :class="[getJobStatusBgClass(round.status), `text-${getJobStatusTextColor(round.status)}`]"
+                  <q-chip
+                    dense
+                    :color="getRoundStatusColor(round.status)"
+                    text-color="dark"
+                    class="text-caption text-weight-bold q-px-sm q-ml-md"
+                    style="min-height: 24px;"
                   >
                     {{ jobStatusLabel(round.status) }}
-                  </q-badge>
+                  </q-chip>
                   <div
                     v-if="round.statusKey === 'SUBMITTED'"
-                    class="q-ml-lg"
+                    class="q-ml-md"
                     :class="roundClosesJob(round) ? 'text-positive' : 'text-orange-8'"
                     style="font-size: 11px"
                   >
@@ -408,9 +422,10 @@
                 icon="task_alt"
                 :label="approveButtonLabel(round)"
                 no-caps
+                no-wrap
                 dense
-                class="q-px-md"
-                style="border-radius: 8px"
+                class="q-px-sm"
+                style="border-radius: 8px; height: 36px; white-space: nowrap; flex-shrink: 0; min-width: max-content;"
                 :disable="round.statusKey !== 'SUBMITTED'"
                 :loading="isApprovingRound && selectedRound?.id === round.id"
                 @click="onApproveRound(round)"
@@ -422,6 +437,7 @@
               class="full-width q-mb-sm action-btn"
               no-caps
               align="between"
+              style="border-radius: 10px; height: 44px;"
               @click="goToRoundDefects(round)"
             >
               <span class="text-weight-bold q-ml-sm">
@@ -435,6 +451,7 @@
               class="full-width q-mb-sm action-btn"
               no-caps
               align="between"
+              style="border-radius: 10px; height: 44px;"
               @click="goToSummaryReport(round)"
             >
               <span class="text-weight-bold q-ml-sm">
@@ -448,6 +465,7 @@
               class="full-width action-btn"
               no-caps
               align="between"
+              style="border-radius: 10px; height: 44px;"
               :disable="!round.summaryCompletedAt || isGeneratingPdf"
               @click="handleViewReport(round)"
             >
@@ -740,6 +758,20 @@ const { jobStatusLabel } = useJobStatus();
 const { pickLocalized } = useLocalizedField();
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 
+const getRoundStatusColor = (status: string) => {
+  switch (status) {
+    case 'COMPLETED':
+      return 'green-2';
+    case 'PENDING_APPROVAL':
+      return 'orange-2';
+    case 'CANCELLED':
+      return 'red-2';
+    case 'IN_PROGRESS':
+    default:
+      return 'blue-2';
+  }
+};
+
 const getImageUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
@@ -863,6 +895,9 @@ const isLatestRoundNotCompleted = computed(() => {
 // กันข้อมูลเก่าที่ job ค้าง Completed ทั้งที่รอบล่าสุดยังรออนุมัติ ไม่ให้ขึ้นว่าปิดงานแล้ว
 const isJobClosed = computed(
   () => jobData.value?.status === 'Completed' && !isLatestRoundNotCompleted.value,
+);
+const hasApprovedRound = computed(() =>
+  inspectionRounds.value.some((r) => r.statusKey === 'APPROVED'),
 );
 const cannotCreateRound = computed(() => isJobClosed.value || isLatestRoundNotCompleted.value);
 
@@ -1231,14 +1266,17 @@ const job = computed(() => {
     customerEmail: data.customer?.email || '-',
     customerEmail2: data.customer?.email2 || '-',
     customerEmail3: data.customer?.email3 || '-',
-    coordName: data.createdBy?.fullName || '-',
-    coordPhone: data.createdBy?.phoneNumber || '-',
-    coordEmail: data.createdBy?.email || '-',
-    coordLine: data.createdBy?.lineId || '-',
+    coordName: data.contractor?.fullName || data.contractor?.companyName || '-',
+    coordPhone: data.contractor?.phoneNumber || '-',
+    coordEmail: data.contractor?.email || '-',
+    coordLine: data.contractor?.companyName || '-',
     housePlanImage: housePlans.value[0] ? getImageUrl(housePlans.value[0].imageUrl) : null,
     projectImage: getImageUrl(data.projectImageUrl),
-    status: latestRound?.status || jobStatusCode(data.status) || data.status || '-',
-    statusKey: (latestRound?.status || data.status) === 'Active' ? 'in_progress' : 'waiting',
+    status: isJobClosed.value
+      ? 'COMPLETED'
+      : (jobStatusCode(data.status) || 'IN_PROGRESS'),
+    statusKey: data.status === 'Active' ? 'in_progress' : 'waiting',
+    roundNumber: isJobClosed.value ? (latestRound?.roundNumber ?? null) : null,
     contractorProgress: data.contractorProgress || 0,
     isReadyForRound2: data.isReadyForRound2 || false,
   };
@@ -1493,8 +1531,7 @@ const formatDateDisplay = (dateStr: string) => {
 };
 
 const onCreateRound = () => {
-  // เดิมเทียบกับสถานะของรอบล่าสุดเท่านั้น — เช็คว่ามีรอบก่อน กันงานที่ยังไม่มีรอบแต่ job.status เป็น Completed
-  if (inspectionRounds.value.length > 0 && job.value.status === 'COMPLETED' && job.value.contractorProgress < 50) {
+  if (hasApprovedRound.value && !isJobClosed.value && job.value.contractorProgress < 50) {
     $q.dialog({
       title: t('adminJobs.inspection.confirmCreateRoundTitle'),
       message: t('adminJobs.inspection.confirmCreateRoundMessage', {
@@ -1651,33 +1688,6 @@ const submitCreateRound = async () => {
     isSubmittingRound.value = false;
   }
 };
-
-// status ในสองฟังก์ชันนี้คือรหัสจาก useJobStatus (IN_PROGRESS/PENDING_APPROVAL/COMPLETED) ไม่ใช่ข้อความที่แสดง
-// ใช้ร่วมกันทั้งป้ายสถานะงานและป้ายสถานะรอบ ให้ตรงกับ statusBgClass/statusTextColor ใน InspectorDetailPage.vue
-function getJobStatusBgClass(status: string) {
-  switch (status) {
-    case 'COMPLETED':
-      return 'bg-green-1';
-    case 'PENDING_APPROVAL':
-      return 'bg-orange-1';
-    case 'IN_PROGRESS':
-      return 'bg-blue-1';
-    default:
-      return 'bg-grey-3';
-  }
-}
-function getJobStatusTextColor(status: string) {
-  switch (status) {
-    case 'COMPLETED':
-      return 'green-9';
-    case 'PENDING_APPROVAL':
-      return 'orange-8';
-    case 'IN_PROGRESS':
-      return 'blue-9';
-    default:
-      return 'grey-8';
-  }
-}
 </script>
 
 <style scoped>

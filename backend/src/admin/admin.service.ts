@@ -13,6 +13,8 @@ import {
   DashboardStatusCount,
   DashboardTaskItem,
   MonthlyTrendItem,
+  TrendItem,
+  BusinessTrendOverview,
   JobDrilldownItem,
   JobDefectCategoryItem,
   JobDefectResolution,
@@ -250,11 +252,9 @@ export class AdminService {
           latestRound = sortedRounds[0];
         }
 
-        // กำหนดสถานะแสดงผลและสี (ใช้สถานะรอบตรวจ ถ้าไม่มีใช้สถานะงาน)
         const statusMapping = latestRound
           ? this.mapRoundStatus(
               latestRound.status,
-              job.status,
               latestRound.roundNumber,
             )
           : this.mapJobStatus(job.status);
@@ -352,9 +352,54 @@ export class AdminService {
       'พ.ย.',
       'ธ.ค.',
     ];
-    const monthlyTrends: MonthlyTrendItem[] = [];
     const now = new Date(targetDate);
 
+    // 5.1 Weekly Trends (7 วันย้อนหลัง)
+    const weeklyTrends: TrendItem[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const day = d.getDate();
+      const key = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const label = `${day} ${monthNamesTh[m]}`;
+
+      let homeCount = 0;
+      let constCount = 0;
+
+      for (const job of allJobs) {
+        const jobDate = new Date(job.createdAt);
+        if (
+          jobDate.getFullYear() === y &&
+          jobDate.getMonth() === m &&
+          jobDate.getDate() === day
+        ) {
+          const inspectionType = job.inspectionType || '';
+          const isConstruction =
+            inspectionType === 'CONSTRUCTION_INSPECTION' ||
+            inspectionType === 'ตรวจก่อสร้าง' ||
+            inspectionType === 'Construction' ||
+            inspectionType === 'งานก่อสร้าง';
+          if (isConstruction) {
+            constCount++;
+          } else {
+            homeCount++;
+          }
+        }
+      }
+
+      weeklyTrends.push({
+        key,
+        label,
+        homeInspection: homeCount,
+        construction: constCount,
+        total: homeCount + constCount,
+      });
+    }
+
+    // 5.2 Monthly Trends (6 เดือนล่าสุด)
+    const monthlyTrends: MonthlyTrendItem[] = [];
+    const monthlyTrendItems: TrendItem[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const y = d.getFullYear();
@@ -382,6 +427,14 @@ export class AdminService {
         }
       }
 
+      const item: TrendItem = {
+        key: monthKey,
+        label: monthLabel,
+        homeInspection: homeCount,
+        construction: constCount,
+        total: homeCount + constCount,
+      };
+      monthlyTrendItems.push(item);
       monthlyTrends.push({
         monthKey,
         monthLabel,
@@ -390,6 +443,48 @@ export class AdminService {
         total: homeCount + constCount,
       });
     }
+
+    // 5.3 Yearly Trends (5 ปีย้อนหลัง)
+    const yearlyTrends: TrendItem[] = [];
+    for (let i = 4; i >= 0; i--) {
+      const y = now.getFullYear() - i;
+      const key = String(y);
+      const label = `${y + 543}`;
+
+      let homeCount = 0;
+      let constCount = 0;
+
+      for (const job of allJobs) {
+        const jobDate = new Date(job.createdAt);
+        if (jobDate.getFullYear() === y) {
+          const inspectionType = job.inspectionType || '';
+          const isConstruction =
+            inspectionType === 'CONSTRUCTION_INSPECTION' ||
+            inspectionType === 'ตรวจก่อสร้าง' ||
+            inspectionType === 'Construction' ||
+            inspectionType === 'งานก่อสร้าง';
+          if (isConstruction) {
+            constCount++;
+          } else {
+            homeCount++;
+          }
+        }
+      }
+
+      yearlyTrends.push({
+        key,
+        label,
+        homeInspection: homeCount,
+        construction: constCount,
+        total: homeCount + constCount,
+      });
+    }
+
+    const trends: BusinessTrendOverview = {
+      weekly: weeklyTrends,
+      monthly: monthlyTrendItems,
+      yearly: yearlyTrends,
+    };
 
     // ========================================
     // 6. ดึงข้อมูล Defects จากรอบล่าสุด (Latest Round) ของแต่ละโครงการ
@@ -937,6 +1032,7 @@ export class AdminService {
       calendarEvents,
       tasks,
       monthlyTrends,
+      trends,
       jobDrilldowns,
       teamWorkloads,
       propertyTypes,
@@ -1022,51 +1118,44 @@ export class AdminService {
         let statusTextColor = 'grey-8';
         let statusKey = 'waiting';
 
-        if (latestRound) {
-          if (
-            latestRound.status === 'COMPLETED' ||
-            latestRound.status === 'APPROVED'
-          ) {
-            // งานถูกปิดตอนแอดมินอนุมัติรอบที่ defect ผ่านครบ (ดู InspectionRoundsService.approveReport)
-            if (job.status === 'Completed') {
-              displayStatus = `เสร็จสิ้น ${latestRound.roundNumber}`;
-              statusBgClass = 'bg-green-1';
-              statusTextColor = 'positive';
-              statusKey = 'others';
-            } else {
-              displayStatus = 'กำลังดำเนินการ';
-              statusBgClass = 'bg-blue-1';
-              statusTextColor = 'primary';
-              statusKey = 'in_progress';
-            }
-          } else if (latestRound.status === 'SUBMITTED') {
-            displayStatus = 'รออนุมัติ';
-            statusBgClass = 'bg-orange-1';
-            statusTextColor = 'orange-8';
-            statusKey = 'waiting';
+        if (job.status === 'Completed') {
+          if (latestRound) {
+            const roundStatusInfo = this.mapRoundStatus(
+              latestRound.status,
+              latestRound.roundNumber,
+            );
+            displayStatus = roundStatusInfo.displayStatus;
+            statusBgClass = roundStatusInfo.statusBgClass;
+            statusTextColor = roundStatusInfo.statusTextColor;
+            statusKey = 'others';
           } else {
-            displayStatus = 'กำลังดำเนินการ';
-            statusBgClass = 'bg-blue-1';
-            statusTextColor = 'primary';
-            statusKey = 'in_progress';
+            const jobStatusInfo = this.mapJobStatus(job.status);
+            displayStatus = jobStatusInfo.displayStatus;
+            statusBgClass = jobStatusInfo.statusBgClass;
+            statusTextColor = jobStatusInfo.statusTextColor;
+            statusKey = 'others';
           }
+        } else if (latestRound && latestRound.status === 'SUBMITTED') {
+          const roundStatusInfo = this.mapRoundStatus(
+            latestRound.status,
+            latestRound.roundNumber,
+          );
+          displayStatus = roundStatusInfo.displayStatus;
+          statusBgClass = roundStatusInfo.statusBgClass;
+          statusTextColor = roundStatusInfo.statusTextColor;
+          statusKey = 'waiting';
         } else {
-          if (job.status === 'Active') {
-            displayStatus = 'กำลังดำเนินการ';
-            statusBgClass = 'bg-blue-1';
-            statusTextColor = 'primary';
-            statusKey = 'in_progress';
-          } else if (job.status === 'Completed') {
-            displayStatus = 'เสร็จสิ้น';
-            statusBgClass = 'bg-green-1';
-            statusTextColor = 'positive';
-            statusKey = 'others';
-          } else if (job.status === 'Cancelled') {
-            displayStatus = 'ยกเลิก';
-            statusBgClass = 'bg-red-1';
-            statusTextColor = 'negative';
-            statusKey = 'others';
-          }
+          const jobStatusInfo = this.mapJobStatus(job.status);
+          displayStatus = jobStatusInfo.displayStatus;
+          statusBgClass = jobStatusInfo.statusBgClass;
+          statusTextColor = jobStatusInfo.statusTextColor;
+          statusKey =
+            jobStatusInfo.statusCode === 'COMPLETED' ||
+            jobStatusInfo.statusCode === 'CANCELLED'
+              ? 'others'
+              : jobStatusInfo.statusCode === 'PENDING_APPROVAL'
+                ? 'waiting'
+                : 'in_progress';
         }
 
         // ข้อมูลทีม
@@ -1105,7 +1194,6 @@ export class AdminService {
    */
   private mapRoundStatus(
     status: string,
-    jobStatus: string,
     roundNumber?: number,
   ): {
     displayStatus: string;
@@ -1114,14 +1202,6 @@ export class AdminService {
     statusTextColor: string;
   } {
     if (status === 'COMPLETED' || status === 'APPROVED') {
-      if (jobStatus !== 'Completed') {
-        return {
-          displayStatus: STATUS_LABEL_TH.IN_PROGRESS,
-          statusCode: 'IN_PROGRESS',
-          statusBgClass: 'bg-blue-1',
-          statusTextColor: 'primary',
-        };
-      }
       return {
         displayStatus: roundNumber
           ? `${STATUS_LABEL_TH.COMPLETED} ${roundNumber}`

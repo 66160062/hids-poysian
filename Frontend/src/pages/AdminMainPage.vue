@@ -13,6 +13,7 @@
       </q-banner>
 
       <q-select
+        v-if="isSuperAdmin"
         v-model="selectedBranchId"
         :options="branchOptions"
         option-value="value"
@@ -312,6 +313,7 @@ import type { AxiosResponse } from 'axios';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { useJobStatus, type JobStatusCode } from 'src/composables/useJobStatus';
 import { useBranchStore } from 'src/stores/useBranch';
+import { useAuthStore } from 'src/stores/useAuth';
 import type {
   BranchOption,
   DashboardStats,
@@ -323,6 +325,8 @@ const $q = useQuasar();
 const { t, locale } = useI18n();
 const { jobStatusLabel } = useJobStatus();
 const branchStore = useBranchStore();
+const authStore = useAuthStore();
+const isSuperAdmin = computed(() => authStore.isSuperAdmin);
 const error = ref<string>('');
 
 const STATUS_ACCENT_COLORS: Partial<Record<JobStatusCode, { bg: string; text: string }>> = {

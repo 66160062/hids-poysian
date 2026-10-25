@@ -7,12 +7,17 @@ import {
   Param,
   Delete,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { DefectSubCategoriesService } from './defect-sub-categories.service';
 import { CreateDefectSubCategoryDto } from './dto/create-defect-sub-category.dto';
 import { UpdateDefectSubCategoryDto } from './dto/update-defect-sub-category.dto';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
 
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
 @Controller('defect-sub-categories')
 export class DefectSubCategoriesController {
   constructor(
@@ -20,6 +25,7 @@ export class DefectSubCategoriesController {
   ) {}
 
   @Post()
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'สร้างหมวดย่อยใหม่' })
   create(@Body() createDefectSubCategoryDto: CreateDefectSubCategoryDto) {
     return this.defectSubCategoriesService.create(createDefectSubCategoryDto);
@@ -38,6 +44,7 @@ export class DefectSubCategoriesController {
   }
 
   @Patch(':id')
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'อัปเดตข้อมูลหมวดย่อย' })
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -50,6 +57,7 @@ export class DefectSubCategoriesController {
   }
 
   @Delete(':id')
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'ลบหมวดย่อย' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.defectSubCategoriesService.remove(id);

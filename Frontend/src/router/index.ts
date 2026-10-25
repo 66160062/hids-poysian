@@ -18,6 +18,7 @@ import { useAuthStore } from 'src/stores/useAuth';
  */
 
 const roleHome: Record<string, string> = {
+  super_admin: '/admin',
   admin: '/admin',
   inspector: '/inspector/Inspectsdashboard',
   customer: '/customer',
@@ -67,14 +68,15 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     }
 
     const role = auth.user?.role;
+    const isAdminRole = role === 'admin' || role === 'super_admin';
 
-    if (isAdminRoute && role !== 'admin') {
+    if (isAdminRoute && !isAdminRole) {
       next(role === 'inspector' ? '/inspector/Inspectsdashboard' : '/login');
       return;
     }
 
     if (isInspectorRoute && role !== 'inspector') {
-      next(role === 'admin' ? '/admin' : '/login');
+      next(isAdminRole ? '/admin' : '/login');
       return;
     }
 

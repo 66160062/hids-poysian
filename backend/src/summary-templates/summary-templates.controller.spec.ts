@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
 import { SummaryTemplatesController } from './summary-templates.controller';
 import { SummaryTemplatesService } from './summary-templates.service';
 
@@ -11,7 +12,10 @@ describe('SummaryTemplatesController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SummaryTemplatesController],
-      providers: [{ provide: SummaryTemplatesService, useValue: serviceMock }],
+      providers: [
+        { provide: SummaryTemplatesService, useValue: serviceMock },
+        { provide: JwtService, useValue: { verify: jest.fn() } },
+      ],
     }).compile();
 
     controller = module.get<SummaryTemplatesController>(

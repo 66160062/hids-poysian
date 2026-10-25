@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
 import { CustomersController } from './customers.controller';
 import { CustomersService } from './customers.service';
-import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
 
 describe('CustomersController', () => {

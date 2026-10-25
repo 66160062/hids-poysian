@@ -161,18 +161,18 @@
             <span class="text-caption">{{ t('inspector.detail.coordinatorLabel') }}</span>
           </div>
           <div class="text-primary text-weight-bold" style="font-size: 14px">
-            {{ jobData.job.createdBy?.fullName || t('inspector.detail.coordinatorNameUnknown') }}
+            {{ jobData.job.contractor?.fullName || jobData.job.contractor?.companyName || t('inspector.detail.coordinatorNameUnknown') }}
           </div>
           <div class="row items-center q-gutter-x-sm">
             <q-icon name="phone_in_talk" color="primary" size="18px" />
             <span class="text-dark" style="font-size: 12px; font-weight: 500">
-              : {{ jobData.job.createdBy?.phoneNumber || '-' }}
+              : {{ jobData.job.contractor?.phoneNumber || '-' }}
             </span>
           </div>
           <div class="row items-center q-gutter-x-sm">
             <q-icon name="mail_outline" color="primary" size="18px" />
             <span class="text-dark" style="font-size: 12px; font-weight: 500">
-              : {{ jobData.job.createdBy?.email || '-' }}
+              : {{ jobData.job.contractor?.email || '-' }}
             </span>
           </div>
         </div>

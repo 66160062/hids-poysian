@@ -172,7 +172,7 @@
                 </q-item-section>
               </q-item>
 
-              <template v-if="branchOptions.length > 1">
+              <template v-if="isSuperAdmin && branchOptions.length > 1">
                 <q-separator class="q-my-xs" />
                 <q-item-label header class="text-caption text-weight-bold text-grey-7">
                   {{ t('adminManage.teamManagement.branchLabel') || 'สาขา' }}
@@ -216,7 +216,7 @@
     </div>
 
     <!-- Active Filter Chips (if selected) -->
-    <div v-if="activeRoleFilter !== 'all' || selectedBranchId !== null" class="row items-center q-gutter-x-xs q-px-md q-my-xs">
+    <div v-if="activeRoleFilter !== 'all' || (isSuperAdmin && selectedBranchId !== null)" class="row items-center q-gutter-x-xs q-px-md q-my-xs">
       <span class="text-caption text-grey-7 q-mr-xs">{{ t('adminManage.userManagement.filteringLabel') }}</span>
       <q-chip
         v-if="activeRoleFilter !== 'all'"
@@ -230,7 +230,7 @@
         {{ roleFilterChips.find((r) => r.value === activeRoleFilter)?.label }}
       </q-chip>
       <q-chip
-        v-if="selectedBranchId !== null"
+        v-if="isSuperAdmin && selectedBranchId !== null"
         removable
         @remove="selectedBranchId = null"
         color="purple-1"
@@ -251,17 +251,33 @@
       </div>
 
       <!-- Users Grid -->
-      <div v-else class="row q-col-gutter-md">
-        <div
-          v-for="user in usersList"
-          :key="user.id"
-          class="col-12 col-sm-6 col-md-4 card-stagger"
-        >
-          <AdminUserCard
-            :user="user"
-            :teamOptions="teamOptions"
-            @edit="openEditDialog"
-            @delete="confirmDeleteUser"
+      <div v-else>
+        <div class="row q-col-gutter-md">
+          <div
+            v-for="user in usersList"
+            :key="user.id"
+            class="col-12 col-sm-6 col-md-4 card-stagger"
+          >
+            <AdminUserCard
+              :user="user"
+              :teamOptions="teamOptions"
+              @edit="openEditDialog"
+              @delete="confirmDeleteUser"
+            />
+          </div>
+        </div>
+
+        <!-- Pagination Controls (9 items per page) -->
+        <div v-if="usersList.length > 0" class="row justify-center q-mt-lg q-pb-xl">
+          <q-pagination
+            v-model="currentPage"
+            :max="totalPages || 1"
+            :max-pages="5"
+            boundary-numbers
+            direction-links
+            color="primary"
+            active-color="primary"
+            active-text-color="white"
           />
         </div>
       </div>
@@ -275,6 +291,8 @@
       :roleOptions="roleOptions"
       :teamOptions="teamOptions"
       :branchOptions="branchFormOptions"
+      :isBranchAdmin="isBranchAdmin"
+      :lockedBranchId="userBranchId"
       @save="onSaveUser"
     />
   </q-page>
@@ -291,6 +309,7 @@ import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { useTeamStore } from 'src/stores/useTeam';
 import { useUserStore } from 'src/stores/useUser';
 import { useBranchStore } from 'src/stores/useBranch';
+import { useAuthStore } from 'src/stores/useAuth';
 import type { User } from 'src/models';
 
 const userSpinner = createIconSpinner('group');
@@ -300,6 +319,10 @@ const $q = useQuasar();
 const teamStore = useTeamStore();
 const userStore = useUserStore();
 const branchStore = useBranchStore();
+const authStore = useAuthStore();
+const isSuperAdmin = computed(() => authStore.isSuperAdmin);
+const isBranchAdmin = computed(() => authStore.isBranchAdmin);
+const userBranchId = computed(() => authStore.userBranchId);
 
 // State
 const isLoading = computed(() => userStore.isLoading);
@@ -322,14 +345,14 @@ const selectedBranchId = computed<number | null>({
 });
 
 // KPI Counts
-const adminCount = computed(() => allUsersList.value.filter((u) => u.role === 'admin').length);
+const adminCount = computed(() => allUsersList.value.filter((u) => u.role === 'admin' || u.role === 'super_admin').length);
 const inspectorCount = computed(() => allUsersList.value.filter((u) => u.role === 'inspector').length);
 const unassignedCount = computed(() => allUsersList.value.filter(isUnassignedInspector).length);
 
 const activeFilterCount = computed(() => {
   let count = 0;
   if (activeRoleFilter.value !== 'all') count++;
-  if (selectedBranchId.value !== null) count++;
+  if (isSuperAdmin.value && selectedBranchId.value !== null) count++;
   return count;
 });
 
@@ -345,10 +368,15 @@ const roleFilterChips = computed(() => {
 
 const roleOptions = computed(() => {
   void locale.value;
-  return [
+  const base = [
     { label: t('adminManage.userManagement.roleAdmin'), value: 'admin' },
     { label: t('adminManage.userManagement.roleInspector'), value: 'inspector' },
   ];
+  // super_admin เท่านั้นที่สามารถสร้าง super_admin ได้
+  if (isSuperAdmin.value) {
+    base.unshift({ label: t('adminManage.userManagement.roleSuperAdmin'), value: 'super_admin' });
+  }
+  return base;
 });
 
 const teamOptions = computed(() =>
@@ -378,10 +406,14 @@ const branchFormOptions = computed(() => {
   }));
 });
 
-const loadUsers = async () => {
+const currentPage = ref(1);
+const totalPages = computed(() => userStore.meta.totalPages || 1);
+
+const loadUsers = async (page = currentPage.value) => {
   try {
     await userStore.fetchUsers({
-      all: true,
+      page,
+      limit: 9,
       search: searchQuery.value.trim() || undefined,
       role:
         activeRoleFilter.value === 'unassigned'
@@ -389,7 +421,10 @@ const loadUsers = async () => {
           : activeRoleFilter.value !== 'all'
             ? activeRoleFilter.value
             : undefined,
-      branchId: selectedBranchId.value ?? undefined,
+      branchId:
+        isBranchAdmin.value
+          ? (userBranchId.value ?? undefined)  // branch admin ต้อง lock สาขาตัวเอง
+          : selectedBranchId.value ?? undefined,
     });
   } catch (err) {
     const error = err as Error & { response?: { data?: { message?: string } } };
@@ -399,16 +434,22 @@ const loadUsers = async () => {
   }
 };
 
+watch(currentPage, (newPage) => {
+  void loadUsers(newPage);
+});
+
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 watch(searchQuery, () => {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => {
-    void loadUsers();
+    currentPage.value = 1;
+    void loadUsers(1);
   }, 400);
 });
 
 watch([activeRoleFilter, selectedBranchId], () => {
-  void loadUsers();
+  currentPage.value = 1;
+  void loadUsers(1);
 });
 
 // Form State
@@ -453,17 +494,22 @@ onMounted(async () => {
 const openCreateDialog = () => {
   isEditing.value = false;
   editingId.value = null;
-  formData.value = { ...defaultForm() };
+  formData.value = {
+    ...defaultForm(),
+    branchId: selectedBranchId.value ?? null,
+  };
   showFormDialog.value = true;
 };
 
 const openEditDialog = (user: User) => {
   isEditing.value = true;
   editingId.value = user.id;
+  const rawBranchId = user.branchId ?? user.branch?.branchId ?? user.team?.branchId ?? user.team?.branch?.branchId ?? null;
+  const rawTeamId = user.teamId ?? user.team?.team_Id ?? null;
   formData.value = {
     ...user,
-    teamId: user.team?.team_Id ?? user.teamId,
-    branchId: user.branchId ?? user.branch?.branchId ?? user.team?.branchId ?? null,
+    teamId: rawTeamId ? Number(rawTeamId) : 0,
+    branchId: rawBranchId ? Number(rawBranchId) : null,
   };
   showFormDialog.value = true;
 };
@@ -496,8 +542,7 @@ const onSaveUser = async (payload: { form: Partial<User>; file: File | null }) =
       $q.notify({ type: 'positive', message: t('adminManage.userManagement.addSuccess'), icon: 'check_circle' });
     }
     showFormDialog.value = false;
-    void loadUsers();
-    void userStore.fetchAllUsers();
+    await Promise.all([loadUsers(), userStore.fetchAllUsers()]);
   } catch (err) {
     const error = err as Error & { response?: { data?: { message?: string } } };
     console.error('Save user failed', error);

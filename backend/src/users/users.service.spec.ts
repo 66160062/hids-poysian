@@ -45,6 +45,7 @@ describe('UsersService', () => {
   });
 
   it('hashes the password before creating a user', async () => {
+    usersRepo.findOne.mockResolvedValue(null);
     usersRepo.create.mockImplementation((value) => value);
     usersRepo.save.mockImplementation((value) => value);
 
@@ -55,6 +56,17 @@ describe('UsersService', () => {
 
     expect(bcrypt.hash).toHaveBeenCalledWith('plain-text', 10);
     expect(result).toMatchObject({ password: 'hashed-password' });
+  });
+
+  it('throws ConflictException when creating a user with an existing email', async () => {
+    usersRepo.findOne.mockResolvedValue({ id: 1, email: 'duplicate@example.com' });
+
+    await expect(
+      service.create({
+        email: 'duplicate@example.com',
+        password: 'plain-text',
+      } as never),
+    ).rejects.toThrow('อีเมลนี้ถูกใช้งานในระบบแล้ว');
   });
 
   it('throws NotFoundException when the user does not exist', async () => {

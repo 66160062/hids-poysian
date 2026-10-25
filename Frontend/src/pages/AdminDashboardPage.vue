@@ -20,7 +20,7 @@
           </div>
         </div>
 
-        <div style="min-width: 180px; max-width: 240px;">
+        <div v-if="isSuperAdmin" style="min-width: 180px; max-width: 240px;">
           <q-select
             v-model="selectedBranchId"
             :options="branchOptions"
@@ -117,12 +117,12 @@
       </div>
 
       <!-- 2. Row 1: Operational Pipeline & Team Workload -->
-      <div class="row q-col-gutter-md q-mb-md">
-        <div class="col-12 col-lg-7 card-stagger">
-          <OperationalPipelineCard :pipeline="operationalPipeline" />
+      <div class="row q-col-gutter-md q-mb-md items-stretch">
+        <div class="col-12 col-lg-7 card-stagger column">
+          <OperationalPipelineCard :pipeline="operationalPipeline" class="full-height" />
         </div>
-        <div class="col-12 col-lg-5 card-stagger">
-          <TeamWorkloadCard :team-workloads="teamWorkloads" />
+        <div class="col-12 col-lg-5 card-stagger column">
+          <TeamWorkloadCard :team-workloads="teamWorkloads" class="full-height" />
         </div>
       </div>
 
@@ -133,10 +133,10 @@
         </div>
       </div>
 
-      <!-- 4. Row 3: Monthly Trends Business Growth Chart -->
+      <!-- 4. Row 3: Business Trends Growth Chart -->
       <div class="row q-col-gutter-md q-mb-md">
         <div class="col-12 card-stagger">
-          <MonthlyTrendChart :trends="monthlyTrends" />
+          <MonthlyTrendChart :trends="businessTrends" />
         </div>
       </div>
     </div>
@@ -155,8 +155,10 @@ import TeamWorkloadCard from 'src/components/dashboard/TeamWorkloadCard.vue';
 import JobDrilldownCard from 'src/components/dashboard/JobDrilldownCard.vue';
 import OperationalPipelineCard from 'src/components/dashboard/OperationalPipelineCard.vue';
 import { useBranchStore } from 'src/stores/useBranch';
+import { useAuthStore } from 'src/stores/useAuth';
 import type {
   MonthlyTrendItem,
+  BusinessTrendOverview,
   JobDefectCategoryItem,
   JobDefectResolution,
   TeamWorkloadItem,
@@ -171,6 +173,8 @@ const $q = useQuasar();
 const { t } = useI18n();
 const error = ref<string>('');
 const branchStore = useBranchStore();
+const authStore = useAuthStore();
+const isSuperAdmin = computed(() => authStore.isSuperAdmin);
 
 const dashboard = ref<DashboardStats>({
   totalProjects: 0,
@@ -191,7 +195,7 @@ const dashboard = ref<DashboardStats>({
 });
 
 const branches = ref<BranchOption[]>([]);
-const monthlyTrends = ref<MonthlyTrendItem[]>([]);
+const businessTrends = ref<BusinessTrendOverview | MonthlyTrendItem[] | undefined>(undefined);
 const topDefectCategories = ref<JobDefectCategoryItem[]>([]);
 const overallDefectResolution = ref<JobDefectResolution | undefined>(undefined);
 const teamWorkloads = ref<TeamWorkloadItem[]>([]);
@@ -257,7 +261,7 @@ async function fetchDashboardData(): Promise<void> {
     };
 
     branches.value = Array.isArray(data.branches) ? data.branches : [];
-    monthlyTrends.value = Array.isArray(data.monthlyTrends) ? data.monthlyTrends : [];
+    businessTrends.value = data.trends || (Array.isArray(data.monthlyTrends) ? data.monthlyTrends : []);
     topDefectCategories.value = Array.isArray(data.topDefectCategories) ? data.topDefectCategories : [];
     overallDefectResolution.value = data.overallDefectResolution;
     teamWorkloads.value = Array.isArray(data.teamWorkloads) ? data.teamWorkloads : [];

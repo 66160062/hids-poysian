@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, MaxLength, ValidateIf } from 'class-validator';
 
 export class CreateContractorDto {
   @ApiProperty({ description: 'ชื่อผู้รับเหมา', example: 'วรวิทย์' })
@@ -16,8 +16,9 @@ export class CreateContractorDto {
     example: 'somchai@email.com',
     required: false,
   })
-  @IsString()
   @IsOptional()
+  @ValidateIf((_o, v) => !!v)
+  @IsEmail()
   email?: string;
 
   @ApiProperty({

@@ -1,16 +1,73 @@
 <template>
-  <div style="overflow: hidden; width: 100%">
-    <div v-if="checkFreshness && isReportStale" class="row items-center q-pa-sm q-mb-sm freshness-banner">
+  <div ref="rootRef" class="report-root-container">
+    <div v-if="checkFreshness && isReportStale" class="row items-center q-pa-sm q-mb-sm freshness-banner no-print">
       <q-icon name="autorenew" color="warning" size="18px" class="q-mr-sm" />
       <div class="text-caption text-grey-8">
         {{ t('reports.defect.freshnessBanner') }}
       </div>
     </div>
-    <div
-      ref="reportRef"
-      class="pdf-wrapper"
-      :style="`transform: scale(${pageScale}); transform-origin: top left; width: 794px;`"
-    >
+
+    <!-- Floating Zoom Controls (no-print) -->
+    <div class="zoom-floating-bar no-print row items-center q-gutter-x-xs shadow-3">
+      <q-btn
+        flat
+        round
+        dense
+        icon="remove"
+        color="dark"
+        size="sm"
+        :disable="pageScale <= minScale"
+        @click="zoomOut"
+      >
+        <q-tooltip>{{ t('common.zoomOut') || 'ซูมออก' }}</q-tooltip>
+      </q-btn>
+      <div class="zoom-percent-text cursor-pointer" @click="resetZoom">
+        {{ Math.round(pageScale * 100) }}%
+      </div>
+      <q-btn
+        flat
+        round
+        dense
+        icon="add"
+        color="dark"
+        size="sm"
+        :disable="pageScale >= maxScale"
+        @click="zoomIn"
+      >
+        <q-tooltip>{{ t('common.zoomIn') || 'ซูมเข้า' }}</q-tooltip>
+      </q-btn>
+      <q-separator vertical class="q-mx-xs" style="height: 18px" />
+      <q-btn
+        flat
+        round
+        dense
+        icon="fit_screen"
+        color="dark"
+        size="sm"
+        @click="fitWidth"
+      >
+        <q-tooltip>{{ t('common.fitWidth') || 'พอดีหน้าจอ' }}</q-tooltip>
+      </q-btn>
+      <q-btn
+        flat
+        round
+        dense
+        icon="restart_alt"
+        color="dark"
+        size="sm"
+        @click="resetZoom"
+      >
+        <q-tooltip>{{ t('common.resetZoom') || 'ขนาดจริง 100%' }}</q-tooltip>
+      </q-btn>
+    </div>
+
+    <!-- Scaler container that matches the scaled height & width -->
+    <div class="report-scaler-container" :style="scalerContainerStyle">
+      <div
+        ref="reportRef"
+        class="pdf-wrapper"
+        :style="pdfWrapperStyle"
+      >
       <!-- หน้า 1: ข้อมูล -->
       <div class="pdf-page">
         <div class="row justify-between items-center q-px-md q-pt-sm q-pb-xs header-line">
@@ -729,13 +786,14 @@
             <span> {{ branch?.mailAddress }} </span>
           </div>
         </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
 import { useLocalizedField, localizedName } from 'src/composables/useLocalizedField';
@@ -879,15 +937,124 @@ const reportLogo = computed(() => {
   return logoUrl.startsWith('http') ? logoUrl : `${apiUrl}${logoUrl}`;
 });
 
+const PAGE_WIDTH_PX = 794; // 210mm ≈ 794px
+const minScale = 0.3;
+const maxScale = 2.0;
+
 const pageScale = ref(1);
-onMounted(() => {
-  const pageWidthPx = 794; // 210mm ≈ 794px
-  const screenWidth = window.innerWidth - 32;
-  pageScale.value = Math.min(1, screenWidth / pageWidthPx);
+const rootRef = ref<HTMLElement | null>(null);
+const reportRef = ref<HTMLElement | null>(null);
+const reportContentHeight = ref(0);
+
+function updateReportHeight() {
+  if (reportRef.value) {
+    reportContentHeight.value = reportRef.value.scrollHeight || reportRef.value.offsetHeight;
+  }
+}
+
+function zoomIn() {
+  pageScale.value = Math.min(maxScale, Number((pageScale.value + 0.1).toFixed(2)));
+}
+
+function zoomOut() {
+  pageScale.value = Math.max(minScale, Number((pageScale.value - 0.1).toFixed(2)));
+}
+
+function isMobileDevice(): boolean {
+  return (
+    (typeof window !== 'undefined' && window.innerWidth < 768) ||
+    (typeof navigator !== 'undefined' &&
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+  );
+}
+
+function resetZoom() {
+  pageScale.value = isMobileDevice() ? 0.4 : 1.0;
+}
+
+function fitWidth() {
+  pageScale.value = isMobileDevice() ? 0.4 : 1.0;
+}
+
+const scalerContainerStyle = computed(() => {
+  const scaledHeight = reportContentHeight.value > 0 ? reportContentHeight.value * pageScale.value : undefined;
+  const scaledWidth = PAGE_WIDTH_PX * pageScale.value;
+  return {
+    width: `${scaledWidth}px`,
+    minWidth: `${scaledWidth}px`,
+    height: scaledHeight ? `${scaledHeight}px` : 'auto',
+    margin: '0 auto',
+    overflow: 'visible' as const,
+    position: 'relative' as const,
+  };
 });
+
+const pdfWrapperStyle = computed(() => {
+  return {
+    transform: `scale(${pageScale.value})`,
+    transformOrigin: 'top left',
+    width: `${PAGE_WIDTH_PX}px`,
+    position: 'absolute' as const,
+    top: '0',
+    left: '0',
+  };
+});
+
+// Touch pinch-to-zoom gesture on mobile
+let initialPinchDistance = 0;
+let initialPinchScale = 1;
+let isPinching = false;
+
+function getTouchDistance(e: TouchEvent): number {
+  if (e.touches.length < 2) return 0;
+  const t1 = e.touches[0];
+  const t2 = e.touches[1];
+  if (!t1 || !t2) return 0;
+  return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+}
+
+function handleTouchStart(e: TouchEvent) {
+  if (e.touches.length === 2) {
+    isPinching = true;
+    initialPinchDistance = getTouchDistance(e);
+    initialPinchScale = pageScale.value;
+  }
+}
+
+function handleTouchMove(e: TouchEvent) {
+  if (isPinching && e.touches.length === 2) {
+    e.preventDefault();
+    const currentDistance = getTouchDistance(e);
+    if (initialPinchDistance > 0 && currentDistance > 0) {
+      const factor = currentDistance / initialPinchDistance;
+      const targetScale = initialPinchScale * factor;
+      pageScale.value = Math.max(minScale, Math.min(maxScale, Number(targetScale.toFixed(2))));
+    }
+  }
+}
+
+function handleTouchEnd(e: TouchEvent) {
+  if (e.touches.length < 2) {
+    isPinching = false;
+    initialPinchDistance = 0;
+  }
+}
+
+function handleWheel(e: WheelEvent) {
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.05 : -0.05;
+    pageScale.value = Math.max(minScale, Math.min(maxScale, Number((pageScale.value + delta).toFixed(2))));
+  }
+}
 
 const isReportStale = ref(false);
 let freshnessTimer: ReturnType<typeof setInterval> | null = null;
+let resizeObserver: ResizeObserver | null = null;
+
+function onWindowResize() {
+  updateReportHeight();
+}
 
 // เทียบ hash ข้อมูล defect สดกับ hash ตอน generate PDF/AI summary ครั้งล่าสุด (backend คำนวณให้
 // ผ่าน isStale — ดู ReportsService.getCachedReportUrl) ระหว่างรอ debounce 30 วิ + เวลา render จริง
@@ -908,17 +1075,48 @@ async function checkReportFreshness() {
 }
 
 onMounted(() => {
-  if (!props.checkFreshness) return;
-  void checkReportFreshness();
-  freshnessTimer = setInterval(() => void checkReportFreshness(), 8000);
-  void useBranchStore().fetchBranches()
+  fitWidth();
+  void nextTick(() => {
+    updateReportHeight();
+  });
+
+  if (rootRef.value) {
+    rootRef.value.addEventListener('touchstart', handleTouchStart, { passive: false });
+    rootRef.value.addEventListener('touchmove', handleTouchMove, { passive: false });
+    rootRef.value.addEventListener('touchend', handleTouchEnd);
+    rootRef.value.addEventListener('wheel', handleWheel, { passive: false });
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', onWindowResize);
+    if ('ResizeObserver' in window && reportRef.value) {
+      resizeObserver = new ResizeObserver(() => {
+        updateReportHeight();
+      });
+      resizeObserver.observe(reportRef.value);
+    }
+  }
+
+  if (props.checkFreshness) {
+    void checkReportFreshness();
+    freshnessTimer = setInterval(() => void checkReportFreshness(), 8000);
+  }
+  void useBranchStore().fetchBranches();
 });
 
 onUnmounted(() => {
+  if (rootRef.value) {
+    rootRef.value.removeEventListener('touchstart', handleTouchStart);
+    rootRef.value.removeEventListener('touchmove', handleTouchMove);
+    rootRef.value.removeEventListener('touchend', handleTouchEnd);
+    rootRef.value.removeEventListener('wheel', handleWheel);
+  }
+  if (resizeObserver) resizeObserver.disconnect();
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', onWindowResize);
+  }
   if (freshnessTimer) clearInterval(freshnessTimer);
 });
-
-const reportRef = ref<HTMLElement | null>(null);
 
 const summaryStats = computed(() => [
   { label: t('reports.defect.totalDefects'), value: props.defects.length, color: '#1976d2' },
@@ -1356,12 +1554,12 @@ async function exportPdf() {
       `/inspection-rounds/${props.round.roundId}/report`,
       { params: { lang: locale.value } },
     );
-    if (data.url) {
+    if (data?.url) {
       window.open(data.url, '_blank');
       return;
     }
-  } catch {
-    // เช็ค cache ไม่สำเร็จ ปล่อยผ่านไป fallback ด้านล่าง
+  } catch (err) {
+    console.error('Failed to get cached report URL:', err);
   }
 
   exportPdfClientSide();
@@ -1370,7 +1568,10 @@ async function exportPdf() {
 function exportPdfClientSide() {
   if (!reportRef.value) return;
   const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
+  if (!printWindow) {
+    window.print();
+    return;
+  }
 
   const allStyles = Array.from(document.styleSheets)
     .map((sheet) => {
@@ -1384,68 +1585,15 @@ function exportPdfClientSide() {
     })
     .join('');
 
-  const html = `
+  const html = `<!DOCTYPE html>
     <html>
       <head>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap">
+        <title>Defect Report</title>
         <style>
           ${allStyles}
-          /* --- เพิ่มจุดที่ 1: บังคับให้พิมพ์สีพื้นหลัง (แก้ปัญหาสีหาย) --- */
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-
-          body { margin: 0; padding: 0; font-family: 'Sarabun', sans-serif !important; background: #ccc; }
-          .pdf-wrapper { background: #ccc; padding: 0; }
-
-          /* --- เพิ่มจุดที่ 2: แก้ไขความสูงหน้ากระดาษ (แก้ปัญหาหน้ายาวว่างเปล่า) --- */
-          .pdf-page {
-            width: 210mm;
-            min-height: 297mm; /* ใช้ min-height เพื่อให้หดได้ถ้าเนื้อหาน้อย */
-            padding: 10mm;
-            margin: 10mm auto;
-            background: white;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            page-break-after: always;
-            position: relative;
-          }
-
-          @media print {
-            body { background: none; }
-            .pdf-page {
-              margin: 0;
-              box-shadow: none;
-              height: 297mm; /* ตอนพิมพ์จริงค่อยล็อคให้เต็มหน้า A4 */
-            }
-            @page { size: A4; margin: 0; }
-          }
-          /* -------------------------------------------------- */
-
-          .defects-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 10px; flex: 1; }
-          .defect-card { display: flex; flex-direction: column; border: 1px solid #f48fb1; border-radius: 8px; background: #fff5f7; position: relative; overflow: hidden; height: 100mm; }
-          .defect-img { width: 100%; height: 55mm; object-fit: cover; }
-          .badge-id { position: absolute; top: 5px; left: 5px; background: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; border: 1px solid #ddd; z-index: 10; }
-          .badge-main { position: absolute; top: 5px; right: 5px; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; z-index: 10; }
-          .card-body { padding: 8px; font-size: 11px; position: relative; flex: 1; overflow: visible; }
-          .room-title { font-weight: bold; text-align: center; margin-bottom: 5px; border-bottom: 1px solid #fecaca; }
-          .header-line { border-bottom: 1px solid #ccc; margin-bottom: 8px; }
-          .section-title { border-left: 4px solid #1976d2; padding-left: 8px; font-weight: bold; font-size: 12px; }
-          .info-box { border: 1px solid #e0e0e0; border-radius: 4px; background: #fafafa; min-height: 85px; padding: 8px; }
-          .label { font-weight: bold; }
-          .info-grid { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 4px; row-gap: 2px; font-size: 10px; overflow-wrap: anywhere; }
-          .card-logo-watermark-img { position: absolute; bottom: 0px; right: 10px; opacity: 0.3; width: 60px; object-fit: contain; }
-          .pdf-footer { border-top: 1px solid #ccc; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #555; margin-top: auto; }
-          .footer-contacts { display: flex; align-items: center; gap: 6px; font-size: 10px; }
-          .sticker-legend { border: 1px solid #d8e1ea; border-radius: 6px; background: #f8fafc; padding: 8px 10px; }
-          .sticker-legend-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; margin-top: 5px; }
-          .sticker-legend-item { display: grid; grid-template-columns: 10px minmax(0, 1fr); align-items: start; gap: 5px; min-width: 0; font-size: 9px; color: #334155; line-height: 1.3; }
-          .sticker-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-top: 2px; }
-          .sticker-legend-text { min-width: 0; }
-          .sticker-legend-label { font-weight: 700; color: #1f2937; white-space: nowrap; margin-right: 3px; }
-          .sticker-legend-description { color: #475569; overflow-wrap: anywhere; }
+          @page { size: A4 portrait; margin: 0; }
+          body { margin: 0; padding: 0; background: white; }
+          .defect-report-page { page-break-after: always; break-after: page; }
         </style>
       </head>
       <body>
@@ -1462,7 +1610,11 @@ function exportPdfClientSide() {
   printWindow.document.close();
 }
 
-defineExpose({ exportPdf });
+const printPdf = () => {
+  void exportPdf();
+};
+
+defineExpose({ exportPdf, printPdf });
 
 // รวมคำตอบเป็น 1 แถวต่อหัวข้อ (template) — API ส่งมาเป็น 1 แถวต่อตัวเลือกที่ติ้ก + 1 แถวต่อรูปหลักฐาน
 // เรียงตาม templateId ให้ลำดับหมวด/หัวข้อตรงกับแบบฟอร์มที่ช่างกรอก ไม่ใช่ตามลำดับที่บันทึก
@@ -1572,6 +1724,46 @@ const summaryPages = computed(() => {
 </script>
 
 <style scoped>
+.report-root-container {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  position: relative;
+  touch-action: pan-x pan-y;
+  background: #525659;
+  min-height: 100%;
+  padding-bottom: 24px;
+}
+
+.report-scaler-container {
+  overflow: visible;
+  position: relative;
+  margin: 0 auto;
+}
+
+.zoom-floating-bar {
+  position: sticky;
+  top: 12px;
+  left: 50%;
+  margin: 0 auto 12px auto;
+  z-index: 1000;
+  width: fit-content;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 24px;
+  padding: 4px 8px;
+}
+
+.zoom-percent-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  min-width: 42px;
+  text-align: center;
+  user-select: none;
+}
+
 .pdf-wrapper {
   background: #eee;
   padding: 20px 0;
@@ -2162,5 +2354,70 @@ const summaryPages = computed(() => {
   color: white;
   font-size: 9px;
   font-weight: bold;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    background: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print,
+  .zoom-floating-bar,
+  .freshness-banner,
+  .q-toolbar,
+  .q-header,
+  .q-drawer {
+    display: none !important;
+  }
+
+  .report-root-container {
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+  }
+
+  .report-scaler-container {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  .pdf-wrapper {
+    transform: none !important;
+    width: 210mm !important;
+    margin: 0 auto !important;
+    background: none !important;
+    padding: 0 !important;
+  }
+
+  .pdf-page {
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    padding: 10mm !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
 }
 </style>

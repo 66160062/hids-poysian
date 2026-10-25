@@ -1,16 +1,28 @@
-import { Controller, Get, Query, Post } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Query, Post, UseGuards, Req } from '@nestjs/common';
+import type { Request } from 'express';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { DashboardResponse } from './dto/dashboard-response.dto';
 import { WorkListResponse } from './dto/work-list-response.dto';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
+
+interface JwtUser {
+  sub: number;
+  email: string;
+  role: string;
+  branchId: number | null;
+}
 
 /**
  * AdminController — จัดการเส้นทาง HTTP สำหรับระบบ Admin
  *
- * ⚠️ ตาม Skill: Controller ทำหน้าที่ routing เท่านั้น
+ *  ตาม Skill: Controller ทำหน้าที่ routing เท่านั้น
  *    Logic ทั้งหมดอยู่ใน AdminService
  */
 @ApiTags('admin')
+@ApiBearerAuth()
+@UseGuards(AuthGuard, AdminGuard)
 @Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
@@ -28,11 +40,16 @@ export class AdminController {
     description: 'Optional branch id for dashboard filtering',
   })
   getDashboard(
+    @Req() req: Request & { user: JwtUser },
     @Query('date') dateString?: string,
     @Query('branchId') branchId?: string,
   ): Promise<DashboardResponse> {
-    const parsedBranchId = branchId ? Number(branchId) : undefined;
-    return this.adminService.getDashboardData(dateString, parsedBranchId);
+    const effectiveBranchId =
+      req.user?.role === 'admin' && req.user?.branchId
+        ? req.user.branchId
+        : branchId ? Number(branchId) : undefined;
+
+    return this.adminService.getDashboardData(dateString, effectiveBranchId);
   }
 
   @Post('sync-jobs')

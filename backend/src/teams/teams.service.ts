@@ -39,7 +39,8 @@ export class TeamsService {
       .createQueryBuilder('team')
       .leftJoinAndSelect('team.branch', 'branch')
       .where('team.status = :status', { status: 'active' })
-      .orderBy('team.team_Id', 'DESC');
+      .orderBy('team.updated_at', 'DESC')
+      .addOrderBy('team.team_Id', 'DESC');
 
     if (params?.branchId) {
       query.andWhere('team.branchId = :branchId', {

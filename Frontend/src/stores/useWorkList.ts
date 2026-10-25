@@ -73,7 +73,7 @@ export const useWorkListStore = defineStore('workList', () => {
   const meta = ref({
     total: 0,
     page: 1,
-    limit: 5,
+    limit: 9,
     totalPages: 1
   });
 

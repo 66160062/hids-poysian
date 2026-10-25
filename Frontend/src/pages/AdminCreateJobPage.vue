@@ -32,13 +32,27 @@
     <!-- ================================ -->
 
     <div class="form-container q-pa-md q-gutter-y-lg pb-100">
-      <q-card flat bordered class="card-rounded q-pa-md">
-        <div class="row items-center q-mb-sm text-primary"><q-icon name="business" size="20px" class="q-mr-sm" /><div class="text-subtitle2 text-weight-bold">{{ t('adminWork.createJob.branchSectionTitle') }}</div></div>
-        <q-select v-model="selectedBranchId" :options="branchOptions" emit-value map-options outlined class="custom-select" :label="t('adminWork.createJob.selectBranchLabel')" />
-        <div v-if="!branchOptions.length" class="text-negative text-caption q-mt-sm">{{ t('adminWork.createJob.noBranchesHint') }}</div>
+      <!-- ข้อมูลสาขา (แสดงเฉพาะ Super Admin สำหรับเลือกสาขาที่เปิดเล่ม) -->
+      <q-card v-if="isSuperAdmin" flat bordered class="card-rounded q-pa-md">
+        <div class="row items-center q-mb-sm text-primary">
+          <q-icon name="business" size="20px" class="q-mr-sm" />
+          <div class="text-subtitle2 text-weight-bold">{{ t('adminWork.createJob.branchSectionTitle') }}</div>
+        </div>
+
+        <q-select
+          v-model="selectedBranchId"
+          :options="branchOptions"
+          emit-value
+          map-options
+          outlined
+          class="custom-select"
+          :label="t('adminWork.createJob.selectBranchLabel')"
+        />
+        <div v-if="!branchOptions.length" class="text-negative text-caption q-mt-sm">
+          {{ t('adminWork.createJob.noBranchesHint') }}
+        </div>
+        <div class="text-caption text-primary q-mt-sm">{{ t('adminWork.createJob.branchTeamHint') }}</div>
       </q-card>
-      <!-- ข้อมูลลูกค้า -->
-      <div class="text-caption text-primary q-mt-sm">{{ t('adminWork.createJob.branchTeamHint') }}</div>
       <div class="section">
         <div class="row items-center q-mb-sm text-primary justify-between">
           <div class="row items-center">
@@ -205,6 +219,9 @@
               "
               class="custom-input"
               :readonly="!!selectedCustomer && !isEditMode"
+              :rules="[
+                (val) => isValidEmail(val) || t('adminWork.createJob.emailInvalid'),
+              ]"
             >
               <template #append>
                 <q-btn
@@ -281,6 +298,9 @@
               clearable
               :placeholder="t('adminWork.createJob.emailPlaceholder')"
               class="custom-input"
+              :rules="[
+                (val) => isValidEmail(val) || t('adminWork.createJob.emailInvalid'),
+              ]"
             />
             <q-input
               v-model="form.contractorCompanyName"
@@ -534,7 +554,14 @@
               :placeholder="t('adminWork.createJob.usableAreaPlaceholder')"
               class="custom-input"
               type="number"
-              :rules="[(val) => !!val || t('adminWork.createJob.usableAreaRequired')]"
+              min="0.01"
+              step="any"
+              :rules="[
+                (val) => !!val || t('adminWork.createJob.usableAreaRequired'),
+                (val) =>
+                  (Number(val) > 0 && !Number.isNaN(Number(val))) ||
+                  t('adminWork.createJob.usableAreaInvalid'),
+              ]"
             />
             <q-select
               v-model="form.houseType"
@@ -698,6 +725,7 @@ import { useAddressStore } from '../stores/useAddress';
 import { useContractorStore } from '../stores/useContractor';
 import { useHouseTypeStore } from '../stores/useHouseType';
 import { useBranchStore } from '../stores/useBranch';
+import { useAuthStore } from 'src/stores/useAuth';
 import { useThaiAddress, type ThaiAddress } from '../composables/useThaiAddress';
 import { useLocalizedField } from 'src/composables/useLocalizedField';
 import { defaultPlanNames } from 'src/composables/useDefaultPlanName';
@@ -730,6 +758,8 @@ const addressStore = useAddressStore();
 const contractorStore = useContractorStore();
 const houseTypeStore = useHouseTypeStore();
 const branchStore = useBranchStore();
+const authStore = useAuthStore();
+const isSuperAdmin = computed(() => authStore.isSuperAdmin);
 const thaiAddress = useThaiAddress();
 const selectedBranchId = ref<number | undefined>();
 const branchOptions = computed(() => branchStore.branchOptions);
@@ -817,6 +847,11 @@ const addCustomerEmail = () => {
 };
 const removeCustomerEmail = (idx: number) => {
   customerEmails.value.splice(idx, 1);
+};
+
+const isValidEmail = (val: string | null | undefined): boolean => {
+  if (!val || !val.trim()) return true;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
 };
 
 const selectCustomer = (c: Customer) => {
@@ -1101,6 +1136,18 @@ onMounted(async () => {
   }
 
   if (!editId.value) {
+    if (authStore.isBranchAdmin && authStore.userBranchId) {
+      selectedBranchId.value = authStore.userBranchId;
+    } else {
+      const activeBranch = branchStore.getPageBranch('work');
+      if (typeof activeBranch === 'number' && activeBranch > 0) {
+        selectedBranchId.value = activeBranch;
+      } else if (route.query.branchId) {
+        selectedBranchId.value = Number(route.query.branchId);
+      } else {
+        selectedBranchId.value = undefined;
+      }
+    }
     $q.loading.hide();
     return;
   }
@@ -1220,6 +1267,12 @@ const submitProblems = computed(() => {
     problems.push(t('adminWork.createJob.projectNameDuplicate'));
   if (!has(form.floor)) problems.push(tc('missingFloor'));
   if (!has(form.usableArea)) problems.push(tc('missingUsableArea'));
+  else if (Number(form.usableArea) <= 0 || Number.isNaN(Number(form.usableArea)))
+    problems.push(tc('missingUsableAreaInvalid'));
+  if (customerEmails.value.some((e) => !isValidEmail(e)))
+    problems.push(tc('missingCustomerEmail'));
+  if (!isValidEmail(form.contractorEmail))
+    problems.push(tc('missingContractorEmail'));
   if (coordinateError.value) problems.push(coordinateError.value);
   if (!has(form.customerName)) problems.push(tc('missingCustomerName'));
   if (!has(customerPhones.value[0])) problems.push(tc('missingCustomerPhone'));
@@ -1324,7 +1377,11 @@ const onSubmit = async () => {
         jobFormData.append('projectNameEn', form.projectNameEn);
         jobFormData.append('locationCoordinate', locationCoordinateValue.value);
         jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
-        if (selectedBranchId.value) jobFormData.append('branchId', String(selectedBranchId.value));
+        const targetBranchId =
+          authStore.isBranchAdmin && authStore.userBranchId
+            ? authStore.userBranchId
+            : selectedBranchId.value;
+        if (targetBranchId) jobFormData.append('branchId', String(targetBranchId));
         if (finalContractorId) jobFormData.append('contractorId', String(finalContractorId));
         if (form.projectImageFile) jobFormData.append('projectImageUrl', form.projectImageFile);
         else if (form.projectImage === null) jobFormData.append('projectImageUrl', '');
@@ -1408,7 +1465,11 @@ const onSubmit = async () => {
       jobFormData.append('locationCoordinate', locationCoordinateValue.value);
       jobFormData.append('usableArea', String(parseFloat(form.usableArea) || 0));
       jobFormData.append('status', 'Draft');
-      if (selectedBranchId.value) jobFormData.append('branchId', String(selectedBranchId.value));
+      const targetBranchId =
+        authStore.isBranchAdmin && authStore.userBranchId
+          ? authStore.userBranchId
+          : selectedBranchId.value;
+      if (targetBranchId) jobFormData.append('branchId', String(targetBranchId));
 
       if (form.projectImageFile) {
         jobFormData.append('projectImageUrl', form.projectImageFile);
@@ -1435,7 +1496,7 @@ const onSubmit = async () => {
       });
       await router.push({
         path: '/admin/work',
-        query: selectedBranchId.value ? { branchId: selectedBranchId.value } : {},
+        query: isSuperAdmin.value && selectedBranchId.value ? { branchId: selectedBranchId.value } : {},
       });
     }
   } catch (error) {

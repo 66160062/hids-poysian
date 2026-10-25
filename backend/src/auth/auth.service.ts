@@ -46,7 +46,7 @@ export class AuthService {
 
   async login(email: string, password: string) {
     const user = await this.validateUser(email, password);
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { sub: user.id, email: user.email, role: user.role, branchId: user.branchId ?? null };
     return {
       access_token: await this.jwtService.signAsync(payload),
       user: {
@@ -58,6 +58,7 @@ export class AuthService {
         lineId: user.lineId,
         imageUrl: user.imageUrl,
         teamId: user.teamId || null,
+        branchId: user.branchId ?? null,
       },
     };
   }

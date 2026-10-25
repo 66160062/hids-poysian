@@ -7,6 +7,7 @@ export interface Meta {
   totalCount: number;
 }
 export enum UserRole {
+  SUPER_ADMIN = 'super_admin',
   ADMIN = 'admin',
   INSPECTOR = 'inspector',
 }
@@ -20,7 +21,7 @@ export interface User {
   role: UserRole | string;
   imageUrl?: string | undefined;
   team?: Team | undefined;
-  teamId?: number | undefined;
+  teamId?: number | null | undefined;
   branchId?: number | null | undefined;
   branch?: { branchId: number; branchName: string; logoUrl?: string | null } | undefined;
 }

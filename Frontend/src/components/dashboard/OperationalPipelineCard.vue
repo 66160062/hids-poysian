@@ -1,6 +1,6 @@
 <template>
-  <q-card flat bordered class="operational-pipeline-card bg-white shadow-1">
-    <div class="q-pa-md">
+  <q-card flat bordered class="operational-pipeline-card bg-white shadow-1 column full-height">
+    <div class="q-pa-md column col justify-between">
       <!-- Header -->
       <div class="row items-center justify-between q-mb-md">
         <div class="row items-center">
@@ -23,129 +23,39 @@
       </div>
 
       <!-- Pipeline Stepper / Stages Row -->
-      <div class="row q-col-gutter-sm items-stretch">
+      <div class="row q-col-gutter-sm items-stretch col">
         <div
           v-for="stage in stages"
           :key="stage.key"
-          class="col-12 col-sm-6 col-md-3"
+          class="col-12 col-sm-6 col-xl-3 column"
         >
           <div
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          
-            class="pipeline-step-box column justify-between q-pa-sm"
+            class="pipeline-step-box column justify-between q-pa-md col"
             :style="{ borderLeft: `4px solid ${stage.color}` }"
           >
-            <!-- Top: Icon + Label -->
+            <!-- Top: Icon + Label + Percentage -->
             <div>
               <div class="row items-center justify-between no-wrap q-mb-xs">
-                <div class="row items-center no-wrap">
-                  <q-icon :name="stage.icon" :style="{ color: stage.color }" size="18px" class="q-mr-xs" />
-                  <span class="text-caption text-weight-bold text-grey-9 ellipsis" style="max-width: 110px;">
+                <div class="row items-center no-wrap col min-w-0 q-mr-xs">
+                  <q-icon
+                    :name="stage.icon"
+                    :style="{ color: stage.color }"
+                    size="18px"
+                    class="q-mr-xs shrink-0"
+                  />
+                  <span class="text-caption text-weight-bold text-grey-9 ellipsis">
                     {{ pickLocalized(stage.labelTh, stage.labelEn) }}
                   </span>
                 </div>
-                <span class="text-caption text-weight-bold" :style="{ color: stage.color }">
+                <q-badge
+                  rounded
+                  :style="{ backgroundColor: stage.color + '18', color: stage.color }"
+                  class="text-caption text-weight-bold shrink-0 q-px-xs"
+                >
                   {{ stage.percentage }}%
-                </span>
+                </q-badge>
               </div>
-              <div class="text-caption text-grey-5 ellipsis" style="font-size: 11px;">
+              <div class="text-caption text-grey-6 ellipsis" style="font-size: 11px;">
                 {{ stage.hint }}
               </div>
             </div>
@@ -200,7 +110,7 @@ const stages = computed(() => props.pipeline?.stages || []);
 .pipeline-step-box {
   background-color: #f8fafc;
   border-radius: 10px;
-  min-height: 96px;
+  min-height: 104px;
   transition: all 0.2s ease;
   border: 1px solid #f1f5f9;
 }
@@ -208,5 +118,13 @@ const stages = computed(() => props.pipeline?.stages || []);
 .pipeline-step-box:hover {
   background-color: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+.shrink-0 {
+  flex-shrink: 0;
 }
 </style>

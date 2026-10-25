@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 export class CreateInspectionJobDto {
@@ -82,6 +83,7 @@ export class CreateInspectionJobDto {
   @ApiProperty({ description: 'พื้นที่ใช้สอย (ตารางเมตร)', example: 150.5 })
   @Type(() => Number)
   @IsNumber()
+  @Min(0.01)
   usableArea!: number;
 
   @ApiProperty({

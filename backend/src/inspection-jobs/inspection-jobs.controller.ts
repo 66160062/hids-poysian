@@ -23,6 +23,7 @@ import { InspectionJobStatus } from './enums/inspection-job-status.enum';
 import { AuthService } from 'src/auth/auth.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { JobAccessGuard } from 'src/auth/job-access.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
 import { StorageService } from 'src/storage/storage.service';
 
 @Controller('inspection-jobs')
@@ -50,9 +51,13 @@ export class InspectionJobsController {
       projectImageUrl?: Express.Multer.File[];
     },
     @Body() createInspectionJobDto: CreateInspectionJobDto,
-    @Req() req: Request & { user?: { sub: number } },
+    @Req() req: Request & { user?: { sub: number; role?: string; branchId?: number | null } },
   ) {
     const projectImage = files?.projectImageUrl?.[0];
+
+    if (req.user?.role === 'admin' && req.user?.branchId) {
+      createInspectionJobDto.branchId = req.user.branchId;
+    }
 
     return this.inspectionJobsService.create(
       {
@@ -71,6 +76,7 @@ export class InspectionJobsController {
   @Get()
   @UseGuards(AuthGuard)
   findAll(
+    @Req() req: Request & { user?: { sub: number; role?: string; branchId?: number | null } },
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('status') status?: string,
@@ -84,6 +90,11 @@ export class InspectionJobsController {
     const parsedStatus =
       status === 'all' ? undefined : (status as InspectionJobStatus);
 
+    const effectiveBranchId =
+      req.user?.role === 'admin' && req.user?.branchId
+        ? req.user.branchId
+        : branchId ? Number(branchId) : undefined;
+
     return this.inspectionJobsService.findAll(
       Number(page) || 1,
       Number(limit) || 10,
@@ -92,7 +103,7 @@ export class InspectionJobsController {
       type,
       sort,
       inspectionType,
-      branchId ? Number(branchId) : undefined,
+      effectiveBranchId,
     );
   }
 
@@ -100,16 +111,22 @@ export class InspectionJobsController {
   @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'ข้อมูลสถานะงานและจำนวน' })
   getStatusMetadata(
+    @Req() req: Request & { user?: { sub: number; role?: string; branchId?: number | null } },
     @Query('search') search?: string,
     @Query('type') type?: string,
     @Query('inspectionType') inspectionType?: string,
     @Query('branchId') branchId?: string,
   ) {
+    const effectiveBranchId =
+      req.user?.role === 'admin' && req.user?.branchId
+        ? req.user.branchId
+        : branchId ? Number(branchId) : undefined;
+
     return this.inspectionJobsService.getStatusMetadata(
       search,
       type,
       inspectionType,
-      branchId ? Number(branchId) : undefined,
+      effectiveBranchId,
     );
   }
 
@@ -161,6 +178,7 @@ export class InspectionJobsController {
     ),
   )
   async update(
+    @Req() req: Request & { user?: { sub: number; role?: string; branchId?: number | null } },
     @Param('id') id: string,
     @UploadedFiles()
     files: {
@@ -169,6 +187,10 @@ export class InspectionJobsController {
     @Body() updateInspectionJobDto: UpdateInspectionJobDto,
   ) {
     const projectImage = files?.projectImageUrl?.[0];
+
+    if (req.user?.role === 'admin' && req.user?.branchId) {
+      updateInspectionJobDto.branchId = req.user.branchId;
+    }
 
     return this.inspectionJobsService.update(+id, {
       ...updateInspectionJobDto,
@@ -182,7 +204,7 @@ export class InspectionJobsController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   remove(@Param('id') id: string) {
     return this.inspectionJobsService.remove(+id);
   }

@@ -13,7 +13,8 @@ export class AdminGuard implements CanActivate {
       .switchToHttp()
       .getRequest<{ user?: { role?: string } }>();
 
-    if (request.user?.role !== 'admin') {
+    const role = request.user?.role;
+    if (role !== 'admin' && role !== 'super_admin') {
       throw new ForbiddenException('เฉพาะผู้ดูแลระบบเท่านั้น');
     }
     return true;

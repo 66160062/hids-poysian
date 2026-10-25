@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from 'src/users/users.module';
@@ -8,6 +8,7 @@ import { LinkTokenGuard } from './link-token.guard';
 import { JobAccessGuard } from './job-access.guard';
 import { RoundAccessGuard } from './round-access.guard';
 import { InspectorSelfOrAdminGuard } from './inspector-self-or-admin.guard';
+import { AdminGuard } from './admin.guard';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InspectionJob } from 'src/inspection-jobs/entities/inspection-job.entity';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
@@ -15,6 +16,7 @@ import { Assignment } from 'src/assignments/entities/assignment.entity';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { User } from 'src/users/entities/user.entity';
 
+@Global()
 @Module({
   imports: [
     UsersModule,
@@ -26,6 +28,7 @@ import { User } from 'src/users/entities/user.entity';
       User,
     ]),
     JwtModule.registerAsync({
+      global: true,
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
         const secret = config.get<string>('JWT_SECRET');
@@ -48,6 +51,7 @@ import { User } from 'src/users/entities/user.entity';
     JobAccessGuard,
     RoundAccessGuard,
     InspectorSelfOrAdminGuard,
+    AdminGuard,
   ],
   exports: [
     JwtModule,
@@ -56,6 +60,7 @@ import { User } from 'src/users/entities/user.entity';
     JobAccessGuard,
     RoundAccessGuard,
     InspectorSelfOrAdminGuard,
+    AdminGuard,
   ],
 })
 export class AuthModule {}
