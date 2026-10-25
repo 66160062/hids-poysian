@@ -1,7 +1,7 @@
 <template>
   <q-page class="row justify-center bg-grey-1" style="height: 100dvh; overflow: hidden">
-    <div class="detail-content column no-wrap" style="height: 100%">
-    <div class="relative-position flex flex-center col-auto bg-grey-3" style="height: 40vh">
+    <div class="detail-content defect-layout column no-wrap" style="height: 100%">
+    <div class="defect-image relative-position flex flex-center col-auto bg-grey-3">
       <q-btn
         flat
         round
@@ -85,8 +85,7 @@
     />
 
     <div
-      class="bg-white col q-pa-lg flex column no-wrap shadow-up-2"
-      style="border-radius: 24px 24px 0 0; margin-top: -24px; z-index: 1; overflow-y: auto"
+      class="defect-form bg-white col q-pa-lg flex column no-wrap shadow-up-2"
     >
       <!-- Step 1: รายละเอียดห้อง -->
       <div v-if="step === 1" class="col-auto column no-wrap">
@@ -1030,23 +1029,35 @@ async function loadAddDefectData() {
 </script>
 
 <style scoped>
+.defect-image {
+  height: 40vh;
+}
+.defect-form {
+  border-radius: 24px 24px 0 0;
+  margin-top: -24px;
+  z-index: 1;
+  overflow-y: auto;
+}
+
 .detail-content {
   width: 100%;
-  max-width: 480px;
 }
-@media (min-width: 768px) {
-  .detail-content {
-    max-width: 720px;
+
+/* จอแนวนอน: รูปอยู่ซ้าย รายละเอียดอยู่ขวา */
+@media (orientation: landscape) {
+  .defect-layout {
+    flex-direction: row;
   }
-}
-@media (min-width: 1024px) {
-  .detail-content {
-    max-width: 1100px;
+  .defect-image {
+    height: 100%;
+    flex: 0 0 50%;
+    width: 50%;
   }
-}
-@media (min-width: 1440px) {
-  .detail-content {
-    max-width: 1280px;
+  .defect-form {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-top: 0;
+    border-radius: 0;
   }
 }
 
