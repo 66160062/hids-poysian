@@ -78,6 +78,7 @@ import type { InspectionRound } from 'src/models';
 import PropertyCard from '../components/PropertyCard.vue';
 import InspectorCalendar from '../components/InspectorCalendar.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
+import { cacheKey, peekCache, setCache } from 'src/utils/responseCache';
 
 const inspectDashboardSpinner = createIconSpinner('search');
 
@@ -157,7 +158,19 @@ async function fetchRounds(showLoading = true): Promise<void> {
     }
   }
 
-  if (showLoading) {
+  const dateParam = isMonthlyView.value
+    ? toLocalDateStr(currentMonth.value)
+    : toLocalDateStr(selectedDate.value);
+  const endpoint = isMonthlyView.value
+    ? `/inspection-rounds/month/${inspectorId.value}?date=${dateParam}`
+    : `/inspection-rounds/week/${inspectorId.value}?date=${dateParam}`;
+
+  // เคยโหลดช่วงเวลานี้แล้ว → โชว์ของเดิมทันทีแล้วรีเฟรชเบื้องหลัง ไม่ต้องบังด้วย spinner เต็มจอ
+  const cachedRounds = peekCache<InspectionRound[]>(cacheKey(endpoint));
+  if (cachedRounds) rounds.value = cachedRounds;
+  const showSpinner = showLoading && !cachedRounds;
+
+  if (showSpinner) {
     loading.value = true;
     $q.loading.show({
       spinner: inspectDashboardSpinner,
@@ -167,16 +180,10 @@ async function fetchRounds(showLoading = true): Promise<void> {
     });
   }
   try {
-    const dateParam = isMonthlyView.value
-      ? toLocalDateStr(currentMonth.value)
-      : toLocalDateStr(selectedDate.value);
-    const endpoint = isMonthlyView.value
-      ? `/inspection-rounds/month/${inspectorId.value}?date=${dateParam}`
-      : `/inspection-rounds/week/${inspectorId.value}?date=${dateParam}`;
-
     const res = await api.get(endpoint);
     const data = Array.isArray(res.data) ? res.data : [];
     rounds.value = data;
+    setCache(cacheKey(endpoint), data);
 
     if (isMonthlyView.value) {
       monthCache.set(monthKey(currentMonth.value), data);
@@ -188,7 +195,7 @@ async function fetchRounds(showLoading = true): Promise<void> {
     }
     rounds.value = [];
   } finally {
-    if (showLoading) {
+    if (showSpinner) {
       loading.value = false;
       $q.loading.hide();
     }
@@ -252,11 +259,19 @@ function getBangkokHour(dateStr: string): number {
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────
+// อยู่ใน <keep-alive> ของ layout: onActivated ยิงทุกครั้งที่สลับแท็บกลับมา รวมถึงครั้งแรกหลัง mount
+// (ซึ่ง onMounted โหลดไปแล้ว) จึงข้ามครั้งแรก ครั้งถัดไปรีเฟรชเบื้องหลังเงียบๆ
+let firstActivation = true;
+
 onMounted(() => {
   void fetchRounds();
 });
 
 onActivated(() => {
+  if (firstActivation) {
+    firstActivation = false;
+    return;
+  }
   void fetchRounds();
 });
 </script>

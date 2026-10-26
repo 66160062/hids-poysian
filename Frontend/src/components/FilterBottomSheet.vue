@@ -87,16 +87,16 @@
               />
               <q-btn
                 v-for="type in availableRoomTypes"
-                :key="type"
-                :label="type"
-                :color="local.roomTypes.includes(type) ? 'primary' : 'grey-3'"
-                :text-color="local.roomTypes.includes(type) ? 'white' : 'grey-8'"
+                :key="type.value"
+                :label="type.label"
+                :color="local.roomTypes.includes(type.value) ? 'primary' : 'grey-3'"
+                :text-color="local.roomTypes.includes(type.value) ? 'white' : 'grey-8'"
                 unelevated
                 rounded
                 no-caps
                 dense
                 class="q-px-md"
-                @click="toggle(local.roomTypes, type)"
+                @click="toggle(local.roomTypes, type.value)"
               />
             </div>
           </div>
@@ -162,7 +162,7 @@ const props = defineProps<{
   modelValue: boolean;
   currentFilter: FilterState;
   availableFloors: { value: string; label: string }[];
-  availableRoomTypes: string[];
+  availableRoomTypes: { value: string; label: string }[];
   availableSeverityLevels: { value: string; label: string }[];
 }>();
 

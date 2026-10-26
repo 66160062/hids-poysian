@@ -126,6 +126,19 @@ export class InspectionRound {
   })
   aiSummaryDataHash!: string | null;
 
+  // สรุปฉบับภาษาอังกฤษสำหรับ PDF en-US — สร้างแยกจากฉบับไทย และเก็บ hash แยกเพื่อให้ลองใหม่ได้
+  // เมื่อฉบับอังกฤษล้มเหลวแต่ฉบับไทยสำเร็จ
+  @Column({ name: 'ai_summary_text_en', type: 'text', nullable: true })
+  aiSummaryTextEn!: string | null;
+
+  @Column({
+    name: 'ai_summary_en_data_hash',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  aiSummaryEnDataHash!: string | null;
+
   @Column({
     name: 'ai_summary_generated_at',
     type: 'timestamp',

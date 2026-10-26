@@ -88,10 +88,7 @@ export class HousePlansService {
     return this.housePlansRepo.save(plan);
   }
 
-  async update(
-    planId: number,
-    dto: UpdateHousePlanDto,
-  ): Promise<HousePlan> {
+  async update(planId: number, dto: UpdateHousePlanDto): Promise<HousePlan> {
     const plan = await this.findOne(planId);
     plan.name = dto.name;
     if (dto.nameEn !== undefined) plan.nameEn = dto.nameEn;

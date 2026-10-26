@@ -51,6 +51,20 @@ export interface DashboardStatusCount {
   count: number;
 }
 
+export interface TrendItem {
+  key: string;
+  label: string;
+  homeInspection: number;
+  construction: number;
+  total: number;
+}
+
+export interface BusinessTrendOverview {
+  weekly: TrendItem[];
+  monthly: TrendItem[];
+  yearly: TrendItem[];
+}
+
 export interface MonthlyTrendItem {
   monthKey: string;
   monthLabel: string;
@@ -152,6 +166,7 @@ export interface DashboardResponse {
   calendarEvents: number[];
   tasks: DashboardTaskItem[];
   monthlyTrends: MonthlyTrendItem[];
+  trends?: BusinessTrendOverview;
   jobDrilldowns: JobDrilldownItem[];
   teamWorkloads: TeamWorkloadItem[];
   propertyTypes: PropertyTypeItem[];

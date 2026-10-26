@@ -14,6 +14,8 @@ export interface LogEntryInput {
   color: ActivityLogColor;
   title: string;
   sub?: string | null;
+  titleEn?: string | null;
+  subEn?: string | null;
 }
 
 export interface ActivityFeedItem {
@@ -22,6 +24,8 @@ export interface ActivityFeedItem {
   color: ActivityLogColor;
   title: string;
   sub: string | null;
+  titleEn: string | null;
+  subEn: string | null;
   createdAt: Date;
 }
 
@@ -31,6 +35,8 @@ interface ActivityFeedRow {
   color: ActivityLogColor;
   title: string;
   sub: string | null;
+  titleEn: string | null;
+  subEn: string | null;
   createdAt: Date;
   eventCount: string;
 }
@@ -49,6 +55,16 @@ function appendCount(
   const unit = COUNTABLE_UNIT[type];
   if (!unit || count <= 1) return title;
   return `${title} ${count} ${unit}`;
+}
+
+// ฉบับอังกฤษของข้อความเดียวกัน เช่น "New defect found (4 items)"
+function appendCountEn(
+  type: ActivityLogType,
+  titleEn: string | null,
+  count: number,
+): string | null {
+  if (!titleEn || !COUNTABLE_UNIT[type] || count <= 1) return titleEn;
+  return `${titleEn} (${count} items)`;
 }
 
 @Injectable()
@@ -74,6 +90,8 @@ export class ActivityLogsService {
         color: entry.color,
         title: entry.title,
         sub: entry.sub ?? null,
+        titleEn: entry.titleEn ?? null,
+        subEn: entry.subEn ?? null,
         job: { jobId } as InspectionJob,
         round: roundId ? { roundId } : null,
       });
@@ -120,6 +138,8 @@ export class ActivityLogsService {
       .addSelect('log.color', 'color')
       .addSelect('log.title', 'title')
       .addSelect('log.sub', 'sub')
+      .addSelect('log.titleEn', 'titleEn')
+      .addSelect('log.subEn', 'subEn')
       .addSelect('log.createdAt', 'createdAt')
       .addSelect(
         'COUNT(*) OVER (PARTITION BY log.type, DATE(log.createdAt))',
@@ -138,6 +158,8 @@ export class ActivityLogsService {
         color: row.color,
         title: appendCount(row.type, row.title, Number(row.eventCount)),
         sub: row.sub,
+        titleEn: appendCountEn(row.type, row.titleEn, Number(row.eventCount)),
+        subEn: row.subEn,
         createdAt: row.createdAt,
       }))
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());

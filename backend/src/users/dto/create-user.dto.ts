@@ -1,6 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -28,7 +34,6 @@ export class CreateUserDto {
   @IsOptional()
   @IsNumber()
   branchId?: number;
-
 
   @ApiProperty({
     description: 'เบอร์โทร',

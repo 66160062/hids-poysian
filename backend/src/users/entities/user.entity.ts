@@ -59,5 +59,3 @@ export class User {
   @JoinColumn({ name: 'team_id' })
   team!: Team | null;
 }
-// Trigger restart for TypeORM sync
-

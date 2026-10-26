@@ -188,8 +188,11 @@ export default {
     jobNotFound: 'ไม่พบข้อมูลงานนี้ กรุณาโหลดหน้าใหม่แล้วลองอีกครั้ง',
   },
   dashboard: {
-    monthlyTrendTitle: 'แนวโน้มปริมาณงานรายเดือน',
-    monthlyTrendSubtitle: 'เปรียบเทียบงานตรวจบ้านและก่อสร้าง 6 เดือนย้อนหลัง',
+    monthlyTrendTitle: 'แนวโน้มปริมาณงาน (Business Trends)',
+    monthlyTrendSubtitle: 'เปรียบเทียบงานตรวจบ้านและงานก่อสร้าง',
+    timeframeWeekly: 'รายสัปดาห์',
+    timeframeMonthly: 'รายเดือน',
+    timeframeYearly: 'รายปี',
     noTrendData: 'ยังไม่มีข้อมูลแนวโน้มงานในช่วงเวลานี้',
     defectCategoryTitle: 'หมวดหมู่ Defect ที่พบบ่อยสุด',
     defectCategorySubtitle: 'สัดส่วนปัญหาและข้อบกพร่องภาพรวมทั้งระบบ',
@@ -247,5 +250,8 @@ export default {
     legendVerified: 'ตรวจผ่าน ({pct}%)',
     legendRepaired: 'รอตรวจ ({pct}%)',
     legendPending: 'รอซ่อม ({pct}%)',
+    statusVerifiedShort: 'ตรวจผ่าน',
+    statusRepairedShort: 'รอตรวจ',
+    statusPendingShort: 'รอซ่อม',
   },
 };

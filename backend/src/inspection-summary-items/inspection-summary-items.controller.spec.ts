@@ -7,8 +7,10 @@ import { AuthService } from 'src/auth/auth.service';
 import { ReportsService } from 'src/reports/reports.service';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { InspectionSummaryItem } from './entities/inspection-summary-item.entity';
+import request from 'supertest';
 
 describe('InspectionSummaryItemsController', () => {
+  let testingModule: TestingModule;
   let controller: InspectionSummaryItemsController;
   let service: jest.Mocked<
     Pick<
@@ -34,7 +36,7 @@ describe('InspectionSummaryItemsController', () => {
     };
     const reportsMock = { scheduleRegeneration: jest.fn() };
 
-    const module: TestingModule = await Test.createTestingModule({
+    testingModule = await Test.createTestingModule({
       controllers: [InspectionSummaryItemsController],
       providers: [
         { provide: InspectionSummaryItemsService, useValue: serviceMock },
@@ -52,11 +54,11 @@ describe('InspectionSummaryItemsController', () => {
       ],
     }).compile();
 
-    controller = module.get<InspectionSummaryItemsController>(
+    controller = testingModule.get<InspectionSummaryItemsController>(
       InspectionSummaryItemsController,
     );
-    service = module.get(InspectionSummaryItemsService);
-    reports = module.get(ReportsService);
+    service = testingModule.get(InspectionSummaryItemsService);
+    reports = testingModule.get(ReportsService);
   });
 
   it('should be defined', () => {
@@ -118,5 +120,18 @@ describe('InspectionSummaryItemsController', () => {
     await controller.remove('3');
 
     expect(reports.scheduleRegeneration).not.toHaveBeenCalled();
+  });
+
+  it('requires a staff token to upload a summary photo', async () => {
+    const app = testingModule.createNestApplication();
+    await app.init();
+
+    try {
+      await request(app.getHttpServer())
+        .post('/inspection-summary-items/photo')
+        .expect(401);
+    } finally {
+      await app.close();
+    }
   });
 });

@@ -8,11 +8,13 @@ import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/ins
 import { StorageService } from 'src/storage/storage.service';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { AiSummaryService } from 'src/ai-summary/ai-summary.service';
+import { DefectNoteTranslator } from 'src/defects/defect-note-translator.service';
+import { SummaryNoteTranslator } from 'src/inspection-summary-items/summary-note-translator.service';
 import puppeteer from 'puppeteer';
 import { createHash } from 'crypto';
 
 // สูตรเดียวกับ computeDataHash ตอนไม่มีทั้ง defect และแบบสรุปการตรวจ
-const EMPTY_DATA_HASH = createHash('sha256').update('##[]').digest('hex');
+const EMPTY_DATA_HASH = createHash('sha256').update('##[]##null').digest('hex');
 
 // อ้างตัว mock ไว้ครั้งเดียว แทนการแตะ puppeteer.launch ตรงๆ ทุกจุด (ติด unbound-method)
 // puppeteer ถูก mock ทั้งโมดูล (Backend/__mocks__/puppeteer.js) launch จึงเป็น jest.fn ธรรมดา
@@ -48,6 +50,7 @@ describe('ReportsService', () => {
   let service: ReportsService;
   let roundRepo: {
     find: jest.Mock;
+    findOne: jest.Mock;
     findOneBy: jest.Mock;
     findOneByOrFail: jest.Mock;
     save: jest.Mock;
@@ -58,10 +61,13 @@ describe('ReportsService', () => {
   let jwtService: { sign: jest.Mock };
   let activityLogsService: { logForRound: jest.Mock };
   let aiSummaryService: { generateIfChanged: jest.Mock };
+  let noteTranslator: { translateMissingForRound: jest.Mock };
+  let summaryNoteTranslator: { translateMissingForRound: jest.Mock };
 
   beforeEach(async () => {
     roundRepo = {
       find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue(null),
       findOneBy: jest.fn(),
       findOneByOrFail: jest.fn(),
       save: jest.fn(),
@@ -80,6 +86,14 @@ describe('ReportsService', () => {
       generateIfChanged: jest.fn().mockResolvedValue(undefined),
     };
 
+    noteTranslator = {
+      translateMissingForRound: jest.fn().mockResolvedValue(0),
+    };
+
+    summaryNoteTranslator = {
+      translateMissingForRound: jest.fn().mockResolvedValue(0),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReportsService,
@@ -93,6 +107,8 @@ describe('ReportsService', () => {
         { provide: JwtService, useValue: jwtService },
         { provide: ActivityLogsService, useValue: activityLogsService },
         { provide: AiSummaryService, useValue: aiSummaryService },
+        { provide: DefectNoteTranslator, useValue: noteTranslator },
+        { provide: SummaryNoteTranslator, useValue: summaryNoteTranslator },
       ],
     }).compile();
 
@@ -198,6 +214,51 @@ describe('ReportsService', () => {
       expect(regenerateSpy).toHaveBeenCalledWith(1, 'th-TH');
     });
 
+    it.each([
+      'branchName',
+      'phoneNumber',
+      'mailAddress',
+      'facebook',
+      'line',
+      'logoUrl',
+    ])('marks the PDF stale when branch %s changes', async (field) => {
+      const branch = {
+        branchId: 1,
+        branchName: 'Poysian_Chonburi',
+        phoneNumber: null,
+        mailAddress: null,
+        facebook: null,
+        line: null,
+        logoUrl: null,
+      };
+      roundRepo.findOne.mockResolvedValue({ job: { branchId: 1, branch } });
+      const page = createMockPage();
+      launchMock.mockResolvedValue(createMockBrowser(page));
+      roundRepo.findOneBy.mockResolvedValue({ roundId: 1 });
+      roundRepo.findOneByOrFail.mockResolvedValue({ roundId: 1 });
+
+      regenerateSpy.mockRestore();
+      await service.regenerateIfChanged(1);
+      regenerateSpy = jest
+        .spyOn(service, 'regenerateIfChanged')
+        .mockResolvedValue(null);
+      const [[saved]] = roundRepo.save.mock.calls as [
+        [Partial<InspectionRound>],
+      ];
+      roundRepo.findOneBy.mockResolvedValue(saved);
+      await expect(service.getCachedReportUrl(1)).resolves.toMatchObject({
+        isStale: false,
+      });
+
+      roundRepo.findOne.mockResolvedValue({
+        job: { branchId: 1, branch: { ...branch, [field]: 'updated-value' } },
+      });
+      await expect(service.getCachedReportUrl(1)).resolves.toMatchObject({
+        isStale: true,
+      });
+      expect(regenerateSpy).toHaveBeenCalledWith(1, 'th-TH');
+    });
+
     it('reads the english cache columns and never blocks on a render', async () => {
       const generatedAtEn = new Date('2026-02-02T00:00:00Z');
       roundRepo.findOneBy.mockResolvedValue({
@@ -216,6 +277,30 @@ describe('ReportsService', () => {
       });
       expect(launchMock).not.toHaveBeenCalled();
       expect(regenerateSpy).toHaveBeenCalledWith(1, 'en-US');
+    });
+
+    // คำแปลหมายเหตุถูกเขียนโดยไม่เลื่อน updatedAt จึงต้องนับเข้า hash ของ PDF อังกฤษ — แต่ห้ามไปเปลี่ยน hash ฉบับไทย
+    it('marks only the English pdf stale when a note translation lands', async () => {
+      const updatedAt = new Date('2026-01-01T00:00:00Z');
+      const baseHash = createHash('sha256')
+        .update(`1:${updatedAt.getTime()}##[]##null`)
+        .digest('hex');
+      defectRepo.find.mockResolvedValue([
+        { defectId: 1, updatedAt, descriptionEn: 'Wall crack' },
+      ]);
+      roundRepo.findOneBy.mockResolvedValue({
+        lastPdfUrl: 'https://example.com/reports/th.pdf',
+        lastPdfHash: baseHash,
+        lastPdfUrlEn: 'https://example.com/reports/en.pdf',
+        lastPdfHashEn: baseHash,
+      });
+
+      await expect(service.getCachedReportUrl(1)).resolves.toMatchObject({
+        isStale: false,
+      });
+      await expect(
+        service.getCachedReportUrl(1, 'en-US'),
+      ).resolves.toMatchObject({ isStale: true });
     });
 
     // ฝั่งอ่านไม่ควรต้องรอ debounce ของฝั่งเขียน ข้อมูลมัน stale ไปแล้ว ไม่มี burst ให้รวบ
@@ -410,6 +495,55 @@ describe('ReportsService', () => {
       const [[visited]] = mockPage.goto.mock.calls as string[][];
       expect(visited).toContain('lang=en-US');
       expect(visited).toContain('generatedAt=');
+    });
+
+    it('fills in missing note translations only before rendering the English pdf', async () => {
+      defectRepo.find.mockResolvedValue([
+        { defectId: 1, updatedAt: new Date('2026-01-01T00:00:00Z') },
+      ]);
+      roundRepo.findOneBy.mockResolvedValue({
+        roundId: 1,
+        roundNumber: 1,
+        lastPdfHash: 'stale-hash',
+        lastPdfHashEn: 'stale-hash',
+      });
+      roundRepo.findOneByOrFail.mockResolvedValue({ roundId: 1 });
+      roundRepo.save.mockImplementation((value: unknown) => value);
+      launchMock.mockResolvedValue(createMockBrowser(createMockPage()));
+
+      await service.regenerateIfChanged(1, 'th-TH');
+      expect(noteTranslator.translateMissingForRound).not.toHaveBeenCalled();
+
+      await service.regenerateIfChanged(1, 'en-US');
+      expect(noteTranslator.translateMissingForRound).toHaveBeenCalledWith(1);
+      expect(
+        summaryNoteTranslator.translateMissingForRound,
+      ).toHaveBeenCalledWith(1);
+    });
+
+    it('still renders the English pdf when filling in translations fails', async () => {
+      noteTranslator.translateMissingForRound.mockRejectedValue(
+        new Error('llm down'),
+      );
+      defectRepo.find.mockResolvedValue([
+        { defectId: 1, updatedAt: new Date('2026-01-01T00:00:00Z') },
+      ]);
+      roundRepo.findOneBy.mockResolvedValue({
+        roundId: 1,
+        roundNumber: 1,
+        lastPdfHashEn: 'stale-hash',
+      });
+      roundRepo.findOneByOrFail.mockResolvedValue({ roundId: 1 });
+      roundRepo.save.mockImplementation((value: unknown) => value);
+      launchMock.mockResolvedValue(createMockBrowser(createMockPage()));
+
+      await service.regenerateIfChanged(1, 'en-US');
+
+      expect(roundRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          lastPdfUrlEn: 'https://example.com/reports/new.pdf',
+        }),
+      );
     });
 
     // เดิมเซฟ lastPdfGeneratedAt ก่อน render แล้วไม่ rollback — ไฟล์เก่าเลยติดป้ายเวลาใหม่ตอน render พัง

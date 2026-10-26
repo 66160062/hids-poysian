@@ -37,6 +37,7 @@ export interface InspectionRound {
   completionDefectScore?: number | null;
   completionSystemScore?: number | null;
   aiSummaryText?: string | null;
+  aiSummaryTextEn?: string | null;
   aiSummaryProvider?: string | null;
   lastPdfGeneratedAt?: string | null;
   teamMember?: { inspector?: { team?: { teamName: string; contactInfo: string } } };
@@ -105,6 +106,7 @@ export interface HousePlan {
 export interface Defect {
   defectId: number;
   description: string;
+  descriptionEn?: string | null;
   severity: string;
   status: string;
   createdAt?: string;
@@ -112,6 +114,7 @@ export interface Defect {
   imageUrl?: string;
   contractorImageUrl?: string;
   contractorNote?: string;
+  contractorNoteEn?: string | null;
   subCategories: {
     subCategoryId: number;
     name: string;
@@ -153,6 +156,7 @@ export interface InspectionSummaryItem {
   refItemId?: number | null;
   refItem?: Pick<InspectionSummaryItem, 'itemId'> | null;
   detailValue?: string;
+  detailValueEn?: string | null;
   photoUrl?: string | null;
 }
 

@@ -6,8 +6,15 @@ export interface Contractor {
   contractorId: number;
   fullName: string;
   phoneNumber: string;
-  email?: string;
-  companyName?: string;
+  email?: string | undefined;
+  companyName?: string | undefined;
+}
+
+export interface ContractorPayload {
+  fullName: string;
+  phoneNumber: string;
+  email?: string | undefined;
+  companyName?: string | undefined;
 }
 
 export const useContractorStore = defineStore('contractor', () => {
@@ -33,7 +40,7 @@ export const useContractorStore = defineStore('contractor', () => {
     }
   };
 
-  const createContractor = async (payload: { fullName: string; phoneNumber: string; email?: string; companyName?: string }) => {
+  const createContractor = async (payload: ContractorPayload) => {
     try {
       const response = await api.post('/contractors', {
         fullName: payload.fullName,
@@ -56,7 +63,7 @@ export const useContractorStore = defineStore('contractor', () => {
     }
   };
 
-  const updateContractor = async (id: number, payload: { fullName: string; phoneNumber: string; email?: string; companyName?: string }) => {
+  const updateContractor = async (id: number, payload: ContractorPayload) => {
     try {
       const response = await api.patch(`/contractors/${id}`, {
         fullName: payload.fullName,
@@ -65,18 +72,33 @@ export const useContractorStore = defineStore('contractor', () => {
         companyName: payload.companyName || '',
       });
       const idx = contractors.value.findIndex(c => c.contractorId === id);
+      const updatedContractor: Contractor = {
+        contractorId: id,
+        fullName: payload.fullName,
+        phoneNumber: payload.phoneNumber,
+        email: payload.email || '',
+        companyName: payload.companyName || '',
+      };
       if (idx !== -1) {
-        contractors.value.splice(idx, 1, {
-          contractorId: id,
-          fullName: payload.fullName,
-          phoneNumber: payload.phoneNumber,
-          email: payload.email || '',
-          companyName: payload.companyName || '',
-        });
+        contractors.value.splice(idx, 1);
       }
+      contractors.value.unshift(updatedContractor);
       return response.data;
     } catch (error) {
       console.error('Failed to update contractor', error);
+      throw error;
+    }
+  };
+
+  const deleteContractor = async (id: number) => {
+    try {
+      await api.delete(`/contractors/${id}`);
+      const idx = contractors.value.findIndex((c) => c.contractorId === id);
+      if (idx !== -1) {
+        contractors.value.splice(idx, 1);
+      }
+    } catch (error) {
+      console.error('Failed to delete contractor', error);
       throw error;
     }
   };
@@ -87,5 +109,6 @@ export const useContractorStore = defineStore('contractor', () => {
     fetchContractors,
     createContractor,
     updateContractor,
+    deleteContractor,
   };
 });

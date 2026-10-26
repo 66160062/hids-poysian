@@ -59,7 +59,10 @@ describe('UsersService', () => {
   });
 
   it('throws ConflictException when creating a user with an existing email', async () => {
-    usersRepo.findOne.mockResolvedValue({ id: 1, email: 'duplicate@example.com' });
+    usersRepo.findOne.mockResolvedValue({
+      id: 1,
+      email: 'duplicate@example.com',
+    });
 
     await expect(
       service.create({

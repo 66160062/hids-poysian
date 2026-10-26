@@ -145,20 +145,22 @@ describe('DailyReportsService', () => {
             { roundId: 1, defectCount: '4', openDefectCount: '0' },
           ]),
       };
-      dataSource.getRepository.mockImplementation((entity: { name: string }) => {
-        if (entity.name === 'InspectionJob') {
-          return { findOneBy: jest.fn().mockResolvedValue({ jobId: 1 }) };
-        }
-        if (entity.name === 'InspectionRound') {
-          return {
-            find: jest.fn().mockResolvedValue([
-              { roundId: 1, roundNumber: 1 },
-              { roundId: 2, roundNumber: 2 },
-            ]),
-          };
-        }
-        return { createQueryBuilder: jest.fn(() => queryBuilder) };
-      });
+      dataSource.getRepository.mockImplementation(
+        (entity: { name: string }) => {
+          if (entity.name === 'InspectionJob') {
+            return { findOneBy: jest.fn().mockResolvedValue({ jobId: 1 }) };
+          }
+          if (entity.name === 'InspectionRound') {
+            return {
+              find: jest.fn().mockResolvedValue([
+                { roundId: 1, roundNumber: 1 },
+                { roundId: 2, roundNumber: 2 },
+              ]),
+            };
+          }
+          return { createQueryBuilder: jest.fn(() => queryBuilder) };
+        },
+      );
 
       const result = await service.findRoundsByJob(1);
 

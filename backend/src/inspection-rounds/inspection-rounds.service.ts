@@ -68,6 +68,14 @@ export class InspectionRoundsService {
     });
   }
 
+  private formatEnglishDate(date: Date): string {
+    return date.toLocaleDateString('en-US', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+
   async create(
     createInspectionRoundDto: CreateInspectionRoundDto,
   ): Promise<InspectionRound> {
@@ -200,6 +208,10 @@ export class InspectionRoundsService {
           title: `นัดหมายตรวจรอบที่ ${savedRound.roundNumber}`,
           sub: savedRound.scheduledDate
             ? `วันที่ตรวจ: ${this.formatThaiDate(new Date(savedRound.scheduledDate))}`
+            : undefined,
+          titleEn: `Inspection round ${savedRound.roundNumber} scheduled`,
+          subEn: savedRound.scheduledDate
+            ? `Inspection date: ${this.formatEnglishDate(new Date(savedRound.scheduledDate))}`
             : undefined,
         },
         savedRound.roundId,
@@ -471,6 +483,7 @@ export class InspectionRoundsService {
       type: ActivityLogType.ROUND_INSPECTED,
       color: 'blue',
       title: `วิศวกรเข้าตรวจรอบที่ ${saved.roundNumber} เสร็จสิ้น`,
+      titleEn: `Engineer completed inspection round ${saved.roundNumber}`,
     });
 
     return saved;
@@ -536,6 +549,8 @@ export class InspectionRoundsService {
             color: 'orange',
             title: `ส่งรายงานรอบที่ ${savedRound.roundNumber} ให้ลูกค้าตรวจสอบแล้ว`,
             sub: `${defectCount} รายการ`,
+            titleEn: `Report for round ${savedRound.roundNumber} sent to the customer for review`,
+            subEn: `${defectCount} items`,
           },
           savedRound.roundId,
         );
@@ -544,6 +559,7 @@ export class InspectionRoundsService {
           type: NotificationType.ALERT,
           recipientRole: 'admin',
           message: `${savedRound.job.projectName}: ตรวจงวดที่ ${savedRound.roundNumber} รออนุมัติ`,
+          messageEn: `${savedRound.job.projectNameEn || savedRound.job.projectName}: inspection round ${savedRound.roundNumber} awaiting approval`,
           jobId: savedRound.job.jobId,
           roundId: savedRound.roundId,
         });
@@ -606,6 +622,8 @@ export class InspectionRoundsService {
             color: 'green',
             title: `ลูกค้าอนุมัติรายงานรอบที่ ${approvedRound.roundNumber} แล้ว`,
             sub: shouldCloseJob ? 'ปิดงานเรียบร้อย' : undefined,
+            titleEn: `Customer approved the report for round ${approvedRound.roundNumber}`,
+            subEn: shouldCloseJob ? 'Job closed' : undefined,
           },
           approvedRound.roundId,
         );

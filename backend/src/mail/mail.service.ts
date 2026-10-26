@@ -52,9 +52,7 @@ export class MailService implements OnModuleInit {
    */
   async sendApprovalEmail(payload: ApprovalEmailPayload): Promise<void> {
     if (!this.transporter) {
-      this.logger.warn(
-        'Mail transporter not configured — skipping email send',
-      );
+      this.logger.warn('Mail transporter not configured — skipping email send');
       return;
     }
 

@@ -5,6 +5,7 @@ import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round
 import { Defect } from 'src/defects/entities/defect.entity';
 import { InspectionSummaryItem } from 'src/inspection-summary-items/entities/inspection-summary-item.entity';
 import { ProviderRegistryService } from './providers/provider-registry.service';
+import { LlmFallbackService } from './llm-fallback.service';
 
 describe('AiSummaryService', () => {
   let service: AiSummaryService;
@@ -42,6 +43,7 @@ describe('AiSummaryService', () => {
           useValue: summaryItemRepo,
         },
         { provide: ProviderRegistryService, useValue: providerRegistry },
+        LlmFallbackService,
       ],
     }).compile();
 
@@ -100,6 +102,7 @@ describe('AiSummaryService', () => {
       roundRepo.findOneBy.mockResolvedValue({
         roundId: 1,
         aiSummaryDataHash: 'hash-a',
+        aiSummaryEnDataHash: 'hash-a',
       });
 
       await service.generateIfChanged(1, 'hash-a');
@@ -124,11 +127,12 @@ describe('AiSummaryService', () => {
       const round = { roundId: 1, aiSummaryDataHash: 'old-hash' };
       roundRepo.findOneBy.mockResolvedValue(round);
       roundRepo.save.mockImplementation((value) => value);
+      const generate = jest
+        .fn()
+        .mockResolvedValueOnce({ text: '  สรุปผลตรวจ  ' })
+        .mockResolvedValueOnce({ text: '  Overall summary  ' });
       providerRegistry.getFallbackChain.mockReturnValue([
-        {
-          id: 'gemini',
-          generate: jest.fn().mockResolvedValue({ text: '  สรุปผลตรวจ  ' }),
-        },
+        { id: 'gemini', generate },
       ]);
 
       await service.generateIfChanged(1, 'new-hash');
@@ -136,8 +140,10 @@ describe('AiSummaryService', () => {
       expect(roundRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
           aiSummaryText: 'สรุปผลตรวจ',
+          aiSummaryTextEn: 'Overall summary',
           aiSummaryProvider: 'gemini',
           aiSummaryDataHash: 'new-hash',
+          aiSummaryEnDataHash: 'new-hash',
           completionPercent: 100,
           // คะแนนย่อยต้องถูกเขียนพร้อมคะแนนรวมเสมอ ไม่งั้นรายงานจะโชว์ที่มาของคะแนนไม่ตรงกัน
           completionDefectScore: 100,
@@ -228,6 +234,64 @@ describe('AiSummaryService', () => {
       expect(roundRepo.save).toHaveBeenCalledWith(
         expect.not.objectContaining({ aiSummaryDataHash: 'new-hash' }),
       );
+      expect(roundRepo.save).toHaveBeenCalledWith(
+        expect.not.objectContaining({ aiSummaryEnDataHash: 'new-hash' }),
+      );
+    });
+
+    it('generates only the English summary when the Thai one is already up to date', async () => {
+      const round = {
+        roundId: 1,
+        aiSummaryText: 'สรุปเดิม',
+        aiSummaryDataHash: 'new-hash',
+        aiSummaryEnDataHash: 'old-hash',
+      };
+      roundRepo.findOneBy.mockResolvedValue(round);
+      roundRepo.save.mockImplementation((value) => value);
+      const generate = jest.fn().mockResolvedValue({ text: 'English summary' });
+      providerRegistry.getFallbackChain.mockReturnValue([
+        { id: 'gemini', generate },
+      ]);
+
+      await service.generateIfChanged(1, 'new-hash');
+
+      expect(generate).toHaveBeenCalledTimes(1);
+      // prompt ภาษาอังกฤษต้องสั่งให้ตอบเป็นอังกฤษ ไม่ใช่ prompt ไทยเดิม
+      expect(generate.mock.calls[0][0]).toContain(
+        'Write the summary in English',
+      );
+      expect(roundRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          aiSummaryText: 'สรุปเดิม',
+          aiSummaryTextEn: 'English summary',
+          aiSummaryEnDataHash: 'new-hash',
+        }),
+      );
+    });
+
+    it('keeps the Thai summary and retries English next time when the English call fails', async () => {
+      const round = { roundId: 1, aiSummaryDataHash: 'old-hash' };
+      roundRepo.findOneBy.mockResolvedValue(round);
+      roundRepo.save.mockImplementation((value) => value);
+      const generate = jest
+        .fn()
+        .mockResolvedValueOnce({ text: 'สรุปผลตรวจ' })
+        .mockRejectedValueOnce(new Error('down'));
+      providerRegistry.getFallbackChain.mockReturnValue([
+        { id: 'gemini', generate },
+      ]);
+
+      await service.generateIfChanged(1, 'new-hash');
+
+      expect(roundRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          aiSummaryText: 'สรุปผลตรวจ',
+          aiSummaryDataHash: 'new-hash',
+        }),
+      );
+      expect(roundRepo.save).toHaveBeenCalledWith(
+        expect.not.objectContaining({ aiSummaryEnDataHash: 'new-hash' }),
+      );
     });
   });
 
@@ -259,6 +323,27 @@ describe('AiSummaryService', () => {
         expect.objectContaining({
           aiSummaryText: 'สรุป',
           aiSummaryProvider: 'gemini',
+        }),
+      );
+    });
+    it('writes only the English text when asked to generate the en-US summary', async () => {
+      providerRegistry.getById.mockReturnValue({
+        id: 'gemini',
+        isConfigured: () => true,
+        generate: jest.fn().mockResolvedValue({ text: ' English summary ' }),
+      });
+      roundRepo.findOneByOrFail.mockResolvedValue({
+        roundId: 1,
+        aiSummaryText: 'สรุปเดิม',
+      });
+      roundRepo.save.mockImplementation((value) => value);
+
+      await service.generateWithProvider(1, 'gemini', 'en-US');
+
+      expect(roundRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          aiSummaryText: 'สรุปเดิม',
+          aiSummaryTextEn: 'English summary',
         }),
       );
     });

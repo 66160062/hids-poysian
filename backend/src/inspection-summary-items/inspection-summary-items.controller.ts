@@ -55,6 +55,7 @@ export class InspectionSummaryItemsController {
   }
 
   @Post('photo')
+  @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('file'))
   async uploadPhoto(
     @UploadedFile(

@@ -29,8 +29,8 @@
         @keyup.enter="viewProjectImage"
       >
         <template v-if="job.projectImage">
-          <q-img loading="eager" :src="job.projectImage" fit="cover" class="house-img-bg" />
-          <q-img loading="eager" :src="job.projectImage" fit="contain" class="house-img-fg" />
+          <q-img loading="eager" :src="job.projectImage" fit="cover" height="100%" class="house-img-bg" />
+          <q-img loading="eager" :src="job.projectImage" fit="contain" height="100%" class="house-img-fg" />
         </template>
         <div v-else class="house-img-placeholder row items-center justify-center bg-grey-2">
           <q-icon name="home" size="64px" color="grey-4" />
@@ -292,11 +292,19 @@
                 no-caps
                 class="share-copy-btn"
                 :loading="isCopyingContractor"
+                :disable="!hasContractor"
                 @click="copyShareLink('contractor')"
-              />
+              >
+                <q-tooltip v-if="!hasContractor">
+                  {{ t('adminJobs.inspection.contractorRequiredForLink') }}
+                </q-tooltip>
+              </q-btn>
             </div>
             <div class="row items-center justify-between q-mt-xs">
-              <div class="text-caption text-grey-5">
+              <div v-if="!hasContractor" class="text-caption text-negative">
+                {{ t('adminJobs.inspection.contractorRequiredForLink') }}
+              </div>
+              <div v-else class="text-caption text-grey-5">
                 {{ t('adminJobs.inspection.contractorLinkNote') }}
               </div>
               <q-btn
@@ -317,7 +325,7 @@
       </q-card>
 
       <!-- Contractor Progress Section -->
-      <div v-if="inspectionRounds.length > 0 && job.status === 'COMPLETED'" class="q-mb-lg">
+      <div v-if="hasApprovedRound && !isJobClosed" class="q-mb-lg">
         <div class="row items-center justify-between q-mb-sm">
           <div class="text-subtitle2 text-weight-bold">
             {{ t('adminJobs.inspection.contractorProgressTitle') }}
@@ -736,7 +744,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, nextTick } from 'vue';
+import { computed, ref, onMounted, nextTick, watch } from 'vue';
+import { cacheKey, peekCache, setCache } from 'src/utils/responseCache';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
@@ -858,6 +867,7 @@ interface ShareLinkResponse {
 }
 
 interface ContractorShareStatusResponse {
+  has_contractor?: boolean;
   contractor_share_enabled: boolean;
   token: string | null;
 }
@@ -895,6 +905,9 @@ const isLatestRoundNotCompleted = computed(() => {
 // กันข้อมูลเก่าที่ job ค้าง Completed ทั้งที่รอบล่าสุดยังรออนุมัติ ไม่ให้ขึ้นว่าปิดงานแล้ว
 const isJobClosed = computed(
   () => jobData.value?.status === 'Completed' && !isLatestRoundNotCompleted.value,
+);
+const hasApprovedRound = computed(() =>
+  inspectionRounds.value.some((r) => r.statusKey === 'APPROVED'),
 );
 const cannotCreateRound = computed(() => isJobClosed.value || isLatestRoundNotCompleted.value);
 
@@ -934,6 +947,15 @@ const customerShareUrl = ref('');
 const contractorShareUrl = ref('');
 const customerLinkExpiresAt = ref<number | null>(null);
 const contractorShareEnabled = ref(false);
+// ลิงก์ผู้รับเหมาออกได้เมื่อมีผู้รับเหมาของงานแล้วเท่านั้น (backend บังคับด้วย)
+const hasContractor = ref(false);
+watch(
+  () => jobData.value?.contractor,
+  (contractor) => {
+    if (jobData.value) hasContractor.value = !!contractor;
+  },
+  { immediate: true },
+);
 const isCopyingCustomer = ref(false);
 const isCopyingContractor = ref(false);
 const isRevokingContractor = ref(false);
@@ -955,6 +977,7 @@ async function fetchContractorShareStatus() {
   const { data } = await api.get<ContractorShareStatusResponse>(
     `/inspection-jobs/${jobId.value}/contractor-share`,
   );
+  hasContractor.value = data.has_contractor ?? hasContractor.value;
   contractorShareEnabled.value = data.contractor_share_enabled;
   contractorShareUrl.value =
     data.contractor_share_enabled && data.token ? buildShareUrl('contractor', data.token) : '';
@@ -972,6 +995,16 @@ async function loadShareLinks() {
 }
 
 async function copyShareLink(role: ShareLinkRole) {
+  if (role === 'contractor' && !hasContractor.value) {
+    $q.notify({
+      message: t('adminJobs.inspection.contractorRequiredForLink'),
+      color: 'warning',
+      icon: 'info',
+      position: 'top',
+    });
+    return;
+  }
+
   const loadingRef = role === 'customer' ? isCopyingCustomer : isCopyingContractor;
   loadingRef.value = true;
 
@@ -1135,17 +1168,42 @@ function applyRounds(rounds: RoundApiResponse[]) {
   inspectionRounds.value = rounds.map(mapRoundToView);
 }
 
+// ภาพรวมของหน้านี้ตอนโหลดครั้งล่าสุด — เปิดงานเดิมซ้ำ (กดเข้า/ย้อนกลับ) จะโชว์ของเดิมทันทีแล้วรีเฟรชเบื้องหลัง
+interface PageSnapshot {
+  job: JobApiResponse | null;
+  team: TeamMemberChip[];
+  plans: HousePlan[];
+  rounds: RoundApiResponse[];
+}
+const pageCacheKey = computed(() => cacheKey(`admin-job-ins:${jobId.value}`));
+
 async function loadPageData() {
-  isLoading.value = true;
+  const snapshot = peekCache<PageSnapshot>(pageCacheKey.value);
+  if (snapshot) {
+    jobData.value = snapshot.job;
+    jobTeamMembers.value = snapshot.team;
+    housePlans.value = snapshot.plans;
+    applyRounds(snapshot.rounds);
+    isLoading.value = false;
+  } else {
+    isLoading.value = true;
+  }
   try {
-    await Promise.all([
+    // fetchRounds ไม่ได้ใช้ผลของสี่ตัวแรก จึงยิงพร้อมกันได้ ไม่ต้องรอเป็นรอบที่สอง
+    const [, , , , rounds] = await Promise.all([
       fetchJobDetails(),
       fetchTeamMembers(),
       fetchHousePlans(),
       teamStore.fetchAllTeams(), // ดึงข้อมูลทีมทั้งหมดไว้กรองตามสาขาของงาน
+      fetchRounds(),
     ]);
-    const rounds = await fetchRounds();
     applyRounds(rounds);
+    setCache<PageSnapshot>(pageCacheKey.value, {
+      job: jobData.value,
+      team: jobTeamMembers.value,
+      plans: housePlans.value,
+      rounds,
+    });
 
     // สองอย่างนี้ไม่ได้ใช้ตอน render การ์ดรอบตรวจ (users = ตัวเลือกผู้ตรวจใน dialog สร้างรอบ,
     // share links = การ์ดด้านล่าง) ปล่อยโหลดเบื้องหลังเพื่อไม่ให้ค้าง spinner ตอนกดย้อนกลับเข้าหน้านี้
@@ -1186,12 +1244,15 @@ const viewPlan = () => {
 };
 
 onMounted(() => {
-  $q.loading.show({
-    spinner: homeInspectionSpinner,
-    spinnerColor: 'primary',
-    spinnerSize: 70,
-    backgroundColor: 'white',
-  });
+  // มีข้อมูลเดิมให้โชว์แล้ว → ไม่ต้องบังด้วย spinner เต็มจอ
+  if (peekCache(pageCacheKey.value) === undefined) {
+    $q.loading.show({
+      spinner: homeInspectionSpinner,
+      spinnerColor: 'primary',
+      spinnerSize: 70,
+      backgroundColor: 'white',
+    });
+  }
   void loadPageData().finally(() => {
     $q.loading.hide();
     void scrollToNotifiedRound();
@@ -1528,8 +1589,7 @@ const formatDateDisplay = (dateStr: string) => {
 };
 
 const onCreateRound = () => {
-  // เดิมเทียบกับสถานะของรอบล่าสุดเท่านั้น — เช็คว่ามีรอบก่อน กันงานที่ยังไม่มีรอบแต่ job.status เป็น Completed
-  if (inspectionRounds.value.length > 0 && job.value.status === 'COMPLETED' && job.value.contractorProgress < 50) {
+  if (hasApprovedRound.value && !isJobClosed.value && job.value.contractorProgress < 50) {
     $q.dialog({
       title: t('adminJobs.inspection.confirmCreateRoundTitle'),
       message: t('adminJobs.inspection.confirmCreateRoundMessage', {

@@ -111,6 +111,25 @@
             </q-btn>
           </div>
 
+          <!-- Rename the selected plan -->
+          <div v-if="activePlan && !readonly" class="bg-white col-auto dialog-inset q-pt-sm">
+            <q-input
+              v-model="activePlan.name"
+              dense
+              outlined
+              bg-color="white"
+              class="plan-name-input"
+              :placeholder="t('components.planPosition.planNamePlaceholder')"
+              @update:model-value="activePlan.nameEn = null"
+              @blur="renameActivePlan"
+              @keyup.enter="($event.target as HTMLInputElement).blur()"
+            >
+              <template #prepend>
+                <q-icon name="edit" size="18px" />
+              </template>
+            </q-input>
+          </div>
+
           <!-- Plan Thumbnail Slider -->
           <div class="bg-white q-py-sm col-auto plan-slider-shell">
             <div class="dialog-inset">
@@ -160,15 +179,28 @@
             <q-card flat bordered class="q-pa-md q-my-sm upload-card">
               <!-- New Plan Form -->
               <div class="column q-gutter-y-sm">
-                <q-input
-                  outlined
-                  dense
-                  bg-color="white"
-                  v-model="newPlanName"
-                  class="plan-name-input"
-                  :label="t('components.planPosition.planNameLabel')"
-                  :placeholder="t('components.planPosition.planNamePlaceholder')"
-                />
+                <!-- รูปที่เลือก/ถ่ายแล้วแต่ยังไม่บันทึก — ตั้งชื่อแต่ละรูปได้ก่อนกดบันทึก -->
+                <div v-for="(item, idx) in pendingPlans" :key="item.id" class="row no-wrap items-center q-gutter-x-sm pending-plan-row">
+                  <img :src="item.previewUrl" :alt="item.name" class="pending-plan-thumb" />
+                  <q-input
+                    v-model="item.name"
+                    outlined
+                    dense
+                    bg-color="white"
+                    class="col plan-name-input"
+                    :disable="isUploadingPlan"
+                    :placeholder="t('components.planPosition.defaultPlanName', { n: plans.length + idx + 1 })"
+                  />
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    color="grey-7"
+                    icon="close"
+                    :disable="isUploadingPlan"
+                    @click="removePendingPlan(idx)"
+                  />
+                </div>
 
                 <!-- Action buttons to capture / select photo -->
                 <div class="row q-gutter-sm q-mt-xs photo-action-row">
@@ -180,7 +212,7 @@
                     icon="photo_camera"
                     :label="t('components.planPosition.takePhotoButton')"
                     class="col action-pill"
-                    :loading="isUploadingPlan"
+                    :disable="isUploadingPlan"
                     @click="triggerCamera"
                   />
                   <q-btn
@@ -191,9 +223,25 @@
                     icon="photo_library"
                     :label="t('components.planPosition.chooseFromGalleryButton')"
                     class="col action-pill"
-                    :loading="isUploadingPlan"
+                    :disable="isUploadingPlan"
                     @click="triggerGallery"
                   />
+                </div>
+
+                <q-btn
+                  v-if="pendingPlans.length > 0"
+                  unelevated
+                  rounded
+                  no-caps
+                  color="primary"
+                  icon="check"
+                  :label="t('components.planPosition.savePlansButton', { count: pendingPlans.length })"
+                  class="action-pill text-weight-bold"
+                  :loading="isUploadingPlan"
+                  @click="savePendingPlans"
+                />
+                <div v-else class="text-caption text-grey-6 text-center">
+                  {{ t('components.planPosition.pendingPlansHint') }}
                 </div>
 
                 <!-- Hidden inputs -->
@@ -385,7 +433,14 @@ const currentPinX = ref<number | null>(null);
 const currentPinY = ref<number | null>(null);
 const locationZone = ref<string>('');
 
-const newPlanName = ref('');
+interface PendingPlan {
+  id: number;
+  file: File;
+  previewUrl: string;
+  name: string;
+}
+const pendingPlans = ref<PendingPlan[]>([]);
+let nextPendingId = 0;
 const imageRef = ref<HTMLImageElement | null>(null);
 const cameraInput = ref<HTMLInputElement | null>(null);
 const galleryInput = ref<HTMLInputElement | null>(null);
@@ -411,7 +466,15 @@ watch(viewerAreaRef, (el) => {
 
 onBeforeUnmount(() => {
   viewerResizeObserver?.disconnect();
+  clearPendingPlans();
 });
+
+watch(
+  () => props.modelValue,
+  (open) => {
+    if (!open) clearPendingPlans();
+  },
+);
 
 const planImageStyle = computed(() =>
   viewerAreaHeight.value ? { maxHeight: `${viewerAreaHeight.value}px` } : {},
@@ -674,28 +737,49 @@ const triggerGallery = () => {
   galleryInput.value?.click();
 };
 
-const onPlanFileSelected = async (event: Event) => {
+// เลือก/ถ่ายรูปแล้วแค่พักไว้ในรายการรอบันทึก ยังไม่อัปโหลด — ตั้งชื่อแต่ละรูปแล้วเลือกเพิ่มได้อีก
+// กดบันทึกทีเดียวค่อยอัปโหลดทั้งหมด
+const onPlanFileSelected = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const files = target.files ? Array.from(target.files) : [];
   target.value = '';
-  if (!files.length || !props.jobId) return;
 
-  const trimmedName = newPlanName.value.trim();
+  for (const file of files) {
+    pendingPlans.value.push({
+      id: nextPendingId++,
+      file,
+      previewUrl: URL.createObjectURL(file),
+      name: '',
+    });
+  }
+};
+
+const removePendingPlan = (index: number) => {
+  const [removed] = pendingPlans.value.splice(index, 1);
+  if (removed) URL.revokeObjectURL(removed.previewUrl);
+};
+
+const clearPendingPlans = () => {
+  pendingPlans.value.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+  pendingPlans.value = [];
+};
+
+const savePendingPlans = async () => {
+  if (!pendingPlans.value.length || !props.jobId) return;
+
   isUploadingPlan.value = true;
+  const total = pendingPlans.value.length;
   let successCount = 0;
   let lastCreatedPlan: HousePlan | null = null;
 
-  for (const [index, file] of files.entries()) {
+  // อัปโหลดทีละรูปตามลำดับ รูปที่สำเร็จเอาออกจากรายการรอ รูปที่พังค้างไว้ให้กดบันทึกซ้ำได้
+  for (const item of [...pendingPlans.value]) {
     const defaultNames = defaultPlanNames(plans.value.length + 1);
-    const planName = trimmedName
-      ? files.length > 1
-        ? `${trimmedName} ${index + 1}`
-        : trimmedName
-      : defaultNames.th;
+    const trimmedName = item.name.trim();
 
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('name', planName);
+    formData.append('file', item.file);
+    formData.append('name', trimmedName || defaultNames.th);
     if (!trimmedName) formData.append('nameEn', defaultNames.en);
     if (props.selectedFloorId) {
       formData.append('floorId', String(props.selectedFloorId));
@@ -710,6 +794,8 @@ const onPlanFileSelected = async (event: Event) => {
       plans.value.push(createdPlan);
       lastCreatedPlan = createdPlan;
       successCount += 1;
+      URL.revokeObjectURL(item.previewUrl);
+      pendingPlans.value = pendingPlans.value.filter((p) => p.id !== item.id);
     } catch (err) {
       console.error('Upload plan error', err);
     }
@@ -720,25 +806,49 @@ const onPlanFileSelected = async (event: Event) => {
   if (successCount > 0) {
     $q.notify({
       message:
-        successCount === files.length
+        successCount === total
           ? t('components.planPosition.uploadPlanSuccess')
           : t('components.planPosition.uploadPlanPartialSuccess', {
               success: successCount,
-              total: files.length,
+              total,
             }),
       color: 'positive',
       icon: 'check_circle',
     });
 
     activePlan.value = lastCreatedPlan;
-    showUploadSection.value = false;
-    newPlanName.value = '';
+    if (pendingPlans.value.length === 0) showUploadSection.value = false;
     scrollActiveThumbIntoView();
   }
 
-  if (successCount < files.length) {
+  if (successCount < total) {
     $q.notify({
       message: t('components.planPosition.uploadPlanFailed'),
+      color: 'negative',
+      icon: 'error',
+    });
+  }
+};
+
+const renameActivePlan = async () => {
+  const plan = activePlan.value;
+  if (!plan) return;
+
+  if (!plan.name.trim()) {
+    const defaults = defaultPlanNames(plans.value.indexOf(plan) + 1);
+    plan.name = defaults.th;
+    plan.nameEn = defaults.en;
+  }
+
+  try {
+    await api.patch(`/house-plans/${plan.planId}`, {
+      name: plan.name.trim(),
+      nameEn: plan.nameEn ?? null,
+    });
+  } catch (err) {
+    console.error('Rename plan error', err);
+    $q.notify({
+      message: t('components.planPosition.renamePlanFailed'),
       color: 'negative',
       icon: 'error',
     });
@@ -1008,6 +1118,15 @@ watch(
 
 .plan-name-input.q-field--focused :deep(.q-field__control) {
   border-color: var(--q-primary, #1976d2);
+}
+
+.pending-plan-thumb {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #eceff3;
 }
 
 .action-pill {

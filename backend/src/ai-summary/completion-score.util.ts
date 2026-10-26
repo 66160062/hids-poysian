@@ -168,12 +168,19 @@ export interface ScoredSummaryItem {
   category: string;
   label: string;
   optionValue: string;
+  // ชื่ออังกฤษ (ถ้ามี) ใช้เฉพาะตอนสร้างสรุปภาษาอังกฤษ ไม่ได้ใช้คิดคะแนน — คะแนนยังจับ keyword จากชื่อไทย
+  categoryEn?: string | null;
+  labelEn?: string | null;
+  optionValueEn?: string | null;
 }
 
 export interface FailedSystem {
   category: string;
   label: string;
   value: string;
+  categoryEn?: string | null;
+  labelEn?: string | null;
+  valueEn?: string | null;
 }
 
 export interface CompletionScore {
@@ -243,6 +250,9 @@ export function computeCompletionScore(
         category: item.category,
         label: item.label,
         value: item.optionValue,
+        categoryEn: item.categoryEn,
+        labelEn: item.labelEn,
+        valueEn: item.optionValueEn,
       });
     }
   }

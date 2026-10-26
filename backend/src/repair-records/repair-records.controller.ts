@@ -8,16 +8,26 @@ import {
   Delete,
   UseInterceptors,
   UploadedFile,
+  UseGuards,
 } from '@nestjs/common';
 import { RepairRecordsService } from './repair-records.service';
 import { CreateRepairRecordDto } from './dto/create-repair-record.dto';
 import { UpdateRepairRecordDto } from './dto/update-repair-record.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { StorageService } from 'src/storage/storage.service';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
 
 @ApiTags('Repair Records') // จัดกลุ่มใน Swagger
+@ApiBearerAuth()
+@UseGuards(AuthGuard, AdminGuard)
 @Controller('repair-records')
 export class RepairRecordsController {
   constructor(

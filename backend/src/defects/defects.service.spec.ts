@@ -11,6 +11,7 @@ import { Room } from 'src/rooms/entities/room.entity';
 import { SubRoom } from 'src/sub-rooms/entities/sub-room.entity';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
+import { DefectNoteTranslator } from './defect-note-translator.service';
 
 describe('DefectsService', () => {
   let service: DefectsService;
@@ -25,6 +26,7 @@ describe('DefectsService', () => {
   };
   let activityLogsService: { log: jest.Mock; logForRound: jest.Mock };
   let notificationsService: { create: jest.Mock };
+  let noteTranslator: { translateAndStore: jest.Mock };
   let repoMock: {
     findOneByOrFail: jest.Mock;
     findOneBy: jest.Mock;
@@ -62,6 +64,7 @@ describe('DefectsService', () => {
     subRoomsRepo = { findOneBy: jest.fn() };
     activityLogsService = { log: jest.fn(), logForRound: jest.fn() };
     notificationsService = { create: jest.fn() };
+    noteTranslator = { translateAndStore: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -75,6 +78,7 @@ describe('DefectsService', () => {
         { provide: getRepositoryToken(SubRoom), useValue: subRoomsRepo },
         { provide: ActivityLogsService, useValue: activityLogsService },
         { provide: NotificationsService, useValue: notificationsService },
+        { provide: DefectNoteTranslator, useValue: noteTranslator },
       ],
     }).compile();
 
@@ -116,6 +120,46 @@ describe('DefectsService', () => {
       expect.objectContaining({
         type: 'defect_created',
         sub: 'ห้องนั่งเล่น • ห้องนอนชั้น2',
+        titleEn: 'New defect found',
+        // ไม่มี roomNameEn ในข้อมูล จึงใช้ชื่อไทยเป็นตัวแทนแทนที่จะไม่มีตำแหน่ง
+        subEn: 'ห้องนั่งเล่น • ห้องนอนชั้น2',
+      }),
+    );
+  });
+
+  it('uses the English room names for the English activity sub when they exist', async () => {
+    repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7 });
+    repoMock.findBy.mockResolvedValue([]);
+    roomsRepo.findOneByOrFail.mockResolvedValue({
+      roomId: 3,
+      roomName: 'ห้องน้ำ',
+      roomNameEn: 'Bathroom',
+    });
+    subRoomsRepo.findOneBy.mockResolvedValue({
+      subRoomId: 5,
+      roomName: 'ห้องนอนเล็ก',
+      roomNameEn: 'Small bedroom',
+    });
+    defectsRepo.create.mockImplementation((value) => value);
+    defectsRepo.save.mockImplementation((value) => ({
+      ...value,
+      defectId: 99,
+    }));
+
+    await service.create({
+      roundId: 7,
+      subCategoryIds: [],
+      inspectorId: 1,
+      roomId: 3,
+      subRoomId: 5,
+      floorId: 1,
+    } as never);
+
+    expect(activityLogsService.logForRound).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({
+        sub: 'ห้องน้ำ • ห้องนอนเล็ก',
+        subEn: 'Bathroom • Small bedroom',
       }),
     );
   });
@@ -545,6 +589,90 @@ describe('DefectsService', () => {
     });
 
     expect(result.description).toBe('edited');
+  });
+
+  describe('English note translation', () => {
+    it('translates the description after a defect is created', async () => {
+      repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7 });
+      repoMock.findBy.mockResolvedValue([]);
+      roomsRepo.findOneByOrFail.mockResolvedValue({ roomId: 3 });
+      defectsRepo.create.mockImplementation((value) => value);
+      defectsRepo.save.mockImplementation((value) => ({
+        ...value,
+        defectId: 99,
+      }));
+
+      await service.create({
+        roundId: 7,
+        subCategoryIds: [],
+        inspectorId: 1,
+        roomId: 3,
+        floorId: 1,
+        severity: 'Minor',
+        description: 'สีผนังไม่เรียบ',
+      });
+
+      expect(noteTranslator.translateAndStore).toHaveBeenCalledWith(99, {
+        description: 'สีผนังไม่เรียบ',
+      });
+    });
+
+    it('clears the stale translation and re-translates when the description changes', async () => {
+      defectsRepo.findOneOrFail.mockResolvedValue({
+        defectId: 11,
+        description: 'old',
+        descriptionEn: 'old translation',
+        round: { roundId: 7, status: 'SCHEDULED' },
+      });
+      defectsRepo.save.mockImplementation((value) => value);
+
+      const result = await service.update(11, { description: 'ผนังร้าว' });
+
+      expect(result.descriptionEn).toBeNull();
+      expect(noteTranslator.translateAndStore).toHaveBeenCalledWith(11, {
+        description: 'ผนังร้าว',
+      });
+    });
+
+    it('keeps the translation when an update leaves the description unchanged', async () => {
+      defectsRepo.findOneOrFail.mockResolvedValue({
+        defectId: 11,
+        description: 'ผนังร้าว',
+        descriptionEn: 'Cracked wall',
+        severity: 'Minor',
+        round: { roundId: 7, status: 'SCHEDULED' },
+      });
+      defectsRepo.save.mockImplementation((value) => value);
+
+      const result = await service.update(11, { severity: 'Major' });
+
+      expect(result.descriptionEn).toBe('Cracked wall');
+      expect(noteTranslator.translateAndStore).not.toHaveBeenCalled();
+    });
+
+    it('translates the contractor note when the contractor reports a repair', async () => {
+      defectsRepo.findOneOrFail.mockResolvedValue({
+        defectId: 11,
+        contractorNote: null,
+        contractorNoteEn: 'stale',
+        round: {
+          job: { jobId: 12, status: 'Active', contractor: { contractorId: 5 } },
+        },
+      });
+      defectsRepo.save.mockImplementation((value) => value);
+
+      const result = await service.contractorUpdate({
+        defectId: 11,
+        contractorId: 5,
+        linkPayload: { project_id: 12, role: 'contractor' },
+        note: 'ซ่อมเรียบร้อย',
+      });
+
+      expect(result.contractorNoteEn).toBeNull();
+      expect(noteTranslator.translateAndStore).toHaveBeenCalledWith(11, {
+        contractorNote: 'ซ่อมเรียบร้อย',
+      });
+    });
   });
 
   it('should reject contractor update for locked jobs', async () => {

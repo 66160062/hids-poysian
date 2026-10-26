@@ -19,6 +19,7 @@ export default {
     enabled: 'เปิดใช้งาน',
     disabled: 'ปิดอยู่',
     contractorLinkPlaceholder: 'กดคัดลอกลิงก์เพื่อเปิดใช้งาน',
+    contractorRequiredForLink: 'ต้องระบุข้อมูลผู้รับเหมาของงานนี้ก่อน จึงจะคัดลอกหรือส่งลิงก์ผู้รับเหมาได้',
     contractorLinkNote: 'ไม่หมดอายุอัตโนมัติ · Admin ปิดได้เมื่อไม่ต้องการให้เข้าถึง',
     revokeLink: 'ปิดลิงก์',
     contractorProgressTitle: 'ความคืบหน้างานซ่อมของผู้รับเหมา',

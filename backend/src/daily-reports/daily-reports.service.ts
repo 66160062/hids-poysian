@@ -42,6 +42,7 @@ export class DailyReportsService {
     jobId: number,
     round: InspectionRound,
     projectName: string,
+    projectNameEn?: string | null,
   ) {
     if (inspectorIds.length === 0) return;
 
@@ -50,6 +51,7 @@ export class DailyReportsService {
         type: NotificationType.INFO,
         recipientUserId: inspectorId,
         message: `คุณได้รับมอบหมายรอบตรวจใหม่: ${projectName}`,
+        messageEn: `You have been assigned a new inspection round: ${projectNameEn || projectName}`,
         jobId,
         roundId: round.roundId,
       });
@@ -337,6 +339,7 @@ export class DailyReportsService {
       job.jobId,
       savedRound,
       job.projectName,
+      job.projectNameEn,
     );
 
     return savedRound;

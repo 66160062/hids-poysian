@@ -39,6 +39,14 @@ export class ActivityLog {
   @Column({ type: 'varchar', length: 255, nullable: true })
   sub!: string | null;
 
+  // ฉบับภาษาอังกฤษของ title/sub — สร้างพร้อมกันตอนบันทึก (ข้อความเป็นแม่แบบตายตัว ไม่ต้องใช้ LLM)
+  // null = แถวเก่าที่บันทึกก่อนมีคอลัมน์นี้ (ดู scripts/translate-activity-notifications.sql) หน้าจอจะแสดงฉบับไทยแทน
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  titleEn!: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  subEn!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

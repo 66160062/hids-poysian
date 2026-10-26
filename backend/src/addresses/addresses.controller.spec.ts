@@ -1,28 +1,48 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AddressesController } from './addresses.controller';
 import { AddressesService } from './addresses.service';
+import { JwtService } from '@nestjs/jwt';
+import request from 'supertest';
 
 describe('AddressesController', () => {
   let controller: AddressesController;
+  let testingModule: TestingModule;
   let service: jest.Mocked<
-    Pick<AddressesService, 'create' | 'findOne' | 'update' | 'remove'>
+    Pick<
+      AddressesService,
+      'create' | 'findAll' | 'findOne' | 'update' | 'remove'
+    >
   >;
 
   beforeEach(async () => {
     const serviceMock = {
       create: jest.fn(),
+      findAll: jest.fn(),
       findOne: jest.fn(),
       update: jest.fn(),
       remove: jest.fn(),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
+    testingModule = await Test.createTestingModule({
       controllers: [AddressesController],
-      providers: [{ provide: AddressesService, useValue: serviceMock }],
+      providers: [
+        { provide: AddressesService, useValue: serviceMock },
+        {
+          provide: JwtService,
+          useValue: {
+            verify: jest.fn((token: string) => {
+              if (token === 'admin-token') return { sub: 1, role: 'admin' };
+              if (token === 'link-token')
+                return { project_id: 1, role: 'customer' };
+              throw new Error('invalid token');
+            }),
+          },
+        },
+      ],
     }).compile();
 
-    controller = module.get<AddressesController>(AddressesController);
-    service = module.get(AddressesService);
+    controller = testingModule.get<AddressesController>(AddressesController);
+    service = testingModule.get(AddressesService);
   });
 
   it('should be defined', () => {
@@ -45,5 +65,40 @@ describe('AddressesController', () => {
     controller.remove('7');
 
     expect(service.remove).toHaveBeenCalledWith(7);
+  });
+
+  it('requires an admin token to read and edit addresses', async () => {
+    service.findAll.mockResolvedValue([]);
+    service.update.mockResolvedValue({
+      raw: [],
+      generatedMaps: [],
+      affected: 1,
+    });
+    const app = testingModule.createNestApplication();
+    await app.init();
+
+    try {
+      await request(app.getHttpServer()).get('/addresses').expect(401);
+      await request(app.getHttpServer())
+        .get('/addresses')
+        .set('Authorization', 'Bearer link-token')
+        .expect(403);
+      await request(app.getHttpServer())
+        .get('/addresses')
+        .set('Authorization', 'Bearer admin-token')
+        .expect(200, []);
+      await request(app.getHttpServer())
+        .patch('/addresses/7')
+        .set('Authorization', 'Bearer link-token')
+        .send({ district: 'Bang Rak' })
+        .expect(403);
+      await request(app.getHttpServer())
+        .patch('/addresses/7')
+        .set('Authorization', 'Bearer admin-token')
+        .send({ district: 'Bang Rak' })
+        .expect(200);
+    } finally {
+      await app.close();
+    }
   });
 });

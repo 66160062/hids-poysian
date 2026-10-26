@@ -21,6 +21,11 @@ export function useLocalizedField() {
   return { pickLocalized };
 }
 
+// Same rule for a bare th/en pair, usable outside setup() (Pinia stores, plain helpers).
+export function localizedText(th: string | null | undefined, en: string | null | undefined): string {
+  return pickForLocale((i18n.global.locale as unknown as Ref<string>).value, th, en);
+}
+
 // Same rule for records shaped { name, nameEn } (defect categories/sub-categories).
 // Reads the global i18n locale directly so it also works outside setup() — Pinia
 // stores and plain helpers — and stays reactive when called from a template/computed.

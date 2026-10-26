@@ -23,6 +23,7 @@ describe('TeamsService', () => {
     where: jest.Mock;
     andWhere: jest.Mock;
     orderBy: jest.Mock;
+    addOrderBy: jest.Mock;
     skip: jest.Mock;
     take: jest.Mock;
     getMany: jest.Mock;
@@ -35,6 +36,7 @@ describe('TeamsService', () => {
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
       skip: jest.fn().mockReturnThis(),
       take: jest.fn().mockReturnThis(),
       getMany: jest
@@ -71,7 +73,7 @@ describe('TeamsService', () => {
     expect(service).toBeDefined();
   });
 
-  it('orders teams by team_Id descending and only returns active ones', async () => {
+  it('orders teams by updated_at descending and only returns active ones', async () => {
     const result = await service.findAll();
 
     expect(teamsRepo.createQueryBuilder).toHaveBeenCalledWith('team');
@@ -79,7 +81,8 @@ describe('TeamsService', () => {
     expect(qb.where).toHaveBeenCalledWith('team.status = :status', {
       status: 'active',
     });
-    expect(qb.orderBy).toHaveBeenCalledWith('team.team_Id', 'DESC');
+    expect(qb.orderBy).toHaveBeenCalledWith('team.updated_at', 'DESC');
+    expect(qb.addOrderBy).toHaveBeenCalledWith('team.team_Id', 'DESC');
     expect(result.data).toHaveLength(1);
   });
 
@@ -112,9 +115,10 @@ describe('TeamsService', () => {
     });
     teamsRepo.save.mockImplementation((value) => value);
 
-    await expect(
-      service.update(8, { branchId: 0 } as never),
-    ).resolves.toMatchObject({ team_Id: 8, branchId: null });
+    await expect(service.update(8, { branchId: 0 })).resolves.toMatchObject({
+      team_Id: 8,
+      branchId: null,
+    });
   });
 
   it('deactivates a team instead of deleting the row, and unassigns its members', async () => {

@@ -10,11 +10,11 @@ const OWN_URL =
 describe('ImagesController', () => {
   let controller: ImagesController;
   let storageService: jest.Mocked<Pick<StorageService, 'ensureThumbnail'>>;
-  let res: { redirect: jest.Mock };
+  let res: { redirect: jest.Mock; setHeader: jest.Mock };
 
   beforeEach(async () => {
     const storageMock = { ensureThumbnail: jest.fn() };
-    res = { redirect: jest.fn() };
+    res = { redirect: jest.fn(), setHeader: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ImagesController],
@@ -36,6 +36,10 @@ describe('ImagesController', () => {
     expect(res.redirect).toHaveBeenCalledWith(
       302,
       'https://project.supabase.co/storage/v1/object/public/hids-uploads/thumbs/x.webp',
+    );
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'Cache-Control',
+      'public, max-age=86400',
     );
   });
 
@@ -75,5 +79,7 @@ describe('ImagesController', () => {
     await controller.thumb(res as unknown as Response, OWN_URL, '600');
 
     expect(res.redirect).toHaveBeenCalledWith(302, OWN_URL);
+    // ต้นฉบับที่ fallback ไป ไม่ควรให้เบราว์เซอร์จำ redirect — รอบหน้าจะได้ลองย่อใหม่
+    expect(res.setHeader).not.toHaveBeenCalled();
   });
 });

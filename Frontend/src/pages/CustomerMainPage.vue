@@ -670,6 +670,8 @@ interface ActivityLogResponse {
   color: 'green' | 'orange' | 'blue' | 'purple';
   title: string;
   sub?: string | null;
+  titleEn?: string | null;
+  subEn?: string | null;
   createdAt: string;
 }
 
@@ -689,8 +691,9 @@ function formatUpdateDate(dateStr: string): string {
 const updates = computed(() =>
   activityLogs.value.map((log) => ({
     color: log.color,
-    title: log.title,
-    sub: log.sub ?? '',
+    // แถวเก่าที่ยังไม่มีฉบับอังกฤษจะ fallback เป็นไทย (pickLocalized)
+    title: pickLocalized(log.title, log.titleEn),
+    sub: pickLocalized(log.sub ?? '', log.subEn),
     date: formatUpdateDate(log.createdAt),
   })),
 );

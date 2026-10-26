@@ -30,16 +30,14 @@ export class TeamsService {
     const isAll =
       params?.all === true ||
       params?.all === 'true' ||
-      (!params?.page &&
-        !params?.limit &&
-        !params?.search &&
-        !params?.branchId);
+      (!params?.page && !params?.limit && !params?.search && !params?.branchId);
 
     const query = this.teamsRepo
       .createQueryBuilder('team')
       .leftJoinAndSelect('team.branch', 'branch')
       .where('team.status = :status', { status: 'active' })
-      .orderBy('team.team_Id', 'DESC');
+      .orderBy('team.updated_at', 'DESC')
+      .addOrderBy('team.team_Id', 'DESC');
 
     if (params?.branchId) {
       query.andWhere('team.branchId = :branchId', {
@@ -111,7 +109,7 @@ export class TeamsService {
   async remove(id: number) {
     const team = await this.teamsRepo.findOneByOrFail({ team_Id: id });
     team.status = 'inactive';
-    await this.usersRepo.update({ teamId: id }, { teamId: null as any });
+    await this.usersRepo.update({ teamId: id }, { teamId: null });
     return this.teamsRepo.save(team);
   }
 }

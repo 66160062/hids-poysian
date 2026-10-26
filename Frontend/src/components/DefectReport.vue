@@ -59,6 +59,20 @@
       >
         <q-tooltip>{{ t('common.resetZoom') || 'ขนาดจริง 100%' }}</q-tooltip>
       </q-btn>
+      <q-separator vertical class="q-mx-xs" style="height: 18px" />
+      <q-btn-toggle
+        v-model="locale"
+        :options="reportLanguageOptions"
+        dense
+        unelevated
+        no-caps
+        size="sm"
+        toggle-color="primary"
+        color="grey-3"
+        text-color="dark"
+        class="report-language-toggle"
+        :aria-label="t('reports.defect.reportLanguage')"
+      />
     </div>
 
     <!-- Scaler container that matches the scaled height & width -->
@@ -87,17 +101,12 @@
           <img loading="eager" :src="reportLogo" style="height: 100px; object-fit: contain" />
         </div>
 
+        <!-- รูปปกแสดงเต็มภาพ (contain) มีรูปเดียวกันเบลอเป็นพื้นหลังเติมช่องว่าง — เหมือนหน้าดูงาน ไม่ถูกตัดขอบ -->
         <div class="row justify-center q-mb-sm">
-          <img
-            loading="eager"
-            :src="
-              resolveImageUrl(
-                round.job.projectImageUrl,
-                'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600',
-              )
-            "
-            style="width: 95%; max-height: 150px; object-fit: cover; border-radius: 8px"
-          />
+          <div class="cover-frame">
+            <img loading="eager" :src="coverImageSrc" class="cover-img-bg" />
+            <img loading="eager" :src="coverImageSrc" class="cover-img-fg" />
+          </div>
         </div>
 
         <div class="row q-col-gutter-md q-px-md q-mb-sm">
@@ -359,7 +368,7 @@
           <div v-for="defect in chunk" :key="defect.defectId" class="defect-card">
             <div class="badge-id">#{{ defect.defectId }}</div>
             <div class="badge-main" style="background: #ef4444">{{ defect.severity }}</div>
-            <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image', 600)" class="defect-img" />
+            <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image', defectThumbWidth)" class="defect-img" />
             <div class="card-body">
               <div class="room-title">{{ getRoomShortName(defect) }}</div>
               <div class="info-grid">
@@ -368,7 +377,7 @@
                 <span class="label">{{ t('reports.defect.itemsLabel') }}</span>
                 <span>{{ defect.subCategories?.map((s) => localizedName(s)).join(', ') }}</span>
                 <span class="label">{{ t('reports.defect.noteLabel') }}</span>
-                <span>{{ defect.description }}</span>
+                <span>{{ defectNote(defect) }}</span>
                 <span class="label">{{ t('reports.defect.statusLabel') }}</span>
                 <span>
                   {{
@@ -438,7 +447,7 @@
               >
                 {{ defect.severity }}
               </div>
-              <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image', 600)" class="defect-img" />
+              <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image', defectThumbWidth)" class="defect-img" />
               <div class="card-body">
                 <div class="info-grid">
                   <span class="label">{{ t('reports.defect.jobTypeLabel') }}</span>
@@ -446,7 +455,7 @@
                   <span class="label">{{ t('reports.defect.itemsLabel') }}</span>
                   <span>{{ defect.subCategories?.map((s) => localizedName(s)).join(', ') }}</span>
                   <span class="label">{{ t('reports.defect.noteLabel') }}</span>
-                  <span>{{ defect.description }}</span>
+                  <span>{{ defectNote(defect) }}</span>
                   <span class="label">{{ t('reports.defect.statusLabel') }}</span>
                   <span>{{ defect.status === 'pending_repair' ? t('reports.defect.statusPendingRepair') : defect.status }}</span>
                 </div>
@@ -533,7 +542,7 @@
               </div>
               <div v-if="topic.note" class="summary-answer">
                 <span class="summary-answer-group">{{ t('reports.defect.noteLabel') }}</span>
-                {{ topic.note }}
+                {{ pickLocalized(topic.note, topic.noteEn) }}
               </div>
             </div>
             <div class="summary-topic-photos">
@@ -657,7 +666,7 @@
                     <span v-if="item.defect.subCategories && item.defect.subCategories.length">
                       {{ item.defect.subCategories.map((s) => localizedName(s)).join(', ') }}
                     </span>
-                    <span v-else>{{ item.defect.description || '-' }}</span>
+                    <span v-else>{{ defectNote(item.defect) || '-' }}</span>
                   </td>
                   <td class="text-center">
                     <span
@@ -768,9 +777,9 @@
           </div>
         </div>
 
-        <div v-if="round.aiSummaryText" class="q-mx-md q-pa-md ai-summary-box">
+        <div v-if="aiSummaryDisplay" class="q-mx-md q-pa-md ai-summary-box">
           <div class="text-caption text-weight-bold text-grey-8 q-mb-xs">{{ t('reports.defect.aiSummaryTitle') }}</div>
-          <div class="text-body2" style="line-height: 1.6">{{ round.aiSummaryText }}</div>
+          <div class="text-body2" style="line-height: 1.6">{{ aiSummaryDisplay }}</div>
         </div>
 
         <div class="pdf-footer">
@@ -793,13 +802,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
-import { useLocalizedField, localizedName } from 'src/composables/useLocalizedField';
+import messages from 'src/i18n';
 
-const { t, locale } = useI18n();
-const { pickLocalized } = useLocalizedField();
+// ภาษาของรายงานแยกจากภาษาของระบบ: เริ่มจากภาษาระบบ (หรือ ?lang= ของหน้า print) แล้วสลับเองได้จากปุ่มบนรายงาน
+// โดยไม่เปลี่ยนภาษาของเมนู/หน้าที่ครอบอยู่ — t, locale และชื่อสองภาษาทั้งหมดในไฟล์นี้จึงอ้างจาก scope ของคอมโพเนนต์นี้
+const { locale: appLocale } = useI18n({ useScope: 'global' });
+const { t, locale } = useI18n({
+  useScope: 'local',
+  inheritLocale: false,
+  locale: appLocale.value,
+  fallbackLocale: 'en-US',
+  messages,
+});
+
+const reportLanguageOptions = [
+  { label: 'TH', value: 'th-TH' },
+  { label: 'EN', value: 'en-US' },
+];
+
+// กฎเดียวกับ useLocalizedField แต่อ่านจาก locale ของรายงาน ไม่ใช่ locale ของระบบ
+function pickLocalized(th: string | null | undefined, en: string | null | undefined): string {
+  if (locale.value === 'en-US' && en) return en;
+  return th || en || '';
+}
+
+function localizedName(item: { name?: string | null; nameEn?: string | null } | null | undefined): string {
+  return pickLocalized(item?.name, item?.nameEn);
+}
 import type { InspectionRound, Defect, InspectionSummaryItem } from 'src/models';
 import { clusterPlanPins } from 'src/utils/planPinClusters';
 import PoysianLogo from 'src/assets/Logos/Poysian.png';
@@ -826,7 +858,7 @@ const addressLocation = computed(() =>
 // ค่า default เก่าในฐานข้อมูลที่ไม่เคยมีไฟล์จริงรองรับ (ข้อมูลเสียของระบบเดิม) — แทนที่ด้วยรูปจริงที่อัปโหลดเก็บไว้ใน Supabase Storage แล้ว
 const LEGACY_IMAGE_REPLACEMENTS: Record<string, string> = {
   '/defect-images/unknown.jpg':
-    'https://wduuxuwwbesgrcmcsnxq.supabase.co/storage/v1/object/public/hids-uploads/defects/unknown2.jpg',
+    'https://pwjxgoybmcnxmnoabjye.supabase.co/storage/v1/object/public/hids-uploads/defects/unknown2.jpg',
 };
 
 // ต้นฉบับใน Storage เก็บที่ 1920px ซึ่งใหญ่กว่าที่หน้านี้แสดงจริงหลายเท่า พอฝังลง PDF ที่มีรูป
@@ -877,6 +909,7 @@ interface SummaryTopic {
   labelEn?: string | null;
   answers: SummaryAnswerGroup[];
   note: string;
+  noteEn: string;
   photos: string[];
 }
 
@@ -931,6 +964,18 @@ const stickerLegend = computed<StickerMeta[]>(() => [
     description: t('reports.defect.categories.other.description'),
   },
 ]);
+// รายงานที่ defect ไม่เยอะใช้รูปย่อละเอียดกว่า (รูปคมขึ้น) ส่วนเล่มใหญ่ลดลงเพื่อไม่ให้ไฟล์ PDF ทะลุเพดานอัปโหลด
+// ต้องตรงกับ defectThumbWidthFor ใน reports.service.ts ไม่งั้นรูปย่อที่ warm ไว้ไม่ถูกใช้ แล้วหน้า print ต้องย่อเองตอนโหลด
+const HIGH_QUALITY_MAX_DEFECTS = 40;
+const defectThumbWidth = computed(() => (props.defects.length <= HIGH_QUALITY_MAX_DEFECTS ? 900 : 600));
+
+const coverImageSrc = computed(() =>
+  resolveImageUrl(
+    props.round.job.projectImageUrl,
+    'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600',
+  ),
+);
+
 const reportLogo = computed(() => {
   const logoUrl = props.round.job.branch?.logoUrl;
   if (!logoUrl) return PoysianLogo;
@@ -1063,6 +1108,7 @@ async function checkReportFreshness() {
   try {
     const { data } = await api.get<{ isStale: boolean }>(
       `/inspection-rounds/${props.round.roundId}/report`,
+      { params: { lang: locale.value } },
     );
     isReportStale.value = data.isStale;
     if (!data.isStale && freshnessTimer) {
@@ -1073,6 +1119,20 @@ async function checkReportFreshness() {
     // เช็คไม่สำเร็จ ไม่โชว์ banner ผิดๆ ปล่อยผ่านเงียบๆ
   }
 }
+
+function startFreshnessPolling() {
+  if (freshnessTimer) clearInterval(freshnessTimer);
+  void checkReportFreshness();
+  freshnessTimer = setInterval(() => void checkReportFreshness(), 8000);
+}
+
+// PDF แต่ละภาษามี cache และ hash แยกกัน — สลับภาษาแล้วต้องเช็คของภาษาใหม่ (และเริ่ม polling ใหม่
+// เพราะ polling เดิมถูกหยุดไปแล้วถ้าฉบับภาษาก่อนหน้า "ล่าสุด" แล้ว)
+watch(locale, () => {
+  if (!props.checkFreshness) return;
+  isReportStale.value = false;
+  startFreshnessPolling();
+});
 
 onMounted(() => {
   fitWidth();
@@ -1098,8 +1158,7 @@ onMounted(() => {
   }
 
   if (props.checkFreshness) {
-    void checkReportFreshness();
-    freshnessTimer = setInterval(() => void checkReportFreshness(), 8000);
+    startFreshnessPolling();
   }
   void useBranchStore().fetchBranches();
 });
@@ -1293,8 +1352,20 @@ const allDefectChunks = computed(() => {
   return pages;
 });
 
+// PDF ภาษาอังกฤษใช้สรุปฉบับอังกฤษ ถ้ายังไม่มี (สร้างไม่สำเร็จ/ข้อมูลเก่า) ให้ใช้ฉบับไทยแทนดีกว่าไม่มีสรุปเลย
+const aiSummaryDisplay = computed(() =>
+  locale.value === 'en-US' && props.round.aiSummaryTextEn
+    ? props.round.aiSummaryTextEn
+    : props.round.aiSummaryText,
+);
+
+// หมายเหตุ defect: ภาษาอังกฤษใช้คำแปลที่เก็บไว้ ถ้ายังไม่มีคำแปลให้แสดงข้อความไทยเดิม
+function defectNote(defect: { description: string; descriptionEn?: string | null }) {
+  return locale.value === 'en-US' && defect.descriptionEn ? defect.descriptionEn : defect.description;
+}
+
 const hasAiSummary = computed(
-  () => props.round.completionPercent != null || !!props.round.aiSummaryText,
+  () => props.round.completionPercent != null || !!aiSummaryDisplay.value,
 );
 
 // Compute plan pages for PDF - groups defects by planId, only plans with pinned defects
@@ -1630,7 +1701,7 @@ const summaryCategories = computed<SummaryCategory[]>(() => {
       if (!topicsByCategory.has(category)) topicsByCategory.set(category, { categoryEn, topics: new Map() });
       const topics = topicsByCategory.get(category)!.topics;
       if (!topics.has(templateId)) {
-        topics.set(templateId, { templateId, label, labelEn, answers: [], note: '', photos: [] });
+        topics.set(templateId, { templateId, label, labelEn, answers: [], note: '', noteEn: '', photos: [] });
       }
       const topic = topics.get(templateId)!;
 
@@ -1648,7 +1719,10 @@ const summaryCategories = computed<SummaryCategory[]>(() => {
       }
       answer.values.push({ th: item.option.value, en: item.option.valueEn ?? null });
       // หน้ากรอกบันทึกหมายเหตุเดียวกันซ้ำลงทุกตัวเลือกที่ติ้ก เก็บค่าเดียวพอ ไม่งั้นพิมพ์ซ้ำหลายรอบ
-      if (!topic.note && item.detailValue?.trim()) topic.note = item.detailValue.trim();
+      if (!topic.note && item.detailValue?.trim()) {
+        topic.note = item.detailValue.trim();
+        topic.noteEn = item.detailValueEn?.trim() ?? '';
+      }
     });
 
   return [...topicsByCategory.entries()].map(([category, { categoryEn, topics }]) => ({
@@ -2072,10 +2146,34 @@ const summaryPages = computed(() => {
   overflow: hidden;
 }
 
+.cover-frame {
+  position: relative;
+  width: 95%;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.cover-img-bg,
+.cover-img-fg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.cover-img-bg {
+  object-fit: cover;
+  filter: blur(14px) brightness(0.7) saturate(1.15);
+  transform: scale(1.15); /* ขยายเล็กน้อยกันขอบเบลอเป็นเส้นจางๆ */
+}
+.cover-img-fg {
+  object-fit: contain;
+}
+
 .card-logo-watermark-img {
   position: absolute;
-  bottom: 0px;
-  right: 10px;
+  bottom: 16px; /* ยกขึ้นจากขอบล่างของการ์ด ไม่ให้ชื่อสาขาใต้โลโก้ชิดขอบ */
+  left: 50%;
+  transform: translateX(-50%); /* กึ่งกลางพื้นที่ว่างใต้ข้อมูลของการ์ด แทนที่จะชิดมุมขวาล่าง */
   opacity: 0.3;
   width: 60px;
   object-fit: contain;

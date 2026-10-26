@@ -45,7 +45,14 @@ describe('UsersController', () => {
     } as Express.Multer.File;
 
     await controller.create(
-      { user: { sub: 1, role: 'super_admin', email: 'admin@gmail.com', branchId: null } } as any,
+      {
+        user: {
+          sub: 1,
+          role: 'super_admin',
+          email: 'admin@gmail.com',
+          branchId: null,
+        },
+      } as any,
       file,
       { email: 'a@b.com' } as never,
     );
@@ -59,7 +66,14 @@ describe('UsersController', () => {
 
   it('falls back to the default avatar when no file is attached', async () => {
     await controller.create(
-      { user: { sub: 1, role: 'super_admin', email: 'admin@gmail.com', branchId: null } } as any,
+      {
+        user: {
+          sub: 1,
+          role: 'super_admin',
+          email: 'admin@gmail.com',
+          branchId: null,
+        },
+      } as any,
       undefined as unknown as Express.Multer.File,
       { email: 'a@b.com' } as never,
     );
@@ -73,7 +87,14 @@ describe('UsersController', () => {
 
   it('only overwrites imageUrl on update when a new file is attached', async () => {
     await controller.update(
-      { user: { sub: 1, role: 'super_admin', email: 'admin@gmail.com', branchId: null } } as any,
+      {
+        user: {
+          sub: 1,
+          role: 'super_admin',
+          email: 'admin@gmail.com',
+          branchId: null,
+        },
+      } as any,
       1,
       undefined as unknown as Express.Multer.File,
       {

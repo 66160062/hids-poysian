@@ -68,6 +68,8 @@ import { StorageModule } from './storage/storage.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { ReportsModule } from './reports/reports.module';
 import { AiSummaryModule } from './ai-summary/ai-summary.module';
+import { TranslateModule } from './translate/translate.module';
+import { HousePlan } from './house-plans/entities/house-plan.entity';
 import { HousePlansModule } from './house-plans/house-plans.module';
 import { AssignmentsModule } from './assignments/assignments.module';
 import { HousePlan } from './house-plans/entities/house-plan.entity';
@@ -131,10 +133,11 @@ import { Assignment } from './assignments/entities/assignment.entity';
       }),
       inject: [ConfigService],
     }),
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'uploads'),
-      serveRoot: '/uploads',
-    }),
+    StorageModule,
+    AiSummaryModule,
+    TranslateModule,
+    ReportsModule,
+    ActivityLogsModule,
     AuthModule,
     UsersModule,
     InspectionJobsModule,

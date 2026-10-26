@@ -52,7 +52,7 @@
       <div class="text-subtitle2 text-weight-bold q-mb-sm">{{ t('inspection.verify.contractorNoteLabel') }}</div>
       <q-card flat bordered class="q-mb-xl">
         <q-card-section>
-          <div class="text-body2 text-grey-8">{{ defect.contractorNote || '-' }}</div>
+          <div class="text-body2 text-grey-8">{{ contractorNoteDisplay }}</div>
         </q-card-section>
       </q-card>
 
@@ -96,7 +96,7 @@ import { createIconSpinner } from 'src/composables/useIconSpinner';
 
 const verifySpinner = createIconSpinner('verified');
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const inspectionStore = useInspectionStore();
@@ -115,6 +115,12 @@ const getImageUrl = (path: string | null | undefined): string => {
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
   return path.startsWith('http') ? path : `${baseUrl}${path}`;
 };
+
+const contractorNoteDisplay = computed(() => {
+  const d = defect.value;
+  const note = locale.value === 'en-US' && d?.contractorNoteEn ? d.contractorNoteEn : d?.contractorNote;
+  return note || '-';
+});
 
 const locationLabel = computed(() => {
   if (!defect.value) return '-';

@@ -31,6 +31,7 @@ export default {
     footerTagline: 'Poysian รับตรวจบ้าน ตรวจคอนโด',
     jobTypeLabel: 'ประเภทงาน:',
     itemsLabel: 'รายการ:',
+    reportLanguage: 'ภาษาของรายงาน',
     noteLabel: 'หมายเหตุ:',
     statusLabel: 'สถานะ:',
     statusPendingRepair: 'กำลังรอซ่อม',

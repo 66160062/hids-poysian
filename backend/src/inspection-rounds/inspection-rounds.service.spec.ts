@@ -176,7 +176,10 @@ describe('InspectionRoundsService', () => {
       expect(result).toMatchObject({ jobId: 1 });
       expect(activityLogsService.log).toHaveBeenCalledWith(
         1,
-        expect.objectContaining({ type: 'round_scheduled' }),
+        expect.objectContaining({
+          type: 'round_scheduled',
+          titleEn: expect.stringContaining('Inspection round') as unknown,
+        }),
         undefined,
       );
     });

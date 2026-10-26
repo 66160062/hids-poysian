@@ -1,6 +1,11 @@
 import { Controller, Get, Query, Post, UseGuards, Req } from '@nestjs/common';
 import type { Request } from 'express';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { DashboardResponse } from './dto/dashboard-response.dto';
 import { WorkListResponse } from './dto/work-list-response.dto';
@@ -47,7 +52,9 @@ export class AdminController {
     const effectiveBranchId =
       req.user?.role === 'admin' && req.user?.branchId
         ? req.user.branchId
-        : branchId ? Number(branchId) : undefined;
+        : branchId
+          ? Number(branchId)
+          : undefined;
 
     return this.adminService.getDashboardData(dateString, effectiveBranchId);
   }
