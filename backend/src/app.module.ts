@@ -11,6 +11,8 @@ import { CustomersModule } from './customers/customers.module';
 import { Customer } from './customers/entities/customer.entity';
 import { AddressesModule } from './addresses/addresses.module';
 import { Address } from './addresses/entities/address.entity';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { HouseTypesModule } from './house-types/house-types.module';
 import { HouseType } from './house-types/entities/house-type.entity';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
@@ -63,13 +65,14 @@ import { Branch } from './branches/entities/branch.entity';
 import { BranchesModule } from './branches/branches.module';
 import { MailModule } from './mail/mail.module';
 import { StorageModule } from './storage/storage.module';
-import { ReportsModule } from './reports/reports.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
+import { ReportsModule } from './reports/reports.module';
+import { AiSummaryModule } from './ai-summary/ai-summary.module';
+import { HousePlansModule } from './house-plans/house-plans.module';
+import { AssignmentsModule } from './assignments/assignments.module';
+import { HousePlan } from './house-plans/entities/house-plan.entity';
 import { ActivityLog } from './activity-logs/entities/activity-log.entity';
 import { Assignment } from './assignments/entities/assignment.entity';
-import { AiSummaryModule } from './ai-summary/ai-summary.module';
-import { HousePlan } from './house-plans/entities/house-plan.entity';
-import { HousePlansModule } from './house-plans/house-plans.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -119,23 +122,22 @@ import { HousePlansModule } from './house-plans/house-plans.module';
           Rating,
           Notification,
           Branch,
+          HousePlan,
           ActivityLog,
           Assignment,
-          HousePlan,
         ],
         synchronize: true,
         namingStrategy: new SnakeNamingStrategy(),
       }),
       inject: [ConfigService],
     }),
-    StorageModule,
-    AiSummaryModule,
-    ReportsModule,
-    ActivityLogsModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
     AuthModule,
     UsersModule,
     InspectionJobsModule,
-    HousePlansModule,
     CustomersModule,
     AddressesModule,
     HouseTypesModule,
@@ -160,8 +162,14 @@ import { HousePlansModule } from './house-plans/house-plans.module';
     NotificationsModule,
     BranchesModule,
     MailModule,
+    StorageModule,
+    ActivityLogsModule,
+    ReportsModule,
+    AiSummaryModule,
+    HousePlansModule,
+    AssignmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

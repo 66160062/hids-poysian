@@ -65,6 +65,15 @@ export class ConstructionDailyReportsController {
     return this.service.create(payloadStr, photoWorkDetailNames, files, userId);
   }
 
+  @Get('round/:roundId/previous-work-items')
+  @ApiOperation({
+    summary:
+      'ดึงรายละเอียดงานจากรอบก่อนหน้าที่ยังไม่ถึง 100% (สำหรับ carry forward)',
+  })
+  findPreviousRoundWorkItems(@Param('roundId') roundId: string) {
+    return this.service.findPreviousRoundWorkItems(+roundId);
+  }
+
   @Get('round/:roundId')
   @ApiOperation({ summary: 'ดึงรายงานก่อสร้างล่าสุดตาม roundId' })
   findByRound(@Param('roundId') roundId: string) {
