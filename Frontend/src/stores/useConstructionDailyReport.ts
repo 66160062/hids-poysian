@@ -120,10 +120,28 @@ export const useConstructionDailyReportStore = defineStore('constructionDailyRep
     }
   }
 
+  /**
+   * ดึง workItems จากรอบก่อนหน้าที่ยังไม่ถึง 100%
+   * สำหรับ carry forward ไปยังรอบปัจจุบัน
+   */
+  async function fetchPreviousWorkItems(
+    roundId: number,
+  ): Promise<WorkItemPayload[]> {
+    try {
+      const { data } = await api.get<WorkItemPayload[]>(
+        `/construction-daily-reports/round/${roundId}/previous-work-items`,
+      );
+      return data;
+    } catch {
+      return [];
+    }
+  }
+
   return {
     isSubmitting,
     submitError,
     submitReport,
     fetchReportByRound,
+    fetchPreviousWorkItems,
   };
 });

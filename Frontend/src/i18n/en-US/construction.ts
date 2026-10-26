@@ -17,6 +17,9 @@ export default {
     unitLabel: 'Unit',
     actualLabel: 'Actual',
     addWorkDetail: 'Add Work Detail',
+    editWorkDetail: 'Edit Work Detail',
+    pendingUpdate: 'Pending Update',
+    workDetailsUpdateRequired: 'Please update the progress of all carried-over work items',
 
     relatedPersonsTitle: 'Related Personnel',
     personnelTitle: 'Personnel',
@@ -109,6 +112,9 @@ export default {
     submitEditSuccess: 'Changes saved successfully',
     submitDailySuccess: 'Daily report submitted successfully',
     submitError: 'An error occurred while saving the data',
+
+    carriedFromPrevious: 'Carried from previous round',
+    previousPercent: 'Previous: {percent}%',
   },
   dashboard: {
     workListTitle: 'Construction Work List',

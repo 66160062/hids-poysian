@@ -398,6 +398,7 @@
       v-model="showAnnotator"
       :image-url="imagePreview"
       @save="onAnnotatorSave"
+      @save-result="onAnnotatorSaveResult"
     />
   </q-page>
 </template>
@@ -406,6 +407,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import ImageAnnotatorDialog from 'src/components/ImageAnnotatorDialog.vue';
+import type { AnnotatorSaveResult } from 'src/composables/useFabricCanvas';
 import { useInspectionStore } from 'src/stores/useInspection';
 import { useRoundLock } from 'src/composables/useRoundLock';
 import { api } from 'src/boot/axios';
@@ -599,6 +601,11 @@ const imagePreview = ref<string | null>(null);
 const selectedFile = ref<File | null>(null);
 const showAnnotator = ref(false);
 
+/** รูปต้นฉบับ (ก่อน annotation) เก็บไว้แยกสำหรับส่ง backend */
+const originalFile = ref<File | null>(null);
+/** ข้อมูล annotation (พิกัด objects ต่างๆ) สำหรับ re-edit ในอนาคต */
+const annotationData = ref<AnnotatorSaveResult['annotationData'] | null>(null);
+
 const galleryInput = ref<HTMLInputElement | null>(null);
 const cameraInput = ref<HTMLInputElement | null>(null);
 
@@ -654,6 +661,19 @@ const onAnnotatorSave = (blob: Blob) => {
     URL.revokeObjectURL(oldPreview);
   }
   startImageCompression(file);
+};
+
+/** รับทั้งรูปต้นฉบับ + รูปที่แก้ไข + ข้อมูล annotation จาก ImageAnnotatorDialog */
+const onAnnotatorSaveResult = (result: AnnotatorSaveResult) => {
+  // เก็บรูปต้นฉบับแยก
+  originalFile.value = new File(
+    [result.originalBlob],
+    `defect-original-${Date.now()}.jpg`,
+    { type: result.originalBlob.type || 'image/jpeg' },
+  );
+  // เก็บข้อมูล annotation
+  annotationData.value = result.annotationData;
+  // selectedFile จะถูกอัปเดตผ่าน onAnnotatorSave (legacy event) อยู่แล้ว
 };
 
 // ── Navigation & Submit ───────────────────────────────────────

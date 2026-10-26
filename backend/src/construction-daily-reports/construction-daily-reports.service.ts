@@ -225,4 +225,57 @@ export class ConstructionDailyReportsService {
 
     return report;
   }
+
+  /**
+   * ดึง workItems จากรอบก่อนหน้า (roundNumber - 1) ของ job เดียวกัน
+   * กรองงานที่ actualPercent >= 100 ออก (ถือว่าเสร็จสมบูรณ์แล้ว)
+   * ใช้สำหรับ carry forward งานที่ยังไม่เสร็จไปยังรอบถัดไป
+   */
+  async findPreviousRoundWorkItems(
+    currentRoundId: number,
+  ): Promise<DailyWorkItem[]> {
+    // 1. ดึง round ปัจจุบัน พร้อม job
+    const currentRound = await this.dataSource
+      .getRepository(InspectionRound)
+      .findOne({
+        where: { roundId: currentRoundId },
+        relations: ['job'],
+      });
+
+    if (!currentRound || currentRound.roundNumber <= 1) {
+      return [];
+    }
+
+    // 2. หา round ก่อนหน้า (roundNumber - 1, same job)
+    const previousRound = await this.dataSource
+      .getRepository(InspectionRound)
+      .findOne({
+        where: {
+          job: { jobId: currentRound.job.jobId },
+          roundNumber: currentRound.roundNumber - 1,
+        },
+      });
+
+    if (!previousRound) {
+      return [];
+    }
+
+    // 3. หา daily report ของรอบก่อนหน้า (ล่าสุด)
+    const previousReport = await this.dataSource
+      .getRepository(ConstructionDailyReport)
+      .findOne({
+        where: { round: { roundId: previousRound.roundId } },
+        relations: ['workItems'],
+        order: { createdAt: 'DESC' },
+      });
+
+    if (!previousReport?.workItems) {
+      return [];
+    }
+
+    // 4. กรองงานที่ 100% ออก (เสร็จสมบูรณ์แล้ว ไม่ต้อง carry forward)
+    return previousReport.workItems.filter(
+      (item) => (item.actualPercent ?? 0) < 100,
+    );
+  }
 }
