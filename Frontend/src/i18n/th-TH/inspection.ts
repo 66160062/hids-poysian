@@ -98,6 +98,8 @@ export default {
     autosaveFailed: 'บันทึกไม่สำเร็จ',
     waitForUploads: 'รอให้อัปโหลดรูปเสร็จก่อน',
     fixFailedUploads: 'มีรูปที่อัปโหลดไม่สำเร็จ แตะที่รูปเพื่อลองใหม่ หรือลบออก',
+    clearCategory: 'ล้างค่าทั้งหมวด',
+    clearItem: 'ล้างค่า',
   },
   verify: {
     title: 'ตรวจสอบงานซ่อม',
