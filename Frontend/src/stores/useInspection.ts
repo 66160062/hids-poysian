@@ -45,6 +45,8 @@ export interface GroupedDefectItem {
   failPercentage: number;
   defects: Defect[]; // raw defects ในกลุ่มนี้ (ส่งต่อไปหน้า detail)
   lastActivityAt: number; // เวลาแก้ไข/เพิ่ม defect ล่าสุดในกลุ่มนี้ (epoch ms) — ใช้เรียงตาม sortOrder
+  firstActivityAt?: number | undefined; // เวลาที่ defect แรกในกลุ่มนี้ถูกสร้าง (epoch ms) — ใช้คำนวณลำดับที่เริ่มตรวจ
+  orderIndex?: number | undefined; // ลำดับที่เริ่มตรวจ (1, 2, 3...)
 }
 
 // ── Helpers: ดึงค่าจาก nested Defect object ─────────────────
@@ -81,6 +83,14 @@ const getLastActivity = (d: Defect) => {
   return Math.max(updated, created);
 };
 
+// เวลาที่ defect ตัวนี้ถูกสร้างครั้งแรก — ใช้ createdAt ก่อน fallback เป็น defectId หรือ updatedAt
+const getFirstCreated = (d: Defect) => {
+  const created = d.createdAt ? new Date(d.createdAt).getTime() : 0;
+  if (created > 0) return created;
+  if (typeof d.defectId === 'number' && d.defectId > 0) return d.defectId;
+  return d.updatedAt ? new Date(d.updatedAt).getTime() : 0;
+};
+
 const SEVERITY_LABEL: Record<string, string> = {
   Major: 'Major',
   Minor: 'Minor',
@@ -108,8 +118,8 @@ export const useInspectionStore = defineStore('inspection', () => {
     severityLevels: [],
   });
 
-  // เรียงกลุ่ม defect ตามเวลาแก้ไข/เพิ่มล่าสุด: desc = ใหม่สุดก่อน, asc = เก่าสุดก่อน
-  const sortOrder = ref<'desc' | 'asc'>('desc');
+  // เรียงกลุ่ม defect ตามลำดับการตรวจ: asc = ลำดับตรวจก่อน (1 ➔ 5), desc = ลำดับตรวจหลัง (5 ➔ 1)
+  const sortOrder = ref<'desc' | 'asc'>('asc');
 
   const defectSyncState = ref<Record<number, DefectSyncEntry>>({});
   // ไม่ต้อง reactive เพราะเก็บ closure (FormData/File อยู่ข้างใน) ไว้ให้ retry เรียกซ้ำได้
@@ -193,8 +203,24 @@ export const useInspectionStore = defineStore('inspection', () => {
   const groupedDefects = computed<GroupedDefectItem[]>(() => {
     const map = new Map<string, GroupedDefectItem>();
 
+    // คำนวณ firstActivityAt ของแต่ละกลุ่มจาก defects ทั้งหมดของรอบ เพื่อให้เลขลำดับห้องคงที่เสมอ
+    const globalFirstActivityMap = new Map<string, number>();
+    for (const defect of defects.value) {
+      const key = buildGroupKey(defect);
+      const created = getFirstCreated(defect);
+      const existing = globalFirstActivityMap.get(key) ?? Infinity;
+      globalFirstActivityMap.set(key, Math.min(existing, created));
+    }
+    const globalOrderMap = new Map<string, number>();
+    [...globalFirstActivityMap.entries()]
+      .sort(([, a], [, b]) => a - b)
+      .forEach(([key], idx) => {
+        globalOrderMap.set(key, idx + 1);
+      });
+
     for (const defect of filteredDefects.value) {
       const key = buildGroupKey(defect);
+      const firstCreated = getFirstCreated(defect);
 
       if (!map.has(key)) {
         map.set(key, {
@@ -211,6 +237,8 @@ export const useInspectionStore = defineStore('inspection', () => {
           failPercentage: 0,
           defects: [],
           lastActivityAt: 0,
+          firstActivityAt: firstCreated,
+          orderIndex: globalOrderMap.get(key),
         });
       }
 
@@ -218,6 +246,7 @@ export const useInspectionStore = defineStore('inspection', () => {
       group.totalItems++;
       group.defects.push(defect);
       group.lastActivityAt = Math.max(group.lastActivityAt, getLastActivity(defect));
+      group.firstActivityAt = Math.min(group.firstActivityAt ?? Infinity, firstCreated);
       if (defect.status === 'verified') group.passCount++;
       else group.failCount++;
     }
@@ -228,9 +257,16 @@ export const useInspectionStore = defineStore('inspection', () => {
     }
 
     const groups = [...map.values()];
-    groups.sort((a, b) =>
-      sortOrder.value === 'desc' ? b.lastActivityAt - a.lastActivityAt : a.lastActivityAt - b.lastActivityAt,
-    );
+    groups.sort((a, b) => {
+      const orderA = a.orderIndex ?? Infinity;
+      const orderB = b.orderIndex ?? Infinity;
+      if (orderA !== orderB) {
+        return sortOrder.value === 'desc' ? orderB - orderA : orderA - orderB;
+      }
+      return sortOrder.value === 'desc'
+        ? b.lastActivityAt - a.lastActivityAt
+        : a.lastActivityAt - b.lastActivityAt;
+    });
 
     return groups;
   });
