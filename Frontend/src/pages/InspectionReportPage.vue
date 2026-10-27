@@ -65,6 +65,27 @@
                   </span>
                 </div>
               </q-item-section>
+              <!-- ปุ่มล้างค่า: แสดงเฉพาะเมื่อไม่ lock และมีคำตอบแล้วในหมวดนี้ -->
+              <q-item-section
+                v-if="!isLocked && hasCategoryAnswers(cat.templates)"
+                side
+                class="q-pr-xs"
+              >
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="backspace"
+                  color="grey-5"
+                  size="sm"
+                  :aria-label="t('inspection.report.clearCategory')"
+                  @click.stop="clearCategory(cat.templates)"
+                >
+                  <q-tooltip anchor="bottom middle" self="top middle">
+                    {{ t('inspection.report.clearCategory') }}
+                  </q-tooltip>
+                </q-btn>
+              </q-item-section>
             </template>
 
             <q-card flat>
@@ -79,6 +100,22 @@
                     <div class="text-weight-bold" style="font-size: 14px">
                       {{ template.label }}
                     </div>
+                    <q-space />
+                    <q-btn
+                      v-if="!isLocked && hasTemplateAnswers(template.templateId)"
+                      flat
+                      dense
+                      round
+                      icon="backspace"
+                      color="grey-5"
+                      size="xs"
+                      :aria-label="t('inspection.report.clearItem')"
+                      @click="clearTemplate(template.templateId)"
+                    >
+                      <q-tooltip anchor="bottom middle" self="top middle">
+                        {{ t('inspection.report.clearItem') }}
+                      </q-tooltip>
+                    </q-btn>
                   </div>
 
                   <!-- Group options -->
@@ -582,6 +619,50 @@ function selectOption(templateId: number, optionId: number, group: string) {
   selectedOptions.value[key] = [optionId];
   scheduleAnswersSave();
 }
+
+// คืนค่า true ถ้า template นี้ถูกตอบแล้ว (มีค่า selectedOptions หรือ detailValue)
+function hasTemplateAnswers(templateId: number): boolean {
+  const hasCheckbox = (selectedOptions.value[String(templateId)]?.length ?? 0) > 0;
+  const hasRadio = Object.keys(selectedOptions.value).some(
+    (key) => key.startsWith(`${templateId}-`) && (selectedOptions.value[key]?.length ?? 0) > 0,
+  );
+  const hasDetail = !!detailValues.value[templateId];
+  return hasCheckbox || hasRadio || hasDetail;
+}
+
+// ล้างค่า selectedOptions และ detailValues เฉพาะใน state ของ template ที่ระบุ
+function clearTemplateAnswers(templateId: number) {
+  // ล้าง checkbox key (key = String(templateId))
+  delete selectedOptions.value[String(templateId)];
+  // ล้าง radio keys (key pattern: `{templateId}-{group}`)
+  for (const key of Object.keys(selectedOptions.value)) {
+    if (key.startsWith(`${templateId}-`)) {
+      delete selectedOptions.value[key];
+    }
+  }
+  // ล้าง detailValue
+  delete detailValues.value[templateId];
+}
+
+// ล้างค่า selectedOptions และ detailValues ของ template นี้ แล้ว autosave
+function clearTemplate(templateId: number) {
+  clearTemplateAnswers(templateId);
+  scheduleAnswersSave();
+}
+
+// คืนค่า true ถ้ามี template ใดใน category นี้ที่ถูกตอบแล้ว
+function hasCategoryAnswers(categoryTemplates: SummaryTemplate[]): boolean {
+  return categoryTemplates.some((template) => hasTemplateAnswers(template.templateId));
+}
+
+// ล้างค่า selectedOptions และ detailValues ของทุก template ในหมวด แล้ว autosave
+function clearCategory(categoryTemplates: SummaryTemplate[]) {
+  for (const template of categoryTemplates) {
+    clearTemplateAnswers(template.templateId);
+  }
+  scheduleAnswersSave();
+}
+
 
 function buildAnswerItems() {
   return templates.value.flatMap((template) => {
