@@ -98,6 +98,8 @@ export default {
     autosaveFailed: 'Not saved',
     waitForUploads: 'Waiting for photos to finish uploading',
     fixFailedUploads: 'Some photos failed to upload. Tap a photo to retry or remove it.',
+    clearCategory: 'Clear Category',
+    clearItem: 'Clear',
   },
   verify: {
     title: 'Verify Repair Work',

@@ -331,4 +331,113 @@ describe('ConstructionDailyReportsService', () => {
       );
     });
   });
+
+  describe('findPreviousRoundWorkItems', () => {
+    it('should return empty array when current round is not found', async () => {
+      const roundRepoMock = { findOne: jest.fn().mockResolvedValue(null) };
+      mockDataSource.getRepository = jest.fn().mockReturnValue(roundRepoMock);
+
+      const result = await service.findPreviousRoundWorkItems(999);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array when roundNumber is 1 (first round)', async () => {
+      const roundRepoMock = {
+        findOne: jest.fn().mockResolvedValue({
+          roundId: 1,
+          roundNumber: 1,
+          job: { jobId: 10 },
+        }),
+      };
+      mockDataSource.getRepository = jest.fn().mockReturnValue(roundRepoMock);
+
+      const result = await service.findPreviousRoundWorkItems(1);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array when previous round does not exist', async () => {
+      const findOneMock = jest
+        .fn()
+        // 1st call: current round (found)
+        .mockResolvedValueOnce({
+          roundId: 2,
+          roundNumber: 2,
+          job: { jobId: 10 },
+        })
+        // 2nd call: previous round (not found)
+        .mockResolvedValueOnce(null);
+
+      mockDataSource.getRepository = jest.fn().mockReturnValue({
+        findOne: findOneMock,
+      });
+
+      const result = await service.findPreviousRoundWorkItems(2);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array when previous round has no daily report', async () => {
+      // Separate mocks for InspectionRound and ConstructionDailyReport repos
+      const roundFindOneMock = jest
+        .fn()
+        .mockResolvedValueOnce({
+          roundId: 2,
+          roundNumber: 2,
+          job: { jobId: 10 },
+        })
+        .mockResolvedValueOnce({ roundId: 1, roundNumber: 1 });
+
+      const reportFindOneMock = jest.fn().mockResolvedValue(null);
+
+      mockDataSource.getRepository = jest.fn().mockImplementation((entity: { name: string }) => {
+        if (entity.name === 'InspectionRound') {
+          return { findOne: roundFindOneMock };
+        }
+        return { findOne: reportFindOneMock };
+      });
+
+      const result = await service.findPreviousRoundWorkItems(2);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return only work items with actualPercent < 100 (filter out 100%)', async () => {
+      const workItemsFromPrevious = [
+        { workItemId: 1, description: 'เทปูนพื้น', actualPercent: 80, location: 'ห้องรับแขก', unit: 'ตร.ม.' },
+        { workItemId: 2, description: 'ทาสีผนัง', actualPercent: 100, location: 'ห้องนอน', unit: 'ตร.ม.' },
+        { workItemId: 3, description: 'ติดตั้งประตู', actualPercent: 50, location: 'ห้องน้ำ', unit: 'ชิ้น' },
+      ];
+
+      const roundFindOneMock = jest
+        .fn()
+        .mockResolvedValueOnce({
+          roundId: 3,
+          roundNumber: 3,
+          job: { jobId: 10 },
+        })
+        .mockResolvedValueOnce({ roundId: 2, roundNumber: 2 });
+
+      const reportFindOneMock = jest
+        .fn()
+        .mockResolvedValue({ workItems: workItemsFromPrevious });
+
+      mockDataSource.getRepository = jest.fn().mockImplementation((entity: { name: string }) => {
+        if (entity.name === 'InspectionRound') {
+          return { findOne: roundFindOneMock };
+        }
+        return { findOne: reportFindOneMock };
+      });
+
+      const result = await service.findPreviousRoundWorkItems(3);
+
+      // Should return 2 items (80% and 50%), filter out 100%
+      expect(result).toHaveLength(2);
+      expect(result[0].description).toBe('เทปูนพื้น');
+      expect(result[0].actualPercent).toBe(80);
+      expect(result[1].description).toBe('ติดตั้งประตู');
+      expect(result[1].actualPercent).toBe(50);
+    });
+  });
 });

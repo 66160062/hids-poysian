@@ -8,7 +8,16 @@
   >
     <q-card-section class="q-pb-none">
       <div class="row items-start justify-between">
-        <div class="row items-baseline q-gutter-x-xs">
+        <div class="row items-center q-gutter-x-xs">
+          <q-badge
+            v-if="groupedData.orderIndex"
+            color="primary"
+            text-color="white"
+            class="text-weight-bold"
+            style="border-radius: 4px; font-size: 11px; padding: 2px 6px"
+          >
+            #{{ groupedData.orderIndex }}
+          </q-badge>
           <div class="text-subtitle1 text-weight-bold text-primary">
             {{ groupedData.roomName }}
           </div>

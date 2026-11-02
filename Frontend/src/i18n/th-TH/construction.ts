@@ -17,6 +17,9 @@ export default {
     unitLabel: 'หน่วย',
     actualLabel: 'ทำได้จริง',
     addWorkDetail: 'เพิ่มรายละเอียดงาน',
+    editWorkDetail: 'แก้ไขรายละเอียดงาน',
+    pendingUpdate: 'รออัพเดท',
+    workDetailsUpdateRequired: 'กรุณาอัปเดตความคืบหน้าของงานที่ดึงมาจากรอบก่อนให้ครบถ้วน',
 
     relatedPersonsTitle: 'รายละเอียดผู้มีส่วนเกี่ยวข้อง',
     personnelTitle: 'บุคลากร',
@@ -109,6 +112,9 @@ export default {
     submitEditSuccess: 'บันทึกการแก้ไขเรียบร้อยแล้ว',
     submitDailySuccess: 'ส่งรายงานประจำวันเรียบร้อยแล้ว',
     submitError: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
+
+    carriedFromPrevious: 'ดึงจากรอบก่อน',
+    previousPercent: 'รอบก่อน: {percent}%',
   },
   dashboard: {
     workListTitle: 'รายการงานก่อสร้าง',

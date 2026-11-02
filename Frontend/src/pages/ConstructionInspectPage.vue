@@ -67,15 +67,38 @@
             <span v-if="workDetails.length > 0" class="text-caption text-primary bg-blue-1 q-px-sm" style="border-radius: 4px;">{{ workSummary }}</span>
           </q-card-section>
           <q-list separator>
-            <!-- ส่วนที่เพิ่มข้อมูลเข้ามาแล้ว -->
-            <q-item v-for="work in workDetails" :key="work.id" class="bg-white">
+            <!-- แถบแจ้งว่าดึงจากรอบก่อน -->
+            <q-item v-if="isCarriedForward && workDetails.length > 0" class="bg-amber-1">
               <q-item-section>
-                <q-item-label class="text-weight-bold text-primary">{{ work.name }}</q-item-label>
+                <q-item-label class="text-weight-medium text-amber-9 row items-center" style="font-size: 12px;">
+                  <q-icon name="history" size="16px" class="q-mr-xs" />
+                  {{ t('construction.inspect.carriedFromPrevious') }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <!-- ส่วนที่เพิ่มข้อมูลเข้ามาแล้ว (กดเพื่อแก้ไขได้) -->
+            <q-item v-for="work in workDetails" :key="work.id" clickable v-ripple @click="editWorkDetail(work.id)" class="bg-white">
+              <q-item-section>
+                <q-item-label class="text-weight-bold text-primary">
+                  {{ work.name }}
+                  <q-badge v-if="work.needsUpdate" color="warning" text-color="dark" class="q-ml-sm">
+                    {{ t('construction.inspect.pendingUpdate') }}
+                  </q-badge>
+                </q-item-label>
                 <q-item-label caption>{{ t('construction.inspect.locationLabel') }}: {{ work.location ? roomLabel(work.location) : '-' }} | {{ t('construction.inspect.unitLabel') }}: {{ work.unit ? unitLabel(work.unit) : '-' }}</q-item-label>
-                <q-item-label caption>{{ t('construction.inspect.actualLabel') }}: {{ work.actual }}%</q-item-label>
+                <q-item-label caption>
+                  {{ t('construction.inspect.actualLabel') }}: 
+                  <span v-if="work.actual !== null">{{ work.actual }}%</span>
+                  <span v-else class="text-warning text-weight-bold">{{ t('construction.inspect.pendingUpdate') }}</span>
+                </q-item-label>
+                <q-item-label v-if="work.previousPercent !== undefined" caption class="text-amber-9">
+                  {{ t('construction.inspect.previousPercent', { percent: work.previousPercent }) }}
+                </q-item-label>
               </q-item-section>
               <q-item-section side class="row items-center q-pa-none">
-                <q-btn flat round dense icon="delete" color="negative" size="sm" @click="removeWork(work.id)" />
+                <q-btn flat round dense icon="edit" color="primary" size="sm" @click.stop="editWorkDetail(work.id)" class="q-mr-xs" />
+                <q-btn flat round dense icon="delete" color="negative" size="sm" @click.stop="removeWork(work.id)" />
               </q-item-section>
             </q-item>
 
@@ -341,7 +364,7 @@
       <q-card style="width: 100vw; border-radius: 20px 20px 0 0; padding-bottom: 20px;">
         <q-card-section class="bg-primary text-white row items-center q-pb-sm">
           <q-icon name="assignment" size="24px" class="q-mr-sm" />
-          <div class="text-h6 text-weight-bold" style="font-size: 18px;">{{ t('construction.inspect.addWorkDetail') }}</div>
+          <div class="text-h6 text-weight-bold" style="font-size: 18px;">{{ editingWorkId ? t('construction.inspect.editWorkDetail') : t('construction.inspect.addWorkDetail') }}</div>
           <q-space />
           <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
@@ -570,6 +593,9 @@ async function urlToFile(url: string, filename: string): Promise<File | null> {
 // roundId จาก route params (เช่น /inspector/job/:roundId/construction-inspect)
 const roundId = Number(route.params.roundId);
 
+// สถานะแสดงว่า workDetails ปัจจุบันคือข้อมูลที่ carry forward จากรอบก่อนหน้า
+const isCarriedForward = ref(false);
+
 onMounted(async () => {
   if (!roundId) return;
   $q.loading.show({
@@ -579,13 +605,30 @@ onMounted(async () => {
     backgroundColor: 'white',
   });
   try {
-    await loadExistingReport();
+    const hasExisting = await loadExistingReport();
+
+    // ถ้ายังไม่มีรายงานในรอบนี้ → ลองดึงงานจากรอบก่อนหน้า (carry forward)
+    if (!hasExisting) {
+      const previousItems = await store.fetchPreviousWorkItems(roundId);
+      if (previousItems.length > 0) {
+        workDetails.value = previousItems.map(item => ({
+          id: Date.now() + Math.random(),
+          name: item.description,
+          location: item.location || '',
+          unit: item.unit || '',
+          actual: null,
+          previousPercent: item.actualPercent || 0,
+          needsUpdate: true,
+        }));
+        isCarriedForward.value = true;
+      }
+    }
   } finally {
     $q.loading.hide();
   }
 });
 
-async function loadExistingReport() {
+async function loadExistingReport(): Promise<boolean> {
   const existingReport = await store.fetchReportByRound(roundId);
   if (existingReport) {
     if (existingReport.workingPeriod) {
@@ -672,12 +715,14 @@ async function loadExistingReport() {
         }
       }
     }
+    return true;
   }
 
   if (existingReport) {
     isEditMode.value = true;
   }
   initialSnapshot.value = getFormSnapshot();
+  return false;
 }
 
 // สำหรับ Panorama View
@@ -764,9 +809,10 @@ function unitLabel(value: string): string {
   const key = UNIT_OPTION_KEYS[value];
   return key ? t(`construction.inspect.unitOptions.${key}`) : value;
 }
-const workDetails = ref<{id: number, name: string, location: string, unit: string, actual: number}[]>([]);
+const workDetails = ref<{id: number, name: string, location: string, unit: string, actual: number | null, previousPercent?: number, needsUpdate?: boolean}[]>([]);
 const workDialog = ref(false);
-const newWork = ref({ name: '', location: '', unit: '', actual: 0 });
+const editingWorkId = ref<number | null>(null);
+const newWork = ref({ name: '', location: '', unit: '', actual: null as number | null });
 
 // Image Upload State
 interface WorkPhoto {
@@ -880,7 +926,15 @@ const accidentSummary = computed(() => {
 });
 
 const addWorkDetail = () => {
-  newWork.value = { name: '', location: '', unit: '', actual: 0 };
+  editingWorkId.value = null;
+  newWork.value = { name: '', location: '', unit: '', actual: null };
+  workDialog.value = true;
+};
+const editWorkDetail = (id: number) => {
+  const work = workDetails.value.find(w => w.id === id);
+  if (!work) return;
+  editingWorkId.value = id;
+  newWork.value = { name: work.name, location: work.location, unit: work.unit, actual: work.actual };
   workDialog.value = true;
 };
 const saveWork = () => {
@@ -891,7 +945,27 @@ const saveWork = () => {
   if (newWork.value.actual < 0 || newWork.value.actual > 100) {
     return $q.notify({ message: t('construction.inspect.workPercentRange'), color: 'warning' });
   }
-  workDetails.value.push({ id: Date.now(), ...newWork.value });
+
+  if (editingWorkId.value !== null) {
+    // โหมดแก้ไข: อัปเดตรายการที่มีอยู่
+    const index = workDetails.value.findIndex(w => w.id === editingWorkId.value);
+    if (index !== -1) {
+      const existing = workDetails.value[index]!;
+      workDetails.value[index] = {
+        id: existing.id,
+        name: newWork.value.name,
+        location: newWork.value.location,
+        unit: newWork.value.unit,
+        actual: newWork.value.actual,
+        ...(existing.previousPercent != null ? { previousPercent: existing.previousPercent } : {}),
+        needsUpdate: false, // เคลียร์สถานะว่าอัปเดตแล้ว
+      };
+    }
+    editingWorkId.value = null;
+  } else {
+    // โหมดเพิ่มใหม่
+    workDetails.value.push({ id: Date.now(), ...newWork.value, needsUpdate: false });
+  }
   workDialog.value = false;
 };
 const removeWork = (id: number) => {
@@ -1077,6 +1151,13 @@ const submitReport = async () => {
       icon: 'warning',
     });
   }
+  if (workDetails.value.some(w => w.needsUpdate || w.actual === null)) {
+    return $q.notify({
+      message: t('construction.inspect.workDetailsUpdateRequired'),
+      color: 'warning',
+      icon: 'warning',
+    });
+  }
 
   const payload: ConstructionDailyReportPayload = {
     roundId,
@@ -1087,7 +1168,7 @@ const submitReport = async () => {
       description: w.name,
       location: w.location,
       unit: w.unit,
-      actualPercent: w.actual,
+      actualPercent: w.actual ?? 0,
       sequence: index + 1,
     })),
 

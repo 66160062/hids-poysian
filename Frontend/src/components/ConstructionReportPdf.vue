@@ -6,7 +6,7 @@
       <q-btn color="primary" icon="print" :label="t('reports.constructionPdf.printDocument')" @click="printPdf" />
     </div>
 
-    <div class="pdf-wrapper">
+    <div ref="pdfWrapperRef" class="pdf-wrapper">
       <div class="pdf-page">
         <!-- HEADER 60/40 -->
       <table class="report-table no-border-bottom">
@@ -15,7 +15,7 @@
             <td style="width: 60%; text-align: center; font-size: 18px; font-weight: bold; background-color: #f0f0f0;">{{ t('reports.constructionPdf.title') }}</td>
             <td style="width: 40%; font-size: 12px; padding: 4px;">
               <div><strong>{{ t('reports.constructionPdf.projectName') }}</strong> <span class="sensitive-data">{{ pickLocalized(report?.round?.job?.projectName, report?.round?.job?.projectNameEn) || '-' }}</span></div>
-              <div><strong>{{ t('reports.constructionPdf.docNumber') }}</strong> <span class="sensitive-data">{{ report?.dailyReportId ? `DOC-${report.dailyReportId}` : '-' }}</span></div>
+              <div><strong>{{ t('reports.constructionPdf.docNumber') }}</strong> <span class="sensitive-data">{{ report?.dailyReportId ? ('DOC-' + report.dailyReportId) : '-' }}</span></div>
             </td>
           </tr>
         </tbody>
@@ -206,7 +206,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { ExtendedConstructionReport } from 'src/stores/useConstructionDailyReport';
 import { useLocalizedField } from 'src/composables/useLocalizedField';
@@ -221,9 +221,143 @@ const props = defineProps<{
 }>();
 
 const isRedacted = ref(false);
+const pdfWrapperRef = ref<HTMLElement | null>(null);
+
+// Dynamic scale calculation for mobile
+const calculatePdfScale = () => {
+  if (!pdfWrapperRef.value) return;
+  const containerWidth = pdfWrapperRef.value.clientWidth;
+  // A4 width = 210mm ≈ 793px at 96dpi
+  const a4WidthPx = 793;
+  if (containerWidth < a4WidthPx) {
+    const scale = (containerWidth - 8) / a4WidthPx; // 8px for small margin
+    pdfWrapperRef.value.style.setProperty('--pdf-scale', scale.toString());
+  } else {
+    pdfWrapperRef.value.style.removeProperty('--pdf-scale');
+  }
+};
+
+let resizeObserver: ResizeObserver | null = null;
+
+onMounted(() => {
+  calculatePdfScale();
+  if (pdfWrapperRef.value) {
+    resizeObserver = new ResizeObserver(() => calculatePdfScale());
+    resizeObserver.observe(pdfWrapperRef.value);
+  }
+});
+
+onUnmounted(() => {
+  resizeObserver?.disconnect();
+});
 
 const printPdf = () => {
-  window.print();
+  // Open a dedicated window with only the document content for clean printing
+  const pdfPage = document.querySelector('.pdf-page');
+  if (!pdfPage) {
+    window.print();
+    return;
+  }
+
+  const printWindow = window.open('', '_blank', 'width=800,height=600');
+  if (!printWindow) {
+    // Fallback if popup blocked
+    window.print();
+    return;
+  }
+
+  // Collect all stylesheets from the current page
+  const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+    .map(el => el.outerHTML)
+    .join('\n');
+
+  const printDocHtml = [
+    '<!DOCTYPE html>',
+    '<html>',
+    '<head>',
+    '  <meta charset="utf-8">',
+    '  <meta name="viewport" content="width=device-width, initial-scale=1">',
+    `  <title>${t('reports.constructionPdf.title')}</title>`,
+    styles,
+    '  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">',
+    '  <style>',
+    '    * { box-sizing: border-box; }',
+    '    body {',
+    '      margin: 0; padding: 0;',
+    '      font-family: "Sarabun", sans-serif;',
+    '      background: white;',
+    '      color: #000;',
+    '    }',
+    '    .print-doc {',
+    '      width: 210mm;',
+    '      margin: 0 auto;',
+    '      padding: 10mm;',
+    '    }',
+    '    table { border-collapse: collapse; width: 100%; }',
+    '    td, th { padding: 2px 4px; }',
+    '    .report-table { width: 100%; border: 1px solid #000; }',
+    '    .report-table th, .report-table td { border: 1px solid #000; }',
+    '    .report-table.no-border-bottom { border-bottom: none; }',
+    '    .inner-table { width: 100%; border: none; }',
+    '    .inner-table td { border: none; padding: 2px 4px; }',
+    '    .mt-4 { margin-top: 6px; }',
+    '    .text-center { text-align: center; }',
+    '    .text-right { text-align: right; }',
+    '    .text-bold, .q-mb-xs { font-weight: bold; }',
+    '    .q-ml-sm { margin-left: 8px; }',
+    '    .q-mt-sm { margin-top: 4px; }',
+    '    .q-mt-xs { margin-top: 2px; }',
+    '    .q-mr-sm { margin-right: 4px; }',
+    '    .checkbox {',
+    '      display: inline-block; width: 12px; height: 12px;',
+    '      border: 1px solid #000; text-align: center;',
+    '      line-height: 10px; font-size: 10px; margin-right: 4px;',
+    '    }',
+    '    .dotted-line {',
+    '      border-bottom: 1px dotted #000; display: inline-block;',
+    '      width: 30px; text-align: center;',
+    '    }',
+    '    .no-print { display: none !important; }',
+    isRedacted.value
+      ? '    .sensitive-data { background-color: #000 !important; color: #000 !important; user-select: none; }'
+      : '',
+    '    @media print {',
+    '      @page { size: A4; margin: 10mm; }',
+    '      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }',
+    '      .print-doc { width: 100%; padding: 0; margin: 0; }',
+    '    }',
+    '  </style>',
+    '</head>',
+    '<body>',
+    '  <div class="print-doc">',
+    pdfPage.innerHTML,
+    '  </div>',
+    '</body>',
+    '</html>'
+  ].join('\n');
+
+  printWindow.document.open();
+  printWindow.document.write(printDocHtml);
+  printWindow.document.close();
+
+  const triggerPrint = () => {
+    try {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    } catch {
+      // Fallback
+    }
+  };
+
+  const fonts = printWindow.document.fonts;
+  if (fonts && typeof fonts.ready !== 'undefined') {
+    fonts.ready
+      .then(() => setTimeout(triggerPrint, 300))
+      .catch(() => setTimeout(triggerPrint, 500));
+  } else {
+    setTimeout(triggerPrint, 500);
+  }
 };
 
 defineExpose({
@@ -380,15 +514,6 @@ const paddedIssues = computed(() => {
   justify-content: center;
 }
 
-@media screen and (max-width: 820px) {
-  .pdf-wrapper {
-    justify-content: flex-start;
-  }
-  .pdf-container {
-    padding: 10px;
-  }
-}
-
 .pdf-page {
   width: 210mm !important;
   min-width: 210mm !important;
@@ -401,6 +526,38 @@ const paddedIssues = computed(() => {
   box-sizing: border-box;
   color: #000;
   overflow: hidden;
+}
+
+/* ─── Mobile responsive: scale A4 page to fit screen ─── */
+@media screen and (max-width: 820px) {
+  .pdf-container {
+    padding: 8px;
+  }
+  .pdf-wrapper {
+    justify-content: flex-start;
+    /* Allow horizontal scroll but show scaled content */
+  }
+  .pdf-page {
+    /* Scale the A4 page to fit mobile viewport width */
+    transform-origin: top left;
+    /* calc: viewport width minus container padding / A4 width in px (~793px at 96dpi) */
+    transform: scale(var(--pdf-scale, 0.48));
+    margin-bottom: calc((297mm * var(--pdf-scale, 0.48)) - 297mm);
+  }
+  .controls {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .pdf-container {
+    padding: 4px;
+  }
+  .pdf-page {
+    transform: scale(var(--pdf-scale, 0.38));
+    margin-bottom: calc((297mm * var(--pdf-scale, 0.38)) - 297mm);
+  }
 }
 
 table {
@@ -488,18 +645,23 @@ td, th {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  
+
+  /* Hide everything except the PDF content */
   .pdf-container {
     background-color: transparent;
     padding: 0;
   }
   
   .pdf-page {
-    width: 100%;
+    width: 100% !important;
+    min-width: unset !important;
+    max-width: unset !important;
     min-height: auto;
     box-shadow: none;
     padding: 0;
     margin: 0;
+    transform: none !important;
+    margin-bottom: 0 !important;
     page-break-after: auto;
   }
   
