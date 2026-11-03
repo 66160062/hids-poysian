@@ -72,7 +72,6 @@ import { TranslateModule } from './translate/translate.module';
 import { HousePlan } from './house-plans/entities/house-plan.entity';
 import { HousePlansModule } from './house-plans/house-plans.module';
 import { AssignmentsModule } from './assignments/assignments.module';
-import { HousePlan } from './house-plans/entities/house-plan.entity';
 import { ActivityLog } from './activity-logs/entities/activity-log.entity';
 import { Assignment } from './assignments/entities/assignment.entity';
 @Module({
