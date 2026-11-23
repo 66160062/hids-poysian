@@ -391,12 +391,14 @@ describe('ConstructionDailyReportsService', () => {
 
       const reportFindOneMock = jest.fn().mockResolvedValue(null);
 
-      mockDataSource.getRepository = jest.fn().mockImplementation((entity: { name: string }) => {
-        if (entity.name === 'InspectionRound') {
-          return { findOne: roundFindOneMock };
-        }
-        return { findOne: reportFindOneMock };
-      });
+      mockDataSource.getRepository = jest
+        .fn()
+        .mockImplementation((entity: { name: string }) => {
+          if (entity.name === 'InspectionRound') {
+            return { findOne: roundFindOneMock };
+          }
+          return { findOne: reportFindOneMock };
+        });
 
       const result = await service.findPreviousRoundWorkItems(2);
 
@@ -405,9 +407,27 @@ describe('ConstructionDailyReportsService', () => {
 
     it('should return only work items with actualPercent < 100 (filter out 100%)', async () => {
       const workItemsFromPrevious = [
-        { workItemId: 1, description: 'เทปูนพื้น', actualPercent: 80, location: 'ห้องรับแขก', unit: 'ตร.ม.' },
-        { workItemId: 2, description: 'ทาสีผนัง', actualPercent: 100, location: 'ห้องนอน', unit: 'ตร.ม.' },
-        { workItemId: 3, description: 'ติดตั้งประตู', actualPercent: 50, location: 'ห้องน้ำ', unit: 'ชิ้น' },
+        {
+          workItemId: 1,
+          description: 'เทปูนพื้น',
+          actualPercent: 80,
+          location: 'ห้องรับแขก',
+          unit: 'ตร.ม.',
+        },
+        {
+          workItemId: 2,
+          description: 'ทาสีผนัง',
+          actualPercent: 100,
+          location: 'ห้องนอน',
+          unit: 'ตร.ม.',
+        },
+        {
+          workItemId: 3,
+          description: 'ติดตั้งประตู',
+          actualPercent: 50,
+          location: 'ห้องน้ำ',
+          unit: 'ชิ้น',
+        },
       ];
 
       const roundFindOneMock = jest
@@ -423,12 +443,14 @@ describe('ConstructionDailyReportsService', () => {
         .fn()
         .mockResolvedValue({ workItems: workItemsFromPrevious });
 
-      mockDataSource.getRepository = jest.fn().mockImplementation((entity: { name: string }) => {
-        if (entity.name === 'InspectionRound') {
-          return { findOne: roundFindOneMock };
-        }
-        return { findOne: reportFindOneMock };
-      });
+      mockDataSource.getRepository = jest
+        .fn()
+        .mockImplementation((entity: { name: string }) => {
+          if (entity.name === 'InspectionRound') {
+            return { findOne: roundFindOneMock };
+          }
+          return { findOne: reportFindOneMock };
+        });
 
       const result = await service.findPreviousRoundWorkItems(3);
 
