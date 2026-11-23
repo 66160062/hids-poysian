@@ -1,3 +1,4 @@
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FloorService } from './floor.service';
@@ -11,7 +12,7 @@ describe('FloorService', () => {
     find: jest.Mock;
     findOneBy: jest.Mock;
     update: jest.Mock;
-    softDelete: jest.Mock;
+    delete: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -21,7 +22,7 @@ describe('FloorService', () => {
       find: jest.fn(),
       findOneBy: jest.fn(),
       update: jest.fn(),
-      softDelete: jest.fn(),
+      delete: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -45,9 +46,48 @@ describe('FloorService', () => {
     expect(floorRepo.findOneBy).toHaveBeenCalledWith({ floorId: 99 });
   });
 
-  it('soft-deletes a floor by wrapping the id in a where clause', async () => {
+  it('updates a floor when found', async () => {
+    const mockFloor = {
+      floorId: 1,
+      label: 'ชั้น 1',
+      labelEn: 'Floor 1',
+      floorOrder: 1,
+    };
+    floorRepo.findOneBy.mockResolvedValue(mockFloor);
+    floorRepo.save.mockImplementation(
+      (f: Floor): Promise<Floor> => Promise.resolve(f),
+    );
+
+    const result = await service.update(1, { label: 'ชั้น 1 แก้ไข' });
+    expect(result.label).toBe('ชั้น 1 แก้ไข');
+    expect(floorRepo.save).toHaveBeenCalled();
+  });
+
+  it('throws NotFoundException when updating non-existent floor', async () => {
+    floorRepo.findOneBy.mockResolvedValue(null);
+
+    await expect(service.update(999, { label: 'ชั้น 999' })).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('deletes a floor by id', async () => {
+    floorRepo.delete.mockResolvedValue({ affected: 1, raw: [] });
+
     await service.remove(2);
 
-    expect(floorRepo.softDelete).toHaveBeenCalledWith({ floorId: 2 });
+    expect(floorRepo.delete).toHaveBeenCalledWith({ floorId: 2 });
+  });
+
+  it('throws NotFoundException when deleting non-existent floor', async () => {
+    floorRepo.delete.mockResolvedValue({ affected: 0, raw: [] });
+
+    await expect(service.remove(999)).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws BadRequestException when deleting a floor with foreign key constraint', async () => {
+    floorRepo.delete.mockRejectedValue({ code: '23503' });
+
+    await expect(service.remove(1)).rejects.toThrow(BadRequestException);
   });
 });
