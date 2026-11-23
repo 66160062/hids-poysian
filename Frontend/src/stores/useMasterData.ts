@@ -14,6 +14,9 @@ import type {
   DefectSubCategory,
   CreateDefectSubCategoryDto,
   UpdateDefectSubCategoryDto,
+  Floor,
+  CreateFloorDto,
+  UpdateFloorDto,
 } from 'src/types/master-data';
 
 export const useMasterDataStore = defineStore('masterData', () => {
@@ -22,6 +25,7 @@ export const useMasterDataStore = defineStore('masterData', () => {
   const subRooms = ref<SubRoom[]>([]);
   const defectCategories = ref<DefectCategory[]>([]);
   const defectSubCategories = ref<DefectSubCategory[]>([]);
+  const floors = ref<Floor[]>([]);
   const loading = ref(false);
 
   // --- Rooms CRUD ---
@@ -163,6 +167,29 @@ export const useMasterDataStore = defineStore('masterData', () => {
     await fetchDefectSubCategories();
   };
 
+  // --- Floors CRUD ---
+  const fetchFloors = async () => {
+    const res = await api.get<Floor[]>('/floor');
+    floors.value = res.data;
+  };
+
+  const createFloor = async (dto: CreateFloorDto) => {
+    const res = await api.post<Floor>('/floor', dto);
+    await fetchFloors();
+    return res.data;
+  };
+
+  const updateFloor = async (id: number, dto: UpdateFloorDto) => {
+    const res = await api.patch<Floor>(`/floor/${id}`, dto);
+    await fetchFloors();
+    return res.data;
+  };
+
+  const deleteFloor = async (id: number) => {
+    await api.delete(`/floor/${id}`);
+    await fetchFloors();
+  };
+
   // Helper to fetch all master data at once
   const fetchAll = async () => {
     loading.value = true;
@@ -172,6 +199,7 @@ export const useMasterDataStore = defineStore('masterData', () => {
         fetchSubRooms(),
         fetchDefectCategories(),
         fetchDefectSubCategories(),
+        fetchFloors(),
       ]);
     } finally {
       loading.value = false;
@@ -183,6 +211,7 @@ export const useMasterDataStore = defineStore('masterData', () => {
     subRooms,
     defectCategories,
     defectSubCategories,
+    floors,
     loading,
 
     fetchRooms,
@@ -205,6 +234,12 @@ export const useMasterDataStore = defineStore('masterData', () => {
     updateDefectSubCategory,
     deleteDefectSubCategory,
 
+    fetchFloors,
+    createFloor,
+    updateFloor,
+    deleteFloor,
+
     fetchAll,
   };
 });
+

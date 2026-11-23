@@ -174,4 +174,4 @@ import { Assignment } from './assignments/entities/assignment.entity';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

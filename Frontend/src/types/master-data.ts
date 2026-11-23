@@ -65,3 +65,23 @@ export interface UpdateDefectSubCategoryDto {
   nameEn?: string | null;
   categoryId?: number;
 }
+
+export interface Floor {
+  floorId: number;
+  label: string;
+  labelEn?: string | null;
+  floorOrder?: number;
+}
+
+export interface CreateFloorDto {
+  label: string;
+  labelEn?: string | null;
+  floorOrder?: number;
+}
+
+export interface UpdateFloorDto {
+  label?: string;
+  labelEn?: string | null;
+  floorOrder?: number;
+}
+
