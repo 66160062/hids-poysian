@@ -97,8 +97,8 @@ export class DefectsService {
     void this.activityLogsService.logForRound(roundId, entry);
   }
 
-  // เช็คซ้ำแบบเดียวกับฝั่ง frontend (isDuplicateDefect ใน AddDefectPage.vue) แต่ query จาก DB สด
-  // กันเคส 2 inspector คนละ session บันทึกจุดเดียวกันพร้อมกัน ซึ่ง local store ฝั่ง frontend มองไม่เห็นกัน
+  // เช็คซ้ำเฉพาะการบันทึกที่ไม่มีรูป (กันกดบันทึกซ้ำโดยไม่ตั้งใจ) แบบเดียวกับฝั่ง frontend
+  // (isDuplicateDefect ใน AddDefectPage.vue) แต่ query จาก DB สด กันเคส 2 inspector คนละ session บันทึกจุดเดียวกันพร้อมกัน ซึ่ง local store ฝั่ง frontend มองไม่เห็นกัน
   private async hasDuplicateDefect(dto: CreateDefectDto): Promise<boolean> {
     const candidates = await this.defectsRepo.find({
       where: {
@@ -202,7 +202,8 @@ export class DefectsService {
       );
     }
 
-    if (await this.hasDuplicateDefect(createDefectDto)) {
+    // มีรูปแนบ = ผู้ตรวจตั้งใจบันทึกซ้ำรายละเอียดเดิมแต่คนละรูป จึงไม่เช็คซ้ำ
+    if (!uploadImage && (await this.hasDuplicateDefect(createDefectDto))) {
       throw new ConflictException(
         'มีรายการ Defect นี้อยู่แล้วในห้อง/ชั้นเดียวกัน',
       );

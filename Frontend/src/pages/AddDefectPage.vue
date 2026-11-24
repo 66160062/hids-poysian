@@ -873,7 +873,16 @@ const handleNext = async () => {
     return;
   }
 
-  if (!isEditMode.value && isDuplicateDefect()) {
+  // โหมดสร้าง: กันกดบันทึกซ้ำระหว่างรอบีบอัดรูป (await ด้านล่าง) ไม่งั้นกด 2 ครั้งพร้อมรูปจะสร้าง 2 รายการ
+  // (ตอนมีรูป ตัวเช็คซ้ำถูกข้าม) ปล่อย guard หลังรีเซ็ตฟอร์มแล้ว
+  if (!isEditMode.value) {
+    if (isSubmitting.value) return;
+    isSubmitting.value = true;
+  }
+
+  // ซ้ำได้เฉพาะเมื่อแนบรูปใหม่ (บันทึกรายละเอียดเดิมแต่คนละรูป) ส่วนไม่มีรูปยังบล็อก กันกดบันทึกซ้ำโดยไม่ตั้งใจ
+  if (!isEditMode.value && !selectedFile.value && isDuplicateDefect()) {
+    isSubmitting.value = false;
     $q.notify({
       message: t('inspection.addDefect.duplicateDefect'),
       color: 'negative',
@@ -921,7 +930,12 @@ const handleNext = async () => {
   }
 
   if (selectedFile.value) {
-    if (pendingImageCompression) await pendingImageCompression;
+    try {
+      if (pendingImageCompression) await pendingImageCompression;
+    } catch (error) {
+      if (!isEditMode.value) isSubmitting.value = false;
+      throw error;
+    }
     if (selectedFile.value) {
       formData.append('file', selectedFile.value);
     }
@@ -946,8 +960,8 @@ const handleNext = async () => {
   const tempId = -Date.now();
   const previewDefect = buildPreviewDefect();
 
-  // คงห้อง/ชั้น/หมวด/แปลนไว้สำหรับจุดถัดไป (มักอยู่ห้องเดิม) แต่ล้างประเภทตำหนิ/หมายเหตุ/รูป/หมุด
-  // เดิมคงประเภทตำหนิ+หมายเหตุไว้ด้วย ทำให้ตัวเช็คซ้ำบล็อกการบันทึกครั้งถัดไปจนกว่าจะล้างเอง
+  // คงห้อง/ชั้น/หมวด/แปลน/ประเภทตำหนิ/หมายเหตุไว้สำหรับจุดถัดไป (มักเป็นตำหนิแบบเดียวกันที่ต่างกันแค่รูป)
+  // ล้างเฉพาะรูปกับหมุด ซ้ำได้ถ้าแนบรูปใหม่ แต่บันทึกซ้ำโดยไม่มีรูปจะถูกบล็อกโดยตัวเช็คซ้ำ
   if (form.value.roomId && form.value.floorId) {
     inspectionStore.rememberLocation(roundId, {
       roomId: form.value.roomId,
@@ -960,8 +974,6 @@ const handleNext = async () => {
   }
   imagePreview.value = null;
   selectedFile.value = null;
-  form.value.defectTypes = [];
-  form.value.note = '';
   form.value.planX = null;
   form.value.planY = null;
   form.value.locationZone = null;
@@ -974,6 +986,7 @@ const handleNext = async () => {
     () => inspectionStore.saveDefect(formData),
     previewDefect,
   );
+  isSubmitting.value = false;
 };
 
 const handleDelete = () => {

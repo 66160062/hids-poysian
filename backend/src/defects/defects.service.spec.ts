@@ -291,8 +291,7 @@ describe('DefectsService', () => {
     );
   });
 
-  it('throws ConflictException when an identical defect already exists in the round/room', async () => {
-    const uploadImage = jest.fn();
+  it('throws ConflictException when an identical photo-less defect already exists in the round/room', async () => {
     repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7, status: 'DRAFT' });
     repoMock.findBy.mockResolvedValue([]);
     roomsRepo.findOneByOrFail.mockResolvedValue({ roomId: 3 });
@@ -302,23 +301,55 @@ describe('DefectsService', () => {
     ]);
 
     await expect(
-      service.create(
-        {
-          roundId: 7,
-          subCategoryIds: [1, 2],
-          inspectorId: 1,
-          roomId: 3,
-          subRoomId: 5,
-          floorId: 1,
-          severity: 'Minor',
-          description: 'ผนังแตกร้าว',
-        },
-        undefined,
-        uploadImage,
-      ),
+      service.create({
+        roundId: 7,
+        subCategoryIds: [1, 2],
+        inspectorId: 1,
+        roomId: 3,
+        subRoomId: 5,
+        floorId: 1,
+        severity: 'Minor',
+        description: 'ผนังแตกร้าว',
+      }),
     ).rejects.toThrow(ConflictException);
     expect(defectsRepo.save).not.toHaveBeenCalled();
-    expect(uploadImage).not.toHaveBeenCalled();
+  });
+
+  it('saves an identical defect when a new photo is attached', async () => {
+    repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7, status: 'DRAFT' });
+    repoMock.findBy.mockResolvedValue([]);
+    roomsRepo.findOneByOrFail.mockResolvedValue({ roomId: 3 });
+    subRoomsRepo.findOneBy.mockResolvedValue({ subRoomId: 5 });
+    defectsRepo.find.mockResolvedValue([
+      { subCategories: [{ subCategoryId: 1 }, { subCategoryId: 2 }] },
+    ]);
+    defectsRepo.create.mockImplementation((value) => value);
+    defectsRepo.save.mockImplementation((value) => ({
+      ...value,
+      defectId: 51,
+    }));
+    const uploadImage = jest
+      .fn()
+      .mockResolvedValue('https://storage/defects/b.webp');
+
+    await service.create(
+      {
+        roundId: 7,
+        subCategoryIds: [1, 2],
+        inspectorId: 1,
+        roomId: 3,
+        subRoomId: 5,
+        floorId: 1,
+        severity: 'Minor',
+        description: 'ผนังแตกร้าว',
+      },
+      undefined,
+      uploadImage,
+    );
+
+    expect(defectsRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ imageUrl: 'https://storage/defects/b.webp' }),
+    );
   });
 
   it('does not block create when subCategories differ from the existing defect', async () => {
