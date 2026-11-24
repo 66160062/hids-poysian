@@ -844,7 +844,9 @@ const savePendingPlans = async () => {
       pendingPlans.value = pendingPlans.value.filter((p) => p.id !== item.id);
     } catch (err) {
       console.error('Upload plan error', err);
-      if (isFloorTakenError(err)) item.error = t('components.planPosition.floorTaken');
+      item.error = isFloorTakenError(err)
+        ? t('components.planPosition.floorTaken')
+        : t('components.planPosition.uploadPlanFailed');
     }
   }
 
