@@ -32,6 +32,7 @@ export class HousePlansService {
     return this.housePlansRepo.find({
       where: { job: { jobId } },
       order: {
+        floor: { floorOrder: { direction: 'ASC', nulls: 'LAST' } },
         orderIndex: 'ASC',
         createdAt: 'ASC',
       },
@@ -51,9 +52,11 @@ export class HousePlansService {
   }
 
   planNamesFor(floor: Floor): { name: string; nameEn: string | null } {
+    const label = floor.label.trim();
+    const labelEn = floor.labelEn?.trim();
     return {
-      name: `แปลน${floor.label}`,
-      nameEn: floor.labelEn ? `${floor.labelEn} Plan` : null,
+      name: `แปลน${label}`,
+      nameEn: labelEn ? `${labelEn} Plan` : null,
     };
   }
 

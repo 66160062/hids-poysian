@@ -4,6 +4,7 @@ import { UpdateFloorDto } from './dto/update-floor.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Floor } from './entities/floor.entity';
 import { Repository } from 'typeorm';
+import { normalizeFloorLabel } from './floor-label.util';
 
 // ชั้นมาตรฐาน 10 ชั้น + ชั้นลอย (ไม่รวมแถว "ชั้นอื่นๆ" ที่ floorOrder ว่างเสมอ)
 export const STANDARD_FLOORS: ReadonlyArray<{
@@ -39,18 +40,18 @@ export class FloorService implements OnModuleInit {
     }
   }
 
-  // id ของชั้นต่างกันระหว่าง dev/production จึงจับคู่ด้วย label (trim) เท่านั้น
+  // id ของชั้นต่างกันระหว่าง dev/production จึงจับคู่ด้วย label (normalize แบบเดียวกับ resolveCustomFloor) เท่านั้น
   async ensureStandardFloors(): Promise<void> {
     const existing = await this.floorRepo.find();
     const byLabel = new Map<string, Floor>();
     for (const f of existing) {
-      const key = f.label.trim();
+      const key = normalizeFloorLabel(f.label);
       if (!byLabel.has(key)) byLabel.set(key, f);
     }
 
     const toSave: Array<Partial<Floor>> = [];
     for (const std of STANDARD_FLOORS) {
-      const row = byLabel.get(std.label);
+      const row = byLabel.get(normalizeFloorLabel(std.label));
       if (!row) {
         toSave.push(this.floorRepo.create(std));
         continue;

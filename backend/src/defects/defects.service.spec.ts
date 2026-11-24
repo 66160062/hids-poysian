@@ -321,7 +321,10 @@ describe('DefectsService', () => {
     roomsRepo.findOneByOrFail.mockResolvedValue({ roomId: 3 });
     subRoomsRepo.findOneBy.mockResolvedValue({ subRoomId: 5 });
     defectsRepo.find.mockResolvedValue([
-      { subCategories: [{ subCategoryId: 1 }, { subCategoryId: 2 }] },
+      {
+        imageFileSize: 1000,
+        subCategories: [{ subCategoryId: 1 }, { subCategoryId: 2 }],
+      },
     ]);
     defectsRepo.create.mockImplementation((value) => value);
     defectsRepo.save.mockImplementation((value) => ({
@@ -342,6 +345,7 @@ describe('DefectsService', () => {
         floorId: 1,
         severity: 'Minor',
         description: 'ผนังแตกร้าว',
+        imageFileSize: 2000,
       },
       undefined,
       uploadImage,
@@ -350,6 +354,40 @@ describe('DefectsService', () => {
     expect(defectsRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({ imageUrl: 'https://storage/defects/b.webp' }),
     );
+  });
+
+  it('throws ConflictException and skips upload when same details and same photo size already exist (retry)', async () => {
+    repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7, status: 'DRAFT' });
+    repoMock.findBy.mockResolvedValue([]);
+    roomsRepo.findOneByOrFail.mockResolvedValue({ roomId: 3 });
+    subRoomsRepo.findOneBy.mockResolvedValue({ subRoomId: 5 });
+    defectsRepo.find.mockResolvedValue([
+      {
+        imageFileSize: 2000,
+        subCategories: [{ subCategoryId: 1 }, { subCategoryId: 2 }],
+      },
+    ]);
+    const uploadImage = jest.fn().mockResolvedValue('https://storage/x.webp');
+
+    await expect(
+      service.create(
+        {
+          roundId: 7,
+          subCategoryIds: [1, 2],
+          inspectorId: 1,
+          roomId: 3,
+          subRoomId: 5,
+          floorId: 1,
+          severity: 'Minor',
+          description: 'ผนังแตกร้าว',
+          imageFileSize: 2000,
+        },
+        undefined,
+        uploadImage,
+      ),
+    ).rejects.toThrow(ConflictException);
+    expect(uploadImage).not.toHaveBeenCalled();
+    expect(defectsRepo.save).not.toHaveBeenCalled();
   });
 
   it('does not block create when subCategories differ from the existing defect', async () => {

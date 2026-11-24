@@ -84,6 +84,17 @@ describe('FloorService', () => {
       expect(savedRows().filter((f) => f.label.trim() === 'ชั้น 2')).toHaveLength(1);
     });
 
+    it('matches labels ignoring internal whitespace runs', async () => {
+      floorRepo.find.mockResolvedValue([
+        { floorId: 6, label: 'ชั้น  3', labelEn: null, floorOrder: null },
+      ]);
+      await service.ensureStandardFloors();
+      expect(savedRows()).toEqual(
+        expect.arrayContaining([expect.objectContaining({ floorId: 6, floorOrder: 30 })]),
+      );
+      expect(savedRows().filter((f) => f.label.replace(/[ ]{2,}/g, ' ') === 'ชั้น 3')).toHaveLength(1);
+    });
+
     it('never touches the "other" row or inspector-typed floors', async () => {
       floorRepo.find.mockResolvedValue([
         { floorId: 7, label: 'ชั้นอื่นๆ…..', labelEn: 'Other Floor…', floorOrder: null },

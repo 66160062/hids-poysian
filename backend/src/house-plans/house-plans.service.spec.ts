@@ -67,8 +67,16 @@ describe('HousePlansService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('planNamesFor', () => {
+    it('trims the floor labels', () => {
+      expect(
+        service.planNamesFor({ label: ' ชั้น 1 ', labelEn: ' Floor 1 ' } as never),
+      ).toEqual({ name: 'แปลนชั้น 1', nameEn: 'Floor 1 Plan' });
+    });
+  });
+
   describe('findByJob', () => {
-    it('returns plans ordered by orderIndex and createdAt', async () => {
+    it('returns plans ordered by floor order, orderIndex and createdAt', async () => {
       const mockPlans = [
         { planId: 1, name: 'แปลนชั้น 1', orderIndex: 0 },
         { planId: 2, name: 'แปลนชั้น 2', orderIndex: 1 },
@@ -79,7 +87,11 @@ describe('HousePlansService', () => {
       expect(result).toEqual(mockPlans);
       expect(housePlansRepo.find).toHaveBeenCalledWith({
         where: { job: { jobId: 10 } },
-        order: { orderIndex: 'ASC', createdAt: 'ASC' },
+        order: {
+          floor: { floorOrder: { direction: 'ASC', nulls: 'LAST' } },
+          orderIndex: 'ASC',
+          createdAt: 'ASC',
+        },
         relations: ['floor'],
       });
     });

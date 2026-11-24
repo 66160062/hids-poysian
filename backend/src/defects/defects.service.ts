@@ -27,6 +27,7 @@ import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity'
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { NotificationType } from 'src/notifications/entities/notification.entity';
 import { DefectNoteTranslator } from './defect-note-translator.service';
+import { normalizeFloorLabel } from 'src/floor/floor-label.util';
 
 type LinkTokenPayload = {
   project_id: number;
@@ -96,10 +97,14 @@ export class DefectsService {
     if (!roundId) return;
     void this.activityLogsService.logForRound(roundId, entry);
   }
-
+  // เช็คซ้ำกันกดบันทึกซ้ำโดยไม่ตั้งใจ แบบเดียวกับฝั่ง frontend
   // เช็คซ้ำเฉพาะการบันทึกที่ไม่มีรูป (กันกดบันทึกซ้ำโดยไม่ตั้งใจ) แบบเดียวกับฝั่ง frontend
   // (isDuplicateDefect ใน AddDefectPage.vue) แต่ query จาก DB สด กันเคส 2 inspector คนละ session บันทึกจุดเดียวกันพร้อมกัน ซึ่ง local store ฝั่ง frontend มองไม่เห็นกัน
-  private async hasDuplicateDefect(dto: CreateDefectDto): Promise<boolean> {
+  // มีรูปแนบ: ซ้ำก็ต่อเมื่อขนาดไฟล์รูปเท่ากันด้วย (กัน retry หลัง timeout สร้างซ้ำ แต่รูปใหม่ที่ขนาดต่างยังบันทึกซ้ำได้)
+  private async hasDuplicateDefect(
+    dto: CreateDefectDto & { imageFileSize?: number },
+    withPhoto = false,
+  ): Promise<boolean> {
     const candidates = await this.defectsRepo.find({
       where: {
         round: { roundId: dto.roundId },
@@ -114,6 +119,9 @@ export class DefectsService {
 
     const wantedIds = [...dto.subCategoryIds].sort((a, b) => a - b);
     return candidates.some((candidate) => {
+      if (withPhoto && candidate.imageFileSize !== dto.imageFileSize) {
+        return false;
+      }
       const ids = candidate.subCategories
         .map((s) => s.subCategoryId)
         .sort((a, b) => a - b);
@@ -128,8 +136,7 @@ export class DefectsService {
   // ไม่งั้นสร้างแถวใหม่ ทุกหน้าที่แสดง defect.floor.label จึงได้ชื่อจริงโดยไม่ต้องแก้ และชื่อนี้จะขึ้นในรายการชั้นครั้งถัดไป
   // ตาราง floor มีไม่กี่แถว เทียบใน JS ได้เลย ไม่ต้องเขียน ILIKE (และไม่ต้อง escape % _ จากข้อความผู้ใช้)
   private async resolveCustomFloor(label: string): Promise<number> {
-    const normalize = (value: string) =>
-      value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('th');
+    const normalize = normalizeFloorLabel;
     const wanted = normalize(label);
     const floors = await this.floorsRepo.find();
     const existing = floors.find(
@@ -202,8 +209,8 @@ export class DefectsService {
       );
     }
 
-    // มีรูปแนบ = ผู้ตรวจตั้งใจบันทึกซ้ำรายละเอียดเดิมแต่คนละรูป จึงไม่เช็คซ้ำ
-    if (!uploadImage && (await this.hasDuplicateDefect(createDefectDto))) {
+    // มีรูปแนบ = อาจตั้งใจบันทึกรายละเอียดเดิมแต่คนละรูป จึงซ้ำเฉพาะเมื่อขนาดรูปเท่ากันด้วย
+    if (await this.hasDuplicateDefect(createDefectDto, !!uploadImage)) {
       throw new ConflictException(
         'มีรายการ Defect นี้อยู่แล้วในห้อง/ชั้นเดียวกัน',
       );
