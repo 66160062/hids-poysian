@@ -800,8 +800,7 @@ function saveAll() {
       title: t('inspection.report.confirmSaveTitle'),
       message:
         unansweredCount.value > 0
-          ? `${t('inspection.report.confirmSaveMessage')}
-${t('inspection.report.unansweredHidden', { count: unansweredCount.value })}`
+          ? `${t('inspection.report.confirmSaveMessage')} ${t('inspection.report.unansweredHidden', { count: unansweredCount.value })}`
           : t('inspection.report.confirmSaveMessage'),
       icon: '',
       color: 'primary',
