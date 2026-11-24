@@ -707,20 +707,25 @@ const handleBack = () => {
 };
 
 // defect ซ้ำ: เช็คทั้ง defect ที่บันทึกแล้ว และ defect ที่กำลังบันทึกอยู่เบื้องหลัง (defectSyncState, isCreate)
+const normalizeFloorLabel = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('th');
+
 const isDuplicateDefect = () => {
   const selectedTypes = [...form.value.defectTypes].sort((a, b) => a - b);
 
   const matchesCurrentForm = (
     roomId: number | null,
     subRoomId: number | null,
-    floorId: number | null,
+    floor: { floorId?: number; label?: string } | null | undefined,
     severity: string,
     note: string,
     types: number[],
   ) => {
     if (roomId !== form.value.roomId) return false;
     if (subRoomId !== form.value.subRoomId) return false;
-    if (floorId !== form.value.floorId) return false;
+    // ชั้น "อื่นๆ" ที่พิมพ์เอง: backend แปลงเป็น floor row จริง (id ต่างจากแถว "อื่นๆ") จึงเทียบด้วยชื่อชั้นแทน id
+    if (isOtherFloorSelected.value) {
+      if (normalizeFloorLabel(floor?.label ?? '') !== normalizeFloorLabel(form.value.customFloor)) return false;
+    } else if ((floor?.floorId ?? null) !== form.value.floorId) return false;
     if (severity !== form.value.severity) return false;
     if (note !== (form.value.note || '-')) return false;
     if (types.length !== selectedTypes.length) return false;
@@ -731,7 +736,7 @@ const isDuplicateDefect = () => {
     matchesCurrentForm(
       d.room?.roomId ?? null,
       d.subRoom?.subRoomId ?? null,
-      d.floor?.floorId ?? null,
+      d.floor,
       d.severity,
       d.description,
       d.subCategories.map((s) => s.subCategoryId).sort((a, b) => a - b),
@@ -746,7 +751,7 @@ const isDuplicateDefect = () => {
       matchesCurrentForm(
         entry.previewDefect.room?.roomId ?? null,
         entry.previewDefect.subRoom?.subRoomId ?? null,
-        entry.previewDefect.floor?.floorId ?? null,
+        entry.previewDefect.floor,
         entry.previewDefect.severity,
         entry.previewDefect.description,
         entry.previewDefect.subCategories.map((s) => s.subCategoryId).sort((a, b) => a - b),
