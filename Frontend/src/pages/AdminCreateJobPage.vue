@@ -951,6 +951,8 @@ const planFloorOptions = (plan: HousePlanItem) =>
   availablePlanFloors(
     inspectionStore.floorOptions,
     housePlans.value.filter((p) => p !== plan),
+    undefined,
+    plan.floor,
   );
 
 const triggerPlanUpload = () => {
@@ -1174,7 +1176,11 @@ onMounted(async () => {
     spinnerSize: 70,
     backgroundColor: 'white',
   });
-  await Promise.all([customerStore.fetchCustomers(), branchStore.fetchBranches(), inspectionStore.ensureMasterData()]);
+  await Promise.all([
+    customerStore.fetchCustomers(),
+    branchStore.fetchBranches(),
+    inspectionStore.ensureMasterData().catch(() => undefined),
+  ]);
   await houseTypeStore.fetchHouseTypes();
 
   // Pre-select job type from route query if available

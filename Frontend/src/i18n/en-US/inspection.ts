@@ -22,6 +22,7 @@ export default {
     selectJobTypeRequired: 'Please select a job type',
     selectDefectTypeRequired: 'Please select at least 1 defect type',
     duplicateDefect: 'This defect already exists in the same room/floor',
+    duplicateNeedsPhoto: 'These details are already saved. Take a new photo to save again.',
     updateSuccess: 'Update successful!',
     saveError: 'An error occurred while saving',
     saveSuccess: 'Save successful!',

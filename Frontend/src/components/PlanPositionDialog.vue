@@ -470,6 +470,8 @@ const activePlanFloorOptions = computed(() =>
   availablePlanFloors(
     inspectionStore.floorOptions,
     plans.value.filter((p) => p !== activePlan.value),
+    undefined,
+    activePlan.value?.floor,
   ),
 );
 const pendingFloorOptions = (item: PendingPlan) =>
@@ -686,7 +688,8 @@ const fetchPlans = async () => {
     // Auto-select initial plan or matching floor plan
     if (plans.value.length > 0) {
       const firstPlan = plans.value[0] ?? null;
-      if (props.initialPlanId) {
+      // ใช้แปลนเดิมเฉพาะเมื่อมีหมุดอยู่แล้ว ไม่งั้นให้แปลนของชั้นที่เลือกมาก่อน (ย้ายชั้นแล้วไม่ควรเปิดแปลนชั้นเก่า)
+      if (props.initialPlanId && props.initialX != null) {
         const found = plans.value.find((p) => p.planId === props.initialPlanId);
         activePlan.value = found ?? firstPlan;
       } else if (props.selectedFloorId) {
@@ -893,7 +896,7 @@ const changeActivePlanFloor = async (floorId: number | null) => {
     console.error('Change plan floor error', err);
     activePlanFloorError.value = isFloorTakenError(err)
       ? t('components.planPosition.floorTaken')
-      : t('components.planPosition.renamePlanFailed');
+      : t('components.planPosition.changeFloorFailed');
   }
 };
 

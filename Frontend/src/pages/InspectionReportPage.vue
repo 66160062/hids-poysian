@@ -753,7 +753,10 @@ function retryPendingSaves() {
 }
 // --- end autosave ---
 
-const unansweredCount = computed(() => totalOptions.value - answeredCount.value);
+// หัวข้อที่ไม่มีทั้งตัวเลือกและรูปเลย = ไม่ขึ้นในรายงาน (ตอบบางส่วน/มีแต่รูปยังขึ้น)
+const unansweredCount = computed(
+  () => templates.value.filter((t) => !hasTemplateAnswers(t.templateId) && photosOf(t.templateId).length === 0).length,
+);
 
 const submitBlockedReason = computed(() => {
   if (templates.value.length === 0) return '';

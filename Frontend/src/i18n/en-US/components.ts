@@ -58,6 +58,7 @@ export default {
     savePlansButton: 'Save Plans ({count})',
     pendingPlansHint: 'Take or choose plan photos, then name each one before saving',
     renamePlanFailed: 'Unable to rename the plan',
+    changeFloorFailed: "Couldn't change the plan's floor",
     defaultPlanName: 'House Plan {n}',
   },
   inspectorCalendar: {

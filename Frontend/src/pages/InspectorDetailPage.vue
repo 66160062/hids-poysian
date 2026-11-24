@@ -625,13 +625,15 @@ const planFloorOptions = (plan: HousePlanItem) =>
   availablePlanFloors(
     inspectionStore.floorOptions,
     housePlans.value.filter((p) => p !== plan),
+    undefined,
+    plan.floor,
   );
 
 async function loadHousePlans() {
   const jobId = jobData.value?.job?.jobId;
   if (!jobId) return;
   try {
-    await inspectionStore.ensureMasterData();
+    await inspectionStore.ensureMasterData().catch(() => undefined);
     const { data } = await api.get<HousePlan[]>(`/inspection-jobs/${jobId}/house-plans`);
     housePlans.value = data.map((p) => ({
       planId: p.planId,

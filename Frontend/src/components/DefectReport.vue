@@ -1368,6 +1368,18 @@ const hasAiSummary = computed(
   () => props.round.completionPercent != null || !!aiSummaryDisplay.value,
 );
 
+// ชื่อชั้นต่อท้ายชื่อแปลน: ไม่ต้องใส่เมื่อชื่อแปลนมาจากชื่อชั้นอยู่แล้ว (แปลน{ชั้น}) เหลือไว้เฉพาะแปลนที่ตั้งชื่อเอง
+function planFloorLabel(
+  plan: { name?: string | null; nameEn?: string | null; floor?: { label: string; labelEn?: string | null } | null } | null | undefined,
+): string | null {
+  const floor = plan?.floor;
+  if (!floor) return null;
+  const derivedTh = `แปลน${floor.label.trim()}`;
+  const derivedEn = floor.labelEn ? `${floor.labelEn.trim()} Plan` : null;
+  if (plan?.name === derivedTh || (derivedEn !== null && plan?.nameEn === derivedEn)) return null;
+  return pickLocalized(floor.label, floor.labelEn) || null;
+}
+
 // Compute plan pages for PDF - groups defects by planId, only plans with pinned defects
 const planPages = computed(() => {
   const planMap = new Map<
@@ -1394,7 +1406,7 @@ const planPages = computed(() => {
         planId,
         planName: planData?.name ? pickLocalized(planData.name, planData.nameEn) : t('reports.defect.planNameFallback', { id: planId }),
         imageUrl: planData?.imageUrl ?? '',
-        floorLabel: pickLocalized(planData?.floor?.label, planData?.floor?.labelEn) || null,
+        floorLabel: planFloorLabel(planData),
         defects: [],
       });
     }

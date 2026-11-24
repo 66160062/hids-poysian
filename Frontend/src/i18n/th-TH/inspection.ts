@@ -22,6 +22,7 @@ export default {
     selectJobTypeRequired: 'กรุณาเลือกประเภทงาน',
     selectDefectTypeRequired: 'กรุณาเลือกประเภทตำหนิอย่างน้อย 1 รายการ',
     duplicateDefect: 'มีรายการ Defect นี้อยู่แล้วในห้อง/ชั้นเดียวกัน',
+    duplicateNeedsPhoto: 'รายละเอียดนี้บันทึกแล้ว ถ่ายรูปใหม่เพื่อบันทึกซ้ำ',
     updateSuccess: 'อัปเดตข้อมูลสำเร็จ!',
     saveError: 'เกิดข้อผิดพลาดในการบันทึก',
     saveSuccess: 'บันทึกข้อมูลสำเร็จ!',

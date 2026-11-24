@@ -57,6 +57,7 @@ export default {
     savePlansButton: 'บันทึกแปลน ({count})',
     pendingPlansHint: 'ถ่ายรูปหรือเลือกรูปแปลน แล้วตั้งชื่อแต่ละรูปก่อนบันทึก',
     renamePlanFailed: 'ไม่สามารถเปลี่ยนชื่อแปลนได้',
+    changeFloorFailed: 'เปลี่ยนชั้นของแปลนไม่สำเร็จ',
     defaultPlanName: 'แปลนบ้าน {n}',
   },
   inspectorCalendar: {

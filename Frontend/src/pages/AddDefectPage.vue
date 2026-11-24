@@ -392,6 +392,10 @@
         </div>
       </div>
 
+      <div v-if="duplicateError" class="text-negative text-caption text-weight-medium q-mt-md" role="alert">
+        {{ t('inspection.addDefect.duplicateNeedsPhoto') }}
+      </div>
+
       <!-- Footer -->
       <div class="row justify-between items-end q-mt-auto q-pt-md">
         <div class="column">
@@ -628,6 +632,9 @@ watch(subCategoryOptions, (v) => (subCategoryOptionsFiltered.value = v), { immed
 
 const imagePreview = ref<string | null>(null);
 const selectedFile = ref<File | null>(null);
+// บันทึกซ้ำโดยไม่มีรูปใหม่ (toast ถูกปิดทั้งแอป จึงแจ้งในหน้า) หายเมื่อเลือกรูปหรือแก้ฟอร์ม
+const duplicateError = ref(false);
+watch([form, selectedFile], () => (duplicateError.value = false), { deep: true });
 const showAnnotator = ref(false);
 // mount ตัววาด (และโหลด fabric) หลังผู้ใช้เปิดครั้งแรกเท่านั้น
 const annotatorRequested = ref(false);
@@ -883,11 +890,7 @@ const handleNext = async () => {
   // ซ้ำได้เฉพาะเมื่อแนบรูปใหม่ (บันทึกรายละเอียดเดิมแต่คนละรูป) ส่วนไม่มีรูปยังบล็อก กันกดบันทึกซ้ำโดยไม่ตั้งใจ
   if (!isEditMode.value && !selectedFile.value && isDuplicateDefect()) {
     isSubmitting.value = false;
-    $q.notify({
-      message: t('inspection.addDefect.duplicateDefect'),
-      color: 'negative',
-      icon: 'warning',
-    });
+    duplicateError.value = true;
     return;
   }
 
@@ -1102,7 +1105,8 @@ async function loadAddDefectData() {
     }
     if (last) {
       form.value.jobType = last.categoryId;
-      form.value.planId = last.planId;
+      // แปลนเดิมใช้ได้เฉพาะเมื่อยังอยู่ชั้นเดิม ไม่งั้นให้เลือกใหม่ตามชั้น
+      if (form.value.floorId === last.floorId) form.value.planId = last.planId;
     }
   }
 }
