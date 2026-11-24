@@ -15,6 +15,10 @@ export default {
       'Could not look up the address from the pin. Only the coordinates were saved; please fill in the address manually',
   },
   planPosition: {
+    planFloor: 'Plan floor',
+    allFloorsHavePlans: 'Every floor already has a plan',
+    floorTaken: 'This floor already has a plan',
+    noFloor: 'No floor',
     viewButton: 'View position on plan',
     viewTitle: 'Plan Position',
     editTitle: 'Set Position on Plan',

@@ -113,21 +113,24 @@
 
           <!-- Rename the selected plan -->
           <div v-if="activePlan && !readonly" class="bg-white col-auto dialog-inset q-pt-sm">
-            <q-input
-              v-model="activePlan.name"
+            <div v-if="!activePlan.floor" class="text-caption text-grey-7 q-mb-xs">
+              {{ planDisplayName(activePlan) }} · {{ t('components.planPosition.noFloor') }}
+            </div>
+            <q-select
+              :model-value="activePlan.floor?.floorId ?? null"
+              :options="activePlanFloorOptions"
+              emit-value
+              map-options
               dense
               outlined
               bg-color="white"
               class="plan-name-input"
-              :placeholder="t('components.planPosition.planNamePlaceholder')"
-              @update:model-value="activePlan.nameEn = null"
-              @blur="renameActivePlan"
-              @keyup.enter="($event.target as HTMLInputElement).blur()"
-            >
-              <template #prepend>
-                <q-icon name="edit" size="18px" />
-              </template>
-            </q-input>
+              :label="t('components.planPosition.planFloor')"
+              :error="!!activePlanFloorError"
+              :error-message="activePlanFloorError ?? ''"
+              hide-bottom-space
+              @update:model-value="changeActivePlanFloor"
+            />
           </div>
 
           <!-- Plan Thumbnail Slider -->
@@ -147,7 +150,7 @@
                   <span class="plan-thumb-frame">
                     <img
                       :src="thumbUrl(plan.imageUrl) ?? formatImageUrl(plan.imageUrl)"
-                      :alt="plan.name"
+                      :alt="planDisplayName(plan)"
                       loading="lazy"
                       class="plan-thumb-img"
                     />
@@ -157,7 +160,7 @@
                     />
                     <span class="plan-thumb-scrim" />
                     <span class="plan-thumb-label">
-                      {{ plan.name }}<template v-if="plan.floor?.label"> · {{ plan.floor.label }}</template>
+                      {{ planDisplayName(plan) }}
                     </span>
                   </span>
                 </button>
@@ -180,16 +183,23 @@
               <!-- New Plan Form -->
               <div class="column q-gutter-y-sm">
                 <!-- รูปที่เลือก/ถ่ายแล้วแต่ยังไม่บันทึก — ตั้งชื่อแต่ละรูปได้ก่อนกดบันทึก -->
-                <div v-for="(item, idx) in pendingPlans" :key="item.id" class="row no-wrap items-center q-gutter-x-sm pending-plan-row">
-                  <img :src="item.previewUrl" :alt="item.name" class="pending-plan-thumb" />
-                  <q-input
-                    v-model="item.name"
+                <div v-for="(item, idx) in pendingPlans" :key="item.id" class="row no-wrap items-start q-gutter-x-sm pending-plan-row">
+                  <img :src="item.previewUrl" :alt="t('components.planPosition.planImageAlt')" class="pending-plan-thumb" />
+                  <q-select
+                    v-model="item.floorId"
+                    :options="pendingFloorOptions(item)"
+                    emit-value
+                    map-options
                     outlined
                     dense
                     bg-color="white"
                     class="col plan-name-input"
                     :disable="isUploadingPlan"
-                    :placeholder="t('components.planPosition.defaultPlanName', { n: plans.length + idx + 1 })"
+                    :label="t('components.planPosition.planFloor')"
+                    :error="!!item.error"
+                    :error-message="item.error ?? ''"
+                    hide-bottom-space
+                    @update:model-value="item.error = null"
                   />
                   <q-btn
                     flat
@@ -202,6 +212,10 @@
                   />
                 </div>
 
+                <div v-if="!canAddPendingPlan" class="text-caption text-grey-7 text-center">
+                  {{ t('components.planPosition.allFloorsHavePlans') }}
+                </div>
+
                 <!-- Action buttons to capture / select photo -->
                 <div class="row q-gutter-sm q-mt-xs photo-action-row">
                   <q-btn
@@ -212,7 +226,7 @@
                     icon="photo_camera"
                     :label="t('components.planPosition.takePhotoButton')"
                     class="col action-pill"
-                    :disable="isUploadingPlan"
+                    :disable="isUploadingPlan || !canAddPendingPlan"
                     @click="triggerCamera"
                   />
                   <q-btn
@@ -223,7 +237,7 @@
                     icon="photo_library"
                     :label="t('components.planPosition.chooseFromGalleryButton')"
                     class="col action-pill"
-                    :disable="isUploadingPlan"
+                    :disable="isUploadingPlan || !canAddPendingPlan"
                     @click="triggerGallery"
                   />
                 </div>
@@ -238,6 +252,7 @@
                   :label="t('components.planPosition.savePlansButton', { count: pendingPlans.length })"
                   class="action-pill text-weight-bold"
                   :loading="isUploadingPlan"
+                  :disable="pendingPlans.some((p) => p.floorId === null)"
                   @click="savePendingPlans"
                 />
                 <div v-else class="text-caption text-grey-6 text-center">
@@ -378,7 +393,8 @@ import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
 import IconBounceSpinner from 'src/components/IconBounceSpinner.vue';
-import { defaultPlanNames } from 'src/composables/useDefaultPlanName';
+import { availablePlanFloors, isFloorTakenError, planDisplayName } from 'src/composables/usePlanFloors';
+import { useInspectionStore } from 'src/stores/useInspection';
 import type { HousePlan } from 'src/models';
 import { thumbUrl } from 'src/utils/thumb';
 
@@ -438,10 +454,36 @@ interface PendingPlan {
   id: number;
   file: File;
   previewUrl: string;
-  name: string;
+  floorId: number | null;
+  error?: string | null;
 }
 const pendingPlans = ref<PendingPlan[]>([]);
 let nextPendingId = 0;
+
+// ── Floors (แปลน 1 ใบต่อ 1 ชั้นต่องาน) ─────────────────────────
+const inspectionStore = useInspectionStore();
+const activePlanFloorError = ref<string | null>(null);
+
+const asFloorUse = (floorId: number | null) => ({ floor: floorId === null ? null : { floorId } });
+// ชั้นที่ถูกแปลนอื่น (ทั้งที่บันทึกแล้วและที่รอบันทึก) ใช้ไปแล้ว ยกเว้นแปลน/แถวที่กำลังเลือกเอง
+const activePlanFloorOptions = computed(() =>
+  availablePlanFloors(
+    inspectionStore.floorOptions,
+    plans.value.filter((p) => p !== activePlan.value),
+  ),
+);
+const pendingFloorOptions = (item: PendingPlan) =>
+  availablePlanFloors(inspectionStore.floorOptions, [
+    ...plans.value,
+    ...pendingPlans.value.filter((p) => p !== item).map((p) => asFloorUse(p.floorId)),
+  ]);
+const canAddPendingPlan = computed(
+  () =>
+    availablePlanFloors(inspectionStore.floorOptions, [
+      ...plans.value,
+      ...pendingPlans.value.map((p) => asFloorUse(p.floorId)),
+    ]).length > 0,
+);
 const imageRef = ref<HTMLImageElement | null>(null);
 const cameraInput = ref<HTMLInputElement | null>(null);
 const galleryInput = ref<HTMLInputElement | null>(null);
@@ -685,6 +727,7 @@ const fetchPlans = async () => {
 
 const selectPlan = (plan: HousePlan, event?: MouseEvent) => {
   activePlan.value = plan;
+  activePlanFloorError.value = null;
   resetZoom();
   const btn = event?.currentTarget as HTMLElement | undefined;
   if (btn) {
@@ -746,11 +789,18 @@ const onPlanFileSelected = (event: Event) => {
   target.value = '';
 
   for (const file of files) {
+    // ตั้งต้นเป็นชั้นที่กำลังกรอก defect อยู่ ถ้าเป็นชั้นจริงและยังว่าง ("ชั้นอื่นๆ" ไม่ผูกแปลน)
+    const preferred = props.selectedFloorId
+      ? availablePlanFloors(inspectionStore.floorOptions, [
+          ...plans.value,
+          ...pendingPlans.value.map((p) => asFloorUse(p.floorId)),
+        ]).find((o) => o.value === props.selectedFloorId)
+      : undefined;
     pendingPlans.value.push({
       id: nextPendingId++,
       file,
       previewUrl: URL.createObjectURL(file),
-      name: '',
+      floorId: preferred?.value ?? null,
     });
   }
 };
@@ -775,16 +825,11 @@ const savePendingPlans = async () => {
 
   // อัปโหลดทีละรูปตามลำดับ รูปที่สำเร็จเอาออกจากรายการรอ รูปที่พังค้างไว้ให้กดบันทึกซ้ำได้
   for (const item of [...pendingPlans.value]) {
-    const defaultNames = defaultPlanNames(plans.value.length + 1);
-    const trimmedName = item.name.trim();
+    if (item.floorId === null) continue;
 
     const formData = new FormData();
     formData.append('file', item.file);
-    formData.append('name', trimmedName || defaultNames.th);
-    if (!trimmedName) formData.append('nameEn', defaultNames.en);
-    if (props.selectedFloorId) {
-      formData.append('floorId', String(props.selectedFloorId));
-    }
+    formData.append('floorId', String(item.floorId));
     formData.append('orderIndex', String(plans.value.length));
 
     try {
@@ -799,6 +844,7 @@ const savePendingPlans = async () => {
       pendingPlans.value = pendingPlans.value.filter((p) => p.id !== item.id);
     } catch (err) {
       console.error('Upload plan error', err);
+      if (isFloorTakenError(err)) item.error = t('components.planPosition.floorTaken');
     }
   }
 
@@ -831,28 +877,21 @@ const savePendingPlans = async () => {
   }
 };
 
-const renameActivePlan = async () => {
+const changeActivePlanFloor = async (floorId: number | null) => {
   const plan = activePlan.value;
-  if (!plan) return;
-
-  if (!plan.name.trim()) {
-    const defaults = defaultPlanNames(plans.value.indexOf(plan) + 1);
-    plan.name = defaults.th;
-    plan.nameEn = defaults.en;
-  }
+  if (!plan || floorId === null || plan.floor?.floorId === floorId) return;
+  activePlanFloorError.value = null;
 
   try {
-    await api.patch(`/house-plans/${plan.planId}`, {
-      name: plan.name.trim(),
-      nameEn: plan.nameEn ?? null,
-    });
+    const { data } = await api.patch<HousePlan>(`/house-plans/${plan.planId}`, { floorId });
+    plan.floor = data.floor ?? null;
+    plan.name = data.name;
+    plan.nameEn = data.nameEn ?? null;
   } catch (err) {
-    console.error('Rename plan error', err);
-    $q.notify({
-      message: t('components.planPosition.renamePlanFailed'),
-      color: 'negative',
-      icon: 'error',
-    });
+    console.error('Change plan floor error', err);
+    activePlanFloorError.value = isFloorTakenError(err)
+      ? t('components.planPosition.floorTaken')
+      : t('components.planPosition.renamePlanFailed');
   }
 };
 
@@ -881,6 +920,8 @@ watch(
       currentPinY.value = props.initialY ?? null;
       locationZone.value = props.initialZone ?? '';
       resetZoom();
+      activePlanFloorError.value = null;
+      void inspectionStore.ensureMasterData();
       void fetchPlans();
     }
   },

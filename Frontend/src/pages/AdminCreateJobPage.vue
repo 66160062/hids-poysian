@@ -604,29 +604,54 @@
                 @click.stop="removeHousePlan(planIdx)"
               />
             </q-card>
-            <q-input
-              v-model="plan.name"
+            <div class="text-caption text-weight-medium q-mt-xs ellipsis">{{ planDisplayName(plan) }}</div>
+            <div v-if="!plan.floor" class="text-caption text-grey-7">{{ t('components.planPosition.noFloor') }}</div>
+            <q-select
+              :model-value="plan.floor?.floorId ?? null"
+              :options="planFloorOptions(plan)"
+              emit-value
+              map-options
               dense
               filled
               class="custom-input plan-name-field q-mt-xs"
               :disable="plan.isUploading"
-              :placeholder="t('adminWork.createJob.planNamePlaceholder')"
-              @update:model-value="plan.nameEn = null"
-              @blur="renameHousePlan(planIdx)"
-              @keyup.enter="($event.target as HTMLInputElement).blur()"
+              :label="t('components.planPosition.planFloor')"
+              :error="!!plan.floorError"
+              :error-message="plan.floorError ?? ''"
+              hide-bottom-space
+              @update:model-value="changeHousePlanFloor(planIdx, $event)"
             />
           </div>
         </div>
 
         <!-- ปุ่มเพิ่มรูปแปลน: แยกจากกริดรูปเดิม กันไม่ให้ปุ่มลบของรูปเก่าโดนบัง/ทับ -->
+        <q-select
+          v-model="newPlanFloorId"
+          :options="newPlanFloorOptions"
+          emit-value
+          map-options
+          dense
+          filled
+          class="custom-input"
+          :class="{ 'q-mt-md': housePlans.length }"
+          :disable="!newPlanFloorOptions.length"
+          :label="t('components.planPosition.planFloor')"
+          :error="!!newPlanError"
+          :error-message="newPlanError ?? ''"
+          hide-bottom-space
+          @update:model-value="newPlanError = null"
+        />
+        <div v-if="!newPlanFloorOptions.length" class="text-caption text-grey-7 q-mt-xs">
+          {{ t('components.planPosition.allFloorsHavePlans') }}
+        </div>
         <q-btn
           outline
           no-caps
           color="primary"
           icon="add_a_photo"
           :label="t('adminWork.createJob.clickToUpload')"
-          class="full-width add-plan-btn"
-          :class="{ 'q-mt-md': housePlans.length }"
+          class="full-width add-plan-btn q-mt-sm"
+          :disable="newPlanFloorId === null"
           @click="triggerPlanUpload"
         />
       </div>
@@ -684,7 +709,6 @@
         ref="planFileInput"
         style="display: none"
         accept="image/*"
-        multiple
         @change="handlePlanFilesChange"
       />
     </div>
@@ -729,7 +753,8 @@ import { useBranchStore } from '../stores/useBranch';
 import { useAuthStore } from 'src/stores/useAuth';
 import { useThaiAddress, type ThaiAddress } from '../composables/useThaiAddress';
 import { useLocalizedField } from 'src/composables/useLocalizedField';
-import { defaultPlanNames } from 'src/composables/useDefaultPlanName';
+import { availablePlanFloors, isFloorTakenError, planDisplayName } from 'src/composables/usePlanFloors';
+import { useInspectionStore } from 'src/stores/useInspection';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import type { HousePlan } from 'src/models';
 import ConfirmActionDialog from '../components/ConfirmActionDialog.vue';
@@ -905,23 +930,38 @@ interface HousePlanItem {
   planId?: number;
   url: string;
   file?: File;
+  // ชื่อมาจากชั้นที่ผูกไว้; แปลนเก่าที่ยังไม่มีชั้น (floor = null) ใช้ชื่อเดิมที่เก็บไว้
   name: string;
-  // null = ผู้ใช้พิมพ์ชื่อเอง ไม่มีชื่ออังกฤษ (ไม่ให้ชื่อ default อังกฤษเดิมค้างอยู่หลังแก้ชื่อ)
   nameEn?: string | null;
+  floor: { floorId: number; label: string; labelEn?: string | null } | null;
+  floorError?: string | null;
   isUploading?: boolean;
 }
 const housePlans = ref<HousePlanItem[]>([]);
 const planFileInput = ref<HTMLInputElement | null>(null);
 
+const inspectionStore = useInspectionStore();
+const newPlanFloorId = ref<number | null>(null);
+const newPlanError = ref<string | null>(null);
+
+// ชั้นที่ยังไม่มีแปลน (นับแปลนที่รออัพโหลดตอนสร้างงานใหม่ด้วย)
+const newPlanFloorOptions = computed(() => availablePlanFloors(inspectionStore.floorOptions, housePlans.value));
+// ตัวเลือกของแปลนแต่ละใบ: ชั้นว่าง + ชั้นปัจจุบันของใบนั้นเอง
+const planFloorOptions = (plan: HousePlanItem) =>
+  availablePlanFloors(
+    inspectionStore.floorOptions,
+    housePlans.value.filter((p) => p !== plan),
+  );
+
 const triggerPlanUpload = () => {
+  if (newPlanFloorId.value === null) return;
   planFileInput.value?.click();
 };
 
-const uploadHousePlan = async (jobId: number, file: File, name: string, nameEn?: string | null) => {
+const uploadHousePlan = async (jobId: number, file: File, floorId: number) => {
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('name', name);
-  if (nameEn) formData.append('nameEn', nameEn);
+  formData.append('floorId', String(floorId));
   formData.append('orderIndex', String(housePlans.value.length));
   const { data } = await api.post<HousePlan>(`/inspection-jobs/${jobId}/house-plans`, formData);
   return data;
@@ -929,58 +969,63 @@ const uploadHousePlan = async (jobId: number, file: File, name: string, nameEn?:
 
 const handlePlanFilesChange = async (e: Event) => {
   const target = e.target as HTMLInputElement;
-  const files = target.files ? Array.from(target.files) : [];
+  const file = target.files?.[0];
   target.value = '';
-  if (!files.length) return;
+  const floorOption = inspectionStore.floorOptions.find((o) => o.value === newPlanFloorId.value);
+  if (!file || !floorOption) return;
+  newPlanError.value = null;
+  const floor = { floorId: floorOption.value, label: floorOption.label, labelEn: null };
+  const name = `แปลน${floor.label}`;
 
   if (isEditMode.value && editId.value) {
-    const jobId = editId.value;
-    for (const file of files) {
-      const { th: name, en: nameEn } = defaultPlanNames(housePlans.value.length + 1);
-      const item: HousePlanItem = { url: URL.createObjectURL(file), name, nameEn, isUploading: true };
-      housePlans.value.push(item);
-      try {
-        const created = await uploadHousePlan(jobId, file, name, nameEn);
-        item.planId = created.planId;
-        item.url = getImageUrl(created.imageUrl) || item.url;
-      } catch (error) {
-        console.error('Failed to upload house plan', error);
-        housePlans.value.splice(housePlans.value.indexOf(item), 1);
-        $q.notify({ message: t('adminWork.createJob.saveError'), color: 'negative', position: 'top' });
-      } finally {
-        item.isUploading = false;
-      }
+    const item: HousePlanItem = { url: URL.createObjectURL(file), name, floor, isUploading: true };
+    housePlans.value.push(item);
+    try {
+      const created = await uploadHousePlan(editId.value, file, floor.floorId);
+      item.planId = created.planId;
+      item.url = getImageUrl(created.imageUrl) || item.url;
+      item.name = created.name;
+      item.nameEn = created.nameEn ?? null;
+      item.floor = created.floor ?? floor;
+      newPlanFloorId.value = null;
+    } catch (error) {
+      console.error('Failed to upload house plan', error);
+      housePlans.value.splice(housePlans.value.indexOf(item), 1);
+      newPlanError.value = isFloorTakenError(error)
+        ? t('components.planPosition.floorTaken')
+        : t('adminWork.createJob.saveError');
+    } finally {
+      item.isUploading = false;
     }
   } else {
-    files.forEach((file) => {
-      const { th: name, en: nameEn } = defaultPlanNames(housePlans.value.length + 1);
-      housePlans.value.push({
-        url: URL.createObjectURL(file),
-        file,
-        name,
-        nameEn,
-      });
-    });
+    housePlans.value.push({ url: URL.createObjectURL(file), file, name, floor });
+    newPlanFloorId.value = null;
   }
 };
 
-const renameHousePlan = async (index: number) => {
+const changeHousePlanFloor = async (index: number, floorId: number | null) => {
   const plan = housePlans.value[index];
-  if (!plan) return;
+  const floorOption = inspectionStore.floorOptions.find((o) => o.value === floorId);
+  if (!plan || !floorOption || plan.floor?.floorId === floorId) return;
+  plan.floorError = null;
 
-  const trimmed = plan.name.trim();
-  if (!trimmed) {
-    const defaults = defaultPlanNames(index + 1);
-    plan.name = defaults.th;
-    plan.nameEn = defaults.en;
+  // แปลนที่ยังไม่ได้อัพโหลด (โหมดสร้างงานใหม่) เปลี่ยนชั้นในคิวได้เลย
+  if (!plan.planId) {
+    plan.floor = { floorId: floorOption.value, label: floorOption.label, labelEn: null };
+    plan.name = `แปลน${floorOption.label}`;
+    return;
   }
-  if (!plan.planId) return;
 
   try {
-    await api.patch(`/house-plans/${plan.planId}`, { name: plan.name.trim(), nameEn: plan.nameEn ?? null });
+    const { data } = await api.patch<HousePlan>(`/house-plans/${plan.planId}`, { floorId });
+    plan.floor = data.floor ?? null;
+    plan.name = data.name;
+    plan.nameEn = data.nameEn ?? null;
   } catch (error) {
-    console.error('Failed to rename house plan', error);
-    $q.notify({ message: t('adminWork.createJob.saveError'), color: 'negative', position: 'top' });
+    console.error('Failed to change house plan floor', error);
+    plan.floorError = isFloorTakenError(error)
+      ? t('components.planPosition.floorTaken')
+      : t('adminWork.createJob.saveError');
   }
 };
 
@@ -1129,7 +1174,7 @@ onMounted(async () => {
     spinnerSize: 70,
     backgroundColor: 'white',
   });
-  await Promise.all([customerStore.fetchCustomers(), branchStore.fetchBranches()]);
+  await Promise.all([customerStore.fetchCustomers(), branchStore.fetchBranches(), inspectionStore.ensureMasterData()]);
   await houseTypeStore.fetchHouseTypes();
 
   // Pre-select job type from route query if available
@@ -1209,6 +1254,8 @@ onMounted(async () => {
         planId: p.planId,
         url: getImageUrl(p.imageUrl) || p.imageUrl,
         name: p.name,
+        nameEn: p.nameEn ?? null,
+        floor: p.floor ?? null,
       }));
     } catch (planError) {
       console.error('Failed to load house plans', planError);
@@ -1481,8 +1528,9 @@ const onSubmit = async () => {
 
       const pendingPlans = housePlans.value.filter((p): p is HousePlanItem & { file: File } => !!p.file);
       for (const plan of pendingPlans) {
+        if (!plan.floor) continue;
         try {
-          await uploadHousePlan(createdJob.jobId, plan.file, plan.name, plan.nameEn);
+          await uploadHousePlan(createdJob.jobId, plan.file, plan.floor.floorId);
         } catch (planError) {
           console.error('Failed to upload house plan', planError);
         }

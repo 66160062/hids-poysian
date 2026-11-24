@@ -14,6 +14,10 @@ export default {
     addressLookupFailed: 'ดึงที่อยู่จากพิกัดไม่สำเร็จ บันทึกเฉพาะพิกัด กรุณากรอกที่อยู่เอง',
   },
   planPosition: {
+    planFloor: 'ชั้นของแปลน',
+    allFloorsHavePlans: 'ทุกชั้นมีแปลนแล้ว',
+    floorTaken: 'ชั้นนี้มีแปลนแล้ว',
+    noFloor: 'ไม่ระบุชั้น',
     viewButton: 'ดูตำแหน่งในแปลน',
     viewTitle: 'ตำแหน่งในแปลนบ้าน',
     editTitle: 'ระบุตำแหน่งในแปลนบ้าน',
