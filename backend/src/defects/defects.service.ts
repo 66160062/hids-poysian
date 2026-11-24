@@ -256,6 +256,7 @@ export class DefectsService {
         'subCategories',
         'inspector',
         'plan',
+        'plan.floor',
       ],
     });
   }
@@ -272,6 +273,7 @@ export class DefectsService {
         'subCategories.category',
         'inspector',
         'plan',
+        'plan.floor',
       ],
     });
   }
@@ -517,6 +519,7 @@ export class DefectsService {
     'subRoom',
     'floor',
     'plan',
+    'plan.floor',
   ];
 
   findByRound(roundId: number) {

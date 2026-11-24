@@ -1,15 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateHousePlanDto {
   @ApiProperty({
-    description: 'ชื่อแปลน (เช่น แปลนชั้น 1, แปลนชั้น 2)',
+    description: 'ชื่อแปลน (ไม่ใช้เมื่อระบุ floorId)',
     example: 'แปลนชั้น 1',
+    required: false,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   @MaxLength(255)
-  name!: string;
+  name?: string;
 
   @ApiProperty({
     description: 'ชื่อแปลนภาษาอังกฤษ (optional)',
@@ -20,4 +22,14 @@ export class UpdateHousePlanDto {
   @IsString()
   @MaxLength(255)
   nameEn?: string | null;
+
+  @ApiProperty({
+    description: 'ย้ายแปลนไปชั้นนี้ (ชื่อแปลนจะถูกตั้งตามชั้น)',
+    example: 2,
+    required: false,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  floorId?: number;
 }

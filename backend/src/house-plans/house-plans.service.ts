@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -49,6 +50,27 @@ export class HousePlansService {
     return plan;
   }
 
+  planNamesFor(floor: Floor): { name: string; nameEn: string | null } {
+    return {
+      name: `แปลน${floor.label}`,
+      nameEn: floor.labelEn ? `${floor.labelEn} Plan` : null,
+    };
+  }
+
+  // หนึ่งงานตรวจมีได้หนึ่งแปลนต่อชั้น (ไม่มี unique index ใน DB เพราะ production ปิด synchronize)
+  private async assertFloorFree(
+    jobId: number,
+    floorId: number,
+    excludePlanId?: number,
+  ): Promise<void> {
+    const existing = await this.housePlansRepo.findOne({
+      where: { job: { jobId }, floor: { floorId } },
+    });
+    if (existing && existing.planId !== excludePlanId) {
+      throw new ConflictException('ชั้นนี้มีแปลนแล้ว');
+    }
+  }
+
   async create(
     jobId: number,
     file: Express.Multer.File | undefined,
@@ -63,13 +85,11 @@ export class HousePlansService {
       throw new NotFoundException(`ไม่พบข้อมูลงานตรวจ (ID: ${jobId})`);
     }
 
-    let floor: Floor | null = null;
-    if (dto.floorId) {
-      floor = await this.floorRepo.findOneBy({ floorId: dto.floorId });
-      if (!floor) {
-        throw new NotFoundException(`ไม่พบข้อมูลชั้น (ID: ${dto.floorId})`);
-      }
+    const floor = await this.floorRepo.findOneBy({ floorId: dto.floorId });
+    if (!floor) {
+      throw new NotFoundException(`ไม่พบข้อมูลชั้น (ID: ${dto.floorId})`);
     }
+    await this.assertFloorFree(jobId, floor.floorId);
 
     const imageUrl = await this.storageService.uploadImage(
       file.buffer,
@@ -77,8 +97,7 @@ export class HousePlansService {
     );
 
     const plan = this.housePlansRepo.create({
-      name: dto.name,
-      nameEn: dto.nameEn ?? null,
+      ...this.planNamesFor(floor),
       imageUrl,
       orderIndex: dto.orderIndex ?? 0,
       job,
@@ -90,8 +109,18 @@ export class HousePlansService {
 
   async update(planId: number, dto: UpdateHousePlanDto): Promise<HousePlan> {
     const plan = await this.findOne(planId);
-    plan.name = dto.name;
-    if (dto.nameEn !== undefined) plan.nameEn = dto.nameEn;
+    if (dto.floorId !== undefined) {
+      const floor = await this.floorRepo.findOneBy({ floorId: dto.floorId });
+      if (!floor) {
+        throw new NotFoundException(`ไม่พบข้อมูลชั้น (ID: ${dto.floorId})`);
+      }
+      await this.assertFloorFree(plan.job.jobId, floor.floorId, planId);
+      plan.floor = floor;
+      Object.assign(plan, this.planNamesFor(floor));
+    } else {
+      if (dto.name !== undefined) plan.name = dto.name;
+      if (dto.nameEn !== undefined) plan.nameEn = dto.nameEn;
+    }
     return this.housePlansRepo.save(plan);
   }
 
