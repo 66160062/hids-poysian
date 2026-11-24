@@ -14,6 +14,7 @@ import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round
 import { Assignment } from 'src/assignments/entities/assignment.entity';
 import { InspectionTeamMember } from 'src/inspection-team-members/entities/inspection-team-member.entity';
 import { User } from 'src/users/entities/user.entity';
+import * as bcrypt from 'bcrypt';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -208,6 +209,38 @@ describe('AuthService', () => {
       has_contractor: true,
       token: 'tok',
     });
+  });
+
+  it('logs in by loading the password hash explicitly, since the column is select: false', async () => {
+    const hash = await bcrypt.hash('secret123', 4);
+    const usersService = {
+      findByEmailWithPassword: jest.fn().mockResolvedValue({
+        id: 3,
+        email: 'inspector@example.com',
+        role: 'inspector',
+        password: hash,
+      }),
+    };
+    jwtService.signAsync.mockResolvedValue('signed');
+    const loginService = new AuthService(
+      usersService as unknown as UsersService,
+      jwtService as never,
+      jobsRepo as never,
+      assignmentsRepo as never,
+      teamMembersRepo as never,
+      authUsersRepo as never,
+    );
+
+    const result = await loginService.login('inspector@example.com', 'secret123');
+
+    expect(usersService.findByEmailWithPassword).toHaveBeenCalledWith(
+      'inspector@example.com',
+    );
+    expect(result.access_token).toBe('signed');
+    expect(result.user).not.toHaveProperty('password');
+    await expect(
+      loginService.login('inspector@example.com', 'wrong'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('creates a real JWT that expires in 1 year for customer links', async () => {

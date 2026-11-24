@@ -2,7 +2,7 @@
   <q-card flat bordered class="rounded-borders bg-white q-pa-sm cursor-pointer" @click="$emit('click')">
     <div class="row no-wrap q-gutter-x-md">
       <div class="image-wrapper">
-        <q-img v-if="defect.imageUrl" loading="eager" :src="getImageUrl(defect.imageUrl) ?? undefined" class="defect-img rounded-borders" />
+        <q-img v-if="defect.imageUrl" loading="lazy" :src="getImageUrl(defect.imageUrl) ?? undefined" class="defect-img rounded-borders" />
         <div v-else class="defect-img-placeholder row items-center justify-center bg-grey-2 rounded-borders defect-img">
           <q-icon name="image_not_supported" size="48px" color="grey-5" />
         </div>
@@ -111,15 +111,13 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { thumbUrl } from 'src/utils/thumb';
 
 const { t } = useI18n();
 const expanded = ref(false);
 
-const getImageUrl = (path: string | null | undefined): string | null => {
-  if (!path) return null;
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-  return path.startsWith('http') ? path : `${baseUrl}${path}`;
-};
+// การ์ดแสดงรูปกว้างไม่กี่ร้อย px ใช้รูปย่อ 400px แทนต้นฉบับ 1920px
+const getImageUrl = (path: string | null | undefined): string | null => thumbUrl(path);
 // เพิ่มฟังก์ชันสำหรับจัดการข้อมูลสถานะ
 function statusInfo(status: string) {
   if (status === 'verified') {

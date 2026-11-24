@@ -5,6 +5,7 @@ import {
   DeleteDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { InspectionRound } from 'src/inspection-rounds/entities/inspection-round.entity';
 import { User } from 'src/users/entities/user.entity';
@@ -15,14 +16,17 @@ export class InspectionTeamMember {
   @PrimaryGeneratedColumn()
   id!: number;
 
+  @Index()
   @ManyToOne(() => InspectionRound)
   @JoinColumn({ name: 'round_id' })
   round: InspectionRound;
 
+  @Index()
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'inspector_id' })
   inspector!: User | null;
 
+  @Index()
   @ManyToOne(() => Team, { nullable: true })
   @JoinColumn({ name: 'team_id' })
   team!: Team | null;

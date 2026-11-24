@@ -8,6 +8,7 @@ import {
   JoinColumn,
   CreateDateColumn,
   DeleteDateColumn,
+  Index,
 } from 'typeorm';
 @Entity()
 export class User {
@@ -26,7 +27,8 @@ export class User {
   @Column({ nullable: true, default: '' })
   lineId!: string;
 
-  @Column()
+  // ไม่ดึง hash มาโดยอัตโนมัติ (เดิมหลุดไปใน response ของ defect ทุกตัว) ตอน login ใช้ findByEmailWithPassword
+  @Column({ select: false })
   password!: string;
 
   @Column()
@@ -55,6 +57,7 @@ export class User {
   @Column({ name: 'team_id', nullable: true })
   teamId!: number | null;
 
+  @Index()
   @ManyToOne(() => Team, { nullable: true })
   @JoinColumn({ name: 'team_id' })
   team!: Team | null;

@@ -15,7 +15,13 @@ declare module 'vue' {
 // good idea to move this instance creation inside of the
 // "export default () => {}" function below (which runs individually
 // for each client)
- const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
+// timeout สำหรับ flow ตรวจหน้างาน (สัญญาณอ่อน) ไม่ให้ request ค้างตลอดกาล: loader ไม่หาย, การ์ดค้าง "กำลังบันทึก"
+// ใส่เป็นราย request ไม่ตั้งเป็นค่า default เพราะบาง request ใช้เวลานานโดยธรรมชาติ (สร้าง PDF/AI, อัปโหลดแปลน)
+export const REQUEST_TIMEOUT_MS = 20_000;
+// อัปโหลดรูปผ่าน 4G ช้าใช้เวลานานกว่า request ทั่วไป
+export const UPLOAD_TIMEOUT_MS = 60_000;
+
+const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 
 export default defineBoot(({ app }) => {
   // ⭐ เพิ่ม Request Interceptor (แนบ JWT Token)

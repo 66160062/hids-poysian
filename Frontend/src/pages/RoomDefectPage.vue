@@ -284,21 +284,15 @@ const roomDefects = computed<Defect[]>(() => {
   return group?.defects ?? [];
 });
 
-// defect ที่กำลังบันทึกใหม่เบื้องหลัง (ยังไม่มีใน store.defects จนกว่า fetchDefects จะดึงของจริงมา)
-// match ด้วย room/subRoom/floor เทียบกับ defect ตัวแรกในกลุ่มนี้ เพราะกลุ่มถูกสร้างจากห้อง/ชั้นเดียวกัน
-const pendingCreateCards = computed<Defect[]>(() => {
-  const ref = roomDefects.value[0];
-  if (!ref) return [];
-  return Object.values(store.defectSyncState)
+// defect ที่กำลังบันทึกใหม่เบื้องหลัง (ยังไม่มีใน store.defects จนกว่า backend จะตอบกลับ)
+// จับคู่ด้วย group key เดียวกับที่ store ใช้จัดกลุ่ม จึงขึ้นได้แม้เป็น defect แรกของห้อง
+// (เดิมเทียบกับ defect ตัวแรกในกลุ่ม ห้องที่ยังไม่มี defect จึงไม่เห็นการ์ดที่กำลังบันทึกเลย)
+const pendingCreateCards = computed<Defect[]>(() =>
+  Object.values(store.defectSyncState)
     .filter((entry) => entry.isCreate && entry.previewDefect)
     .map((entry) => entry.previewDefect!)
-    .filter(
-      (p) =>
-        (p.room?.roomId ?? null) === (ref.room?.roomId ?? null) &&
-        (p.subRoom?.subRoomId ?? null) === (ref.subRoom?.subRoomId ?? null) &&
-        (p.floor?.floorId ?? null) === (ref.floor?.floorId ?? null),
-    );
-});
+    .filter((p) => store.groupKeyOf(p) === groupKey),
+);
 
 // ── Filter state ──────────────────────────────────────────────
 

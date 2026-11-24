@@ -831,7 +831,7 @@ onMounted(async () => {
     backgroundColor: 'white',
   });
   try {
-    await Promise.all([fetchTemplates(), fetchSummaryItems(), fetchLockState()]);
+    await Promise.all([fetchTemplates(), fetchSummaryItems(), fetchLockState({ fresh: true })]);
   } finally {
     $q.loading.hide();
   }

@@ -166,6 +166,14 @@ const GROUP_BY_OPTIONS = computed(() => [
 // ── Lifecycle ─────────────────────────────────────────────────
 
 onMounted(async () => {
+  // กลับมาจากหน้าเพิ่ม/แก้ defect: แสดง list เดิมใน store ทันที แล้ว refresh เบื้องหลัง
+  // (เดิมขึ้น loader เต็มจอ + ดึงทั้งรอบใหม่ทุกครั้งที่ย้อนกลับ) โหลดแบบเต็มเฉพาะครั้งแรกของรอบ
+  void store.ensureMasterData().catch(() => undefined); // อุ่น cache ไว้ให้หน้าเพิ่ม defect เปิดได้ทันที
+  if (store.hasDefectsFor(roundId)) {
+    void store.fetchDefects(roundId, { background: true });
+    void fetchLockState();
+    return;
+  }
   $q.loading.show({
     spinner: inspectionSpinner,
     spinnerColor: 'primary',

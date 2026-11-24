@@ -146,7 +146,7 @@
                 >
                   <span class="plan-thumb-frame">
                     <img
-                      :src="formatImageUrl(plan.imageUrl)"
+                      :src="thumbUrl(plan.imageUrl) ?? formatImageUrl(plan.imageUrl)"
                       :alt="plan.name"
                       loading="lazy"
                       class="plan-thumb-img"
@@ -380,6 +380,7 @@ import { api } from 'src/boot/axios';
 import IconBounceSpinner from 'src/components/IconBounceSpinner.vue';
 import { defaultPlanNames } from 'src/composables/useDefaultPlanName';
 import type { HousePlan } from 'src/models';
+import { thumbUrl } from 'src/utils/thumb';
 
 const props = withDefaults(
   defineProps<{

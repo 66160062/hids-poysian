@@ -141,7 +141,7 @@
 import { ref, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
-import { useFabricCanvas, type AnnotatorSaveResult } from 'src/composables/useFabricCanvas';
+import { useFabricCanvas } from 'src/composables/useFabricCanvas';
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -153,10 +153,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', val: boolean): void;
-  /** @deprecated Use 'saveResult' instead for full original + edited export */
   (e: 'save', file: Blob): void;
-  /** New: emits original, edited, and annotation data */
-  (e: 'saveResult', result: AnnotatorSaveResult): void;
 }>();
 
 const isOpen = ref(props.modelValue);
@@ -180,7 +177,6 @@ const {
   undo,
   deleteSelected,
   exportAsBlob,
-  exportSaveResult,
 } = useFabricCanvas();
 
 watch(() => props.modelValue, async (newVal) => {
@@ -228,26 +224,18 @@ const handleSave = async () => {
     await applyCrop();
   }
 
-  const result = await exportSaveResult();
-  if (!result) {
-    // Fallback: try legacy single-blob export
-    const blob = await exportAsBlob();
-    if (!blob) {
-      $q.notify({
-        color: 'negative',
-        message: t('components.imageAnnotationDialog.saveError'),
-        icon: 'error',
-      });
-      return;
-    }
-    emit('save', blob);
-    isOpen.value = false;
+  // ส่งแค่รูปที่วาดแล้ว: เดิม export รูปต้นฉบับ + ข้อมูล annotation ด้วย (saveResult)
+  // แต่ไม่เคยถูกส่งขึ้น backend จึงเป็นงานเปล่าที่ทำให้กดบันทึกช้าบนมือถือ
+  const blob = await exportAsBlob();
+  if (!blob) {
+    $q.notify({
+      color: 'negative',
+      message: t('components.imageAnnotationDialog.saveError'),
+      icon: 'error',
+    });
     return;
   }
-
-  // Emit both legacy and new events for backward compatibility
-  emit('save', result.editedBlob);
-  emit('saveResult', result);
+  emit('save', blob);
   isOpen.value = false;
 };
 </script>
