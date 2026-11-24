@@ -842,6 +842,7 @@ import GmailLogo from 'src/assets/Logos/Gmail.png';
 const apiUrl = import.meta.env.VITE_API_URL;
 
 import { useBranchStore } from 'src/stores/useBranch';
+import { formatLocation } from 'src/utils/location';
 const branchStore = useBranchStore();
 // ใช้ข้อมูลสาขาที่มากับ round ก่อน — หน้า print ของ Puppeteer ไม่ได้โหลด branch store ทำให้ footer ว่าง
 const branch = computed(
@@ -1324,7 +1325,7 @@ const majorChunks = computed(() => {
 const allDefectGroups = computed(() => {
   const groups: Record<string, Defect[]> = {};
   props.defects.forEach((defect) => {
-    const key = `${pickLocalized(defect.room?.roomName, defect.room?.roomNameEn) || '-'}, ${pickLocalized(defect.subRoom?.roomName, defect.subRoom?.roomNameEn) || '-'}, ${pickLocalized(defect.floor?.label, defect.floor?.labelEn)}`;
+    const key = getRoomShortName(defect);
     if (!groups[key]) groups[key] = [];
     groups[key].push(defect);
   });
@@ -1590,8 +1591,7 @@ const completionGap = computed(() => {
 });
 
 function getRoomShortName(defect: Defect) {
-  const parts = [pickLocalized(defect.room?.roomName, defect.room?.roomNameEn), pickLocalized(defect.subRoom?.roomName, defect.subRoom?.roomNameEn), pickLocalized(defect.floor?.label, defect.floor?.labelEn)].filter(Boolean);
-  return parts.length ? parts.join(', ') : '-';
+  return formatLocation([pickLocalized(defect.room?.roomName, defect.room?.roomNameEn), pickLocalized(defect.subRoom?.roomName, defect.subRoom?.roomNameEn), pickLocalized(defect.floor?.label, defect.floor?.labelEn)]);
 }
 
 function formatDate(dateStr: string) {

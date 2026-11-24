@@ -261,6 +261,7 @@ import { useInspectionStore } from 'src/stores/useInspection';
 import { useRoundLock } from 'src/composables/useRoundLock';
 import { useInspectionRoutes } from 'src/composables/useInspectionRoutes';
 import { localizedName } from 'src/composables/useLocalizedField';
+import { formatLocation } from 'src/utils/location';
 import type { Defect } from 'src/models';
 
 // ── Route ─────────────────────────────────────────────────────
@@ -421,13 +422,13 @@ function severityColor(s: string): string {
 
 function toCardData(d: Defect) {
   const room = d.room?.roomName ?? '-';
-  const subRoom = d.subRoom?.roomName ?? '-';
+  const subRoom = d.subRoom?.roomName ?? '';
   const floor = d.floor?.label ?? '-';
 
   return {
     defectId: d.defectId,
     imageUrl: d.imageUrl,
-    locationLabel: `${room}, ${subRoom}, ${floor}`,
+    locationLabel: formatLocation([room, subRoom, floor]),
     category: localizedName(d.subCategories[0]?.category) || '-',
     severity: d.severity,
     tags: d.subCategories.map((s) => localizedName(s)),
