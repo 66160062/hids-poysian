@@ -757,9 +757,6 @@ const unansweredCount = computed(() => totalOptions.value - answeredCount.value)
 
 const submitBlockedReason = computed(() => {
   if (templates.value.length === 0) return '';
-  if (unansweredCount.value > 0) {
-    return t('inspection.report.unansweredWarning', { count: unansweredCount.value });
-  }
   if (uploadingCount.value > 0) return t('inspection.report.waitForUploads');
   if (failedUploadCount.value > 0) return t('inspection.report.fixFailedUploads');
   return '';
@@ -797,20 +794,15 @@ async function executeSaveAll() {
 function saveAll() {
   if (!canSubmit.value) return;
 
-  const missingPhotos = templates.value.filter((t) => !isPhotoComplete(t.templateId));
-  if (missingPhotos.length > 0) {
-    $q.notify({
-      type: 'warning',
-      message: t('inspection.report.missingPhotos', { min: MIN_PHOTOS, count: missingPhotos.length }),
-      caption: missingPhotos.map((t) => t.label).join(', '),
-    });
-  }
-
   $q.dialog({
     component: ConfirmActionDialog,
     componentProps: {
       title: t('inspection.report.confirmSaveTitle'),
-      message: t('inspection.report.confirmSaveMessage'),
+      message:
+        unansweredCount.value > 0
+          ? `${t('inspection.report.confirmSaveMessage')}
+${t('inspection.report.unansweredHidden', { count: unansweredCount.value })}`
+          : t('inspection.report.confirmSaveMessage'),
       icon: '',
       color: 'primary',
       confirmLabel: t('inspection.report.confirm'),

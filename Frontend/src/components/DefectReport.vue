@@ -553,7 +553,6 @@
                 :src="resolveImageUrl(url, '', 400)"
                 class="summary-evidence-photo"
               />
-              <span v-if="!topic.photos.length" class="summary-muted">{{ t('reports.defect.noEvidencePhotos') }}</span>
             </div>
           </div>
         </div>

@@ -39,6 +39,7 @@ interface SummaryTemplateResponse {
 interface SummaryItemResponse {
   itemId: number
   detailValue?: string
+  photoUrl?: string | null
   template: { templateId: number }
   option: { optionId: number; value: string; group?: string; type: string } | null
 }
@@ -92,6 +93,11 @@ export function useReport() {
         const templateItems = items.filter(
           (i): i is AnswerItemResponse => i.template.templateId === template.templateId && i.option !== null,
         )
+        const hasPhoto = items.some(
+          (i) => i.template.templateId === template.templateId && !!i.photoUrl,
+        )
+        // หัวข้อที่ไม่ได้เลือกตัวเลือกและไม่มีรูป ถือว่ายังไม่ได้กรอก จึงไม่แสดง
+        if (templateItems.length === 0 && !hasPhoto) continue
         const showLabel = groups.size > 1
 
         const fields: ReportField[] = []
