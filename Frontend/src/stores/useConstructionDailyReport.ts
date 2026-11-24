@@ -68,6 +68,14 @@ export interface ConstructionDailyReportResponse {
   images?: { imageUrl: string; caption?: string; imageType?: string }[];
 }
 
+/** ข้อมูลจากรายงานรอบก่อน สำหรับปุ่ม "ใช้ข้อมูลจากรอบก่อน" */
+export interface PreviousRoundCrew {
+  workingPeriod: string | null;
+  weather: string | null;
+  personnels: PersonnelPayload[];
+  machines: MachinePayload[];
+}
+
 export interface ExtendedConstructionReport extends ConstructionDailyReportResponse {
   round?: {
     roundNumber: number;
@@ -137,11 +145,24 @@ export const useConstructionDailyReportStore = defineStore('constructionDailyRep
     }
   }
 
+  /** null = ไม่มีรายงานรอบก่อน หรือโหลดไม่ได้ (เช่น ออฟไลน์) */
+  async function fetchPreviousCrew(roundId: number): Promise<PreviousRoundCrew | null> {
+    try {
+      const { data } = await api.get<PreviousRoundCrew | null>(
+        `/construction-daily-reports/round/${roundId}/previous-crew`,
+      );
+      return data || null;
+    } catch {
+      return null;
+    }
+  }
+
   return {
     isSubmitting,
     submitError,
     submitReport,
     fetchReportByRound,
     fetchPreviousWorkItems,
+    fetchPreviousCrew,
   };
 });

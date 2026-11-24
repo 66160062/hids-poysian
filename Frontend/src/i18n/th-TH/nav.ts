@@ -41,6 +41,7 @@ export default {
     headerReport: 'สรุปรายงาน',
     headerInspection: 'ดำเนินการตรวจ',
     headerDetail: 'รายละเอียด',
+    headerConstructionReport: 'รายงานประจำวัน',
     headerConstruction: 'การตรวจก่อสร้าง',
     headerDefault: 'ระบบตรวจบ้าน',
     roomDefectFallback: 'รายการ Defect',

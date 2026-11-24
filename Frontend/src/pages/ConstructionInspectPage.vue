@@ -1,1322 +1,443 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header v-if="route.path.includes('/admin')" class="bg-white" flat bordered>
-      <div class="row items-center q-pt-md q-pb-sm q-px-md relative-position">
-        <q-btn flat round dense icon="arrow_back_ios_new" color="primary" @click="router.back()" />
-        <div class="text-h6 text-weight-bold q-ml-sm text-primary">{{ t('construction.inspect.headerTitleEdit') }}</div>
+    <q-header v-if="isAdmin" class="bg-white" bordered>
+      <div class="row items-center q-py-sm q-px-sm">
+        <q-btn flat round icon="arrow_back_ios_new" color="primary" class="cr-tap" :aria-label="t('construction.report.back')" @click="router.back()" />
+        <div class="text-h6 text-weight-bold q-ml-xs text-primary">{{ t('construction.inspect.headerTitleEdit') }}</div>
       </div>
     </q-header>
 
     <q-page-container>
-      <q-page class="q-pa-md bg-grey-1 modern-font row justify-center" style="padding-bottom: 80px">
-        <div class="detail-content">
-        <!-- 1. ข้อมูลทั่วไป -->
-        <q-card flat bordered class="q-mb-md ui-card">
-          <q-card-section class="q-pa-sm bg-grey-2 text-primary text-weight-bold row items-center">
-            <q-icon name="info" size="20px" class="q-mr-xs" />
-            {{ t('construction.inspect.generalInfoTitle') }}
-          </q-card-section>
-          <q-card-section class="q-pa-md column q-gutter-y-sm">
-            <div class="row q-col-gutter-sm">
-              <div class="col-6">
-                <div class="text-caption text-grey-8 q-mb-xs">{{ t('construction.inspect.startTime') }}</div>
-                <q-input type="time" outlined dense v-model="form.startTime" bg-color="white" hide-bottom-space>
-                  <template v-slot:append>
-                    <q-btn flat dense color="primary" :label="t('construction.inspect.now')" size="sm" @click="setCurrentTime('startTime')" />
-                  </template>
-                </q-input>
-              </div>
-              <div class="col-6">
-                <div class="text-caption text-grey-8 q-mb-xs">{{ t('construction.inspect.endTime') }}</div>
-                <q-input type="time" outlined dense v-model="form.endTime" bg-color="white" hide-bottom-space>
-                  <template v-slot:append>
-                    <q-btn flat dense color="primary" :label="t('construction.inspect.now')" size="sm" @click="setCurrentTime('endTime')" />
-                  </template>
-                </q-input>
-              </div>
-            </div>
+      <q-page class="cr-page">
+        <div class="cr-content">
+          <ReportStepNav :steps="navSteps" :current="step" @go="goTo" />
 
-            <div class="text-caption text-grey-8 q-mt-sm">{{ t('construction.inspect.weather') }}</div>
-            <q-btn-toggle
-              v-model="form.weather"
-              spread
-              no-caps
-              rounded
-              unelevated
-              toggle-color="primary"
-              color="white"
-              text-color="grey-8"
-              :options="[
-                { label: t('construction.inspect.weatherSunny'), value: 'Sunny' },
-                { label: t('construction.inspect.weatherCloudy'), value: 'Cloudy' },
-                { label: t('construction.inspect.weatherRainy'), value: 'Rainy' },
-                { label: t('construction.inspect.weatherStormy'), value: 'Stormy' },
-              ]"
-              class="q-mt-xs"
-              style="border: 1px solid #e0e0e0; border-radius: 8px;"
-            />
-          </q-card-section>
-        </q-card>
-
-        <!-- 2. รายละเอียดงานที่ปฏิบัติ -->
-        <q-card flat bordered class="q-mb-md ui-card">
-          <q-card-section class="q-pa-sm bg-grey-2 text-dark text-weight-bold row items-center">
-            <q-icon name="grid_on" size="18px" class="q-mr-xs text-primary" />
-            {{ t('construction.inspect.workDetailsTitle') }}
-            <q-space />
-            <span v-if="workDetails.length > 0" class="text-caption text-primary bg-blue-1 q-px-sm" style="border-radius: 4px;">{{ workSummary }}</span>
-          </q-card-section>
-          <q-list separator>
-            <!-- แถบแจ้งว่าดึงจากรอบก่อน -->
-            <q-item v-if="isCarriedForward && workDetails.length > 0" class="bg-amber-1">
-              <q-item-section>
-                <q-item-label class="text-weight-medium text-amber-9 row items-center" style="font-size: 12px;">
-                  <q-icon name="history" size="16px" class="q-mr-xs" />
-                  {{ t('construction.inspect.carriedFromPrevious') }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-
-            <!-- ส่วนที่เพิ่มข้อมูลเข้ามาแล้ว (กดเพื่อแก้ไขได้) -->
-            <q-item v-for="work in workDetails" :key="work.id" clickable v-ripple @click="editWorkDetail(work.id)" class="bg-white">
-              <q-item-section>
-                <q-item-label class="text-weight-bold text-primary">
-                  {{ work.name }}
-                  <q-badge v-if="work.needsUpdate" color="warning" text-color="dark" class="q-ml-sm">
-                    {{ t('construction.inspect.pendingUpdate') }}
-                  </q-badge>
-                </q-item-label>
-                <q-item-label caption>{{ t('construction.inspect.locationLabel') }}: {{ work.location ? roomLabel(work.location) : '-' }} | {{ t('construction.inspect.unitLabel') }}: {{ work.unit ? unitLabel(work.unit) : '-' }}</q-item-label>
-                <q-item-label caption>
-                  {{ t('construction.inspect.actualLabel') }}: 
-                  <span v-if="work.actual !== null">{{ work.actual }}%</span>
-                  <span v-else class="text-warning text-weight-bold">{{ t('construction.inspect.pendingUpdate') }}</span>
-                </q-item-label>
-                <q-item-label v-if="work.previousPercent !== undefined" caption class="text-amber-9">
-                  {{ t('construction.inspect.previousPercent', { percent: work.previousPercent }) }}
-                </q-item-label>
-              </q-item-section>
-              <q-item-section side class="row items-center q-pa-none">
-                <q-btn flat round dense icon="edit" color="primary" size="sm" @click.stop="editWorkDetail(work.id)" class="q-mr-xs" />
-                <q-btn flat round dense icon="delete" color="negative" size="sm" @click.stop="removeWork(work.id)" />
-              </q-item-section>
-            </q-item>
-
-            <!-- ปุ่มกดเพิ่มข้อมูล -->
-            <q-item clickable v-ripple @click="addWorkDetail" class="bg-white">
-              <q-item-section class="text-primary text-weight-medium">{{ t('construction.inspect.addWorkDetail') }}</q-item-section>
-              <q-item-section side>
-                <q-icon name="add_circle_outline" color="primary" size="24px" />
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-card>
-
-        <!-- 3. รายละเอียดผู้มีส่วนเกี่ยวข้อง -->
-        <q-card flat bordered class="q-mb-md ui-card">
-          <q-card-section class="q-pa-sm bg-grey-2 text-dark text-weight-bold row items-center">
-            <q-icon name="people" size="18px" class="q-mr-xs text-primary" />
-            {{ t('construction.inspect.relatedPersonsTitle') }}
-          </q-card-section>
-          <div class="row">
-            <!-- ซ้าย: บุคลากร -->
-            <div class="col-6" style="border-right: 1px solid #e0e0e0;">
-              <div class="row items-center justify-center q-pa-sm bg-blue-1 text-blue-9 text-weight-bold" style="font-size: 13px;">
-                {{ t('construction.inspect.personnelTitle') }}
-                <q-space />
-                <span v-if="personnelList.length > 0" class="text-caption text-weight-regular">{{ personnelSummary }}</span>
-              </div>
-              <q-list separator>
-                <q-item v-for="p in personnelList" :key="p.id" class="bg-white q-pa-sm">
-                  <q-item-section>
-                    <q-item-label class="text-weight-bold" style="font-size: 12px;">{{ translatePersonnelType(p.name) }}</q-item-label>
-                    <q-item-label caption v-if="p.hours" style="font-size: 11px;">{{ t('construction.inspect.timeHoursLabel', { hours: p.hours }) }}</q-item-label>
-                  </q-item-section>
-                  <q-item-section side class="row items-center q-pa-none">
-                    <div class="row items-center">
-                      <q-badge color="blue-8" class="q-mr-xs">{{ p.count }}</q-badge>
-                      <q-btn flat round dense icon="delete" color="negative" size="sm" @click="removePersonnel(p.id)" />
-                    </div>
-                  </q-item-section>
-                </q-item>
-
-                <q-item clickable v-ripple @click="addPersonnel" class="bg-white q-pa-sm justify-center">
-                  <q-item-section avatar class="min-width-0 q-pr-none">
-                    <q-icon name="add_circle_outline" color="blue-8" size="20px" />
-                  </q-item-section>
-                  <q-item-section class="text-blue-8 text-weight-medium" style="font-size: 12px;">{{ t('construction.inspect.addPersonnel') }}</q-item-section>
-                </q-item>
-              </q-list>
-            </div>
-
-            <!-- ขวา: คนงาน -->
-            <div class="col-6">
-              <div class="row items-center justify-center q-pa-sm bg-orange-1 text-orange-9 text-weight-bold" style="font-size: 13px;">
-                {{ t('construction.inspect.workerTitle') }}
-                <q-space />
-                <span v-if="workerList.length > 0" class="text-caption text-weight-regular">{{ workerSummary }}</span>
-              </div>
-              <q-list separator>
-                <q-item v-for="w in workerList" :key="w.id" class="bg-white q-pa-sm">
-                  <q-item-section>
-                    <q-item-label class="text-weight-bold" style="font-size: 12px;">{{ translatePersonnelType(w.name) }}</q-item-label>
-                    <q-item-label caption v-if="w.hours" style="font-size: 11px;">{{ t('construction.inspect.timeHoursLabel', { hours: w.hours }) }}</q-item-label>
-                  </q-item-section>
-                  <q-item-section side class="row items-center q-pa-none">
-                    <div class="row items-center">
-                      <q-badge color="orange-8" class="q-mr-xs">{{ w.count }}</q-badge>
-                      <q-btn flat round dense icon="delete" color="negative" size="sm" @click="removeWorker(w.id)" />
-                    </div>
-                  </q-item-section>
-                </q-item>
-
-                <q-item clickable v-ripple @click="addWorker" class="bg-white q-pa-sm justify-center">
-                  <q-item-section avatar class="min-width-0 q-pr-none">
-                    <q-icon name="add_circle_outline" color="orange-8" size="20px" />
-                  </q-item-section>
-                  <q-item-section class="text-orange-8 text-weight-medium" style="font-size: 12px;">{{ t('construction.inspect.addWorker') }}</q-item-section>
-                </q-item>
-              </q-list>
-            </div>
+          <div v-if="!isOnline" class="cr-banner cr-banner--offline q-mt-sm" role="status">
+            <q-icon name="cloud_off" size="20px" aria-hidden="true" />
+            <span>{{ t('construction.report.offline') }}</span>
           </div>
-        </q-card>
-
-        <!-- 4. เครื่องจักร/อุปกรณ์ -->
-        <q-card flat bordered class="q-mb-md ui-card">
-          <q-card-section class="q-pa-sm bg-grey-2 text-dark text-weight-bold row items-center">
-            <q-icon name="construction" size="18px" class="q-mr-xs text-teal-8" />
-            {{ t('construction.inspect.machineTitle') }}
-          </q-card-section>
-          <q-list separator>
-            <q-item v-for="m in machineList" :key="m.id" class="bg-white">
-              <q-item-section>
-                <q-item-label class="text-weight-bold text-teal-8">{{ m.name }}</q-item-label>
-                <q-item-label caption>{{ t('construction.inspect.machineDetail', { size: m.size || '-', quantity: m.quantity, hours: m.hours ?? '-' }) }}</q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-btn flat round dense icon="delete" color="negative" size="sm" @click="removeMachine(m.id)" />
-              </q-item-section>
-            </q-item>
-
-            <q-item clickable v-ripple @click="addMachine" class="bg-white">
-              <q-item-section class="text-teal-8 text-weight-medium">{{ t('construction.inspect.addMachine') }}</q-item-section>
-              <q-item-section side>
-                <q-icon name="add_circle_outline" color="teal-8" size="24px" />
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-card>
-
-        <!-- 5. รายงานอุบัติเหตุ -->
-        <q-card flat bordered class="q-mb-md ui-card">
-          <q-card-section class="q-pa-sm bg-grey-2 text-dark text-weight-bold row items-center">
-            <q-icon name="health_and_safety" size="18px" class="q-mr-xs text-red-8" />
-            {{ t('construction.inspect.accidentTitle') }}
-            <q-space />
-            <span v-if="accidentList.length > 0" class="text-caption text-red-8 bg-red-1 q-px-sm" style="border-radius: 4px;">{{ accidentSummary }}</span>
-          </q-card-section>
-          <q-list separator>
-            <q-item v-for="a in accidentList" :key="a.id" class="bg-white">
-              <q-item-section>
-                <q-item-label class="text-weight-bold text-red-8">{{ t('construction.inspect.accidentOccurred') }}</q-item-label>
-                <q-item-label caption>{{ t('construction.inspect.accidentCountLine', { count: a.count }) }}</q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-btn flat round dense icon="delete" color="negative" size="sm" @click="removeAccident(a.id)" />
-              </q-item-section>
-            </q-item>
-
-            <q-item clickable v-ripple @click="addAccident" class="bg-white">
-              <q-item-section class="text-red-8 text-weight-medium">{{ t('construction.inspect.addAccident') }}</q-item-section>
-              <q-item-section side>
-                <q-icon name="add_circle_outline" color="red-8" size="24px" />
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-card>
-
-        <!-- 6. รายงานเพิ่มเติมหรือปัญหาในการทำงาน -->
-        <q-card flat bordered class="q-mb-md ui-card">
-          <q-card-section class="q-pa-sm bg-grey-2 text-dark text-weight-bold row items-center">
-            <q-icon name="report_problem" size="18px" class="q-mr-xs text-primary" />
-            {{ t('construction.inspect.notesTitle') }}
-          </q-card-section>
-          <q-list separator>
-            <q-item v-for="note in notesList" :key="note.id" class="bg-white">
-              <q-item-section>
-                <q-item-label>{{ note.text }}</q-item-label>
-                <q-item-label caption class="text-orange-8 text-weight-bold">{{ t('construction.inspect.noteStatusLabel', { status: note.status }) }}</q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-btn flat round dense icon="delete" color="negative" size="sm" @click="removeNote(note.id)" />
-              </q-item-section>
-            </q-item>
-
-            <q-item clickable v-ripple @click="addAdditionalNote" class="bg-white">
-              <q-item-section class="text-primary text-weight-medium">{{ t('construction.inspect.addNote') }}</q-item-section>
-              <q-item-section side>
-                <q-icon name="add_circle_outline" color="primary" size="24px" />
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-card>
-
-        <!-- 7. PROJECT PHOTOS -->
-        <div class="text-subtitle2 text-weight-bold row items-center q-mb-sm text-uppercase text-dark">
-          <q-icon name="photo_camera" size="20px" class="q-mr-xs text-primary" />
-          PROJECT PHOTOS
-        </div>
-
-        <!-- กล่องอัปโหลด Panorama -->
-        <div class="q-mb-md">
-          <div class="text-caption text-weight-bold q-mb-xs text-grey-8">{{ t('construction.inspect.panoramaLabel') }}</div>
-          <q-card flat bordered class="upload-box flex flex-center relative-position" style="min-height: 120px; overflow: hidden;" clickable v-ripple @click="triggerPanoramaInput">
-            <template v-if="panoramaPreview">
-              <q-img :src="panoramaPreview" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;" />
-              <q-btn
-                round
-                color="negative"
-                icon="close"
-                size="sm"
-                class="absolute-top-right q-ma-xs shadow-2"
-                @click.stop.prevent="removePanorama"
-                style="z-index: 10;"
-              />
-            </template>
-            <template v-else>
-              <div class="column items-center text-grey-6">
-                <q-icon name="panorama" size="32px" color="primary" />
-                <div class="text-caption text-weight-medium q-mt-xs text-primary" style="font-size: 10px;">PRIMARY PANORAMA VIEW (REQUIRED)</div>
-              </div>
-            </template>
-          </q-card>
-        </div>
-        <!-- ซ่อน Input สำหรับอัปโหลด Panorama ไว้ -->
-        <input type="file" accept="image/*" ref="panoramaInput" style="display: none" @change="onPanoramaUpload" />
-
-        <!-- PROJECT PHOTOS: Single 6-slot (or more) Grid -->
-        <!-- PROJECT PHOTOS: Single 6-slot (or more) Grid -->
-        <div class="q-mb-lg">
-          <div class="text-subtitle2 text-weight-bold q-mb-sm text-dark text-uppercase">{{ t('construction.inspect.projectPhotos') }}</div>
-          <div class="row q-col-gutter-sm">
-            <div class="col-6" v-for="(item, index) in gridItems" :key="index">
-              
-              <!-- Case: Photo -->
-              <template v-if="item.type === 'photo' && item.photo">
-                <q-card flat bordered class="q-pa-xs bg-white h-100 relative-position">
-                  <q-img :src="item.photo.preview" style="height: 120px; border-radius: 4px;" fit="cover" />
-                  
-                  <!-- ปุ่มลบ (กากบาท) มุมขวาบน -->
-                  <q-btn round dense color="negative" icon="close" size="sm" class="absolute-top-right q-ma-xs shadow-2" @click.stop.prevent="removePhoto(item.photo.id)" style="z-index: 10;" />
-                  
-                  <!-- Tag ชื่องาน มุมซ้ายล่าง -->
-                  <div class="absolute-bottom-left q-pa-xs" style="z-index: 5;">
-                    <q-badge color="primary" text-color="white" style="opacity: 0.9;">
-                      {{ item.workName }}
-                    </q-badge>
-                  </div>
-                </q-card>
-              </template>
-
-              <!-- Case: Add Button -->
-              <template v-else-if="item.type === 'add_button'">
-                <q-card flat bordered class="upload-box flex flex-center full-height bg-blue-50" style="min-height: 120px; border: 2px dashed #1976D2;" clickable v-ripple @click="triggerFileInput(item.workName || undefined)">
-                  <div class="column items-center text-center q-pa-sm">
-                    <q-icon name="add_a_photo" size="28px" color="primary" />
-                    <div class="text-caption text-weight-bold q-mt-xs text-primary" style="font-size: 12px; line-height: 1.2;">
-                      {{ t('construction.inspect.addPhotoFor', { name: item.workName }) }}
-                    </div>
-                  </div>
-                </q-card>
-              </template>
-
-              <!-- Case: Empty Slot -->
-              <template v-else>
-                <q-card flat bordered class="flex flex-center full-height bg-grey-2" style="min-height: 120px; border: 1px dashed #e0e0e0; opacity: 0.5;">
-                  <q-icon name="photo" size="24px" color="grey-4" />
-                </q-card>
-              </template>
-
-            </div>
+          <div v-if="restoredDraftAt" class="cr-banner cr-banner--info q-mt-sm" role="status">
+            <q-icon name="restore" size="20px" aria-hidden="true" />
+            <span class="col">{{ t('construction.report.draft.restored', { time: formatTime(restoredDraftAt) }) }}</span>
+            <q-btn flat dense no-caps color="primary" class="cr-fix-btn" :label="t('construction.report.draft.discard')" @click="confirmDiscard" />
           </div>
-        </div>
 
-        <input type="file" ref="fileInput" accept="image/*" style="display: none" @change="handleFileChange" />
-
+          <div class="q-mt-md">
+            <StepGeneral v-if="currentKey === 'general'" />
+            <StepWork v-else-if="currentKey === 'work'" />
+            <StepCrew v-else-if="currentKey === 'crew'" />
+            <StepSafety v-else-if="currentKey === 'safety'" />
+            <StepPhotos v-else-if="currentKey === 'photos'" />
+            <StepReview v-else @go="goTo" />
+          </div>
         </div>
       </q-page>
     </q-page-container>
 
-    <q-footer class="bg-transparent q-px-md q-pb-lg row justify-center">
-      <q-btn
-        color="primary"
-        :label="route.path.includes('/admin') ? t('construction.inspect.submitEdit') : t('construction.inspect.submitDaily')"
-        class="full-width text-weight-bold shadow-3 footer-btn"
-        style="border-radius: 8px; height: 48px; font-size: 16px;"
-        :loading="store.isSubmitting"
-        :disable="store.isSubmitting || (isEditMode && !isFormDirty)"
-        @click="submitReport"
-      />
-    </q-footer>
-
-    <!-- Dialog: เพิ่มรายละเอียดงาน -->
-    <q-dialog v-model="workDialog" position="bottom">
-      <q-card style="width: 100vw; border-radius: 20px 20px 0 0; padding-bottom: 20px;">
-        <q-card-section class="bg-primary text-white row items-center q-pb-sm">
-          <q-icon name="assignment" size="24px" class="q-mr-sm" />
-          <div class="text-h6 text-weight-bold" style="font-size: 18px;">{{ editingWorkId ? t('construction.inspect.editWorkDetail') : t('construction.inspect.addWorkDetail') }}</div>
-          <q-space />
-          <q-btn icon="close" flat round dense v-close-popup />
-        </q-card-section>
-
-        <q-card-section class="q-pt-md column q-gutter-y-md">
-          <q-input
-            outlined
-            v-model="newWork.name"
-            autofocus
-            :label="t('construction.inspect.workNameLabel')"
-            :placeholder="t('construction.inspect.workNamePlaceholder')"
-            bg-color="white"
-            hide-bottom-space
-          />
-
-          <div class="row q-col-gutter-sm">
-            <div class="col-12 col-sm-6">
-              <q-select outlined v-model="newWork.location" :options="roomOptions" emit-value map-options :label="t('construction.inspect.locationSelectLabel')" bg-color="white" />
-            </div>
-            <div class="col-12 col-sm-6">
-              <q-select outlined v-model="newWork.unit" :options="unitOptions" emit-value map-options :label="t('construction.inspect.unitSelectLabel')" bg-color="white" />
-            </div>
-          </div>
-
-          <q-input
-            outlined
-            type="number"
-            v-model.number="newWork.actual"
-            :label="t('construction.inspect.actualPercentLabel')"
-            placeholder="0 - 100"
-            bg-color="white"
-            suffix="%"
-            hide-bottom-space
-          />
-        </q-card-section>
-
-        <q-card-actions class="bg-white q-px-md q-pt-none column">
-          <q-btn unelevated :label="t('construction.inspect.save')" color="primary" @click="saveWork" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-          <q-btn flat :label="t('construction.inspect.cancel')" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
-    <!-- Dialog: เพิ่มบุคลากร/คนงาน -->
-    <q-dialog v-model="personDialog" position="bottom">
-      <q-card style="width: 100vw; border-radius: 20px 20px 0 0; padding-bottom: 20px;">
-        <q-card-section :class="isWorker ? 'bg-orange-8 text-white' : 'bg-blue-8 text-white'">
-          <div class="row items-center">
-            <div class="text-h6">{{ isWorker ? t('construction.inspect.addWorker') : t('construction.inspect.addPersonnel') }}</div>
-            <q-space />
-            <q-btn icon="close" flat round dense v-close-popup />
-          </div>
-        </q-card-section>
-        <q-card-section class="q-pt-md column q-gutter-y-md">
-          <q-select
-            outlined
-            v-model="newPerson.name"
-            :options="isWorker ? workerOptions : personnelOptions"
-            emit-value
-            map-options
-            :label="isWorker ? t('construction.inspect.workerTypeLabel') : t('construction.inspect.personnelPositionLabel')"
-            autofocus
-          />
-          <div class="row items-center justify-between q-mt-sm">
-            <span class="text-subtitle1 text-grey-8 text-weight-bold">{{ t('construction.inspect.peopleCountLabel') }}</span>
-            <div class="row items-center q-gutter-x-sm">
-              <q-btn round flat color="negative" icon="remove_circle" size="lg" @click="newPerson.count > 1 ? newPerson.count-- : 1" />
-              <q-input outlined type="number" v-model.number="newPerson.count" input-class="text-center text-weight-bold text-h6" style="width: 80px;" />
-              <q-btn round flat :color="isWorker ? 'orange-8' : 'blue-8'" icon="add_circle" size="lg" @click="newPerson.count++" />
-            </div>
-          </div>
-          <div class="row items-center justify-between q-mt-sm">
-            <span class="text-subtitle1 text-grey-8 text-weight-bold">{{ t('construction.inspect.workingHoursPerPersonLabel') }}</span>
-            <div class="row items-center q-gutter-x-sm">
-              <q-btn round flat color="negative" icon="remove_circle" size="lg" @click="newPerson.hours = Math.max(0, (newPerson.hours || 0) - 1)" />
-              <q-input outlined type="number" v-model.number="newPerson.hours" input-class="text-center text-weight-bold text-h6" style="width: 80px;" />
-              <q-btn round flat :color="isWorker ? 'orange-8' : 'blue-8'" icon="add_circle" size="lg" @click="newPerson.hours = (newPerson.hours || 0) + 1" />
-            </div>
-          </div>
-        </q-card-section>
-        <q-card-actions class="bg-white q-px-md q-pt-none column">
-          <q-btn unelevated :label="t('construction.inspect.save')" :color="isWorker ? 'orange-8' : 'blue-8'" @click="savePerson" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-          <q-btn flat :label="t('construction.inspect.cancel')" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
-    <!-- Dialog: เพิ่มรายงานเพิ่มเติม -->
-    <q-dialog v-model="noteDialog" position="bottom">
-      <q-card style="width: 100vw; border-radius: 20px 20px 0 0; padding-bottom: 20px;">
-        <q-card-section class="bg-negative text-white">
-          <div class="row items-center">
-            <div class="text-h6">{{ t('construction.inspect.noteDialogTitle') }}</div>
-            <q-space />
-            <q-btn icon="close" flat round dense v-close-popup />
-          </div>
-        </q-card-section>
-        <q-card-section class="q-pt-md column q-gutter-y-md">
-          <q-input outlined v-model="newNote.text" type="textarea" rows="3" :label="t('construction.inspect.noteTextLabel')" autofocus />
-          <div class="text-caption text-grey-8 q-mb-xs">{{ t('construction.inspect.noteStatusCategoryLabel') }}</div>
-          <q-btn-toggle
-            v-model="newNote.status"
-            spread
+    <q-footer class="cr-footer">
+      <div class="cr-footer__inner">
+        <div class="cr-footer__status" role="status" aria-live="polite">
+          <template v-if="draftSaveFailed">
+            <q-icon name="warning" size="14px" color="negative" aria-hidden="true" />
+            <span class="text-negative">{{ t('construction.report.draft.failed') }}</span>
+          </template>
+          <template v-else-if="draftSavedAt">
+            <q-icon name="save" size="14px" aria-hidden="true" />
+            {{ t('construction.report.draft.saved', { time: formatTime(draftSavedAt) }) }}
+          </template>
+        </div>
+        <div class="row no-wrap q-gutter-x-sm">
+          <q-btn
+            v-if="step > 0"
+            outline
             no-caps
-            rounded
-            unelevated
-            toggle-color="negative"
-            color="white"
-            text-color="grey-8"
-            :options="[
-              { label: t('construction.inspect.noteStatusFollowUp'), value: 'ติดตามผล' },
-              { label: t('construction.inspect.noteStatusPending'), value: 'รอดำเนินการ' },
-              { label: t('construction.inspect.noteStatusAcknowledged'), value: 'รับทราบแล้ว' },
-            ]"
-            style="border: 1px solid #e0e0e0; border-radius: 8px;"
+            color="primary"
+            icon="chevron_left"
+            :label="t('construction.report.back')"
+            class="cr-footer__back"
+            @click="goTo(step - 1)"
           />
-        </q-card-section>
-        <q-card-actions class="bg-white q-px-md q-pt-none column">
-          <q-btn unelevated :label="t('construction.inspect.save')" color="negative" @click="saveNote" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-          <q-btn flat :label="t('construction.inspect.cancel')" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
-    <!-- Dialog: เพิ่มเครื่องจักร -->
-    <q-dialog v-model="machineDialog" position="bottom">
-      <q-card style="width: 100vw; border-radius: 20px 20px 0 0; padding-bottom: 20px;">
-        <q-card-section class="bg-teal-8 text-white">
-          <div class="row items-center">
-            <div class="text-h6">{{ t('construction.inspect.addMachine') }}</div>
-            <q-space />
-            <q-btn icon="close" flat round dense v-close-popup />
-          </div>
-        </q-card-section>
-        <q-card-section class="q-pt-md column q-gutter-y-md">
-          <q-input outlined v-model="newMachine.name" :label="t('construction.inspect.machineNameLabel')" :placeholder="t('construction.inspect.machineNamePlaceholder')" autofocus />
-          <q-input outlined v-model="newMachine.size" :label="t('construction.inspect.machineSizeLabel')" :placeholder="t('construction.inspect.machineSizePlaceholder')" />
-          <div class="row items-center justify-between q-mt-sm">
-            <span class="text-subtitle1 text-grey-8 text-weight-bold">{{ t('construction.inspect.machineQuantityLabel') }}</span>
-            <div class="row items-center q-gutter-x-sm">
-              <q-btn round flat color="negative" icon="remove_circle" size="lg" @click="newMachine.quantity > 1 ? newMachine.quantity-- : 1" />
-              <q-input outlined type="number" v-model.number="newMachine.quantity" input-class="text-center text-weight-bold text-h6" style="width: 80px;" />
-              <q-btn round flat color="teal-8" icon="add_circle" size="lg" @click="newMachine.quantity++" />
-            </div>
-          </div>
-          <div class="row items-center justify-between q-mt-sm">
-            <span class="text-subtitle1 text-grey-8 text-weight-bold">{{ t('construction.inspect.machineHoursLabel') }}</span>
-            <div class="row items-center q-gutter-x-sm">
-              <q-btn round flat color="negative" icon="remove_circle" size="lg" @click="newMachine.hours = Math.max(0, (newMachine.hours || 0) - 1)" />
-              <q-input outlined type="number" v-model.number="newMachine.hours" input-class="text-center text-weight-bold text-h6" style="width: 80px;" />
-              <q-btn round flat color="teal-8" icon="add_circle" size="lg" @click="newMachine.hours = (newMachine.hours || 0) + 1" />
-            </div>
-          </div>
-        </q-card-section>
-        <q-card-actions class="bg-white q-px-md q-pt-none column">
-          <q-btn unelevated :label="t('construction.inspect.save')" color="teal-8" @click="saveMachine" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-          <q-btn flat :label="t('construction.inspect.cancel')" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
-    <!-- Dialog: เพิ่มรายงานอุบัติเหตุ -->
-    <q-dialog v-model="accidentDialog" position="bottom">
-      <q-card style="width: 100vw; border-radius: 20px 20px 0 0; padding-bottom: 20px;">
-        <q-card-section class="bg-red-8 text-white">
-          <div class="row items-center">
-            <div class="text-h6">{{ t('construction.inspect.accidentDialogTitle') }}</div>
-            <q-space />
-            <q-btn icon="close" flat round dense v-close-popup />
-          </div>
-        </q-card-section>
-        <q-card-section class="q-pt-md column q-gutter-y-md">
-          <div class="row items-center justify-between">
-            <span class="text-subtitle1 text-grey-8 text-weight-bold">{{ t('construction.inspect.accidentCountLabel') }}</span>
-            <div class="row items-center q-gutter-x-sm">
-              <q-btn round flat color="negative" icon="remove_circle" size="lg" @click="newAccident.count > 1 ? newAccident.count-- : 1" />
-              <q-input outlined type="number" v-model.number="newAccident.count" input-class="text-center text-weight-bold text-h6" style="width: 80px;" />
-              <q-btn round flat color="red-8" icon="add_circle" size="lg" @click="newAccident.count++" />
-            </div>
-          </div>
-        </q-card-section>
-        <q-card-actions class="bg-white q-px-md q-pt-none column">
-          <q-btn unelevated :label="t('construction.inspect.save')" color="red-8" @click="saveAccident" class="full-width text-weight-bold q-mb-sm" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-          <q-btn flat :label="t('construction.inspect.cancel')" color="grey-8" v-close-popup class="full-width text-weight-medium" style="border-radius: 8px; height: 48px; font-size: 16px;" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
+          <q-btn
+            v-if="!isLastStep"
+            unelevated
+            no-caps
+            color="primary"
+            icon-right="chevron_right"
+            :label="t('construction.report.next')"
+            class="col cr-footer__main"
+            @click="goTo(step + 1)"
+          />
+          <q-btn
+            v-else
+            unelevated
+            no-caps
+            color="primary"
+            icon="send"
+            :label="submitLabel"
+            class="col cr-footer__main"
+            :loading="store.isSubmitting"
+            :disable="store.isSubmitting || (isEditMode && !isDirty)"
+            @click="onSubmit"
+          />
+        </div>
+      </div>
+    </q-footer>
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted, onMounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { computed, nextTick, onMounted, onUnmounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
-import { usePersonnelLabel } from 'src/composables/usePersonnelLabel';
-import imageCompression from 'browser-image-compression';
-import { useConstructionDailyReportStore } from 'src/stores/useConstructionDailyReport';
-import type { ConstructionDailyReportPayload, MachinePayload, PersonnelPayload } from 'src/stores/useConstructionDailyReport';
+import ReportStepNav from 'src/components/constructionReport/ReportStepNav.vue';
+import type { StepNavItem } from 'src/components/constructionReport/ReportStepNav.vue';
+import StepGeneral from 'src/components/constructionReport/StepGeneral.vue';
+import StepWork from 'src/components/constructionReport/StepWork.vue';
+import StepCrew from 'src/components/constructionReport/StepCrew.vue';
+import StepSafety from 'src/components/constructionReport/StepSafety.vue';
+import StepPhotos from 'src/components/constructionReport/StepPhotos.vue';
+import StepReview from 'src/components/constructionReport/StepReview.vue';
+import { provideConstructionReport, STEP_KEYS } from 'src/composables/constructionReport/useConstructionReport';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 
-const consInspectSpinner = createIconSpinner('construction');
+// รายงานก่อสร้างประจำวันแบบทีละขั้น ออกแบบให้กรอกบนมือถือมือเดียวได้
+// state ทั้งหมดอยู่ใน useConstructionReport (บันทึกร่างลงเครื่องอัตโนมัติ) — หน้านี้ดูแลแค่การนำทางและการส่ง
+const spinner = createIconSpinner('construction');
 
 const $q = useQuasar();
 const router = useRouter();
 const route = useRoute();
 const { t } = useI18n();
-const { translatePersonnelType } = usePersonnelLabel();
-const store = useConstructionDailyReportStore();
 
-const API_BASE_URL = import.meta.env.VITE_API_URL as string;
-
-async function urlToFile(url: string, filename: string): Promise<File | null> {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return new File([blob], filename, { type: blob.type || 'image/jpeg' });
-  } catch (err) {
-    console.error('Failed to load image as file:', url, err);
-    return null;
-  }
-}
-
-// roundId จาก route params (เช่น /inspector/job/:roundId/construction-inspect)
+const isAdmin = route.path.startsWith('/admin');
 const roundId = Number(route.params.roundId);
 
-// สถานะแสดงว่า workDetails ปัจจุบันคือข้อมูลที่ carry forward จากรอบก่อนหน้า
-const isCarriedForward = ref(false);
+const report = provideConstructionReport(roundId);
+const {
+  store,
+  step,
+  isEditMode,
+  isDirty,
+  isOnline,
+  draftSavedAt,
+  draftSaveFailed,
+  restoredDraftAt,
+  problems,
+  blockingProblems,
+} = report;
 
-onMounted(async () => {
-  if (!roundId) return;
-  $q.loading.show({
-    spinner: consInspectSpinner,
-    spinnerColor: 'primary',
-    spinnerSize: 70,
-    backgroundColor: 'white',
+const currentKey = computed(() => STEP_KEYS[step.value] ?? 'general');
+const isLastStep = computed(() => step.value === STEP_KEYS.length - 1);
+const submitLabel = computed(() => {
+  if (isEditMode.value && !isDirty.value) return t('construction.report.noChanges');
+  return isAdmin || isEditMode.value ? t('construction.report.submitEdit') : t('construction.report.submitDaily');
+});
+
+const navSteps = computed<StepNavItem[]>(() =>
+  STEP_KEYS.map((key, i) => {
+    const hasBlocking = problems.value.some((p) => p.step === key && p.level === 'blocking');
+    // แสดงสถานะ "ต้องแก้" เฉพาะขั้นที่ผ่านมาแล้ว — ไม่ขึ้นสีแดงตั้งแต่ยังไม่ได้เริ่มกรอก
+    const visited = i < step.value || isLastStep.value;
+    let state: StepNavItem['state'] = 'todo';
+    if (key !== 'review' && visited) state = hasBlocking ? 'error' : 'done';
+    return { key, label: t(`construction.report.steps.${key}`), state };
+  }),
+);
+
+function goTo(index: number) {
+  if (index < 0 || index >= STEP_KEYS.length || index === step.value) return;
+  step.value = index;
+  void nextTick(() => {
+    window.scrollTo({ top: 0 });
+    document.getElementById('cr-step-title')?.focus({ preventScroll: true });
   });
-  try {
-    const hasExisting = await loadExistingReport();
+}
 
-    // ถ้ายังไม่มีรายงานในรอบนี้ → ลองดึงงานจากรอบก่อนหน้า (carry forward)
-    if (!hasExisting) {
-      const previousItems = await store.fetchPreviousWorkItems(roundId);
-      if (previousItems.length > 0) {
-        workDetails.value = previousItems.map(item => ({
-          id: Date.now() + Math.random(),
-          name: item.description,
-          location: item.location || '',
-          unit: item.unit || '',
-          actual: null,
-          previousPercent: item.actualPercent || 0,
-          needsUpdate: true,
-        }));
-        isCarriedForward.value = true;
-      }
-    }
+function formatTime(ts: number): string {
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function confirmDiscard() {
+  $q.dialog({
+    title: t('construction.report.draft.discardTitle'),
+    message: t('construction.report.draft.discardMessage'),
+    ok: { label: t('construction.report.draft.discard'), color: 'negative', unelevated: true, noCaps: true },
+    cancel: { label: t('construction.report.draft.keep'), flat: true, noCaps: true, color: 'grey-8' },
+  }).onOk(() => {
+    void withLoading(report.discardDraft);
+  });
+}
+
+async function withLoading(run: () => Promise<void>) {
+  $q.loading.show({ spinner, spinnerColor: 'primary', spinnerSize: 70, backgroundColor: 'white' });
+  try {
+    await run();
   } finally {
     $q.loading.hide();
   }
-});
-
-async function loadExistingReport(): Promise<boolean> {
-  const existingReport = await store.fetchReportByRound(roundId);
-  if (existingReport) {
-    if (existingReport.workingPeriod) {
-      const [start, end] = existingReport.workingPeriod.split(' - ');
-      if (start) form.value.startTime = start.trim();
-      if (end) form.value.endTime = end.trim();
-    }
-    if (existingReport.weather) {
-      form.value.weather = existingReport.weather;
-    }
-    
-    if (existingReport.workItems && existingReport.workItems.length > 0) {
-      workDetails.value = existingReport.workItems.map(item => ({
-        id: Date.now() + Math.random(),
-        name: item.description,
-        location: item.location || '',
-        unit: item.unit || '',
-        actual: item.actualPercent || 0,
-      }));
-    }
-    
-    if (existingReport.personnels && existingReport.personnels.length > 0) {
-      personnelList.value = existingReport.personnels
-        .filter(p => p.type === 'PERSONNEL')
-        .map(p => ({
-          id: Date.now() + Math.random(),
-          name: p.name,
-          count: p.count,
-          hours: p.hours ?? null,
-        }));
-      workerList.value = existingReport.personnels
-        .filter(p => p.type === 'WORKER')
-        .map(p => ({
-          id: Date.now() + Math.random(),
-          name: p.name,
-          count: p.count,
-          hours: p.hours ?? null,
-        }));
-    }
-    
-    if (existingReport.issues && existingReport.issues.length > 0) {
-      notesList.value = existingReport.issues.map(issue => ({
-        id: Date.now() + Math.random(),
-        text: issue.description,
-        status: issue.note || 'ติดตามผล',
-      }));
-    }
-    
-    if (existingReport.machines && existingReport.machines.length > 0) {
-      machineList.value = existingReport.machines.map(m => ({
-        id: Date.now() + Math.random(),
-        name: m.machineName,
-        size: m.machineSize || '',
-        quantity: m.quantity || 1,
-        hours: m.workingHours ?? null,
-      }));
-    }
-    
-    if (existingReport.accidents && existingReport.accidents.length > 0) {
-      accidentList.value = existingReport.accidents.map(a => ({
-        id: Date.now() + Math.random(),
-        count: a.accidentCount || 1,
-      }));
-    }
-
-    if (existingReport.images && existingReport.images.length > 0) {
-      for (const img of existingReport.images) {
-        const fullUrl = img.imageUrl.startsWith('http') ? img.imageUrl : `${API_BASE_URL}${img.imageUrl}`;
-        const filename = img.imageUrl.split('/').pop() || 'image.jpg';
-        const file = await urlToFile(fullUrl, filename);
-
-        if (file) {
-          if (img.imageType === 'PANORAMA') {
-            panoramaFile.value = file;
-            panoramaPreview.value = URL.createObjectURL(file);
-          } else if (img.imageType === 'WORK_DETAIL' || img.imageType === 'GENERAL') {
-            photos.value.push({
-              id: Date.now().toString() + Math.random(),
-              file: file,
-              preview: URL.createObjectURL(file),
-              workDetailName: img.caption || null
-            });
-          }
-        }
-      }
-    }
-    return true;
-  }
-
-  if (existingReport) {
-    isEditMode.value = true;
-  }
-  initialSnapshot.value = getFormSnapshot();
-  return false;
 }
 
-// สำหรับ Panorama View
-const panoramaInput = ref<HTMLInputElement | null>(null);
-const panoramaFile = ref<File | null>(null);
-const panoramaPreview = ref<string | null>(null);
-
-const triggerPanoramaInput = () => {
-  panoramaInput.value?.click();
-};
-
-const onPanoramaUpload = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  if (!target.files || target.files.length === 0) return;
-  const file = target.files[0];
-  if (!file) return;
-  if (panoramaPreview.value) {
-    URL.revokeObjectURL(panoramaPreview.value);
+async function onSubmit() {
+  if (blockingProblems.value.length > 0) {
+    $q.notify({ message: t('construction.report.submit.fixFirst'), color: 'warning', textColor: 'dark', icon: 'warning' });
+    return;
   }
-  panoramaFile.value = file;
-  panoramaPreview.value = URL.createObjectURL(file);
-};
-
-const removePanorama = () => {
-  if (panoramaPreview.value) {
-    URL.revokeObjectURL(panoramaPreview.value);
-  }
-  panoramaFile.value = null;
-  panoramaPreview.value = null;
-  if (panoramaInput.value) panoramaInput.value.value = '';
-};
-
-// 1. General Info
-const form = ref({
-  startTime: '',
-  endTime: '',
-  weather: 'Sunny',
-});
-
-const setCurrentTime = (field: 'startTime' | 'endTime') => {
-  const now = new Date();
-  const hh = now.getHours().toString().padStart(2, '0');
-  const mm = now.getMinutes().toString().padStart(2, '0');
-  form.value[field] = `${hh}:${mm}`;
-};
-
-// 2. Work Details
-// value เป็นข้อความไทยตามที่บันทึกลงฐานข้อมูลอยู่เดิม (รายงาน PDF อ่านค่านี้) — แปลเฉพาะ label ที่แสดง
-const ROOM_OPTION_KEYS: Record<string, string> = {
-  ห้องรับแขก: 'livingRoom',
-  ห้องนอน: 'bedroom',
-  ห้องน้ำ: 'bathroom',
-  ห้องครัว: 'kitchen',
-  ระเบียง: 'balcony',
-  รอบตัวบ้าน: 'exterior',
-  หลังคา: 'roof',
-  ส่วนกลาง: 'commonArea',
-};
-const UNIT_OPTION_KEYS: Record<string, string> = {
-  'ตร.ม.': 'sqm',
-  เมตร: 'meter',
-  ชิ้น: 'piece',
-  จุด: 'point',
-  ชุด: 'set',
-};
-const roomOptions = computed(() =>
-  Object.entries(ROOM_OPTION_KEYS).map(([value, key]) => ({
-    value,
-    label: t(`construction.inspect.roomOptions.${key}`),
-  })),
-);
-const unitOptions = computed(() =>
-  Object.entries(UNIT_OPTION_KEYS).map(([value, key]) => ({
-    value,
-    label: t(`construction.inspect.unitOptions.${key}`),
-  })),
-);
-// ค่าที่ไม่อยู่ในรายการ (เช่นข้อมูลเก่า) แสดงค่าดิบตามเดิม
-function roomLabel(value: string): string {
-  const key = ROOM_OPTION_KEYS[value];
-  return key ? t(`construction.inspect.roomOptions.${key}`) : value;
-}
-function unitLabel(value: string): string {
-  const key = UNIT_OPTION_KEYS[value];
-  return key ? t(`construction.inspect.unitOptions.${key}`) : value;
-}
-const workDetails = ref<{id: number, name: string, location: string, unit: string, actual: number | null, previousPercent?: number, needsUpdate?: boolean}[]>([]);
-const workDialog = ref(false);
-const editingWorkId = ref<number | null>(null);
-const newWork = ref({ name: '', location: '', unit: '', actual: null as number | null });
-
-// Image Upload State
-interface WorkPhoto {
-  id: string;
-  file: File;
-  preview: string;
-  workDetailName: string | null;
-}
-const photos = ref<WorkPhoto[]>([]);
-
-interface GridItem {
-  type: 'photo' | 'add_button' | 'empty';
-  photo?: WorkPhoto;
-  workName?: string | null;
-}
-
-const gridItems = computed<GridItem[]>(() => {
-  const items: GridItem[] = [];
-  
-  // 1. ใส่รูปและปุ่มเพิ่มรูป ของแต่ละงาน (1 งาน = 1 รูป)
-  for (const work of workDetails.value) {
-    const workPhoto = photos.value.find(p => p.workDetailName === work.name);
-    
-    if (workPhoto) {
-      items.push({ type: 'photo', photo: workPhoto, workName: work.name });
-    } else {
-      items.push({ type: 'add_button', workName: work.name });
-    }
-  }
-
-  // 2. เติมช่องว่างให้ครบ 6 ช่อง (ถ้ามีน้อยกว่า 6)
-  while (items.length < 6) {
-    items.push({ type: 'empty' });
-  }
-
-  return items;
-});
-
-const fileInput = ref<HTMLInputElement | null>(null);
-const targetWorkDetailForPhoto = ref<string | null>(null);
-
-const triggerFileInput = (workName?: string) => {
-  if (typeof workName === 'string') {
-    targetWorkDetailForPhoto.value = workName;
-  } else {
-    targetWorkDetailForPhoto.value = null;
-  }
-  fileInput.value?.click();
-};
-
-const handleFileChange = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  if (target.files && target.files.length > 0) {
-    Array.from(target.files).forEach(file => {
-      let preview = '';
-      if (typeof window !== 'undefined' && window.URL) {
-        preview = window.URL.createObjectURL(file);
-      }
-      photos.value.push({
-        id: Date.now().toString() + Math.floor(Math.random() * 1000).toString(),
-        file,
-        preview,
-        workDetailName: targetWorkDetailForPhoto.value
-      });
-    });
-  }
-  targetWorkDetailForPhoto.value = null;
-  if (target) target.value = '';
-};
-
-const removePhoto = (id: string) => {
-  const index = photos.value.findIndex(p => p.id === id);
-  if (index !== -1) {
-    const photo = photos.value[index];
-    if (photo && typeof window !== 'undefined' && window.URL && photo.preview) {
-      window.URL.revokeObjectURL(photo.preview);
-    }
-    photos.value.splice(index, 1);
-  }
-};
-
-// ป้องกัน Memory Leak
-onUnmounted(() => {
-  if (typeof window !== 'undefined' && window.URL) {
-    photos.value.forEach(p => {
-      if (p.preview) window.URL.revokeObjectURL(p.preview);
-    });
-  } // close if (typeof window !== 'undefined')
-  if (panoramaPreview.value) {
-    if (typeof window !== 'undefined' && window.URL) {
-      window.URL.revokeObjectURL(panoramaPreview.value);
-    }
-  }
-});
-
-// Summaries
-const workSummary = computed(() => t('construction.inspect.workSummary', { count: workDetails.value.length }));
-const personnelSummary = computed(() => {
-  const count = personnelList.value.reduce((sum, p) => sum + p.count, 0);
-  const hours = personnelList.value.reduce((sum, p) => sum + (p.hours || 0) * p.count, 0);
-  return t('construction.inspect.personnelSummary', { count, hours });
-});
-const workerSummary = computed(() => {
-  const count = workerList.value.reduce((sum, w) => sum + w.count, 0);
-  const hours = workerList.value.reduce((sum, w) => sum + (w.hours || 0) * w.count, 0);
-  return t('construction.inspect.workerSummary', { count, hours });
-});
-const accidentSummary = computed(() => {
-  const count = accidentList.value.reduce((sum, a) => sum + a.count, 0);
-  return t('construction.inspect.accidentSummary', { count });
-});
-
-const addWorkDetail = () => {
-  editingWorkId.value = null;
-  newWork.value = { name: '', location: '', unit: '', actual: null };
-  workDialog.value = true;
-};
-const editWorkDetail = (id: number) => {
-  const work = workDetails.value.find(w => w.id === id);
-  if (!work) return;
-  editingWorkId.value = id;
-  newWork.value = { name: work.name, location: work.location, unit: work.unit, actual: work.actual };
-  workDialog.value = true;
-};
-const saveWork = () => {
-  if (!newWork.value.name) return $q.notify({ message: t('construction.inspect.workNameRequired'), color: 'warning' });
-  if (newWork.value.actual === null || newWork.value.actual === undefined || newWork.value.actual.toString() === '') {
-    return $q.notify({ message: t('construction.inspect.workPercentRequired'), color: 'warning' });
-  }
-  if (newWork.value.actual < 0 || newWork.value.actual > 100) {
-    return $q.notify({ message: t('construction.inspect.workPercentRange'), color: 'warning' });
-  }
-
-  if (editingWorkId.value !== null) {
-    // โหมดแก้ไข: อัปเดตรายการที่มีอยู่
-    const index = workDetails.value.findIndex(w => w.id === editingWorkId.value);
-    if (index !== -1) {
-      const existing = workDetails.value[index]!;
-      workDetails.value[index] = {
-        id: existing.id,
-        name: newWork.value.name,
-        location: newWork.value.location,
-        unit: newWork.value.unit,
-        actual: newWork.value.actual,
-        ...(existing.previousPercent != null ? { previousPercent: existing.previousPercent } : {}),
-        needsUpdate: false, // เคลียร์สถานะว่าอัปเดตแล้ว
-      };
-    }
-    editingWorkId.value = null;
-  } else {
-    // โหมดเพิ่มใหม่
-    workDetails.value.push({ id: Date.now(), ...newWork.value, needsUpdate: false });
-  }
-  workDialog.value = false;
-};
-const removeWork = (id: number) => {
-  workDetails.value = workDetails.value.filter(w => w.id !== id);
-};
-
-// 3. Personnel / Workers
-const personnelList = ref<{id: number, name: string, count: number, hours: number | null}[]>([]);
-const workerList = ref<{id: number, name: string, count: number, hours: number | null}[]>([]);
-const personDialog = ref(false);
-const isWorker = ref(false);
-const newPerson = ref({ name: '', count: 1, hours: null as number | null });
-
-const PERSONNEL_TYPES = [
-  'ผู้จัดการโครงการ', 'วิศวกรโครงการ', 'ประสานงานโครงการ', 'วิศวกรสนาม', 'สถาปนิก',
-  'โฟร์แมนโครงสร้าง', 'โฟร์แมนสถาปัตย์', 'จนท.ความปลอดภัย', 'ช่างสำรวจ', 'เสมียน',
-  'พนักงานคุมสโตร์', 'พนักงานควบคุมเครื่องจักร', 'พนักงานขับรถ'
-];
-
-const WORKER_TYPES = [
-  'หัวหน้าชุด', 'ช่างไม้', 'ช่างปูนก่อ, เท Topping', 'ช่างปูนฉาบ', 'ช่างกระเบื้อง',
-  'ช่างฝ้าเพดาน', 'ช่างติดตั้ง, สุขภัณฑ์', 'ช่างทาสี', 'กรรมกร (ชาย/หญิง)',
-  'ช่างเฟอร์นิเจอร์', 'ช่างไฟ', 'ช่างเหล็ก, ช่างเชื่อม', 'ช่างแอร์'
-];
-
-const personnelOptions = computed(() =>
-  PERSONNEL_TYPES.map((type) => ({ label: translatePersonnelType(type), value: type })),
-);
-
-const workerOptions = computed(() =>
-  WORKER_TYPES.map((type) => ({ label: translatePersonnelType(type), value: type })),
-);
-
-const addPersonnel = () => {
-  isWorker.value = false;
-  newPerson.value = { name: '', count: 1, hours: 8 };
-  personDialog.value = true;
-};
-const addWorker = () => {
-  isWorker.value = true;
-  newPerson.value = { name: '', count: 1, hours: 8 };
-  personDialog.value = true;
-};
-const savePerson = () => {
-  if (!newPerson.value.name) return $q.notify({ message: t('construction.inspect.personNameRequired'), color: 'warning' });
-  if (newPerson.value.count < 1) newPerson.value.count = 1;
-  if (newPerson.value.hours !== null && newPerson.value.hours < 0) newPerson.value.hours = 0;
-  
-  if (isWorker.value) {
-    workerList.value.push({ id: Date.now(), ...newPerson.value });
-  } else {
-    personnelList.value.push({ id: Date.now(), ...newPerson.value });
-  }
-  personDialog.value = false;
-};
-const removePersonnel = (id: number) => {
-  personnelList.value = personnelList.value.filter(p => p.id !== id);
-};
-const removeWorker = (id: number) => {
-  workerList.value = workerList.value.filter(w => w.id !== id);
-};
-
-// 4. เครื่องจักร/อุปกรณ์
-const machineList = ref<{id: number, name: string, size: string, quantity: number, hours: number | null}[]>([]);
-const machineDialog = ref(false);
-const newMachine = ref({ name: '', size: '', quantity: 1, hours: null as number | null });
-
-const addMachine = () => {
-  newMachine.value = { name: '', size: '', quantity: 1, hours: 8 };
-  machineDialog.value = true;
-};
-const saveMachine = () => {
-  if (!newMachine.value.name) return $q.notify({ message: t('construction.inspect.machineNameRequired'), color: 'warning' });
-  if (newMachine.value.quantity < 1) newMachine.value.quantity = 1;
-  machineList.value.push({ id: Date.now(), ...newMachine.value });
-  machineDialog.value = false;
-};
-const removeMachine = (id: number) => {
-  machineList.value = machineList.value.filter(m => m.id !== id);
-};
-
-// 5. รายงานอุบัติเหตุ
-const accidentList = ref<{id: number, count: number}[]>([]);
-const accidentDialog = ref(false);
-const newAccident = ref({ count: 1 });
-
-const addAccident = () => {
-  newAccident.value = { count: 1 };
-  accidentDialog.value = true;
-};
-const saveAccident = () => {
-  if (newAccident.value.count < 1) newAccident.value.count = 1;
-  accidentList.value.push({ id: Date.now(), ...newAccident.value });
-  accidentDialog.value = false;
-};
-const removeAccident = (id: number) => {
-  accidentList.value = accidentList.value.filter(a => a.id !== id);
-};
-
-// 6. Additional Notes
-const notesList = ref<{id: number, text: string, status: string}[]>([]);
-const noteDialog = ref(false);
-const newNote = ref({ text: '', status: 'ติดตามผล' });
-
-const addAdditionalNote = () => {
-  newNote.value = { text: '', status: 'ติดตามผล' };
-  noteDialog.value = true;
-};
-const saveNote = () => {
-  if (!newNote.value.text) return $q.notify({ message: t('construction.inspect.noteTextRequired'), color: 'warning' });
-  notesList.value.push({ id: Date.now(), ...newNote.value });
-  noteDialog.value = false;
-};
-const removeNote = (id: number) => {
-  notesList.value = notesList.value.filter(n => n.id !== id);
-};
-
-// บีบอัดรูปก่อนส่ง — endpoint นี้ส่งได้ถึง 20 รูป/panorama ใน request เดียว ถ้าไม่บีบอัดก่อนเสี่ยง timeout บนเน็ตหน้างาน
-const compressImage = async (file: File): Promise<File> => {
-  try {
-    return await imageCompression(file, { maxSizeMB: 1, maxWidthOrHeight: 1024, useWebWorker: true });
-  } catch {
-    return file;
-  }
-};
-
-// Dirty checking for Edit Mode
-const isEditMode = ref(false);
-const initialSnapshot = ref<string>('');
-
-function getFormSnapshot(): string {
-  return JSON.stringify({
-    startTime: form.value.startTime,
-    endTime: form.value.endTime,
-    weather: form.value.weather,
-    workDetails: workDetails.value.map(w => ({ name: w.name, location: w.location, unit: w.unit, actual: w.actual })),
-    personnel: personnelList.value.map(p => ({ name: p.name, count: p.count, hours: p.hours })),
-    workers: workerList.value.map(w => ({ name: w.name, count: w.count, hours: w.hours })),
-    notes: notesList.value.map(n => ({ text: n.text, status: n.status })),
-    machines: machineList.value.map(m => ({ name: m.name, size: m.size, quantity: m.quantity, hours: m.hours })),
-    accidents: accidentList.value.map(a => ({ count: a.count })),
-    photosCount: photos.value.length,
-    photosNames: photos.value.map(p => `${p.file?.name}_${p.file?.size}_${p.workDetailName}`),
-    hasPanorama: !!panoramaFile.value,
-    panoramaName: panoramaFile.value ? `${panoramaFile.value.name}_${panoramaFile.value.size}` : '',
-  });
-}
-
-const isFormDirty = computed(() => {
-  if (!isEditMode.value) return true;
-  return getFormSnapshot() !== initialSnapshot.value;
-});
-
-// 7. Submit — แปลง form data เป็น API payload แล้วส่ง POST
-const submitReport = async () => {
-  // Validation
-  if (!form.value.startTime || !form.value.endTime) {
-    return $q.notify({
-      message: t('construction.inspect.timeRequired'),
-      color: 'warning',
-      icon: 'warning',
-    });
-  }
-  const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-  if (!timeRegex.test(form.value.startTime) || !timeRegex.test(form.value.endTime)) {
-    return $q.notify({
-      message: t('construction.inspect.timeFormatInvalid'),
-      color: 'warning',
-      icon: 'warning',
-    });
-  }
-  if (!form.value.weather) {
-    return $q.notify({
-      message: t('construction.inspect.weatherRequired'),
-      color: 'warning',
-      icon: 'warning',
-    });
-  }
-  if (workDetails.value.length === 0) {
-    return $q.notify({
-      message: t('construction.inspect.workDetailRequired'),
-      color: 'warning',
-      icon: 'warning',
-    });
-  }
-  if (workDetails.value.some(w => w.needsUpdate || w.actual === null)) {
-    return $q.notify({
-      message: t('construction.inspect.workDetailsUpdateRequired'),
-      color: 'warning',
-      icon: 'warning',
-    });
-  }
-
-  const payload: ConstructionDailyReportPayload = {
-    roundId,
-    reportDate: new Date().toISOString().slice(0, 10), // วันนี้ (YYYY-MM-DD)
-
-    // แปลง workDetails → workItems
-    workItems: workDetails.value.map((w, index) => ({
-      description: w.name,
-      location: w.location,
-      unit: w.unit,
-      actualPercent: w.actual ?? 0,
-      sequence: index + 1,
-    })),
-
-    // รวม personnelList + workerList → personnels
-    personnels: [
-      ...personnelList.value.map((p) => {
-        const payload: PersonnelPayload = {
-          name: p.name,
-          type: 'PERSONNEL',
-          count: p.count,
-        };
-        if (p.hours != null) payload.hours = p.hours;
-        return payload;
-      }),
-      ...workerList.value.map((w) => {
-        const payload: PersonnelPayload = {
-          name: w.name,
-          type: 'WORKER',
-          count: w.count,
-        };
-        if (w.hours != null) payload.hours = w.hours;
-        return payload;
-      }),
-    ],
-
-    // แปลง notesList → issues
-    issues: notesList.value.map((n) => ({
-      description: n.text,
-      note: n.status,
-    })),
-
-    // แปลง machineList → machines
-    machines: machineList.value.map((m) => {
-      const payload: MachinePayload = {
-        machineName: m.name,
-        quantity: m.quantity,
-      };
-      if (m.size) payload.machineSize = m.size;
-      if (m.hours != null) payload.workingHours = m.hours;
-      return payload;
-    }),
-
-    // แปลง accidentList → accidents
-    accidents: accidentList.value.map((a) => ({
-      description: 'เกิดอุบัติเหตุ/ผู้บาดเจ็บ',
-      accidentCount: a.count,
-    })),
-  };
-
-  if (form.value.weather) {
-    payload.weather = form.value.weather;
-  }
-
-  if (form.value.startTime && form.value.endTime) {
-    payload.workingPeriod = `${form.value.startTime} - ${form.value.endTime}`;
-  }
-
-  try {
-    const formData = new FormData();
-    formData.append('payload', JSON.stringify(payload));
-
-    if (panoramaFile.value) {
-      formData.append('panoramaFile', await compressImage(panoramaFile.value));
-    }
-
-    if (photos.value && photos.value.length > 0) {
-      for (const photo of photos.value) {
-        formData.append('photos', await compressImage(photo.file));
-        formData.append('photoWorkDetailNames', photo.workDetailName || '');
-      }
-    }
-
-    await store.submitReport(formData);
+  const result = await report.submit();
+  if (result.ok) {
     $q.notify({
-      message: route.path.includes('/admin') ? t('construction.inspect.submitEditSuccess') : t('construction.inspect.submitDailySuccess'),
+      message: isAdmin || isEditMode.value ? t('construction.report.submit.editSuccess') : t('construction.report.submit.success'),
       color: 'positive',
       icon: 'check_circle',
     });
     router.back();
-  } catch {
-    $q.notify({
-      message: store.submitError ?? t('construction.inspect.submitError'),
-      color: 'negative',
-      icon: 'error',
-    });
+    return;
   }
-};
+  if (result.reason === 'invalid') return;
+  $q.notify({
+    message: result.reason === 'offline' ? t('construction.report.submit.offline') : (result.message ?? t('construction.report.submit.error')),
+    color: 'negative',
+    icon: result.reason === 'offline' ? 'cloud_off' : 'error',
+    timeout: 6000,
+  });
+}
+
+// ล็อกจอหรือสลับแอปบนมือถือ → บันทึกร่างทันที ไม่รอ debounce
+function onVisibilityChange() {
+  if (document.visibilityState === 'hidden') void report.flushDraft();
+}
+
+onMounted(() => {
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  if (roundId) void withLoading(report.load);
+});
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', onVisibilityChange);
+});
 </script>
 
-<style scoped>
-.modern-font {
+<style>
+/* คลาสร่วมของหน้ารายงานก่อสร้าง (ใช้ในคอมโพเนนต์ src/components/constructionReport/*) */
+.cr-page {
+  background: #f5f7fa;
+  padding: 16px 16px 140px;
+  line-height: 1.5;
   font-family: 'Inter', 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, sans-serif;
 }
-
-.detail-content {
+.cr-content {
   width: 100%;
-  max-width: 480px;
+  max-width: 600px;
+  margin: 0 auto;
 }
-@media (min-width: 768px) {
-  .detail-content {
-    max-width: 720px;
-  }
+.cr-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #263238;
 }
-@media (min-width: 1024px) {
-  .detail-content {
-    max-width: 1100px;
-  }
+.cr-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #546e7a;
 }
-@media (min-width: 1440px) {
-  .detail-content {
-    max-width: 1280px;
-  }
+.cr-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 12px;
 }
-
-.footer-btn {
-  max-width: 480px;
+.cr-card--attention {
+  border-color: #ffb74d;
+  box-shadow: inset 4px 0 0 #fb8c00;
 }
-@media (min-width: 768px) {
-  .footer-btn {
-    max-width: 720px;
-  }
+.cr-card--info {
+  border-color: #90caf9;
+  background: #f3f8ff;
 }
-@media (min-width: 1024px) {
-  .footer-btn {
-    max-width: 1100px;
-  }
+.cr-card--error {
+  border-color: #ef9a9a;
+  background: #fff5f5;
 }
-@media (min-width: 1440px) {
-  .footer-btn {
-    max-width: 1280px;
-  }
+.cr-card--warning {
+  border-color: #ffe082;
+  background: #fffbea;
 }
-
-.ui-card {
-  border-radius: 8px;
-  border-color: #e0e0e0;
-  overflow: hidden;
+.cr-card__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #263238;
+  word-break: break-word;
 }
-
-.upload-box {
-  border: 1px dashed #b0bec5;
-  border-radius: 8px;
-  background-color: #f8f9fa;
+.cr-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.cr-banner--warning {
+  background: #fff3e0;
+  color: #8a4b00;
+}
+.cr-banner--info {
+  background: #e3f2fd;
+  color: #0d47a1;
+}
+.cr-banner--offline {
+  background: #eceff1;
+  color: #37474f;
+}
+.cr-banner--ok {
+  background: #e8f5e9;
+  color: #1b5e20;
+  font-weight: 600;
+}
+.cr-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 12px;
+  text-align: center;
+  color: #607d8b;
+  background: #fff;
+  border: 1px dashed #cfd8dc;
+  border-radius: 12px;
+}
+.cr-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.cr-tag--warning {
+  background: #fff3e0;
+  color: #8a4b00;
+  font-weight: 600;
+}
+.cr-chip {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #cfd8dc;
+  border-radius: 20px;
+  background: #fff;
+  color: #37474f;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
   cursor: pointer;
-  transition: background-color 0.2s ease;
 }
-
-.upload-box:hover {
-  background-color: #f1f3f4;
+.cr-chip:focus-visible {
+  outline: 2px solid var(--q-primary);
+  outline-offset: 2px;
+}
+.cr-chip--active {
+  background: var(--q-primary);
+  border-color: var(--q-primary);
+  color: #fff;
+  font-weight: 600;
+}
+.cr-tap {
+  min-width: 48px;
+  min-height: 48px;
+}
+.cr-tap-btn {
+  min-height: 48px;
+  border-radius: 10px;
+}
+.cr-primary-btn {
+  min-height: 52px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.cr-fix-btn {
+  min-height: 44px;
+  padding: 0 12px;
+}
+.cr-thumb {
+  width: 56px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex: none;
+}
+.cr-sheet {
+  width: 100vw;
+  max-width: 600px;
+  max-height: 90vh;
+  border-radius: 20px 20px 0 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+.cr-sheet__handle {
+  width: 40px;
+  height: 4px;
+  margin: 8px auto 0;
+  border-radius: 2px;
+  background: #cfd8dc;
+}
+.cr-sheet__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.cr-sheet__body {
+  overflow-y: auto;
+}
+.cr-sheet__actions {
+  padding: 8px 16px calc(16px + env(safe-area-inset-bottom));
+}
+.cr-footer {
+  background: #fff;
+  color: #455a64;
+  border-top: 1px solid #e0e0e0;
+}
+.cr-footer__inner {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 6px 16px calc(12px + env(safe-area-inset-bottom));
+}
+.cr-footer__status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 20px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #607d8b;
+}
+.cr-footer__back {
+  min-height: 52px;
+  min-width: 112px;
+  border-radius: 12px;
+}
+.cr-footer__main {
+  min-height: 52px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cr-page * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
 }
 </style>
