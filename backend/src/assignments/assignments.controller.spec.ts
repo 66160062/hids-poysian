@@ -1,4 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
+import { GUARDS_METADATA, PATH_METADATA } from '@nestjs/common/constants';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
 import { AssignmentsController } from './assignments.controller';
 import { AssignmentsService } from './assignments.service';
 import { JwtService } from '@nestjs/jwt';
@@ -54,13 +58,13 @@ describe('AssignmentsController', () => {
     await app.init();
 
     try {
-      await request(app.getHttpServer()).get('/assignments/job/1').expect(401);
+      await request(app.getHttpServer()).get('/job-assignments/job/1').expect(401);
       await request(app.getHttpServer())
-        .get('/assignments/job/1')
+        .get('/job-assignments/job/1')
         .set('Authorization', 'Bearer link-token')
         .expect(403);
       await request(app.getHttpServer())
-        .get('/assignments/job/1')
+        .get('/job-assignments/job/1')
         .set('Authorization', 'Bearer inspector-token')
         .expect(403);
     } finally {

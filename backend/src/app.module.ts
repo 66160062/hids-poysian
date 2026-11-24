@@ -127,7 +127,12 @@ import { Assignment } from './assignments/entities/assignment.entity';
           ActivityLog,
           Assignment,
         ],
-        synchronize: true,
+        // synchronize แก้ schema ตาม entity อัตโนมัติ ถ้าเปลี่ยนชื่อ/ลบคอลัมน์จะ drop คอลัมน์และข้อมูลหาย
+        // จึงปิดใน production เป็นค่าเริ่มต้น ตั้ง DB_SYNCHRONIZE=true/false เพื่อบังคับค่าได้
+        synchronize:
+          configService.get<string>('DB_SYNCHRONIZE') !== undefined
+            ? configService.get<string>('DB_SYNCHRONIZE') === 'true'
+            : configService.get<string>('NODE_ENV') !== 'production',
         namingStrategy: new SnakeNamingStrategy(),
       }),
       inject: [ConfigService],
@@ -174,4 +179,4 @@ import { Assignment } from './assignments/entities/assignment.entity';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

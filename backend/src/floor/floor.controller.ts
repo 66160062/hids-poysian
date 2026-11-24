@@ -8,15 +8,17 @@ import {
   Delete,
   UseGuards,
 } from '@nestjs/common';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
+import { StaffGuard } from 'src/auth/staff.guard';
 import { FloorService } from './floor.service';
 import { CreateFloorDto } from './dto/create-floor.dto';
 import { UpdateFloorDto } from './dto/update-floor.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
-import { AuthGuard } from 'src/auth/auth.guard';
-import { AdminGuard } from 'src/auth/admin.guard';
 
 @ApiBearerAuth()
-@UseGuards(AuthGuard)
+// StaffGuard: link token ของ customer/contractor ผ่าน AuthGuard ได้ แต่ข้อมูลชั้นเป็นของพนักงาน
+@UseGuards(AuthGuard, StaffGuard)
 @Controller('floor')
 export class FloorController {
   constructor(private readonly floorService: FloorService) {}

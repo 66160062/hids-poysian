@@ -10,6 +10,8 @@ import {
   UploadedFile,
   UseGuards,
 } from '@nestjs/common';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
 import { RepairRecordsService } from './repair-records.service';
 import { CreateRepairRecordDto } from './dto/create-repair-record.dto';
 import { UpdateRepairRecordDto } from './dto/update-repair-record.dto';
@@ -22,8 +24,6 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { StorageService } from 'src/storage/storage.service';
-import { AuthGuard } from 'src/auth/auth.guard';
-import { AdminGuard } from 'src/auth/admin.guard';
 
 @ApiTags('Repair Records') // จัดกลุ่มใน Swagger
 @ApiBearerAuth()

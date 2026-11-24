@@ -14,10 +14,13 @@ import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { AdminGuard } from 'src/auth/admin.guard';
 
-@ApiTags('assignments')
+// เดิมใช้ path 'assignments' ซ้ำกับ InspectionTeamMembersController ซึ่ง register ก่อน
+// ทำให้ทุก route ของ controller นี้ไม่เคยถูกเรียกจริง จึงย้ายไป path ของตัวเอง
+// (frontend ยังเรียก /assignments ซึ่งคือ inspection-team-members เหมือนเดิม)
+@ApiTags('job-assignments')
 @ApiBearerAuth()
 @UseGuards(AuthGuard, AdminGuard)
-@Controller('assignments')
+@Controller('job-assignments')
 export class AssignmentsController {
   constructor(private readonly assignmentsService: AssignmentsService) {}
 

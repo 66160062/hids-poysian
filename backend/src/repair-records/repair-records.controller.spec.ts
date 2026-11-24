@@ -1,4 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { AdminGuard } from 'src/auth/admin.guard';
 import { RepairRecordsController } from './repair-records.controller';
 import { RepairRecordsService } from './repair-records.service';
 import { StorageService } from 'src/storage/storage.service';
