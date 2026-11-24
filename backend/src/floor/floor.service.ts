@@ -16,8 +16,11 @@ export class FloorService {
     return this.floorRepo.save(floor);
   }
 
+  // ชั้นมาตรฐานเรียงตาม floor_order ส่วนชั้นที่ผู้ตรวจพิมพ์เอง (floor_order ว่าง) ต่อท้ายตามลำดับที่สร้าง
   findAll() {
-    return this.floorRepo.find();
+    return this.floorRepo.find({
+      order: { floorOrder: { direction: 'ASC', nulls: 'LAST' }, floorId: 'ASC' },
+    });
   }
 
   findOne(id: number) {

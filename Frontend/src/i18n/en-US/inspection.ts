@@ -32,6 +32,11 @@ export default {
     planPositionLabel: 'Position on Floor Plan',
     planPositionSet: '📍 Position marked (click to view/edit)',
     planPositionNotSet: 'Position not set (optional)',
+    changeLocation: 'Change room/floor',
+    floorOther: 'Other (type it)',
+    customFloor: 'Floor name',
+    customFloorPlaceholder: 'Rooftop',
+    customFloorRequired: 'Enter the floor name',
   },
   inspect: {
     groupByRoomType: 'Room Type',

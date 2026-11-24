@@ -32,6 +32,11 @@ export default {
     planPositionLabel: 'ตำแหน่งในแปลนบ้าน',
     planPositionSet: '📍 ระบุในแปลนแล้ว (คลิกเพื่อดู/แก้ไข)',
     planPositionNotSet: 'ยังไม่ระบุตำแหน่ง (ไม่บังคับ)',
+    changeLocation: 'เปลี่ยนห้อง/ชั้น',
+    floorOther: 'อื่นๆ (ระบุเอง)',
+    customFloor: 'ชื่อชั้น',
+    customFloorPlaceholder: 'ชั้นดาดฟ้า',
+    customFloorRequired: 'กรุณาระบุชื่อชั้น',
   },
   inspect: {
     groupByRoomType: 'ประเภทห้อง',

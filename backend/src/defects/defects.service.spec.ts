@@ -9,6 +9,7 @@ import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub
 import { User } from 'src/users/entities/user.entity';
 import { Room } from 'src/rooms/entities/room.entity';
 import { SubRoom } from 'src/sub-rooms/entities/sub-room.entity';
+import { Floor } from 'src/floor/entities/floor.entity';
 import { ActivityLogsService } from 'src/activity-logs/activity-logs.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { DefectNoteTranslator } from './defect-note-translator.service';
@@ -39,8 +40,18 @@ describe('DefectsService', () => {
   };
   let roomsRepo: { findOneByOrFail: jest.Mock };
   let subRoomsRepo: { findOneBy: jest.Mock };
+  let floorsRepo: { find: jest.Mock; create: jest.Mock; save: jest.Mock };
 
   beforeEach(async () => {
+    floorsRepo = {
+      find: jest.fn().mockResolvedValue([
+        { floorId: 1, label: 'ชั้น 1', labelEn: 'Floor 1' },
+        { floorId: 7, label: 'ชั้นอื่นๆ.....', labelEn: null },
+        { floorId: 12, label: 'ชั้นดาดฟ้า', labelEn: null },
+      ]),
+      create: jest.fn((value) => value),
+      save: jest.fn((value) => ({ ...value, floorId: 99 })),
+    };
     defectsRepo = {
       findOneOrFail: jest.fn(),
       findOne: jest.fn(),
@@ -76,6 +87,7 @@ describe('DefectsService', () => {
         { provide: getRepositoryToken(User), useValue: repoMock },
         { provide: getRepositoryToken(Room), useValue: roomsRepo },
         { provide: getRepositoryToken(SubRoom), useValue: subRoomsRepo },
+        { provide: getRepositoryToken(Floor), useValue: floorsRepo },
         { provide: ActivityLogsService, useValue: activityLogsService },
         { provide: NotificationsService, useValue: notificationsService },
         { provide: DefectNoteTranslator, useValue: noteTranslator },
@@ -87,6 +99,90 @@ describe('DefectsService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('custom floor ("ชั้นอื่นๆ" + typed name)', () => {
+    const baseDto = {
+      roundId: 7,
+      subCategoryIds: [],
+      inspectorId: 1,
+      roomId: 3,
+      floorId: 7,
+      severity: 'Minor',
+    };
+
+    beforeEach(() => {
+      repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7, status: 'DRAFT' });
+      repoMock.findBy.mockResolvedValue([]);
+      roomsRepo.findOneByOrFail.mockResolvedValue({ roomId: 3 });
+      defectsRepo.create.mockImplementation((value) => value);
+      defectsRepo.save.mockImplementation((value) => ({ ...value, defectId: 50 }));
+    });
+
+    it('reuses an existing floor whose name matches, ignoring case and extra spaces', async () => {
+      await service.create({ ...baseDto, customFloorLabel: '  ชั้นดาดฟ้า ' } as never);
+
+      expect(floorsRepo.save).not.toHaveBeenCalled();
+      expect(defectsRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ floor: { floorId: 12 } }),
+      );
+    });
+
+    it('creates a new floor row for a new name and saves the defect against it', async () => {
+      await service.create({ ...baseDto, customFloorLabel: 'ชั้นใต้หลังคา' } as never);
+
+      expect(floorsRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ label: 'ชั้นใต้หลังคา', labelEn: null }),
+      );
+      expect(defectsRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ floor: { floorId: 99 } }),
+      );
+    });
+
+    it('checks duplicates against the resolved floor, not the "other" row', async () => {
+      await service.create({ ...baseDto, customFloorLabel: 'ชั้นดาดฟ้า' } as never);
+
+      expect(defectsRepo.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ floor: { floorId: 12 } }),
+        }),
+      );
+    });
+
+    it('leaves the floor table alone when no custom name is given', async () => {
+      await service.create(baseDto as never);
+
+      expect(floorsRepo.find).not.toHaveBeenCalled();
+      expect(floorsRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('does not create a floor or upload when the round is locked', async () => {
+      repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7, status: 'SUBMITTED' });
+      const uploadImage = jest.fn();
+
+      await expect(
+        service.create(
+          { ...baseDto, customFloorLabel: 'ชั้นใต้หลังคา' } as never,
+          undefined,
+          uploadImage,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(floorsRepo.save).not.toHaveBeenCalled();
+      expect(uploadImage).not.toHaveBeenCalled();
+    });
+
+    it('applies a custom floor on update too', async () => {
+      defectsRepo.findOneOrFail.mockResolvedValue({
+        defectId: 11,
+        round: { roundId: 7, status: 'DRAFT' },
+      });
+
+      await service.update(11, { customFloorLabel: 'ชั้นใต้หลังคา' });
+
+      expect(defectsRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ floor: { floorId: 99 } }),
+      );
+    });
   });
 
   it('logs a DEFECT_CREATED activity with the room/sub-room as the location', async () => {
@@ -196,6 +292,7 @@ describe('DefectsService', () => {
   });
 
   it('throws ConflictException when an identical defect already exists in the round/room', async () => {
+    const uploadImage = jest.fn();
     repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7, status: 'DRAFT' });
     repoMock.findBy.mockResolvedValue([]);
     roomsRepo.findOneByOrFail.mockResolvedValue({ roomId: 3 });
@@ -205,18 +302,23 @@ describe('DefectsService', () => {
     ]);
 
     await expect(
-      service.create({
-        roundId: 7,
-        subCategoryIds: [1, 2],
-        inspectorId: 1,
-        roomId: 3,
-        subRoomId: 5,
-        floorId: 1,
-        severity: 'Minor',
-        description: 'ผนังแตกร้าว',
-      }),
+      service.create(
+        {
+          roundId: 7,
+          subCategoryIds: [1, 2],
+          inspectorId: 1,
+          roomId: 3,
+          subRoomId: 5,
+          floorId: 1,
+          severity: 'Minor',
+          description: 'ผนังแตกร้าว',
+        },
+        undefined,
+        uploadImage,
+      ),
     ).rejects.toThrow(ConflictException);
     expect(defectsRepo.save).not.toHaveBeenCalled();
+    expect(uploadImage).not.toHaveBeenCalled();
   });
 
   it('does not block create when subCategories differ from the existing defect', async () => {
@@ -478,6 +580,7 @@ describe('DefectsService', () => {
   });
 
   it('should reject creating a defect on a submitted round', async () => {
+    const uploadImage = jest.fn();
     repoMock.findOneByOrFail.mockResolvedValue({
       roundId: 7,
       status: 'SUBMITTED',
@@ -486,29 +589,75 @@ describe('DefectsService', () => {
     roomsRepo.findOneByOrFail.mockResolvedValue({ roomId: 3 });
 
     await expect(
-      service.create({
+      service.create(
+        {
+          roundId: 7,
+          subCategoryIds: [],
+          inspectorId: 1,
+          roomId: 3,
+          floorId: 1,
+        } as never,
+        undefined,
+        uploadImage,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(defectsRepo.save).not.toHaveBeenCalled();
+    expect(uploadImage).not.toHaveBeenCalled();
+  });
+
+  it('uploads the image only after the checks pass and saves its url', async () => {
+    repoMock.findOneByOrFail.mockResolvedValue({ roundId: 7, status: 'DRAFT' });
+    repoMock.findBy.mockResolvedValue([]);
+    roomsRepo.findOneByOrFail.mockResolvedValue({ roomId: 3 });
+    defectsRepo.create.mockImplementation((value) => value);
+    defectsRepo.save.mockImplementation((value) => ({
+      ...value,
+      defectId: 99,
+    }));
+    const uploadImage = jest
+      .fn()
+      .mockResolvedValue('https://storage/defects/a.webp');
+
+    await service.create(
+      {
         roundId: 7,
         subCategoryIds: [],
         inspectorId: 1,
         roomId: 3,
         floorId: 1,
-      } as never),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+      } as never,
+      undefined,
+      uploadImage,
+    );
 
-    expect(defectsRepo.save).not.toHaveBeenCalled();
+    expect(uploadImage).toHaveBeenCalledTimes(1);
+    expect(defectsRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ imageUrl: 'https://storage/defects/a.webp' }),
+    );
   });
 
   it('should reject updating a defect on an approved round', async () => {
+    const uploadImage = jest.fn();
     defectsRepo.findOneOrFail.mockResolvedValue({
       defectId: 11,
       round: { roundId: 7, status: 'APPROVED' },
     });
 
     await expect(
-      service.update(11, { description: 'edited' }),
+      service.update(11, { description: 'edited' }, undefined, uploadImage),
     ).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(defectsRepo.save).not.toHaveBeenCalled();
+    expect(uploadImage).not.toHaveBeenCalled();
+  });
+
+  it('lists a round without joining the round row and in a stable order', async () => {
+    await service.findByRound(7);
+
+    const options = defectsRepo.find.mock.calls[0][0];
+    expect(options.relations).not.toContain('round');
+    expect(options.order).toEqual({ defectId: 'ASC' });
   });
 
   it('should reject removing a defect on a submitted round', async () => {

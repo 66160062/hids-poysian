@@ -15,6 +15,7 @@ import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub
 import { User } from 'src/users/entities/user.entity';
 import { Room } from 'src/rooms/entities/room.entity';
 import { SubRoom } from 'src/sub-rooms/entities/sub-room.entity';
+import { Floor } from 'src/floor/entities/floor.entity';
 import { DefectStatus } from './entities/defect.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
 import { InspectionJobStatus } from 'src/inspection-jobs/enums/inspection-job-status.enum';
@@ -64,6 +65,9 @@ export class DefectsService {
 
     @InjectRepository(SubRoom)
     private readonly subRoomsRepo: Repository<SubRoom>,
+
+    @InjectRepository(Floor)
+    private readonly floorsRepo: Repository<Floor>,
 
     private readonly activityLogsService: ActivityLogsService,
     private readonly notificationsService: NotificationsService,
@@ -120,6 +124,30 @@ export class DefectsService {
     });
   }
 
+  // ชั้นที่ผู้ตรวจพิมพ์เอง (เลือก "ชั้นอื่นๆ"): ใช้แถวเดิมถ้ามีชื่อเดียวกัน (ไม่สนตัวพิมพ์/ช่องว่าง)
+  // ไม่งั้นสร้างแถวใหม่ ทุกหน้าที่แสดง defect.floor.label จึงได้ชื่อจริงโดยไม่ต้องแก้ และชื่อนี้จะขึ้นในรายการชั้นครั้งถัดไป
+  // ตาราง floor มีไม่กี่แถว เทียบใน JS ได้เลย ไม่ต้องเขียน ILIKE (และไม่ต้อง escape % _ จากข้อความผู้ใช้)
+  private async resolveCustomFloor(label: string): Promise<number> {
+    const normalize = (value: string) =>
+      value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('th');
+    const wanted = normalize(label);
+    const floors = await this.floorsRepo.find();
+    const existing = floors.find(
+      (floor) =>
+        normalize(floor.label) === wanted ||
+        (!!floor.labelEn && normalize(floor.labelEn) === wanted),
+    );
+    if (existing) return existing.floorId;
+
+    const created = await this.floorsRepo.save(
+      this.floorsRepo.create({
+        label: label.trim().replace(/\s+/g, ' '),
+        labelEn: null,
+      }),
+    );
+    return created.floorId;
+  }
+
   private assertRoundEditable(roundStatus: string, role?: string): void {
     const isAdmin = role === 'admin';
     const lockedStatuses = isAdmin
@@ -135,12 +163,15 @@ export class DefectsService {
     }
   }
 
+  // uploadImage ถูกเรียกหลังเช็ครอบล็อก/ซ้ำผ่านแล้วเท่านั้น จะได้ไม่ต้องบีบอัด+อัปโหลดรูปทิ้ง
+  // ทั้งที่ request จะถูกปฏิเสธอยู่ดี (เดิมรูปถูกอัปโหลดก่อนแล้วค้างอยู่ใน storage)
   async create(
     createDefectDto: CreateDefectDto & {
       imageUrl?: string;
       imageFileSize?: number;
     },
     role?: string,
+    uploadImage?: () => Promise<string>,
   ) {
     const [round, subCategories, inspector, room, subRoom] = await Promise.all([
       this.roundsRepo.findOneByOrFail({
@@ -164,10 +195,21 @@ export class DefectsService {
 
     this.assertRoundEditable(round.status, role);
 
+    // หลังเช็ครอบล็อก (รอบล็อกแล้วไม่ต้องสร้างชั้นทิ้ง) แต่ก่อนเช็คซ้ำ (ต้องเทียบด้วย floorId จริง)
+    if (createDefectDto.customFloorLabel) {
+      createDefectDto.floorId = await this.resolveCustomFloor(
+        createDefectDto.customFloorLabel,
+      );
+    }
+
     if (await this.hasDuplicateDefect(createDefectDto)) {
       throw new ConflictException(
         'มีรายการ Defect นี้อยู่แล้วในห้อง/ชั้นเดียวกัน',
       );
+    }
+
+    if (uploadImage) {
+      createDefectDto.imageUrl = await uploadImage();
     }
 
     const defect = this.defectsRepo.create({
@@ -241,6 +283,7 @@ export class DefectsService {
       imageFileSize?: number;
     },
     role?: string,
+    uploadImage?: () => Promise<string>,
   ) {
     const defect = await this.defectsRepo.findOneOrFail({
       where: { defectId: id },
@@ -249,6 +292,16 @@ export class DefectsService {
 
     if (defect.round) {
       this.assertRoundEditable(defect.round.status, role);
+    }
+
+    if (updateDefectDto.customFloorLabel) {
+      updateDefectDto.floorId = await this.resolveCustomFloor(
+        updateDefectDto.customFloorLabel,
+      );
+    }
+
+    if (uploadImage) {
+      updateDefectDto.imageUrl = await uploadImage();
     }
 
     // Assign primitive properties
@@ -454,19 +507,32 @@ export class DefectsService {
     return this.defectsRepo.remove(defect);
   }
 
+  // ไม่ join 'round' เพราะทุกแถวเป็นรอบเดียวกัน (เดิมแถว round ทั้งแถว รวม token ลูกค้า/ช่าง
+  // และข้อความ AI ถูกส่งซ้ำในทุก defect) frontend ไม่ได้อ่าน defect.round จาก list นี้
+  private static readonly LIST_RELATIONS = [
+    'subCategories',
+    'subCategories.category',
+    'inspector',
+    'room',
+    'subRoom',
+    'floor',
+    'plan',
+  ];
+
   findByRound(roundId: number) {
     return this.defectsRepo.find({
       where: { round: { roundId } },
-      relations: [
-        'round',
-        'subCategories',
-        'subCategories.category',
-        'inspector',
-        'room',
-        'subRoom',
-        'floor',
-        'plan',
-      ],
+      relations: DefectsService.LIST_RELATIONS,
+      order: { defectId: 'ASC' },
+    });
+  }
+
+  // defect ตัวเดียวในรูปร่างเดียวกับ findByRound ใช้ตอบกลับหลังสร้าง ให้ frontend ใส่ลง list
+  // ได้ทันทีโดยไม่ต้องดึงทั้งรอบใหม่
+  findListItem(defectId: number) {
+    return this.defectsRepo.findOneOrFail({
+      where: { defectId },
+      relations: DefectsService.LIST_RELATIONS,
     });
   }
 }

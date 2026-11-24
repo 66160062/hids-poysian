@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsEnum,
   IsArray,
+  MaxLength,
 } from 'class-validator';
 import { DefectStatus } from '../entities/defect.entity';
 import { Transform, Type } from 'class-transformer';
@@ -29,6 +30,21 @@ export class CreateDefectDto {
   @Type(() => Number)
   @IsNumber()
   floorId!: number;
+
+  // ใช้เมื่อเลือก "ชั้นอื่นๆ" แล้วพิมพ์ชื่อชั้นเอง backend จะหาชั้นที่ชื่อตรงกัน (ไม่สนตัวพิมพ์/ช่องว่าง)
+  // หรือสร้างแถวใหม่ในตาราง floor แล้วใช้ floorId นั้นแทน floorId ที่ส่งมา
+  @ApiProperty({
+    description: 'ชื่อชั้นที่ผู้ตรวจพิมพ์เอง (เมื่อเลือกชั้นอื่นๆ)',
+    example: 'ชั้นดาดฟ้า',
+    required: false,
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value,
+  )
+  @IsString()
+  @MaxLength(50)
+  customFloorLabel?: string;
 
   @Transform(({ value }: { value: string | string[] }) => {
     if (Array.isArray(value)) return value.map((v) => Number(v));
