@@ -1,4 +1,8 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateFloorDto } from './dto/create-floor.dto';
 import { UpdateFloorDto } from './dto/update-floor.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -83,11 +87,30 @@ export class FloorService implements OnModuleInit {
     return this.floorRepo.findOneBy({ floorId: id });
   }
 
-  update(id: number, updateFloorDto: UpdateFloorDto) {
-    return this.floorRepo.update({ floorId: id }, updateFloorDto);
+  async update(id: number, updateFloorDto: UpdateFloorDto): Promise<Floor> {
+    const floor = await this.findOne(id);
+    if (!floor) {
+      throw new NotFoundException(`Floor #${id} not found`);
+    }
+    Object.assign(floor, updateFloorDto);
+    return this.floorRepo.save(floor);
   }
 
-  remove(id: number) {
-    return this.floorRepo.delete({ floorId: id });
+  async remove(id: number) {
+    try {
+      const res = await this.floorRepo.delete({ floorId: id });
+      if (res.affected === 0) {
+        throw new NotFoundException(`Floor #${id} not found`);
+      }
+      return res;
+    } catch (error: unknown) {
+      const err = error as { code?: string };
+      if (err?.code === '23503') {
+        throw new BadRequestException(
+          'ไม่สามารถลบชั้นนี้ได้เนื่องจากมีรายการจุดบกพร่อง (Defect) ใช้งานอยู่',
+        );
+      }
+      throw error;
+    }
   }
 }

@@ -64,6 +64,27 @@
           <q-card
             flat
             bordered
+            class="kpi-card theme-floors shadow-1 cursor-pointer"
+            :class="{ 'kpi-card--active': activeTab === 'floors' }"
+            v-ripple
+            tabindex="0"
+            role="button"
+            @click="activeTab = 'floors'"
+            @keyup.enter="activeTab = 'floors'"
+          >
+            <q-card-section class="q-pa-sm row items-center no-wrap">
+              <q-avatar class="tone-avatar" icon="layers" size="40px" />
+              <div class="q-ml-sm">
+                <div class="text-caption text-grey-7">{{ t('adminManage.masterData.kpiFloors') }}</div>
+                <div class="text-h6 text-weight-bold text-dark">{{ store.floors.length }}</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="kpi-col col">
+          <q-card
+            flat
+            bordered
             class="kpi-card theme-categories shadow-1 cursor-pointer"
             :class="{ 'kpi-card--active': activeTab === 'defectCategories' }"
             v-ripple
@@ -318,6 +339,52 @@
         </div>
       </div>
 
+      <!-- 3.5 ชั้น (Floors) View -->
+      <div v-else-if="activeTab === 'floors'">
+        <div v-if="filteredFloors.length === 0" class="text-center q-py-xl text-grey-6">
+          <q-icon name="layers" size="64px" class="q-mb-md" />
+          <div>{{ t('adminManage.masterData.noFloorsFound') }}</div>
+        </div>
+
+        <div v-else class="row q-col-gutter-md">
+          <div
+            v-for="floor in paginatedFloors"
+            :key="floor.floorId"
+            class="col-12 col-sm-6 col-md-4"
+          >
+            <AdminMasterDataCard
+              class="theme-floors"
+              :title="floor.label"
+              :subtitle="floor.labelEn"
+              :id="floor.floorId"
+              @open="openFloorModal(floor)"
+              @edit="openFloorModal(floor)"
+              @delete="confirmDelete('floor', floor.floorId, floor.label)"
+            >
+              <template v-if="floor.floorOrder !== undefined && floor.floorOrder !== null" #tags>
+                <q-badge color="light-blue-1" text-color="light-blue-9" class="tag-badge">
+                  {{ t('adminManage.masterData.floorOrderBadge', { order: floor.floorOrder }) }}
+                </q-badge>
+              </template>
+            </AdminMasterDataCard>
+          </div>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div v-if="maxPageFloors > 1" class="row justify-center q-mt-lg">
+          <q-pagination
+            v-model="pageFloors"
+            :max="maxPageFloors"
+            :max-pages="5"
+            direction-links
+            boundary-links
+            color="primary"
+            active-color="primary"
+            active-text-color="white"
+          />
+        </div>
+      </div>
+
       <!-- 4. ประเภทตำหนิย่อยทั้งหมด (Defect Sub-Categories) View -->
       <div v-else-if="activeTab === 'defectSubCategories'">
         <div v-if="filteredSubCategories.length === 0" class="text-center q-py-xl text-grey-6">
@@ -545,6 +612,37 @@
         filled
       />
     </AdminMasterDataFormDialog>
+
+    <!-- Dialog 5: Floor Dialog -->
+    <AdminMasterDataFormDialog
+      v-model="showFloorModal"
+      form-id="floor-form"
+      icon="layers"
+      :is-editing="isEdit"
+      :saving="saving"
+      :title="isEdit ? t('adminManage.masterData.editFloorTitle') : t('adminManage.masterData.addFloorTitle')"
+      @submit="saveFloor"
+    >
+      <AdminMasterDataBilingualField
+        v-model:th="floorForm.label"
+        v-model:en="floorForm.labelEn"
+        :th-label="t('adminManage.masterData.floorLabelThLabel')"
+        :en-label="t('adminManage.masterData.floorLabelEnLabel')"
+        :th-required-message="t('adminManage.masterData.floorLabelRequired')"
+        dense
+        filled
+      />
+      <div>
+        <div class="dialog-field-label">{{ t('adminManage.masterData.floorOrderLabel') }}</div>
+        <q-input
+          v-model.number="floorForm.floorOrder"
+          type="number"
+          dense
+          filled
+          :hint="t('adminManage.masterData.floorOrderHint')"
+        />
+      </div>
+    </AdminMasterDataFormDialog>
   </q-page>
 </template>
 
@@ -562,13 +660,14 @@ import type {
   SubRoom,
   DefectCategory,
   DefectSubCategory,
+  Floor,
 } from 'src/types/master-data';
 
 const { t, locale } = useI18n({ useScope: 'global' });
 const $q = useQuasar();
 const store = useMasterDataStore();
 
-type TabType = 'defectCategories' | 'rooms' | 'subRooms' | 'defectSubCategories';
+type TabType = 'defectCategories' | 'rooms' | 'subRooms' | 'floors' | 'defectSubCategories';
 
 const activeTab = ref<TabType>('defectCategories');
 const searchQuery = ref('');
@@ -584,6 +683,7 @@ const itemsPerPage = 25;
 const pageCategories = ref(1);
 const pageRooms = ref(1);
 const pageSubRooms = ref(1);
+const pageFloors = ref(1);
 const pageSubCategories = ref(1);
 
 // Drill-down dialog state
@@ -596,10 +696,16 @@ const showRoomModal = ref(false);
 const showSubRoomModal = ref(false);
 const showCategoryModal = ref(false);
 const showSubCategoryModal = ref(false);
+const showFloorModal = ref(false);
 
 // Forms
 const roomForm = ref({ roomName: '', roomNameEn: '' });
 const subRoomForm = ref({ roomName: '', roomNameEn: '' });
+const floorForm = ref<{ label: string; labelEn: string; floorOrder?: number }>({
+  label: '',
+  labelEn: '',
+  floorOrder: 0,
+});
 const categoryForm = ref({ name: '', nameEn: '' });
 const subCategoryForm = ref({ name: '', nameEn: '', categoryId: null as number | null });
 
@@ -627,6 +733,7 @@ watch([searchQuery, activeTab, selectedCategoryFilter], () => {
   pageCategories.value = 1;
   pageRooms.value = 1;
   pageSubRooms.value = 1;
+  pageFloors.value = 1;
   pageSubCategories.value = 1;
 });
 
@@ -676,6 +783,16 @@ const filteredSubRooms = computed(() => {
   );
 });
 
+const filteredFloors = computed(() => {
+  if (!searchQuery.value) return store.floors;
+  const q = searchQuery.value.toLowerCase();
+  return store.floors.filter(
+    (f) =>
+      f.label.toLowerCase().includes(q) ||
+      (f.labelEn && f.labelEn.toLowerCase().includes(q))
+  );
+});
+
 const filteredSubCategories = computed(() => {
   let list = store.defectSubCategories;
 
@@ -717,6 +834,12 @@ const paginatedSubRooms = computed(() => {
   return filteredSubRooms.value.slice(start, start + itemsPerPage);
 });
 
+const maxPageFloors = computed(() => Math.ceil(filteredFloors.value.length / itemsPerPage) || 1);
+const paginatedFloors = computed(() => {
+  const start = (pageFloors.value - 1) * itemsPerPage;
+  return filteredFloors.value.slice(start, start + itemsPerPage);
+});
+
 const maxPageSubCategories = computed(() => Math.ceil(filteredSubCategories.value.length / itemsPerPage) || 1);
 const paginatedSubCategories = computed(() => {
   const start = (pageSubCategories.value - 1) * itemsPerPage;
@@ -747,6 +870,7 @@ function getCategoryName(categoryId?: number) {
 function handleAddNew() {
   if (activeTab.value === 'rooms') openRoomModal();
   else if (activeTab.value === 'subRooms') openSubRoomModal();
+  else if (activeTab.value === 'floors') openFloorModal();
   else if (activeTab.value === 'defectCategories') openCategoryModal();
   else if (activeTab.value === 'defectSubCategories') openSubCategoryModal();
 }
@@ -930,8 +1054,56 @@ async function saveSubCategory() {
   }
 }
 
+// 5. Floor Dialog
+function openFloorModal(row?: Floor) {
+  if (row) {
+    isEdit.value = true;
+    editId.value = row.floorId;
+    floorForm.value = {
+      label: row.label,
+      labelEn: row.labelEn || '',
+      floorOrder: row.floorOrder ?? 0,
+    };
+  } else {
+    isEdit.value = false;
+    editId.value = null;
+    const nextOrder =
+      store.floors.length > 0
+        ? Math.max(...store.floors.map((f) => f.floorOrder ?? 0)) + 1
+        : 0;
+    floorForm.value = { label: '', labelEn: '', floorOrder: nextOrder };
+  }
+  showFloorModal.value = true;
+}
+
+async function saveFloor() {
+  saving.value = true;
+  try {
+    const payload = {
+      label: floorForm.value.label,
+      labelEn: floorForm.value.labelEn,
+      ...(typeof floorForm.value.floorOrder === 'number' && !Number.isNaN(floorForm.value.floorOrder)
+        ? { floorOrder: floorForm.value.floorOrder }
+        : {}),
+    };
+    if (isEdit.value && editId.value) {
+      await store.updateFloor(editId.value, payload);
+      $q.notify({ type: 'positive', message: t('adminManage.masterData.notifySaveFloorSuccessEdit') });
+    } else {
+      await store.createFloor(payload);
+      $q.notify({ type: 'positive', message: t('adminManage.masterData.notifySaveFloorSuccessAdd') });
+    }
+    showFloorModal.value = false;
+  } catch (err: unknown) {
+    console.error(err);
+    $q.notify({ type: 'negative', message: t('adminManage.masterData.notifySaveError') });
+  } finally {
+    saving.value = false;
+  }
+}
+
 // Delete Confirmation
-function confirmDelete(type: 'room' | 'subRoom' | 'category' | 'subCategory', id: number, name: string) {
+function confirmDelete(type: 'room' | 'subRoom' | 'floor' | 'category' | 'subCategory', id: number, name: string) {
   $q.dialog({
     title: t('adminManage.masterData.confirmDeleteTitle'),
     message: t('adminManage.masterData.confirmDeleteMsg', { name }),
@@ -943,13 +1115,19 @@ function confirmDelete(type: 'room' | 'subRoom' | 'category' | 'subCategory', id
       try {
         if (type === 'room') await store.deleteRoom(id);
         else if (type === 'subRoom') await store.deleteSubRoom(id);
+        else if (type === 'floor') await store.deleteFloor(id);
         else if (type === 'category') await store.deleteDefectCategory(id);
         else if (type === 'subCategory') await store.deleteDefectSubCategory(id);
 
         $q.notify({ type: 'positive', message: t('adminManage.masterData.notifyDeleteSuccess') });
       } catch (err: unknown) {
         console.error(err);
-        $q.notify({ type: 'negative', message: t('adminManage.masterData.notifyDeleteError') });
+        const backendMessage =
+          (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        $q.notify({
+          type: 'negative',
+          message: backendMessage || t('adminManage.masterData.notifyDeleteError'),
+        });
       }
     })();
   });
@@ -985,6 +1163,12 @@ function confirmDelete(type: 'room' | 'subRoom' | 'category' | 'subCategory', id
   --tone: #00897b;
   --tone-soft: #e0f2f1;
   --tone-dark: #00695c;
+}
+
+.theme-floors {
+  --tone: #0288d1;
+  --tone-soft: #e1f5fe;
+  --tone-dark: #01579b;
 }
 
 .theme-categories {
