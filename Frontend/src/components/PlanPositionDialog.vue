@@ -111,26 +111,11 @@
             </q-btn>
           </div>
 
-          <!-- Rename the selected plan -->
-          <div v-if="activePlan && !readonly" class="bg-white col-auto dialog-inset q-pt-sm">
-            <div v-if="!activePlan.floor" class="text-caption text-grey-7 q-mb-xs">
+          <!-- แปลนเก่าที่ไม่มีชั้น: บอกไว้ให้รู้ (แปลนใหม่ได้ชั้นตามลำดับอัตโนมัติ จึงไม่มี dropdown เปลี่ยนชั้น) -->
+          <div v-if="activePlan && !readonly && !activePlan.floor" class="bg-white col-auto dialog-inset q-pt-sm">
+            <div class="text-caption text-grey-7">
               {{ planDisplayName(activePlan) }} · {{ t('components.planPosition.noFloor') }}
             </div>
-            <q-select
-              :model-value="activePlan.floor?.floorId ?? null"
-              :options="activePlanFloorOptions"
-              emit-value
-              map-options
-              dense
-              outlined
-              bg-color="white"
-              class="plan-name-input"
-              :label="t('components.planPosition.planFloor')"
-              :error="!!activePlanFloorError"
-              :error-message="activePlanFloorError ?? ''"
-              hide-bottom-space
-              @update:model-value="changeActivePlanFloor"
-            />
           </div>
 
           <!-- Plan Thumbnail Slider -->
@@ -185,22 +170,11 @@
                 <!-- รูปที่เลือก/ถ่ายแล้วแต่ยังไม่บันทึก — ตั้งชื่อแต่ละรูปได้ก่อนกดบันทึก -->
                 <div v-for="(item, idx) in pendingPlans" :key="item.id" class="row no-wrap items-start q-gutter-x-sm pending-plan-row">
                   <img :src="item.previewUrl" :alt="t('components.planPosition.planImageAlt')" class="pending-plan-thumb" />
-                  <q-select
-                    v-model="item.floorId"
-                    :options="pendingFloorOptions(item)"
-                    emit-value
-                    map-options
-                    outlined
-                    dense
-                    bg-color="white"
-                    class="col plan-name-input"
-                    :disable="isUploadingPlan"
-                    :label="t('components.planPosition.planFloor')"
-                    :error="!!item.error"
-                    :error-message="item.error ?? ''"
-                    hide-bottom-space
-                    @update:model-value="item.error = null"
-                  />
+                  <!-- ชั้นตายตัวตามลำดับ (รูปแรก = ชั้น 1, ถัดไป = ชั้น 2 ...) ไม่ต้องเลือกเอง -->
+                  <div class="col column justify-center pending-plan-floor">
+                    <div class="text-body2 text-weight-medium">{{ pendingPlanName(item) }}</div>
+                    <div v-if="item.error" class="text-caption text-negative" role="alert">{{ item.error }}</div>
+                  </div>
                   <q-btn
                     flat
                     round
@@ -208,12 +182,17 @@
                     color="grey-7"
                     icon="close"
                     :disable="isUploadingPlan"
+                    :aria-label="t('components.planPosition.removePendingPlan')"
                     @click="removePendingPlan(idx)"
                   />
                 </div>
 
-                <div v-if="!canAddPendingPlan" class="text-caption text-grey-7 text-center">
-                  {{ t('components.planPosition.allFloorsHavePlans') }}
+                <div class="text-caption text-center" :class="canAddPendingPlan ? 'text-primary' : 'text-grey-7'">
+                  {{
+                    nextPendingFloor
+                      ? t('components.planPosition.nextPlanFloorHint', { floor: nextPendingFloor.label })
+                      : t('components.planPosition.allFloorsHavePlans')
+                  }}
                 </div>
 
                 <!-- Action buttons to capture / select photo -->
@@ -393,7 +372,7 @@ import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
 import IconBounceSpinner from 'src/components/IconBounceSpinner.vue';
-import { availablePlanFloors, isFloorTakenError, planDisplayName } from 'src/composables/usePlanFloors';
+import { isFloorTakenError, nextPlanFloor, planDisplayName } from 'src/composables/usePlanFloors';
 import { useInspectionStore } from 'src/stores/useInspection';
 import type { HousePlan } from 'src/models';
 import { thumbUrl } from 'src/utils/thumb';
@@ -460,32 +439,33 @@ interface PendingPlan {
 const pendingPlans = ref<PendingPlan[]>([]);
 let nextPendingId = 0;
 
-// ── Floors (แปลน 1 ใบต่อ 1 ชั้นต่องาน) ─────────────────────────
+// ── Floors (แปลน 1 ใบต่อ 1 ชั้นต่องาน, เรียงชั้นตายตัว) ───────────────
 const inspectionStore = useInspectionStore();
-const activePlanFloorError = ref<string | null>(null);
 
 const asFloorUse = (floorId: number | null) => ({ floor: floorId === null ? null : { floorId } });
-// ชั้นที่ถูกแปลนอื่น (ทั้งที่บันทึกแล้วและที่รอบันทึก) ใช้ไปแล้ว ยกเว้นแปลน/แถวที่กำลังเลือกเอง
-const activePlanFloorOptions = computed(() =>
-  availablePlanFloors(
-    inspectionStore.floorOptions,
-    plans.value.filter((p) => p !== activePlan.value),
-    undefined,
-    activePlan.value?.floor,
-  ),
-);
-const pendingFloorOptions = (item: PendingPlan) =>
-  availablePlanFloors(inspectionStore.floorOptions, [
+// ชั้นถัดไปที่รูปใหม่จะได้: ชั้นมาตรฐานที่ว่างต่ำสุด นับทั้งแปลนที่บันทึกแล้วและที่รอบันทึก
+const nextPendingFloor = computed(() =>
+  nextPlanFloor(inspectionStore.floorOptions, [
     ...plans.value,
-    ...pendingPlans.value.filter((p) => p !== item).map((p) => asFloorUse(p.floorId)),
-  ]);
-const canAddPendingPlan = computed(
-  () =>
-    availablePlanFloors(inspectionStore.floorOptions, [
-      ...plans.value,
-      ...pendingPlans.value.map((p) => asFloorUse(p.floorId)),
-    ]).length > 0,
+    ...pendingPlans.value.map((p) => asFloorUse(p.floorId)),
+  ]),
 );
+const canAddPendingPlan = computed(() => nextPendingFloor.value !== null);
+
+// กำหนดชั้นให้รูปที่รอบันทึกใหม่ทั้งหมดตามลำดับ (เรียกหลังเพิ่ม/ลบรูป) เติมชั้นที่ว่างต่ำสุดก่อน
+const assignPendingFloors = () => {
+  const assigned: { floor: { floorId: number } | null }[] = [];
+  for (const item of pendingPlans.value) {
+    const floor = nextPlanFloor(inspectionStore.floorOptions, [...plans.value, ...assigned]);
+    item.floorId = floor?.value ?? null;
+    assigned.push(asFloorUse(item.floorId));
+  }
+};
+
+const pendingPlanName = (item: PendingPlan) => {
+  const floor = inspectionStore.floorOptions.find((o) => o.value === item.floorId);
+  return floor ? t('components.planPosition.planNameForFloor', { floor: floor.label }) : t('components.planPosition.allFloorsHavePlans');
+};
 const imageRef = ref<HTMLImageElement | null>(null);
 const cameraInput = ref<HTMLInputElement | null>(null);
 const galleryInput = ref<HTMLInputElement | null>(null);
@@ -730,7 +710,6 @@ const fetchPlans = async () => {
 
 const selectPlan = (plan: HousePlan, event?: MouseEvent) => {
   activePlan.value = plan;
-  activePlanFloorError.value = null;
   resetZoom();
   const btn = event?.currentTarget as HTMLElement | undefined;
   if (btn) {
@@ -791,26 +770,23 @@ const onPlanFileSelected = (event: Event) => {
   const files = target.files ? Array.from(target.files) : [];
   target.value = '';
 
+  // รับเท่าที่ยังมีชั้นว่าง (เกินกว่านั้นไม่มีชั้นให้ผูก)
   for (const file of files) {
-    // ตั้งต้นเป็นชั้นที่กำลังกรอก defect อยู่ ถ้าเป็นชั้นจริงและยังว่าง ("ชั้นอื่นๆ" ไม่ผูกแปลน)
-    const preferred = props.selectedFloorId
-      ? availablePlanFloors(inspectionStore.floorOptions, [
-          ...plans.value,
-          ...pendingPlans.value.map((p) => asFloorUse(p.floorId)),
-        ]).find((o) => o.value === props.selectedFloorId)
-      : undefined;
+    if (!nextPendingFloor.value) break;
     pendingPlans.value.push({
       id: nextPendingId++,
       file,
       previewUrl: URL.createObjectURL(file),
-      floorId: preferred?.value ?? null,
+      floorId: null,
     });
+    assignPendingFloors();
   }
 };
 
 const removePendingPlan = (index: number) => {
   const [removed] = pendingPlans.value.splice(index, 1);
   if (removed) URL.revokeObjectURL(removed.previewUrl);
+  assignPendingFloors();
 };
 
 const clearPendingPlans = () => {
@@ -882,23 +858,6 @@ const savePendingPlans = async () => {
   }
 };
 
-const changeActivePlanFloor = async (floorId: number | null) => {
-  const plan = activePlan.value;
-  if (!plan || floorId === null || plan.floor?.floorId === floorId) return;
-  activePlanFloorError.value = null;
-
-  try {
-    const { data } = await api.patch<HousePlan>(`/house-plans/${plan.planId}`, { floorId });
-    plan.floor = data.floor ?? null;
-    plan.name = data.name;
-    plan.nameEn = data.nameEn ?? null;
-  } catch (err) {
-    console.error('Change plan floor error', err);
-    activePlanFloorError.value = isFloorTakenError(err)
-      ? t('components.planPosition.floorTaken')
-      : t('components.planPosition.changeFloorFailed');
-  }
-};
 
 // ── Dialog Controls & Confirm ─────────────────────────────────
 const closeDialog = () => {
@@ -925,7 +884,6 @@ watch(
       currentPinY.value = props.initialY ?? null;
       locationZone.value = props.initialZone ?? '';
       resetZoom();
-      activePlanFloorError.value = null;
       void inspectionStore.ensureMasterData();
       void fetchPlans();
     }

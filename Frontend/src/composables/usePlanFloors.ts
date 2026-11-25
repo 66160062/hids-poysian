@@ -12,30 +12,19 @@ export function planDisplayName(plan: Pick<HousePlan, 'name' | 'nameEn' | 'floor
   return localizedText(plan.name, plan.nameEn);
 }
 
-// ชั้นที่เลือกได้ตอนเพิ่ม/ย้ายแปลน: ตัด "ชั้นอื่นๆ" ออก (แปลนต้องผูกชั้นจริง) และตัดชั้นที่แปลนอื่นของงานใช้แล้ว
-// ownFloor = ชั้นปัจจุบันของแปลนที่กำลังแก้ ต้องอยู่ในตัวเลือกเสมอ (แปลนเก่าอาจใช้ชั้นซ้ำกัน/เป็น "ชั้นอื่นๆ"/ชั้นที่พิมพ์เอง)
-// ไม่งั้น q-select (emit-value map-options) จะโชว์ floorId ดิบ
-export function availablePlanFloors(
+// แปลนเรียงตามชั้นแบบตายตัว: รูปแรก = ชั้น 1, รูปถัดไป = ชั้น 2 ... ชั้น 10 แล้วชั้นลอย (ตาม floor_order)
+// ใช้เฉพาะชั้นมาตรฐาน (มี order) ไม่รวม "อื่นๆ" และชั้นที่ผู้ตรวจพิมพ์เอง
+// ถ้าลบแปลนชั้นกลางทิ้ง ช่อง "+" จะเติมชั้นที่ว่างที่ต่ำสุดก่อน คืน null เมื่อทุกชั้นมีแปลนแล้ว
+export function nextPlanFloor(
   floors: SelectOption[],
-  plans: { planId?: number; floor?: { floorId: number } | null }[],
-  currentPlanId?: number,
-  ownFloor?: { floorId: number; label: string } | null,
-): SelectOption[] {
-  const taken = new Set<number>();
-  for (const p of plans) {
-    if (p.floor && (currentPlanId === undefined || p.planId !== currentPlanId)) taken.add(p.floor.floorId);
-  }
-  const result = floors.filter((f) => !f.isOther && !taken.has(f.value) && f.value !== ownFloor?.floorId);
-  if (!ownFloor) return result;
-  const own = floors.find((f) => f.value === ownFloor.floorId) ?? { value: ownFloor.floorId, label: ownFloor.label };
-  // คงลำดับตามรายการชั้นเดิม
-  return floors.length ? [...result, own].sort((a, b) => floorIndex(floors, a.value) - floorIndex(floors, b.value)) : [own];
+  plans: { floor?: { floorId: number } | null }[],
+): SelectOption | null {
+  const taken = new Set(plans.flatMap((p) => (p.floor ? [p.floor.floorId] : [])));
+  const standard = floors
+    .filter((f) => !f.isOther && f.order != null)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  return standard.find((f) => !taken.has(f.value)) ?? null;
 }
-
-const floorIndex = (floors: SelectOption[], id: number) => {
-  const i = floors.findIndex((f) => f.value === id);
-  return i === -1 ? Number.MAX_SAFE_INTEGER : i;
-};
 
 // 409 จาก backend = งานนี้มีแปลนอยู่ในชั้นนั้นแล้ว
 export function isFloorTakenError(err: unknown): boolean {

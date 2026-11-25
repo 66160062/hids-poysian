@@ -101,9 +101,10 @@ const SEVERITY_LABEL: Record<string, string> = {
 // ข้อมูลพวกนี้แทบไม่เปลี่ยนระหว่างตรวจ จึงโหลดครั้งเดียวแล้วใช้ซ้ำทั้ง session
 
 // isOther: ตัวเลือก "ชั้นอื่นๆ" ที่ต้องให้ผู้ตรวจพิมพ์ชื่อชั้นเอง
-export type SelectOption = { value: number; label: string; isOther?: boolean };
+// order: floor_order จาก backend (ชั้นมาตรฐาน 10..110, ชั้นที่พิมพ์เอง/อื่นๆ = null) ใช้เรียงแปลนตามชั้นแบบตายตัว
+export type SelectOption = { value: number; label: string; isOther?: boolean; order?: number | null };
 
-type FloorRow = { floorId: number; label: string; labelEn?: string | null };
+type FloorRow = { floorId: number; label: string; labelEn?: string | null; floorOrder?: number | null };
 
 // แถว "ชั้นอื่นๆ....." เป็น lookup ธรรมดาในตาราง floor (ไม่มีคอลัมน์บอกว่าเป็นตัวเลือกอื่นๆ) จึงดูจากชื่อ
 export const isOtherFloor = (floor: Pick<FloorRow, 'label' | 'labelEn'>) =>
@@ -111,7 +112,7 @@ export const isOtherFloor = (floor: Pick<FloorRow, 'label' | 'labelEn'>) =>
 
 // ตัวเลือก "อื่นๆ" อยู่ท้ายสุดเสมอ ชั้นที่พิมพ์เพิ่มเองจะขึ้นก่อนหน้ามัน
 const toFloorOptions = (rows: FloorRow[]): SelectOption[] => {
-  const options = rows.map((f) => ({ value: f.floorId, label: f.label, isOther: isOtherFloor(f) }));
+  const options = rows.map((f) => ({ value: f.floorId, label: f.label, isOther: isOtherFloor(f), order: f.floorOrder ?? null }));
   return [...options.filter((o) => !o.isOther), ...options.filter((o) => o.isOther)];
 };
 
@@ -505,7 +506,7 @@ export const useInspectionStore = defineStore('inspection', () => {
   function upsertFloorOption(floor: Defect['floor']) {
     if (!floor || floorOptions.value.some((o) => o.value === floor.floorId)) return;
     floorOptions.value = toFloorOptions([
-      ...floorOptions.value.map((o) => ({ floorId: o.value, label: o.label, labelEn: o.isOther ? 'Other' : null })),
+      ...floorOptions.value.map((o) => ({ floorId: o.value, label: o.label, labelEn: o.isOther ? 'Other' : null, floorOrder: o.order ?? null })),
       { floorId: floor.floorId, label: floor.label, labelEn: floor.labelEn ?? null },
     ]);
   }

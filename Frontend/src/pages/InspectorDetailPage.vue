@@ -407,60 +407,15 @@
                     class="absolute-top-right q-ma-xs shadow-2"
                     size="sm"
                     :disable="plan.isUploading"
-                    @click.stop="removeHousePlan(planIdx)"
+                    :aria-label="t('components.planPosition.deletePlanConfirm')"
+                    @click.stop="confirmRemoveHousePlan(planIdx)"
                   />
                 </q-card>
                 <div class="text-caption text-weight-medium q-mt-xs ellipsis">{{ planDisplayName(plan) }}</div>
                 <div v-if="!plan.floor" class="text-caption text-grey-7">{{ t('components.planPosition.noFloor') }}</div>
-                <q-select
-                  :model-value="plan.floor?.floorId ?? null"
-                  :options="planFloorOptions(plan)"
-                  emit-value
-                  map-options
-                  dense
-                  filled
-                  class="q-mt-xs"
-                  :disable="plan.isUploading"
-                  :label="t('components.planPosition.planFloor')"
-                  :error="!!plan.floorError"
-                  :error-message="plan.floorError ?? ''"
-                  hide-bottom-space
-                  @update:model-value="changeHousePlanFloor(planIdx, $event)"
-                />
               </div>
-              <div class="col-6 col-sm-4">
-                <q-card
-                  flat
-                  bordered
-                  class="upload-box flex flex-center"
-                  :class="newPlanFloorId === null ? 'disabled' : 'cursor-pointer'"
-                  :aria-disabled="newPlanFloorId === null"
-                  @click="triggerHousePlanUpload"
-                >
-                  <div class="column items-center">
-                    <q-icon name="add_a_photo" size="32px" color="grey-5" />
-                    <div class="text-caption text-grey-6 q-mt-xs">{{ t('inspector.detail.editChooseImage') }}</div>
-                  </div>
-                </q-card>
-              </div>
-            </div>
-            <q-select
-              v-model="newPlanFloorId"
-              :options="newPlanFloorOptions"
-              emit-value
-              map-options
-              dense
-              filled
-              class="q-mt-md"
-              :disable="!newPlanFloorOptions.length"
-              :label="t('components.planPosition.planFloor')"
-              :error="!!newPlanError"
-              :error-message="newPlanError ?? ''"
-              hide-bottom-space
-              @update:model-value="newPlanError = null"
-            />
-            <div v-if="!newPlanFloorOptions.length" class="text-caption text-grey-7 q-mt-xs">
-              {{ t('components.planPosition.allFloorsHavePlans') }}
+              <!-- ช่อง "+" อยู่ท้ายกริดเสมอ ชั้นตายตัวตามลำดับ (รูปแรก = ชั้น 1, ถัดไป = ชั้น 2 ...) ไม่ต้องเลือกชั้นเอง -->
+              <HousePlanAddTile :next-floor="nextFloor" :error="newPlanError" @add="addPlanForFloor" />
             </div>
           </div>
 
@@ -545,10 +500,12 @@ import { api } from 'src/boot/axios';
 import type { InspectionRound, Defect, InspectionSummaryItem, HousePlan } from 'src/models';
 import DefectReport from 'src/components/DefectReport.vue';
 import PlanPositionDialog from 'src/components/PlanPositionDialog.vue';
+import HousePlanAddTile from 'src/components/HousePlanAddTile.vue';
+import ConfirmActionDialog from 'src/components/ConfirmActionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { useLocalizedField } from 'src/composables/useLocalizedField';
 import { buildGoogleMapsUrl, parseCoordinate } from 'src/composables/useMapLocation';
-import { availablePlanFloors, isFloorTakenError, planDisplayName } from 'src/composables/usePlanFloors';
+import { isFloorTakenError, nextPlanFloor, planDisplayName } from 'src/composables/usePlanFloors';
 import { useInspectorJobEditDialog } from 'src/composables/useInspectorJobEditDialog';
 import { useContractorStore } from 'src/stores/useContractor';
 import { useInspectionStore } from 'src/stores/useInspection';
@@ -608,7 +565,6 @@ interface HousePlanItem {
   name: string;
   nameEn?: string | null;
   floor: { floorId: number; label: string; labelEn?: string | null } | null;
-  floorError?: string | null;
   isUploading?: boolean;
 }
 const housePlans = ref<HousePlanItem[]>([]);
@@ -618,16 +574,15 @@ const inspectionStore = useInspectionStore();
 const newPlanFloorId = ref<number | null>(null);
 const newPlanError = ref<string | null>(null);
 
-// ชั้นที่ยังไม่มีแปลน
-const newPlanFloorOptions = computed(() => availablePlanFloors(inspectionStore.floorOptions, housePlans.value));
-// ตัวเลือกของแปลนแต่ละใบ: ชั้นว่าง + ชั้นปัจจุบันของใบนั้นเอง
-const planFloorOptions = (plan: HousePlanItem) =>
-  availablePlanFloors(
-    inspectionStore.floorOptions,
-    housePlans.value.filter((p) => p !== plan),
-    undefined,
-    plan.floor,
-  );
+// ชั้นตายตัวตามลำดับ: รูปแรก = ชั้น 1, ถัดไป = ชั้น 2 ...
+const nextFloor = computed(() => nextPlanFloor(inspectionStore.floorOptions, housePlans.value));
+
+// เรียงการ์ดตามชั้น (เติมชั้นที่ว่างกลางทางแล้วการ์ดยังอยู่ถูกที่) แปลนเก่าที่ไม่มีชั้นอยู่ท้าย
+function sortHousePlansByFloor() {
+  const orderOf = (p: HousePlanItem) =>
+    inspectionStore.floorOptions.find((o) => o.value === p.floor?.floorId)?.order ?? Number.MAX_SAFE_INTEGER;
+  housePlans.value.sort((a, b) => orderOf(a) - orderOf(b));
+}
 
 async function loadHousePlans() {
   const jobId = jobData.value?.job?.jobId;
@@ -647,8 +602,10 @@ async function loadHousePlans() {
   }
 }
 
-function triggerHousePlanUpload() {
-  if (newPlanFloorId.value === null) return;
+// แตะช่อง "+" แล้วเปิดเลือกรูปทันที (ยังอยู่ในการแตะครั้งเดียวกัน เบราว์เซอร์จึงยอมเปิด)
+function addPlanForFloor(floorId: number) {
+  newPlanFloorId.value = floorId;
+  newPlanError.value = null;
   housePlanFileInput.value?.click();
 }
 
@@ -662,13 +619,15 @@ async function handleHousePlanFilesChange(event: Event) {
   newPlanError.value = null;
 
   const floor = { floorId: floorOption.value, label: floorOption.label, labelEn: null };
-  const item: HousePlanItem = {
+  // แก้ผ่านตัวที่อยู่ใน housePlans (reactive proxy) ไม่ใช่ object ดิบ ไม่งั้นหน้าจอไม่อัปเดต (badge "กำลังอัปโหลด" ค้าง)
+  housePlans.value.push({
     url: URL.createObjectURL(file),
     name: `แปลน${floor.label}`,
     floor,
     isUploading: true,
-  };
-  housePlans.value.push(item);
+  });
+  const item = housePlans.value[housePlans.value.length - 1]!;
+  sortHousePlansByFloor();
   try {
     const formData = new FormData();
     formData.append('file', file);
@@ -692,37 +651,35 @@ async function handleHousePlanFilesChange(event: Event) {
   }
 }
 
-async function changeHousePlanFloor(index: number, floorId: number | null) {
+// ลบแปลนแล้วกู้คืนไม่ได้ (รูปใน Storage หายด้วย) จึงยืนยันก่อน
+function confirmRemoveHousePlan(index: number) {
   const plan = housePlans.value[index];
-  if (!plan?.planId || floorId === null || plan.floor?.floorId === floorId) return;
-  plan.floorError = null;
-
-  try {
-    const { data } = await api.patch<HousePlan>(`/house-plans/${plan.planId}`, { floorId });
-    plan.floor = data.floor ?? null;
-    plan.name = data.name;
-    plan.nameEn = data.nameEn ?? null;
-  } catch (error) {
-    console.error('Failed to change house plan floor', error);
-    plan.floorError = isFloorTakenError(error)
-      ? t('components.planPosition.floorTaken')
-      : t('inspector.detail.editSaveFailed');
-  }
+  if (!plan?.planId) return;
+  $q.dialog({
+    component: ConfirmActionDialog,
+    componentProps: {
+      title: t('components.planPosition.deletePlanTitle', { name: planDisplayName(plan) }),
+      message: t('components.planPosition.deletePlanMessage'),
+      icon: 'delete',
+      color: 'negative',
+      confirmLabel: t('components.planPosition.deletePlanConfirm'),
+      cancelLabel: t('components.planPosition.deletePlanCancel'),
+    },
+  }).onOk(() => {
+    void removeHousePlan(plan);
+  });
 }
 
-async function removeHousePlan(index: number) {
-  const plan = housePlans.value[index];
-  if (!plan) return;
-  if (plan.planId) {
-    try {
-      await api.delete(`/house-plans/${plan.planId}`);
-    } catch (error) {
-      console.error('Failed to delete house plan', error);
-      $q.notify({ message: t('inspector.detail.editSaveFailed'), color: 'negative', position: 'top' });
-      return;
-    }
+async function removeHousePlan(plan: HousePlanItem) {
+  newPlanError.value = null;
+  try {
+    await api.delete(`/house-plans/${plan.planId}`);
+    housePlans.value.splice(housePlans.value.indexOf(plan), 1);
+  } catch (error) {
+    console.error('Failed to delete house plan', error);
+    // toast ถูกปิดทั้งแอป แจ้งใต้ช่อง "+" แทน
+    newPlanError.value = t('inspector.detail.editSaveFailed');
   }
-  housePlans.value.splice(index, 1);
 }
 
 function resetEditForm() {
@@ -1244,6 +1201,9 @@ onMounted(() => {
   background-color: #fcfdfe;
   border: 2px dashed #e2e8f0;
   border-radius: 16px;
+  /* width ต้องกำหนดเอง: aspect-ratio + min-height ทำให้การ์ดกว้างเกินคอลัมน์
+     ปุ่มลบแปลนจึงไปทับช่องข้างๆ จนกดลบแปลนโดยไม่ตั้งใจ */
+  width: 100%;
   aspect-ratio: 16/9;
   min-height: 140px;
   max-height: 220px;
