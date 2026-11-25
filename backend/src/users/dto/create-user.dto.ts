@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  Allow,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -39,12 +40,14 @@ export class CreateUserDto {
     description: 'เบอร์โทร',
     example: '0987654321',
   })
+  @Allow()
   phoneNumber!: string;
 
   @ApiProperty({
     description: 'อีเมล',
     example: 'triphop@gmail.com',
   })
+  @Allow()
   email!: string;
 
   @ApiProperty({
@@ -66,6 +69,7 @@ export class CreateUserDto {
     description: 'ตำแหน่ง',
     example: 'inspector',
   })
+  @Allow()
   role!: string;
 
   @ApiProperty({

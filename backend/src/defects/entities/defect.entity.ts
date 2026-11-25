@@ -16,6 +16,7 @@ import {
   JoinColumn,
   ManyToMany,
   JoinTable,
+  Index,
 } from 'typeorm';
 export enum DefectStatus {
   PENDING_REPAIR = 'pending_repair',
@@ -24,6 +25,8 @@ export enum DefectStatus {
   VERIFIED = 'verified',
 }
 
+// round_id อยู่หน้าสุด จึงใช้ได้ทั้ง query ตามรอบ (list/นับ/hash รายงาน) และเช็คซ้ำ (round+room+floor)
+@Index(['round', 'room', 'floor'])
 @Entity()
 export class Defect {
   @PrimaryGeneratedColumn()

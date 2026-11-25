@@ -15,6 +15,7 @@ import { DefectSubCategory } from 'src/defect-sub-categories/entities/defect-sub
 import { User } from 'src/users/entities/user.entity';
 import { Room } from 'src/rooms/entities/room.entity';
 import { SubRoom } from 'src/sub-rooms/entities/sub-room.entity';
+import { Floor } from 'src/floor/entities/floor.entity';
 import { DefectStatus } from './entities/defect.entity';
 import { Contractor } from 'src/contractor/entities/contractor.entity';
 import { InspectionJobStatus } from 'src/inspection-jobs/enums/inspection-job-status.enum';
@@ -26,6 +27,7 @@ import { ActivityLogType } from 'src/activity-logs/entities/activity-log.entity'
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { NotificationType } from 'src/notifications/entities/notification.entity';
 import { DefectNoteTranslator } from './defect-note-translator.service';
+import { normalizeFloorLabel } from 'src/floor/floor-label.util';
 
 type LinkTokenPayload = {
   project_id: number;
@@ -65,6 +67,9 @@ export class DefectsService {
     @InjectRepository(SubRoom)
     private readonly subRoomsRepo: Repository<SubRoom>,
 
+    @InjectRepository(Floor)
+    private readonly floorsRepo: Repository<Floor>,
+
     private readonly activityLogsService: ActivityLogsService,
     private readonly notificationsService: NotificationsService,
     private readonly noteTranslator: DefectNoteTranslator,
@@ -92,10 +97,14 @@ export class DefectsService {
     if (!roundId) return;
     void this.activityLogsService.logForRound(roundId, entry);
   }
-
-  // เช็คซ้ำแบบเดียวกับฝั่ง frontend (isDuplicateDefect ใน AddDefectPage.vue) แต่ query จาก DB สด
-  // กันเคส 2 inspector คนละ session บันทึกจุดเดียวกันพร้อมกัน ซึ่ง local store ฝั่ง frontend มองไม่เห็นกัน
-  private async hasDuplicateDefect(dto: CreateDefectDto): Promise<boolean> {
+  // เช็คซ้ำกันกดบันทึกซ้ำโดยไม่ตั้งใจ แบบเดียวกับฝั่ง frontend
+  // เช็คซ้ำเฉพาะการบันทึกที่ไม่มีรูป (กันกดบันทึกซ้ำโดยไม่ตั้งใจ) แบบเดียวกับฝั่ง frontend
+  // (isDuplicateDefect ใน AddDefectPage.vue) แต่ query จาก DB สด กันเคส 2 inspector คนละ session บันทึกจุดเดียวกันพร้อมกัน ซึ่ง local store ฝั่ง frontend มองไม่เห็นกัน
+  // มีรูปแนบ: ซ้ำก็ต่อเมื่อขนาดไฟล์รูปเท่ากันด้วย (กัน retry หลัง timeout สร้างซ้ำ แต่รูปใหม่ที่ขนาดต่างยังบันทึกซ้ำได้)
+  private async hasDuplicateDefect(
+    dto: CreateDefectDto & { imageFileSize?: number },
+    withPhoto = false,
+  ): Promise<boolean> {
     const candidates = await this.defectsRepo.find({
       where: {
         round: { roundId: dto.roundId },
@@ -110,6 +119,9 @@ export class DefectsService {
 
     const wantedIds = [...dto.subCategoryIds].sort((a, b) => a - b);
     return candidates.some((candidate) => {
+      if (withPhoto && candidate.imageFileSize !== dto.imageFileSize) {
+        return false;
+      }
       const ids = candidate.subCategories
         .map((s) => s.subCategoryId)
         .sort((a, b) => a - b);
@@ -118,6 +130,29 @@ export class DefectsService {
         ids.every((id, i) => id === wantedIds[i])
       );
     });
+  }
+
+  // ชั้นที่ผู้ตรวจพิมพ์เอง (เลือก "ชั้นอื่นๆ"): ใช้แถวเดิมถ้ามีชื่อเดียวกัน (ไม่สนตัวพิมพ์/ช่องว่าง)
+  // ไม่งั้นสร้างแถวใหม่ ทุกหน้าที่แสดง defect.floor.label จึงได้ชื่อจริงโดยไม่ต้องแก้ และชื่อนี้จะขึ้นในรายการชั้นครั้งถัดไป
+  // ตาราง floor มีไม่กี่แถว เทียบใน JS ได้เลย ไม่ต้องเขียน ILIKE (และไม่ต้อง escape % _ จากข้อความผู้ใช้)
+  private async resolveCustomFloor(label: string): Promise<number> {
+    const normalize = normalizeFloorLabel;
+    const wanted = normalize(label);
+    const floors = await this.floorsRepo.find();
+    const existing = floors.find(
+      (floor) =>
+        normalize(floor.label) === wanted ||
+        (!!floor.labelEn && normalize(floor.labelEn) === wanted),
+    );
+    if (existing) return existing.floorId;
+
+    const created = await this.floorsRepo.save(
+      this.floorsRepo.create({
+        label: label.trim().replace(/\s+/g, ' '),
+        labelEn: null,
+      }),
+    );
+    return created.floorId;
   }
 
   private assertRoundEditable(roundStatus: string, role?: string): void {
@@ -135,12 +170,15 @@ export class DefectsService {
     }
   }
 
+  // uploadImage ถูกเรียกหลังเช็ครอบล็อก/ซ้ำผ่านแล้วเท่านั้น จะได้ไม่ต้องบีบอัด+อัปโหลดรูปทิ้ง
+  // ทั้งที่ request จะถูกปฏิเสธอยู่ดี (เดิมรูปถูกอัปโหลดก่อนแล้วค้างอยู่ใน storage)
   async create(
     createDefectDto: CreateDefectDto & {
       imageUrl?: string;
       imageFileSize?: number;
     },
     role?: string,
+    uploadImage?: () => Promise<string>,
   ) {
     const [round, subCategories, inspector, room, subRoom] = await Promise.all([
       this.roundsRepo.findOneByOrFail({
@@ -164,10 +202,22 @@ export class DefectsService {
 
     this.assertRoundEditable(round.status, role);
 
-    if (await this.hasDuplicateDefect(createDefectDto)) {
+    // หลังเช็ครอบล็อก (รอบล็อกแล้วไม่ต้องสร้างชั้นทิ้ง) แต่ก่อนเช็คซ้ำ (ต้องเทียบด้วย floorId จริง)
+    if (createDefectDto.customFloorLabel) {
+      createDefectDto.floorId = await this.resolveCustomFloor(
+        createDefectDto.customFloorLabel,
+      );
+    }
+
+    // มีรูปแนบ = อาจตั้งใจบันทึกรายละเอียดเดิมแต่คนละรูป จึงซ้ำเฉพาะเมื่อขนาดรูปเท่ากันด้วย
+    if (await this.hasDuplicateDefect(createDefectDto, !!uploadImage)) {
       throw new ConflictException(
         'มีรายการ Defect นี้อยู่แล้วในห้อง/ชั้นเดียวกัน',
       );
+    }
+
+    if (uploadImage) {
+      createDefectDto.imageUrl = await uploadImage();
     }
 
     const defect = this.defectsRepo.create({
@@ -214,6 +264,7 @@ export class DefectsService {
         'subCategories',
         'inspector',
         'plan',
+        'plan.floor',
       ],
     });
   }
@@ -230,6 +281,7 @@ export class DefectsService {
         'subCategories.category',
         'inspector',
         'plan',
+        'plan.floor',
       ],
     });
   }
@@ -241,6 +293,7 @@ export class DefectsService {
       imageFileSize?: number;
     },
     role?: string,
+    uploadImage?: () => Promise<string>,
   ) {
     const defect = await this.defectsRepo.findOneOrFail({
       where: { defectId: id },
@@ -249,6 +302,16 @@ export class DefectsService {
 
     if (defect.round) {
       this.assertRoundEditable(defect.round.status, role);
+    }
+
+    if (updateDefectDto.customFloorLabel) {
+      updateDefectDto.floorId = await this.resolveCustomFloor(
+        updateDefectDto.customFloorLabel,
+      );
+    }
+
+    if (uploadImage) {
+      updateDefectDto.imageUrl = await uploadImage();
     }
 
     // Assign primitive properties
@@ -454,19 +517,33 @@ export class DefectsService {
     return this.defectsRepo.remove(defect);
   }
 
+  // ไม่ join 'round' เพราะทุกแถวเป็นรอบเดียวกัน (เดิมแถว round ทั้งแถว รวม token ลูกค้า/ช่าง
+  // และข้อความ AI ถูกส่งซ้ำในทุก defect) frontend ไม่ได้อ่าน defect.round จาก list นี้
+  private static readonly LIST_RELATIONS = [
+    'subCategories',
+    'subCategories.category',
+    'inspector',
+    'room',
+    'subRoom',
+    'floor',
+    'plan',
+    'plan.floor',
+  ];
+
   findByRound(roundId: number) {
     return this.defectsRepo.find({
       where: { round: { roundId } },
-      relations: [
-        'round',
-        'subCategories',
-        'subCategories.category',
-        'inspector',
-        'room',
-        'subRoom',
-        'floor',
-        'plan',
-      ],
+      relations: DefectsService.LIST_RELATIONS,
+      order: { defectId: 'ASC' },
+    });
+  }
+
+  // defect ตัวเดียวในรูปร่างเดียวกับ findByRound ใช้ตอบกลับหลังสร้าง ให้ frontend ใส่ลง list
+  // ได้ทันทีโดยไม่ต้องดึงทั้งรอบใหม่
+  findListItem(defectId: number) {
+    return this.defectsRepo.findOneOrFail({
+      where: { defectId },
+      relations: DefectsService.LIST_RELATIONS,
     });
   }
 }

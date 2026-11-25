@@ -204,6 +204,7 @@ const headerTitle = computed(() => {
   }
 
   if (route.path.includes('/inspector/job/')) {
+    if (route.path.includes('/construction-inspect')) return t('nav.inspector.headerConstructionReport');
     if (route.path.includes('/report')) return t('nav.inspector.headerReport');
     if (route.path.includes('/room-defect')) {
       return roomName.value;

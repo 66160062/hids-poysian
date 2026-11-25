@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { api } from 'src/boot/axios'
 import { t } from 'src/boot/i18n'
 import { localizedName } from 'src/composables/useLocalizedField'
+import { formatLocation } from 'src/utils/location'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string
 
@@ -93,7 +94,7 @@ export function useDefectList() {
           ),
         )
         const roomName = defect.room?.roomName || '-'
-        const subRoomName = defect.subRoom?.roomName || '-'
+        const subRoomName = defect.subRoom?.roomName || ''
         const floorLabel = defect.floor?.label ? t('stores.defectList.floorPrefix', { label: defect.floor.label }) : '-'
 
         return {
@@ -103,7 +104,7 @@ export function useDefectList() {
               ? defect.imageUrl
               : `${API_BASE_URL}${defect.imageUrl}`
             : '',
-          location: `${roomName}, ${subRoomName}, ${floorLabel}`,
+          location: formatLocation([roomName, subRoomName, floorLabel]),
           jobType: categoryNames.join(', ') || '-',
           status: defect.status === 'verified' ? t('stores.defectList.statusPassed') : t('stores.defectList.statusFailed'),
           isPassed: defect.status === 'verified',

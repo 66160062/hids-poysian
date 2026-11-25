@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { api } from 'src/boot/axios';
 import { t } from 'src/boot/i18n';
 import { localizedName } from 'src/composables/useLocalizedField';
+import { formatLocation } from 'src/utils/location';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 
@@ -161,7 +162,7 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
 
       for (const defect of defects) {
         const roomName = defect.room?.roomName || '-';
-        const subRoomName = defect.subRoom?.roomName || '-';
+        const subRoomName = defect.subRoom?.roomName || '';
         const floorLabel = defect.floor?.label
           ? t('stores.contractorMain.floorPrefix', { label: defect.floor.label })
           : '-';
@@ -171,7 +172,7 @@ export const useContractorRepair = defineStore('contractorRepair', () => {
         if (!room) {
           room = {
             id: nextRoomId++,
-            name: `${roomName}, ${subRoomName}, ${floorLabel}`,
+            name: formatLocation([roomName, subRoomName, floorLabel]),
             tags: [roomName],
             floor: floorLabel,
             count: 0,

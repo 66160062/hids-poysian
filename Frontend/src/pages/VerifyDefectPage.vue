@@ -92,6 +92,8 @@ import { useRoundLock } from 'src/composables/useRoundLock';
 import { api } from 'src/boot/axios';
 import { useQuasar } from 'quasar';
 import type { Defect } from 'src/models';
+import { thumbUrl } from 'src/utils/thumb';
+import { formatLocation } from 'src/utils/location';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 
 const verifySpinner = createIconSpinner('verified');
@@ -110,11 +112,8 @@ void fetchLockState();
 const defect = ref<Defect | null>(null);
 const isSubmitting = ref(false);
 
-const getImageUrl = (path: string | null | undefined): string => {
-  if (!path) return '';
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-  return path.startsWith('http') ? path : `${baseUrl}${path}`;
-};
+// รูปก่อน/หลังซ่อมกว้างเท่าจอมือถือ รูปย่อ 600px พอสำหรับเทียบ ไม่ต้องโหลดต้นฉบับ 1920px
+const getImageUrl = (path: string | null | undefined): string => thumbUrl(path, 600) ?? '';
 
 const contractorNoteDisplay = computed(() => {
   const d = defect.value;
@@ -126,9 +125,9 @@ const locationLabel = computed(() => {
   if (!defect.value) return '-';
   const d = defect.value;
   const room = d.room?.roomName ?? '-';
-  const subRoom = d.subRoom?.roomName ?? '-';
+  const subRoom = d.subRoom?.roomName ?? '';
   const floor = d.floor?.label ?? '-';
-  return `${room}, ${subRoom}, ${floor}`;
+  return formatLocation([room, subRoom, floor]);
 });
 
 const loadDefect = async () => {
@@ -169,7 +168,9 @@ const handlePass = async () => {
     formData.append('status', 'verified');
     
     await inspectionStore.updateDefect(defectId, formData);
-    await inspectionStore.fetchDefects(roundId);
+    // อัปเดตสถานะใน store ตรงๆ ไม่ต้องดึงทั้งรอบใหม่ก่อนย้อนกลับ
+    const verified = inspectionStore.defects.find((d) => d.defectId === defectId);
+    if (verified) verified.status = 'verified';
     
     $q.notify({
       message: t('inspection.verify.verifySuccess'),

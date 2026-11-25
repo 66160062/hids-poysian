@@ -1,29 +1,19 @@
 <template>
   <q-page-sticky position="bottom-right" :offset="[16, 80]">
-    <q-fab v-model="isExpanded" color="primary" icon="add" active-icon="close" direction="up">
-      <q-fab-action
-        color="white"
-        text-color="primary"
-        icon="add"
-        :label="t('components.actionFab.addInspectionItem')"
-        label-class="text-weight-bold"
-        style="transform: translateX(-45px)"
-        @click="onClickAdd"
-      />
-    </q-fab>
+    <!-- มีแค่คำสั่งเดียว จึงเป็นปุ่มเดียวแตะครั้งเดียว (เดิมต้องกางเมนูก่อนแล้วแตะอีกครั้ง) -->
+    <q-btn
+      fab
+      color="primary"
+      icon="add"
+      :aria-label="t('components.actionFab.addInspectionItem')"
+      @click="emit('add')"
+    />
   </q-page-sticky>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
-const isExpanded = ref(false);
 const emit = defineEmits(['add']);
-
-const onClickAdd = () => {
-  emit('add');
-  isExpanded.value = false;
-};
 </script>

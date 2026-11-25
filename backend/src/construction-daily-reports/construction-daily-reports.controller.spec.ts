@@ -12,14 +12,21 @@ describe('ConstructionDailyReportsController', () => {
   let testingModule: TestingModule;
   let controller: ConstructionDailyReportsController;
   let service: jest.Mocked<
-    Pick<ConstructionDailyReportsService, 'create' | 'findByRound'>
+    Pick<
+      ConstructionDailyReportsService,
+      'create' | 'findByRound' | 'findPreviousRoundCrew'
+    >
   >;
 
   const authServiceMock = { verifyRoundAccess: jest.fn() };
 
   beforeEach(async () => {
     authServiceMock.verifyRoundAccess.mockReset();
-    const serviceMock = { create: jest.fn(), findByRound: jest.fn() };
+    const serviceMock = {
+      create: jest.fn(),
+      findByRound: jest.fn(),
+      findPreviousRoundCrew: jest.fn(),
+    };
 
     testingModule = await Test.createTestingModule({
       controllers: [ConstructionDailyReportsController],
@@ -109,5 +116,11 @@ describe('ConstructionDailyReportsController', () => {
     } finally {
       await app.close();
     }
+  });
+
+  it('converts the route param to a number when looking up the previous round crew', () => {
+    controller.findPreviousRoundCrew('8');
+
+    expect(service.findPreviousRoundCrew).toHaveBeenCalledWith(8);
   });
 });

@@ -407,34 +407,15 @@
                     class="absolute-top-right q-ma-xs shadow-2"
                     size="sm"
                     :disable="plan.isUploading"
-                    @click.stop="removeHousePlan(planIdx)"
+                    :aria-label="t('components.planPosition.deletePlanConfirm')"
+                    @click.stop="confirmRemoveHousePlan(planIdx)"
                   />
                 </q-card>
-                <q-input
-                  v-model="plan.name"
-                  dense
-                  filled
-                  class="q-mt-xs"
-                  :disable="plan.isUploading"
-                  :placeholder="t('adminWork.createJob.planNamePlaceholder')"
-                  @update:model-value="plan.nameEn = null"
-                  @blur="renameHousePlan(planIdx)"
-                  @keyup.enter="($event.target as HTMLInputElement).blur()"
-                />
+                <div class="text-caption text-weight-medium q-mt-xs ellipsis">{{ planDisplayName(plan) }}</div>
+                <div v-if="!plan.floor" class="text-caption text-grey-7">{{ t('components.planPosition.noFloor') }}</div>
               </div>
-              <div class="col-6 col-sm-4">
-                <q-card
-                  flat
-                  bordered
-                  class="upload-box flex flex-center cursor-pointer"
-                  @click="triggerHousePlanUpload"
-                >
-                  <div class="column items-center">
-                    <q-icon name="add_a_photo" size="32px" color="grey-5" />
-                    <div class="text-caption text-grey-6 q-mt-xs">{{ t('inspector.detail.editChooseImage') }}</div>
-                  </div>
-                </q-card>
-              </div>
+              <!-- ช่อง "+" อยู่ท้ายกริดเสมอ ชั้นตายตัวตามลำดับ (รูปแรก = ชั้น 1, ถัดไป = ชั้น 2 ...) ไม่ต้องเลือกชั้นเอง -->
+              <HousePlanAddTile :next-floor="nextFloor" :error="newPlanError" @add="addPlanForFloor" />
             </div>
           </div>
 
@@ -472,7 +453,6 @@
             ref="housePlanFileInput"
             type="file"
             accept="image/*"
-            multiple
             style="display: none"
             @change="handleHousePlanFilesChange"
           />
@@ -520,12 +500,15 @@ import { api } from 'src/boot/axios';
 import type { InspectionRound, Defect, InspectionSummaryItem, HousePlan } from 'src/models';
 import DefectReport from 'src/components/DefectReport.vue';
 import PlanPositionDialog from 'src/components/PlanPositionDialog.vue';
+import HousePlanAddTile from 'src/components/HousePlanAddTile.vue';
+import ConfirmActionDialog from 'src/components/ConfirmActionDialog.vue';
 import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { useLocalizedField } from 'src/composables/useLocalizedField';
 import { buildGoogleMapsUrl, parseCoordinate } from 'src/composables/useMapLocation';
-import { defaultPlanNames } from 'src/composables/useDefaultPlanName';
+import { isFloorTakenError, nextPlanFloor, planDisplayName } from 'src/composables/usePlanFloors';
 import { useInspectorJobEditDialog } from 'src/composables/useInspectorJobEditDialog';
 import { useContractorStore } from 'src/stores/useContractor';
+import { useInspectionStore } from 'src/stores/useInspection';
 import { useWorkListStore } from 'src/stores/useWorkList';
 
 const jobDetailSpinner = createIconSpinner('search');
@@ -578,96 +561,125 @@ const isSavingJobEdit = ref(false);
 interface HousePlanItem {
   planId?: number;
   url: string;
+  // ชื่อมาจากชั้นที่ผูกไว้; แปลนเก่าที่ยังไม่มีชั้น (floor = null) ใช้ชื่อเดิมที่เก็บไว้
   name: string;
-  // null = ผู้ใช้พิมพ์ชื่อเอง ไม่มีชื่ออังกฤษ (ไม่ให้ชื่อ default อังกฤษเดิมค้างอยู่หลังแก้ชื่อ)
   nameEn?: string | null;
+  floor: { floorId: number; label: string; labelEn?: string | null } | null;
   isUploading?: boolean;
 }
 const housePlans = ref<HousePlanItem[]>([]);
 const housePlanFileInput = ref<HTMLInputElement | null>(null);
 
+const inspectionStore = useInspectionStore();
+const newPlanFloorId = ref<number | null>(null);
+const newPlanError = ref<string | null>(null);
+
+// ชั้นตายตัวตามลำดับ: รูปแรก = ชั้น 1, ถัดไป = ชั้น 2 ...
+const nextFloor = computed(() => nextPlanFloor(inspectionStore.floorOptions, housePlans.value));
+
+// เรียงการ์ดตามชั้น (เติมชั้นที่ว่างกลางทางแล้วการ์ดยังอยู่ถูกที่) แปลนเก่าที่ไม่มีชั้นอยู่ท้าย
+function sortHousePlansByFloor() {
+  const orderOf = (p: HousePlanItem) =>
+    inspectionStore.floorOptions.find((o) => o.value === p.floor?.floorId)?.order ?? Number.MAX_SAFE_INTEGER;
+  housePlans.value.sort((a, b) => orderOf(a) - orderOf(b));
+}
+
 async function loadHousePlans() {
   const jobId = jobData.value?.job?.jobId;
   if (!jobId) return;
   try {
+    await inspectionStore.ensureMasterData().catch(() => undefined);
     const { data } = await api.get<HousePlan[]>(`/inspection-jobs/${jobId}/house-plans`);
     housePlans.value = data.map((p) => ({
       planId: p.planId,
       url: getImageUrl(p.imageUrl) || p.imageUrl,
       name: p.name,
       nameEn: p.nameEn ?? null,
+      floor: p.floor ?? null,
     }));
   } catch (error) {
     console.error('Failed to load house plans', error);
   }
 }
 
-function triggerHousePlanUpload() {
+// แตะช่อง "+" แล้วเปิดเลือกรูปทันที (ยังอยู่ในการแตะครั้งเดียวกัน เบราว์เซอร์จึงยอมเปิด)
+function addPlanForFloor(floorId: number) {
+  newPlanFloorId.value = floorId;
+  newPlanError.value = null;
   housePlanFileInput.value?.click();
 }
 
 async function handleHousePlanFilesChange(event: Event) {
   const target = event.target as HTMLInputElement;
-  const files = target.files ? Array.from(target.files) : [];
+  const file = target.files?.[0];
   target.value = '';
   const jobId = jobData.value?.job?.jobId;
-  if (!files.length || !jobId) return;
+  const floorOption = inspectionStore.floorOptions.find((o) => o.value === newPlanFloorId.value);
+  if (!file || !jobId || !floorOption) return;
+  newPlanError.value = null;
 
-  for (const file of files) {
-    const { th: name, en: nameEn } = defaultPlanNames(housePlans.value.length + 1);
-    const item: HousePlanItem = { url: URL.createObjectURL(file), name, nameEn, isUploading: true };
-    housePlans.value.push(item);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('name', name);
-      formData.append('nameEn', nameEn);
-      formData.append('orderIndex', String(housePlans.value.length));
-      const { data } = await api.post<HousePlan>(`/inspection-jobs/${jobId}/house-plans`, formData);
-      item.planId = data.planId;
-      item.url = getImageUrl(data.imageUrl) || item.url;
-    } catch (error) {
-      console.error('Failed to upload house plan', error);
-      housePlans.value.splice(housePlans.value.indexOf(item), 1);
-      $q.notify({ message: t('inspector.detail.editSaveFailed'), color: 'negative', position: 'top' });
-    } finally {
-      item.isUploading = false;
-    }
-  }
-}
-
-async function renameHousePlan(index: number) {
-  const plan = housePlans.value[index];
-  if (!plan) return;
-
-  if (!plan.name.trim()) {
-    const defaults = defaultPlanNames(index + 1);
-    plan.name = defaults.th;
-    plan.nameEn = defaults.en;
-  }
-  if (!plan.planId) return;
-
+  const floor = { floorId: floorOption.value, label: floorOption.label, labelEn: null };
+  // แก้ผ่านตัวที่อยู่ใน housePlans (reactive proxy) ไม่ใช่ object ดิบ ไม่งั้นหน้าจอไม่อัปเดต (badge "กำลังอัปโหลด" ค้าง)
+  housePlans.value.push({
+    url: URL.createObjectURL(file),
+    name: `แปลน${floor.label}`,
+    floor,
+    isUploading: true,
+  });
+  const item = housePlans.value[housePlans.value.length - 1]!;
+  sortHousePlansByFloor();
   try {
-    await api.patch(`/house-plans/${plan.planId}`, { name: plan.name.trim(), nameEn: plan.nameEn ?? null });
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('floorId', String(floor.floorId));
+    formData.append('orderIndex', String(housePlans.value.length));
+    const { data } = await api.post<HousePlan>(`/inspection-jobs/${jobId}/house-plans`, formData);
+    item.planId = data.planId;
+    item.url = getImageUrl(data.imageUrl) || item.url;
+    item.name = data.name;
+    item.nameEn = data.nameEn ?? null;
+    item.floor = data.floor ?? floor;
+    newPlanFloorId.value = null;
   } catch (error) {
-    console.error('Failed to rename house plan', error);
-    $q.notify({ message: t('inspector.detail.editSaveFailed'), color: 'negative', position: 'top' });
+    console.error('Failed to upload house plan', error);
+    housePlans.value.splice(housePlans.value.indexOf(item), 1);
+    newPlanError.value = isFloorTakenError(error)
+      ? t('components.planPosition.floorTaken')
+      : t('inspector.detail.editSaveFailed');
+  } finally {
+    item.isUploading = false;
   }
 }
 
-async function removeHousePlan(index: number) {
+// ลบแปลนแล้วกู้คืนไม่ได้ (รูปใน Storage หายด้วย) จึงยืนยันก่อน
+function confirmRemoveHousePlan(index: number) {
   const plan = housePlans.value[index];
-  if (!plan) return;
-  if (plan.planId) {
-    try {
-      await api.delete(`/house-plans/${plan.planId}`);
-    } catch (error) {
-      console.error('Failed to delete house plan', error);
-      $q.notify({ message: t('inspector.detail.editSaveFailed'), color: 'negative', position: 'top' });
-      return;
-    }
+  if (!plan?.planId) return;
+  $q.dialog({
+    component: ConfirmActionDialog,
+    componentProps: {
+      title: t('components.planPosition.deletePlanTitle', { name: planDisplayName(plan) }),
+      message: t('components.planPosition.deletePlanMessage'),
+      icon: 'delete',
+      color: 'negative',
+      confirmLabel: t('components.planPosition.deletePlanConfirm'),
+      cancelLabel: t('components.planPosition.deletePlanCancel'),
+    },
+  }).onOk(() => {
+    void removeHousePlan(plan);
+  });
+}
+
+async function removeHousePlan(plan: HousePlanItem) {
+  newPlanError.value = null;
+  try {
+    await api.delete(`/house-plans/${plan.planId}`);
+    housePlans.value.splice(housePlans.value.indexOf(plan), 1);
+  } catch (error) {
+    console.error('Failed to delete house plan', error);
+    // toast ถูกปิดทั้งแอป แจ้งใต้ช่อง "+" แทน
+    newPlanError.value = t('inspector.detail.editSaveFailed');
   }
-  housePlans.value.splice(index, 1);
 }
 
 function resetEditForm() {
@@ -1189,10 +1201,17 @@ onMounted(() => {
   background-color: #fcfdfe;
   border: 2px dashed #e2e8f0;
   border-radius: 16px;
+  /* width ต้องกำหนดเอง: aspect-ratio + min-height ทำให้การ์ดกว้างเกินคอลัมน์
+     ปุ่มลบแปลนจึงไปทับช่องข้างๆ จนกดลบแปลนโดยไม่ตั้งใจ */
+  width: 100%;
   aspect-ratio: 16/9;
   min-height: 140px;
   max-height: 220px;
   transition: all 0.2s ease;
+}
+.upload-box.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .upload-box:hover {
   border-color: var(--q-primary);

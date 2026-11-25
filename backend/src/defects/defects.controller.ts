@@ -39,6 +39,13 @@ type LinkTokenPayload = {
 // role ที่ได้ใช้ตัดสินว่าแก้รอบที่ SUBMITTED ได้ไหม (แอดมินได้ คนอื่นไม่ได้ — ดู DefectsService)
 type RequestWithUser = Request & { user?: { role?: string } };
 
+// รูปจากมือถือหลังบีบอัดฝั่ง client ไม่เกิน ~1MB เผื่อกรณีส่งต้นฉบับมาตรงๆ ไว้ที่ 15MB
+// (เดิมไม่มี limit ไฟล์ใหญ่แค่ไหนก็ถูกโหลดเข้า memory ทั้งก้อน)
+const IMAGE_UPLOAD_OPTIONS = {
+  storage: memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+};
+
 @Controller('defects')
 export class DefectsController {
   constructor(
@@ -58,10 +65,18 @@ export class DefectsController {
     }
   }
 
+  // อัปโหลดทีหลัง: service เรียกหลังเช็ครอบล็อก/ซ้ำผ่านแล้ว
+  private imageUploader(
+    file?: Express.Multer.File,
+  ): (() => Promise<string>) | undefined {
+    if (!file) return undefined;
+    return () => this.storageService.uploadImage(file.buffer, 'defects');
+  }
+
   @Post()
   @UseGuards(AuthGuard)
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  @UseInterceptors(FileInterceptor('file', IMAGE_UPLOAD_OPTIONS))
   async create(
     @UploadedFile() file: Express.Multer.File,
     @Body() createDefectDto: CreateDefectDto,
@@ -70,15 +85,14 @@ export class DefectsController {
     const defect = await this.defectsService.create(
       {
         ...createDefectDto,
-        imageUrl: file
-          ? await this.storageService.uploadImage(file.buffer, 'defects')
-          : undefined,
         imageFileSize: file ? file.size : undefined,
       },
       request.user?.role,
+      this.imageUploader(file),
     );
     this.maybeScheduleRegeneration(defect);
-    return defect;
+    // ตอบกลับรูปร่างเดียวกับ GET /defects/round/:roundId ให้ frontend ใส่ลง list ได้เลย
+    return this.defectsService.findListItem(defect.defectId);
   }
 
   @Get()
@@ -102,7 +116,7 @@ export class DefectsController {
   @Put('contractor-update')
   @UseGuards(LinkTokenGuard)
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  @UseInterceptors(FileInterceptor('file', IMAGE_UPLOAD_OPTIONS))
   async contractorUpdate(
     @UploadedFile() file: Express.Multer.File,
     @Body() contractorUpdateDto: ContractorUpdateDefectDto,
@@ -126,7 +140,7 @@ export class DefectsController {
   @Patch(':id')
   @UseGuards(DefectAccessGuard)
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  @UseInterceptors(FileInterceptor('file', IMAGE_UPLOAD_OPTIONS))
   async update(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File,
@@ -137,15 +151,10 @@ export class DefectsController {
       id,
       {
         ...updateDefectDto,
-        ...(file && {
-          imageUrl: await this.storageService.uploadImage(
-            file.buffer,
-            'defects',
-          ),
-          imageFileSize: file.size,
-        }),
+        ...(file && { imageFileSize: file.size }),
       },
       request.user?.role,
+      this.imageUploader(file),
     );
     this.maybeScheduleRegeneration(defect);
     return defect;

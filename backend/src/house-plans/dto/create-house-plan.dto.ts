@@ -1,15 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateHousePlanDto {
   @ApiProperty({
-    description: 'ชื่อแปลน (เช่น แปลนชั้น 1, แปลนชั้น 2)',
+    description: 'ชื่อแปลน (ไม่ใช้ — ระบบตั้งชื่อจากชั้นเอง)',
     example: 'แปลนชั้น 1',
+    required: false,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  name!: string;
+  name?: string;
 
   @ApiProperty({
     description: 'ชื่อแปลนภาษาอังกฤษ (optional)',
@@ -21,14 +22,12 @@ export class CreateHousePlanDto {
   nameEn?: string;
 
   @ApiProperty({
-    description: 'รหัสชั้น (optional)',
+    description: 'รหัสชั้น (หนึ่งงานมีได้หนึ่งแปลนต่อชั้น)',
     example: 1,
-    required: false,
   })
-  @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  floorId?: number;
+  floorId!: number;
 
   @ApiProperty({
     description: 'ลำดับการแสดงผล',

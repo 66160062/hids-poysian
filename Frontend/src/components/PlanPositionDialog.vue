@@ -111,23 +111,11 @@
             </q-btn>
           </div>
 
-          <!-- Rename the selected plan -->
-          <div v-if="activePlan && !readonly" class="bg-white col-auto dialog-inset q-pt-sm">
-            <q-input
-              v-model="activePlan.name"
-              dense
-              outlined
-              bg-color="white"
-              class="plan-name-input"
-              :placeholder="t('components.planPosition.planNamePlaceholder')"
-              @update:model-value="activePlan.nameEn = null"
-              @blur="renameActivePlan"
-              @keyup.enter="($event.target as HTMLInputElement).blur()"
-            >
-              <template #prepend>
-                <q-icon name="edit" size="18px" />
-              </template>
-            </q-input>
+          <!-- แปลนเก่าที่ไม่มีชั้น: บอกไว้ให้รู้ (แปลนใหม่ได้ชั้นตามลำดับอัตโนมัติ จึงไม่มี dropdown เปลี่ยนชั้น) -->
+          <div v-if="activePlan && !readonly && !activePlan.floor" class="bg-white col-auto dialog-inset q-pt-sm">
+            <div class="text-caption text-grey-7">
+              {{ planDisplayName(activePlan) }} · {{ t('components.planPosition.noFloor') }}
+            </div>
           </div>
 
           <!-- Plan Thumbnail Slider -->
@@ -146,8 +134,8 @@
                 >
                   <span class="plan-thumb-frame">
                     <img
-                      :src="formatImageUrl(plan.imageUrl)"
-                      :alt="plan.name"
+                      :src="thumbUrl(plan.imageUrl) ?? formatImageUrl(plan.imageUrl)"
+                      :alt="planDisplayName(plan)"
                       loading="lazy"
                       class="plan-thumb-img"
                     />
@@ -157,7 +145,7 @@
                     />
                     <span class="plan-thumb-scrim" />
                     <span class="plan-thumb-label">
-                      {{ plan.name }}<template v-if="plan.floor?.label"> · {{ plan.floor.label }}</template>
+                      {{ planDisplayName(plan) }}
                     </span>
                   </span>
                 </button>
@@ -180,17 +168,13 @@
               <!-- New Plan Form -->
               <div class="column q-gutter-y-sm">
                 <!-- รูปที่เลือก/ถ่ายแล้วแต่ยังไม่บันทึก — ตั้งชื่อแต่ละรูปได้ก่อนกดบันทึก -->
-                <div v-for="(item, idx) in pendingPlans" :key="item.id" class="row no-wrap items-center q-gutter-x-sm pending-plan-row">
-                  <img :src="item.previewUrl" :alt="item.name" class="pending-plan-thumb" />
-                  <q-input
-                    v-model="item.name"
-                    outlined
-                    dense
-                    bg-color="white"
-                    class="col plan-name-input"
-                    :disable="isUploadingPlan"
-                    :placeholder="t('components.planPosition.defaultPlanName', { n: plans.length + idx + 1 })"
-                  />
+                <div v-for="(item, idx) in pendingPlans" :key="item.id" class="row no-wrap items-start q-gutter-x-sm pending-plan-row">
+                  <img :src="item.previewUrl" :alt="t('components.planPosition.planImageAlt')" class="pending-plan-thumb" />
+                  <!-- ชั้นตายตัวตามลำดับ (รูปแรก = ชั้น 1, ถัดไป = ชั้น 2 ...) ไม่ต้องเลือกเอง -->
+                  <div class="col column justify-center pending-plan-floor">
+                    <div class="text-body2 text-weight-medium">{{ pendingPlanName(item) }}</div>
+                    <div v-if="item.error" class="text-caption text-negative" role="alert">{{ item.error }}</div>
+                  </div>
                   <q-btn
                     flat
                     round
@@ -198,8 +182,17 @@
                     color="grey-7"
                     icon="close"
                     :disable="isUploadingPlan"
+                    :aria-label="t('components.planPosition.removePendingPlan')"
                     @click="removePendingPlan(idx)"
                   />
+                </div>
+
+                <div class="text-caption text-center" :class="canAddPendingPlan ? 'text-primary' : 'text-grey-7'">
+                  {{
+                    nextPendingFloor
+                      ? t('components.planPosition.nextPlanFloorHint', { floor: nextPendingFloor.label })
+                      : t('components.planPosition.allFloorsHavePlans')
+                  }}
                 </div>
 
                 <!-- Action buttons to capture / select photo -->
@@ -212,7 +205,7 @@
                     icon="photo_camera"
                     :label="t('components.planPosition.takePhotoButton')"
                     class="col action-pill"
-                    :disable="isUploadingPlan"
+                    :disable="isUploadingPlan || !canAddPendingPlan"
                     @click="triggerCamera"
                   />
                   <q-btn
@@ -223,7 +216,7 @@
                     icon="photo_library"
                     :label="t('components.planPosition.chooseFromGalleryButton')"
                     class="col action-pill"
-                    :disable="isUploadingPlan"
+                    :disable="isUploadingPlan || !canAddPendingPlan"
                     @click="triggerGallery"
                   />
                 </div>
@@ -238,6 +231,7 @@
                   :label="t('components.planPosition.savePlansButton', { count: pendingPlans.length })"
                   class="action-pill text-weight-bold"
                   :loading="isUploadingPlan"
+                  :disable="pendingPlans.some((p) => p.floorId === null)"
                   @click="savePendingPlans"
                 />
                 <div v-else class="text-caption text-grey-6 text-center">
@@ -378,8 +372,10 @@ import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { api } from 'src/boot/axios';
 import IconBounceSpinner from 'src/components/IconBounceSpinner.vue';
-import { defaultPlanNames } from 'src/composables/useDefaultPlanName';
+import { isFloorTakenError, nextPlanFloor, planDisplayName } from 'src/composables/usePlanFloors';
+import { useInspectionStore } from 'src/stores/useInspection';
 import type { HousePlan } from 'src/models';
+import { thumbUrl } from 'src/utils/thumb';
 
 const props = withDefaults(
   defineProps<{
@@ -437,10 +433,39 @@ interface PendingPlan {
   id: number;
   file: File;
   previewUrl: string;
-  name: string;
+  floorId: number | null;
+  error?: string | null;
 }
 const pendingPlans = ref<PendingPlan[]>([]);
 let nextPendingId = 0;
+
+// ── Floors (แปลน 1 ใบต่อ 1 ชั้นต่องาน, เรียงชั้นตายตัว) ───────────────
+const inspectionStore = useInspectionStore();
+
+const asFloorUse = (floorId: number | null) => ({ floor: floorId === null ? null : { floorId } });
+// ชั้นถัดไปที่รูปใหม่จะได้: ชั้นมาตรฐานที่ว่างต่ำสุด นับทั้งแปลนที่บันทึกแล้วและที่รอบันทึก
+const nextPendingFloor = computed(() =>
+  nextPlanFloor(inspectionStore.floorOptions, [
+    ...plans.value,
+    ...pendingPlans.value.map((p) => asFloorUse(p.floorId)),
+  ]),
+);
+const canAddPendingPlan = computed(() => nextPendingFloor.value !== null);
+
+// กำหนดชั้นให้รูปที่รอบันทึกใหม่ทั้งหมดตามลำดับ (เรียกหลังเพิ่ม/ลบรูป) เติมชั้นที่ว่างต่ำสุดก่อน
+const assignPendingFloors = () => {
+  const assigned: { floor: { floorId: number } | null }[] = [];
+  for (const item of pendingPlans.value) {
+    const floor = nextPlanFloor(inspectionStore.floorOptions, [...plans.value, ...assigned]);
+    item.floorId = floor?.value ?? null;
+    assigned.push(asFloorUse(item.floorId));
+  }
+};
+
+const pendingPlanName = (item: PendingPlan) => {
+  const floor = inspectionStore.floorOptions.find((o) => o.value === item.floorId);
+  return floor ? t('components.planPosition.planNameForFloor', { floor: floor.label }) : t('components.planPosition.allFloorsHavePlans');
+};
 const imageRef = ref<HTMLImageElement | null>(null);
 const cameraInput = ref<HTMLInputElement | null>(null);
 const galleryInput = ref<HTMLInputElement | null>(null);
@@ -643,7 +668,8 @@ const fetchPlans = async () => {
     // Auto-select initial plan or matching floor plan
     if (plans.value.length > 0) {
       const firstPlan = plans.value[0] ?? null;
-      if (props.initialPlanId) {
+      // ใช้แปลนเดิมเฉพาะเมื่อมีหมุดอยู่แล้ว ไม่งั้นให้แปลนของชั้นที่เลือกมาก่อน (ย้ายชั้นแล้วไม่ควรเปิดแปลนชั้นเก่า)
+      if (props.initialPlanId && props.initialX != null) {
         const found = plans.value.find((p) => p.planId === props.initialPlanId);
         activePlan.value = found ?? firstPlan;
       } else if (props.selectedFloorId) {
@@ -744,19 +770,23 @@ const onPlanFileSelected = (event: Event) => {
   const files = target.files ? Array.from(target.files) : [];
   target.value = '';
 
+  // รับเท่าที่ยังมีชั้นว่าง (เกินกว่านั้นไม่มีชั้นให้ผูก)
   for (const file of files) {
+    if (!nextPendingFloor.value) break;
     pendingPlans.value.push({
       id: nextPendingId++,
       file,
       previewUrl: URL.createObjectURL(file),
-      name: '',
+      floorId: null,
     });
+    assignPendingFloors();
   }
 };
 
 const removePendingPlan = (index: number) => {
   const [removed] = pendingPlans.value.splice(index, 1);
   if (removed) URL.revokeObjectURL(removed.previewUrl);
+  assignPendingFloors();
 };
 
 const clearPendingPlans = () => {
@@ -774,16 +804,11 @@ const savePendingPlans = async () => {
 
   // อัปโหลดทีละรูปตามลำดับ รูปที่สำเร็จเอาออกจากรายการรอ รูปที่พังค้างไว้ให้กดบันทึกซ้ำได้
   for (const item of [...pendingPlans.value]) {
-    const defaultNames = defaultPlanNames(plans.value.length + 1);
-    const trimmedName = item.name.trim();
+    if (item.floorId === null) continue;
 
     const formData = new FormData();
     formData.append('file', item.file);
-    formData.append('name', trimmedName || defaultNames.th);
-    if (!trimmedName) formData.append('nameEn', defaultNames.en);
-    if (props.selectedFloorId) {
-      formData.append('floorId', String(props.selectedFloorId));
-    }
+    formData.append('floorId', String(item.floorId));
     formData.append('orderIndex', String(plans.value.length));
 
     try {
@@ -798,6 +823,9 @@ const savePendingPlans = async () => {
       pendingPlans.value = pendingPlans.value.filter((p) => p.id !== item.id);
     } catch (err) {
       console.error('Upload plan error', err);
+      item.error = isFloorTakenError(err)
+        ? t('components.planPosition.floorTaken')
+        : t('components.planPosition.uploadPlanFailed');
     }
   }
 
@@ -830,30 +858,6 @@ const savePendingPlans = async () => {
   }
 };
 
-const renameActivePlan = async () => {
-  const plan = activePlan.value;
-  if (!plan) return;
-
-  if (!plan.name.trim()) {
-    const defaults = defaultPlanNames(plans.value.indexOf(plan) + 1);
-    plan.name = defaults.th;
-    plan.nameEn = defaults.en;
-  }
-
-  try {
-    await api.patch(`/house-plans/${plan.planId}`, {
-      name: plan.name.trim(),
-      nameEn: plan.nameEn ?? null,
-    });
-  } catch (err) {
-    console.error('Rename plan error', err);
-    $q.notify({
-      message: t('components.planPosition.renamePlanFailed'),
-      color: 'negative',
-      icon: 'error',
-    });
-  }
-};
 
 // ── Dialog Controls & Confirm ─────────────────────────────────
 const closeDialog = () => {
@@ -880,6 +884,7 @@ watch(
       currentPinY.value = props.initialY ?? null;
       locationZone.value = props.initialZone ?? '';
       resetZoom();
+      void inspectionStore.ensureMasterData();
       void fetchPlans();
     }
   },

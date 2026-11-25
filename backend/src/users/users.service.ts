@@ -133,6 +133,18 @@ export class UsersService {
     });
   }
 
+  // password เป็น select: false บน entity จึงต้องขอแยกเฉพาะตอนตรวจรหัสผ่าน (login)
+  async findByEmailWithPassword(email: string) {
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .leftJoinAndSelect('user.team', 'team')
+      .leftJoinAndSelect('team.branch', 'teamBranch')
+      .leftJoinAndSelect('user.branch', 'branch')
+      .where('user.email = :email', { email })
+      .getOne();
+  }
+
   async update(id: number, updateUserDto: UpdateUserDto) {
     const user = await this.findOne(id);
 

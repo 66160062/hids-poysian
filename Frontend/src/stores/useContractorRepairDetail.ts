@@ -7,6 +7,7 @@ import { useContractorRepair } from 'src/stores/useContractormain';
 import { useLinkAccess } from 'src/stores/useLinkAccess';
 import { api } from 'src/boot/axios';
 import { localizedName } from 'src/composables/useLocalizedField';
+import { formatLocation } from 'src/utils/location';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL as string;
 
@@ -132,7 +133,7 @@ export function useRepairDetail(defectId: number) {
         });
 
         const roomName = data.room?.roomName || '-';
-        const subRoomName = data.subRoom?.roomName || '-';
+        const subRoomName = data.subRoom?.roomName || '';
         const floorLabel = data.floor?.label ? t('stores.contractorRepairDetail.floorPrefix', { label: data.floor.label }) : '-';
         const categoryNames = Array.from(
           new Set(
@@ -150,7 +151,7 @@ export function useRepairDetail(defectId: number) {
           }),
           beforeImage: resolveUrl(data.imageUrl) || 'https://placehold.co/600x400/e0e0e0/999?text=Before',
           jobType: categoryNames.join(', ') || '-',
-          location: `${roomName}, ${subRoomName}, ${floorLabel}`,
+          location: formatLocation([roomName, subRoomName, floorLabel]),
           tags: (data.subCategories ?? []).map((sub) => localizedName(sub)),
           status: data.status,
           description: data.description ?? '',

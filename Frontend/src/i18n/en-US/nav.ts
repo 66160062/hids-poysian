@@ -41,6 +41,7 @@ export default {
     headerReport: 'Report Summary',
     headerInspection: 'Inspecting',
     headerDetail: 'Details',
+    headerConstructionReport: 'Daily report',
     headerConstruction: 'Construction Inspection',
     headerDefault: 'Home Inspection System',
     roomDefectFallback: 'Defect List',

@@ -1,6 +1,6 @@
 import { ref } from 'vue'
-import { api } from 'src/boot/axios'
 import { useAuthStore } from 'src/stores/useAuth'
+import { useInspectionStore } from 'src/stores/useInspection'
 import { UserRole } from 'src/models'
 
 // รอบตรวจที่ยื่นอนุมัติแล้ว inspector แก้ต่อไม่ได้ แต่แอดมินยังตรวจทาน/แก้ได้จนกว่าจะกดอนุมัติ
@@ -11,13 +11,16 @@ const ADMIN_LOCKED_STATUSES = ['APPROVED']
 export function useRoundLock(roundId: string | number) {
   const isLocked = ref(false)
   const auth = useAuthStore()
+  const inspectionStore = useInspectionStore()
 
-  async function fetchLockState() {
+  // ใช้ข้อมูลรอบที่ cache ไว้ใน store (หลายหน้าในรอบเดียวกันเคยยิง GET รอบเดิมซ้ำทุกครั้งที่เปิด)
+  // fresh: true เมื่อต้องการสถานะล่าสุดจริงๆ เช่นหน้าส่งรายงาน
+  async function fetchLockState({ fresh = false } = {}) {
     try {
-      const { data } = await api.get<{ status?: string }>(`/inspection-rounds/${roundId}`)
+      const round = await inspectionStore.getRound(roundId, { fresh })
       const lockedStatuses =
         auth.currentUser?.role === UserRole.ADMIN ? ADMIN_LOCKED_STATUSES : LOCKED_STATUSES
-      isLocked.value = lockedStatuses.includes(data.status ?? '')
+      isLocked.value = lockedStatuses.includes(round.status ?? '')
     } catch {
       isLocked.value = false
     }

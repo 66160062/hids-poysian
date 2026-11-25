@@ -108,7 +108,7 @@
                 option-label="label"
                 emit-value
                 map-options
-                :loading="isLoadingRooms"
+                :loading="isLoadingMaster"
                 :disable="isLocked"
                 @filter="filterRooms"
                 @update:model-value="onRoomChange"
@@ -152,9 +152,25 @@
                 emit-value
                 map-options
                 :disable="!form.roomId || isLocked"
-                :loading="isLoadingFloors"
+                :loading="isLoadingMaster"
                 @filter="filterFloors"
                 @update:model-value="onFloorChange"
+              />
+              <!-- เลือก "อื่นๆ" แล้วต้องพิมพ์ชื่อชั้นจริง backend จะหาหรือสร้างชั้นชื่อนี้ให้ -->
+              <q-input
+                v-if="isOtherFloorSelected"
+                v-model="form.customFloor"
+                outlined
+                dense
+                autofocus
+                class="q-mt-md"
+                maxlength="50"
+                :label="t('inspection.addDefect.customFloor')"
+                :placeholder="t('inspection.addDefect.customFloorPlaceholder')"
+                :disable="isLocked"
+                :error="customFloorError"
+                :error-message="t('inspection.addDefect.customFloorRequired')"
+                @update:model-value="customFloorError = false"
               />
             </div>
           </div>
@@ -164,7 +180,20 @@
       <!-- Step 2: รายละเอียดงาน -->
       <div v-if="step === 2" class="col-auto column no-wrap">
         <div class="text-h6 text-weight-bold text-primary">{{ t('inspection.addDefect.jobDetailsTitle') }}</div>
-        <div class="text-caption text-grey-7 q-mb-lg">{{ t('inspection.addDefect.jobDetailsSubtitle') }}</div>
+        <div class="text-caption text-grey-7" :class="locationSummary ? 'q-mb-sm' : 'q-mb-lg'">{{ t('inspection.addDefect.jobDetailsSubtitle') }}</div>
+        <!-- ห้อง/ชั้นที่จะบันทึก (มักมาจากค่าล่าสุด) ให้เห็นชัดและกลับไปเปลี่ยนได้ในแตะเดียว -->
+        <div v-if="locationSummary" class="row items-center no-wrap q-mb-md">
+          <q-chip dense outline color="primary" icon="place" class="q-ml-none ellipsis">{{ locationSummary }}</q-chip>
+          <q-btn
+            v-if="!isLocked"
+            flat
+            dense
+            no-caps
+            color="primary"
+            :label="t('inspection.addDefect.changeLocation')"
+            @click="step = 1"
+          />
+        </div>
         <div class="column no-wrap q-gutter-y-md">
           <!-- ความรุนแรง -->
           <!-- <div class="row no-wrap items-center">
@@ -200,6 +229,7 @@
                 option-label="label"
                 emit-value
                 map-options
+                :loading="isLoadingMaster"
                 :disable="isLocked"
                 @filter="filterCategories"
                 @update:model-value="onCategoryChange"
@@ -362,6 +392,10 @@
         </div>
       </div>
 
+      <div v-if="duplicateError" class="text-negative text-caption text-weight-medium q-mt-md" role="alert">
+        {{ t('inspection.addDefect.duplicateNeedsPhoto') }}
+      </div>
+
       <!-- Footer -->
       <div class="row justify-between items-end q-mt-auto q-pt-md">
         <div class="column">
@@ -383,7 +417,6 @@
           color="primary"
           :label="step === 1 ? t('inspection.addDefect.next') : t('inspection.addDefect.save')"
           :icon-right="step === 1 ? 'chevron_right' : ''"
-          :loading="inspectionStore.isLoading"
           :disable="isSubmitting || (isLocked && step === 2)"
           class="text-weight-bold"
           style="border-radius: 8px; padding: 8px 24px"
@@ -394,20 +427,19 @@
     </div>
 
     <ImageAnnotatorDialog
-      v-if="imagePreview"
+      v-if="imagePreview && annotatorRequested"
       v-model="showAnnotator"
       :image-url="imagePreview"
       @save="onAnnotatorSave"
-      @save-result="onAnnotatorSaveResult"
     />
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import ImageAnnotatorDialog from 'src/components/ImageAnnotatorDialog.vue';
-import type { AnnotatorSaveResult } from 'src/composables/useFabricCanvas';
+// โหลด fabric.js (ก้อนใหญ่) เฉพาะตอนผู้ใช้เปิดเครื่องมือวาดจริงๆ ไม่ต้องโหลดทุกครั้งที่เปิดหน้า
+const ImageAnnotatorDialog = defineAsyncComponent(() => import('src/components/ImageAnnotatorDialog.vue'));
 import { useInspectionStore } from 'src/stores/useInspection';
 import { useRoundLock } from 'src/composables/useRoundLock';
 import { api } from 'src/boot/axios';
@@ -416,10 +448,7 @@ import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import imageCompression from 'browser-image-compression';
 import PlanPositionDialog from 'src/components/PlanPositionDialog.vue';
-import { createIconSpinner } from 'src/composables/useIconSpinner';
 import { localizedName } from 'src/composables/useLocalizedField';
-
-const addDefectSpinner = createIconSpinner('note_add');
 
 const route = useRoute();
 const router = useRouter();
@@ -442,6 +471,7 @@ interface DefectForm {
   roomId: number | null;
   subRoomId: number | null;
   floorId: number | null;
+  customFloor: string; // ชื่อชั้นที่พิมพ์เอง ใช้เมื่อเลือก "ชั้นอื่นๆ"
   templateId: number | null;
   severity: string;
   jobType: number | null;
@@ -459,6 +489,7 @@ const form = ref<DefectForm>({
   roomId: null,
   subRoomId: null,
   floorId: null,
+  customFloor: '',
   templateId: null,
   severity: 'Minor',
   jobType: null,
@@ -491,9 +522,9 @@ const fetchJobInfo = async () => {
     return;
   }
   try {
-    const { data } = await api.get<{ job?: { jobId?: number } }>(`/inspection-rounds/${roundId}`);
-    if (data?.job?.jobId) {
-      jobId.value = data.job.jobId;
+    const round = await inspectionStore.getRound(roundId);
+    if (round?.job?.jobId) {
+      jobId.value = round.job.jobId;
     }
   } catch (err) {
     console.error('Failed to fetch job info for round', err);
@@ -502,16 +533,31 @@ const fetchJobInfo = async () => {
 
 // ── Master data ───────────────────────────────────────────────
 
-const isLoadingRooms = ref(false);
-const isLoadingFloors = ref(false);
+// ห้อง/ห้องย่อย/ชั้น/หมวด มาจาก cache ใน store (โหลดครั้งเดียวต่อ session) ฟอร์มใช้งานได้ทันที
+const isLoadingMaster = computed(() => inspectionStore.isLoading);
+const roomOptions = computed(() => inspectionStore.roomOptions);
+const subRoomOptions = computed(() => inspectionStore.subRoomOptions);
+// ตัวเลือก "ชั้นอื่นๆ....." ในฐานข้อมูลแสดงเป็น "อื่นๆ (ระบุเอง)" ให้รู้ว่าต้องพิมพ์ชื่อชั้นต่อ
+const floorOptions = computed(() =>
+  inspectionStore.floorOptions.map((o) =>
+    o.isOther ? { ...o, label: t('inspection.addDefect.floorOther') } : o,
+  ),
+);
 
-const roomOptions = ref<{ value: number; label: string }[]>([]);
-const subRoomOptions = ref<{ value: number; label: string }[]>([]);
-const floorOptions = ref<{ value: number; label: string }[]>([]);
+const isOtherFloorSelected = computed(
+  () => floorOptions.value.find((o) => o.value === form.value.floorId)?.isOther === true,
+);
+const customFloorError = ref(false);
+
+// ชื่อชั้นที่จะแสดง (chip, การ์ดระหว่างบันทึก) = ชื่อที่พิมพ์ ถ้าเลือก "อื่นๆ"
+const currentFloorLabel = () =>
+  isOtherFloorSelected.value
+    ? form.value.customFloor.trim()
+    : floorOptions.value.find((f) => f.value === form.value.floorId)?.label;
 
 // ── Searchable dropdowns ──────────────────────────────────────
 // q-select ต้องผูกกับ ref แยกที่ filter แล้ว ไม่ใช่ผูกตรงกับ list ต้นทาง
-type SelectOption = { value: number; label: string };
+type SelectOption = { value: number; label: string; isOther?: boolean };
 
 const roomOptionsFiltered = ref<SelectOption[]>([]);
 const subRoomOptionsFiltered = ref<SelectOption[]>([]);
@@ -539,21 +585,6 @@ watch(roomOptions, (v) => (roomOptionsFiltered.value = v), { immediate: true });
 watch(subRoomOptions, (v) => (subRoomOptionsFiltered.value = v), { immediate: true });
 watch(floorOptions, (v) => (floorOptionsFiltered.value = v), { immediate: true });
 
-const fetchRooms = async () => {
-  const { data } = await api.get<{ roomId: number; roomName: string }[]>('/rooms');
-  roomOptions.value = data.map((r) => ({ value: r.roomId, label: r.roomName }));
-};
-
-const fetchSubRooms = async () => {
-  const { data } = await api.get<{ subRoomId: number; roomName: string }[]>('/sub-rooms');
-  subRoomOptions.value = data.map((s) => ({ value: s.subRoomId, label: s.roomName }));
-};
-
-const fetchFloors = async () => {
-  const { data } = await api.get<{ floorId: number; label: string }[]>('/floor');
-  floorOptions.value = data.map((f) => ({ value: f.floorId, label: f.label }));
-};
-
 const onRoomChange = async () => {
   // ไม่ต้อง clear subRoomId แล้ว เพราะมันอิสระ
   // แต่สามารถ clear floorId ถ้าต้องการ (หรือไม่ clear ก็ได้)
@@ -564,7 +595,9 @@ const onSubRoomChange = () => {
 };
 
 const onFloorChange = () => {
-  // ไม่ต้อง lookup template แล้ว
+  // เปลี่ยนไปชั้นปกติแล้ว ชื่อที่เคยพิมพ์ไว้ไม่ใช้แล้ว
+  if (!isOtherFloorSelected.value) form.value.customFloor = '';
+  customFloorError.value = false;
 };
 
 // ── Category / SubCategory ────────────────────────────────────
@@ -599,12 +632,15 @@ watch(subCategoryOptions, (v) => (subCategoryOptionsFiltered.value = v), { immed
 
 const imagePreview = ref<string | null>(null);
 const selectedFile = ref<File | null>(null);
+// บันทึกซ้ำโดยไม่มีรูปใหม่ (toast ถูกปิดทั้งแอป จึงแจ้งในหน้า) หายเมื่อเลือกรูปหรือแก้ฟอร์ม
+const duplicateError = ref(false);
+watch([form, selectedFile], () => (duplicateError.value = false), { deep: true });
 const showAnnotator = ref(false);
-
-/** รูปต้นฉบับ (ก่อน annotation) เก็บไว้แยกสำหรับส่ง backend */
-const originalFile = ref<File | null>(null);
-/** ข้อมูล annotation (พิกัด objects ต่างๆ) สำหรับ re-edit ในอนาคต */
-const annotationData = ref<AnnotatorSaveResult['annotationData'] | null>(null);
+// mount ตัววาด (และโหลด fabric) หลังผู้ใช้เปิดครั้งแรกเท่านั้น
+const annotatorRequested = ref(false);
+watch(showAnnotator, (open) => {
+  if (open) annotatorRequested.value = true;
+});
 
 const galleryInput = ref<HTMLInputElement | null>(null);
 const cameraInput = ref<HTMLInputElement | null>(null);
@@ -663,19 +699,6 @@ const onAnnotatorSave = (blob: Blob) => {
   startImageCompression(file);
 };
 
-/** รับทั้งรูปต้นฉบับ + รูปที่แก้ไข + ข้อมูล annotation จาก ImageAnnotatorDialog */
-const onAnnotatorSaveResult = (result: AnnotatorSaveResult) => {
-  // เก็บรูปต้นฉบับแยก
-  originalFile.value = new File(
-    [result.originalBlob],
-    `defect-original-${Date.now()}.jpg`,
-    { type: result.originalBlob.type || 'image/jpeg' },
-  );
-  // เก็บข้อมูล annotation
-  annotationData.value = result.annotationData;
-  // selectedFile จะถูกอัปเดตผ่าน onAnnotatorSave (legacy event) อยู่แล้ว
-};
-
 // ── Navigation & Submit ───────────────────────────────────────
 
 const handleBack = () => {
@@ -684,20 +707,25 @@ const handleBack = () => {
 };
 
 // defect ซ้ำ: เช็คทั้ง defect ที่บันทึกแล้ว และ defect ที่กำลังบันทึกอยู่เบื้องหลัง (defectSyncState, isCreate)
+const normalizeFloorLabel = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('th');
+
 const isDuplicateDefect = () => {
   const selectedTypes = [...form.value.defectTypes].sort((a, b) => a - b);
 
   const matchesCurrentForm = (
     roomId: number | null,
     subRoomId: number | null,
-    floorId: number | null,
+    floor: { floorId?: number; label?: string } | null | undefined,
     severity: string,
     note: string,
     types: number[],
   ) => {
     if (roomId !== form.value.roomId) return false;
     if (subRoomId !== form.value.subRoomId) return false;
-    if (floorId !== form.value.floorId) return false;
+    // ชั้น "อื่นๆ" ที่พิมพ์เอง: backend แปลงเป็น floor row จริง (id ต่างจากแถว "อื่นๆ") จึงเทียบด้วยชื่อชั้นแทน id
+    if (isOtherFloorSelected.value) {
+      if (normalizeFloorLabel(floor?.label ?? '') !== normalizeFloorLabel(form.value.customFloor)) return false;
+    } else if ((floor?.floorId ?? null) !== form.value.floorId) return false;
     if (severity !== form.value.severity) return false;
     if (note !== (form.value.note || '-')) return false;
     if (types.length !== selectedTypes.length) return false;
@@ -708,7 +736,7 @@ const isDuplicateDefect = () => {
     matchesCurrentForm(
       d.room?.roomId ?? null,
       d.subRoom?.subRoomId ?? null,
-      d.floor?.floorId ?? null,
+      d.floor,
       d.severity,
       d.description,
       d.subCategories.map((s) => s.subCategoryId).sort((a, b) => a - b),
@@ -723,7 +751,7 @@ const isDuplicateDefect = () => {
       matchesCurrentForm(
         entry.previewDefect.room?.roomId ?? null,
         entry.previewDefect.subRoom?.subRoomId ?? null,
-        entry.previewDefect.floor?.floorId ?? null,
+        entry.previewDefect.floor,
         entry.previewDefect.severity,
         entry.previewDefect.description,
         entry.previewDefect.subCategories.map((s) => s.subCategoryId).sort((a, b) => a - b),
@@ -750,7 +778,7 @@ const patchDefectLocally = (defectId: number) => {
   const existing = inspectionStore.defects[idx]!;
   const roomLabel = roomOptions.value.find((r) => r.value === form.value.roomId)?.label;
   const subRoomLabel = subRoomOptions.value.find((r) => r.value === form.value.subRoomId)?.label;
-  const floorLabel = floorOptions.value.find((f) => f.value === form.value.floorId)?.label;
+  const floorLabel = currentFloorLabel();
 
   inspectionStore.defects[idx] = {
     ...existing,
@@ -786,7 +814,7 @@ const buildPreviewDefect = (): Defect => ({
     ? { subRoomId: form.value.subRoomId, roomName: subRoomOptions.value.find((r) => r.value === form.value.subRoomId)?.label ?? '' }
     : null,
   ...(form.value.floorId
-    ? { floor: { floorId: form.value.floorId, label: floorOptions.value.find((f) => f.value === form.value.floorId)?.label ?? '' } }
+    ? { floor: { floorId: form.value.floorId, label: currentFloorLabel() ?? '' } }
     : {}),
   planId: form.value.planId,
   planX: form.value.planX,
@@ -795,6 +823,15 @@ const buildPreviewDefect = (): Defect => ({
 });
 
 const isSubmitting = ref(false);
+
+const locationSummary = computed(() => {
+  const parts = [
+    roomOptions.value.find((r) => r.value === form.value.roomId)?.label,
+    subRoomOptions.value.find((r) => r.value === form.value.subRoomId)?.label,
+    currentFloorLabel(),
+  ].filter((part): part is string => !!part);
+  return parts.join(' · ');
+});
 
 const handleNext = async () => {
   if (step.value === 1) {
@@ -812,6 +849,11 @@ const handleNext = async () => {
         color: 'negative',
         icon: 'warning',
       });
+      return;
+    }
+    // แจ้งในช่องเลย (toast ถูกปิดทั้งแอปใน boot/notify.ts จึงไม่ขึ้น)
+    if (isOtherFloorSelected.value && !form.value.customFloor.trim()) {
+      customFloorError.value = true;
       return;
     }
     step.value = 2;
@@ -843,12 +885,17 @@ const handleNext = async () => {
     return;
   }
 
-  if (!isEditMode.value && isDuplicateDefect()) {
-    $q.notify({
-      message: t('inspection.addDefect.duplicateDefect'),
-      color: 'negative',
-      icon: 'warning',
-    });
+  // โหมดสร้าง: กันกดบันทึกซ้ำระหว่างรอบีบอัดรูป (await ด้านล่าง) ไม่งั้นกด 2 ครั้งพร้อมรูปจะสร้าง 2 รายการ
+  // (ตอนมีรูป ตัวเช็คซ้ำถูกข้าม) ปล่อย guard หลังรีเซ็ตฟอร์มแล้ว
+  if (!isEditMode.value) {
+    if (isSubmitting.value) return;
+    isSubmitting.value = true;
+  }
+
+  // ซ้ำได้เฉพาะเมื่อแนบรูปใหม่ (บันทึกรายละเอียดเดิมแต่คนละรูป) ส่วนไม่มีรูปยังบล็อก กันกดบันทึกซ้ำโดยไม่ตั้งใจ
+  if (!isEditMode.value && !selectedFile.value && isDuplicateDefect()) {
+    isSubmitting.value = false;
+    duplicateError.value = true;
     return;
   }
 
@@ -859,6 +906,9 @@ const handleNext = async () => {
     formData.append('subRoomId', String(form.value.subRoomId));
   }
   formData.append('floorId', String(form.value.floorId));
+  if (isOtherFloorSelected.value) {
+    formData.append('customFloorLabel', form.value.customFloor.trim());
+  }
   formData.append('inspectorId', '1'); // TODO: ดึงจาก auth store
   formData.append('severity', form.value.severity);
   formData.append('description', form.value.note || '-');
@@ -888,7 +938,12 @@ const handleNext = async () => {
   }
 
   if (selectedFile.value) {
-    if (pendingImageCompression) await pendingImageCompression;
+    try {
+      if (pendingImageCompression) await pendingImageCompression;
+    } catch (error) {
+      if (!isEditMode.value) isSubmitting.value = false;
+      throw error;
+    }
     if (selectedFile.value) {
       formData.append('file', selectedFile.value);
     }
@@ -913,9 +968,20 @@ const handleNext = async () => {
   const tempId = -Date.now();
   const previewDefect = buildPreviewDefect();
 
+  // คงห้อง/ชั้น/หมวด/แปลน/ประเภทตำหนิ/หมายเหตุไว้สำหรับจุดถัดไป (มักเป็นตำหนิแบบเดียวกันที่ต่างกันแค่รูป)
+  // ล้างเฉพาะรูปกับหมุด ซ้ำได้ถ้าแนบรูปใหม่ แต่บันทึกซ้ำโดยไม่มีรูปจะถูกบล็อกโดยตัวเช็คซ้ำ
+  if (form.value.roomId && form.value.floorId) {
+    inspectionStore.rememberLocation(roundId, {
+      roomId: form.value.roomId,
+      subRoomId: form.value.subRoomId,
+      floorId: form.value.floorId,
+      customFloorLabel: isOtherFloorSelected.value ? form.value.customFloor.trim() : null,
+      categoryId: form.value.jobType,
+      planId: form.value.planId,
+    });
+  }
   imagePreview.value = null;
   selectedFile.value = null;
-  form.value.planId = null;
   form.value.planX = null;
   form.value.planY = null;
   form.value.locationZone = null;
@@ -928,6 +994,7 @@ const handleNext = async () => {
     () => inspectionStore.saveDefect(formData),
     previewDefect,
   );
+  isSubmitting.value = false;
 };
 
 const handleDelete = () => {
@@ -939,8 +1006,9 @@ const handleDelete = () => {
   }).onOk(() => {
     void (async () => {
       try {
-        await inspectionStore.deleteDefect(Number(defectIdFromQuery));
-        await inspectionStore.fetchDefects(roundId);
+        const deletedId = Number(defectIdFromQuery);
+        await inspectionStore.deleteDefect(deletedId);
+        inspectionStore.defects = inspectionStore.defects.filter((d) => d.defectId !== deletedId);
         $q.notify({
           message: t('inspection.addDefect.deleteSuccess'),
           color: 'positive',
@@ -972,27 +1040,15 @@ const setSeverity = (val: boolean) => {
   onSeverityToggle(val);
 };
 
-onMounted(async () => {
-  $q.loading.show({
-    spinner: addDefectSpinner,
-    spinnerColor: 'primary',
-    spinnerSize: 70,
-    backgroundColor: 'white',
-  });
-  try {
-    await loadAddDefectData();
-  } finally {
-    $q.loading.hide();
-  }
+// ไม่มี loader เต็มจอแล้ว ฟอร์มขึ้นทันที ส่วน dropdown แสดง loading เองระหว่าง master data ยังมาไม่ครบ
+// (ครั้งแรกของ session เท่านั้น ครั้งถัดไปมาจาก cache)
+onMounted(() => {
+  void loadAddDefectData();
 });
 
 async function loadAddDefectData() {
-  void inspectionStore.fetchInspectionMasterData(roundId);
+  void inspectionStore.fetchInspectionMasterData();
   void fetchJobInfo();
-
-  await fetchRooms();
-  await fetchSubRooms();
-  await fetchFloors();
 
   if (defectIdFromQuery) {
     const defectId = Number(defectIdFromQuery);
@@ -1038,11 +1094,24 @@ async function loadAddDefectData() {
     }
   } else {
     const { roomId, subRoomId, floorId } = route.query;
+    const last = inspectionStore.lastLocation(roundId);
     if (roomId) {
       form.value.roomId = Number(roomId);
       if (subRoomId) form.value.subRoomId = Number(subRoomId);
       if (floorId) form.value.floorId = Number(floorId);
       step.value = 2;
+    } else if (last) {
+      // เปิดจากปุ่มเพิ่มของหน้ารวม: ใช้ห้อง/ชั้นล่าสุดที่บันทึก เปลี่ยนได้จาก chip ด้านบนของขั้นที่ 2
+      form.value.roomId = last.roomId;
+      form.value.subRoomId = last.subRoomId;
+      form.value.floorId = last.floorId;
+      form.value.customFloor = last.customFloorLabel ?? '';
+      step.value = 2;
+    }
+    if (last) {
+      form.value.jobType = last.categoryId;
+      // แปลนเดิมใช้ได้เฉพาะเมื่อยังอยู่ชั้นเดิม ไม่งั้นให้เลือกใหม่ตามชั้น
+      if (form.value.floorId === last.floorId) form.value.planId = last.planId;
     }
   }
 }

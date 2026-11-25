@@ -75,6 +75,16 @@ export class ConstructionDailyReportsController {
     return this.service.findPreviousRoundWorkItems(+roundId);
   }
 
+  @Get('round/:roundId/previous-crew')
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary:
+      'ดึงช่วงเวลาทำงาน สภาพอากาศ บุคลากร/คนงาน และเครื่องจักรจากรายงานรอบก่อน (null ถ้าไม่มี)',
+  })
+  findPreviousRoundCrew(@Param('roundId') roundId: string) {
+    return this.service.findPreviousRoundCrew(+roundId);
+  }
+
   @Get('round/:roundId')
   @UseGuards(RoundAccessGuard)
   @ApiOperation({ summary: 'ดึงรายงานก่อสร้างล่าสุดตาม roundId' })

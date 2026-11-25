@@ -18,7 +18,9 @@ async function bootstrap() {
 
   app.enableCors();
 
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  // whitelist: ตัด field ที่ไม่ได้ประกาศใน DTO ทิ้ง กัน mass assignment (เช่นส่ง role/branchId แอบเข้ามา)
+  // ยังไม่เปิด forbidNonWhitelisted เพราะ frontend บางหน้าส่ง field เกินมา (เช่น roundId ใน POST /assignments)
+  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 
   await app.listen(process.env.PORT || 3000);
 }

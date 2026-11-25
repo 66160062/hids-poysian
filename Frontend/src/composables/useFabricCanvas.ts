@@ -532,6 +532,16 @@ export function useFabricCanvas() {
       // Determine the image region to export (only the image area, not the full canvas)
       const imgBounds = getImageBounds();
 
+      // รูปถูกย่อให้พอดีจอตอนวาด ถ้า export ที่ multiplier 1 รูปที่ได้จะเล็กแค่ขนาดจอมือถือ
+      // ขยายกลับสู่ความละเอียดเดิม (ไม่เกิน 1920px ซึ่งเป็นเพดานเดียวกับตอนบีบอัดก่อนอัปโหลด)
+      const MAX_EXPORT_EDGE = 1920;
+      const regionLongEdge = imgBounds ? Math.max(imgBounds.width, imgBounds.height) : 0;
+      const imageScale = backgroundImage?.scaleX ?? 1;
+      const multiplier =
+        regionLongEdge > 0 && imageScale > 0
+          ? Math.max(1, Math.min(1 / imageScale, MAX_EXPORT_EDGE / regionLongEdge))
+          : 1;
+
       let dataUrl: string;
       try {
         if (imgBounds) {
@@ -539,7 +549,7 @@ export function useFabricCanvas() {
           dataUrl = fabCanvas.toDataURL({
             format: 'jpeg',
             quality: 0.8,
-            multiplier: 1,
+            multiplier,
             left: imgBounds.left,
             top: imgBounds.top,
             width: imgBounds.width,

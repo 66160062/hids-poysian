@@ -462,4 +462,83 @@ describe('ConstructionDailyReportsService', () => {
       expect(result[1].actualPercent).toBe(50);
     });
   });
+
+  describe('findPreviousRoundCrew', () => {
+    it('should return null when the current round is the first round', async () => {
+      mockDataSource.getRepository = jest.fn().mockReturnValue({
+        findOne: jest.fn().mockResolvedValue({
+          roundId: 1,
+          roundNumber: 1,
+          job: { jobId: 10 },
+        }),
+      });
+
+      await expect(service.findPreviousRoundCrew(1)).resolves.toBeNull();
+    });
+
+    it('should return null when the previous round has no daily report', async () => {
+      const roundFindOneMock = jest
+        .fn()
+        .mockResolvedValueOnce({
+          roundId: 2,
+          roundNumber: 2,
+          job: { jobId: 10 },
+        })
+        .mockResolvedValueOnce({ roundId: 1, roundNumber: 1 });
+      mockDataSource.getRepository = jest
+        .fn()
+        .mockImplementation((entity: { name: string }) =>
+          entity.name === 'InspectionRound'
+            ? { findOne: roundFindOneMock }
+            : { findOne: jest.fn().mockResolvedValue(null) },
+        );
+
+      await expect(service.findPreviousRoundCrew(2)).resolves.toBeNull();
+    });
+
+    it('should return working period, weather, personnels and machines from the previous round report', async () => {
+      const roundFindOneMock = jest
+        .fn()
+        .mockResolvedValueOnce({
+          roundId: 3,
+          roundNumber: 3,
+          job: { jobId: 10 },
+        })
+        .mockResolvedValueOnce({ roundId: 2, roundNumber: 2 });
+      const personnels = [
+        { name: 'ช่างไม้', type: PersonnelType.WORKER, count: 4, hours: 8 },
+      ];
+      const machines = [
+        { machineName: 'รถแบ็คโฮ', quantity: 1, workingHours: 6 },
+      ];
+      const reportFindOneMock = jest.fn().mockResolvedValue({
+        workingPeriod: '08:00 - 17:00',
+        weather: 'Rainy',
+        personnels,
+        machines,
+      });
+      mockDataSource.getRepository = jest
+        .fn()
+        .mockImplementation((entity: { name: string }) =>
+          entity.name === 'InspectionRound'
+            ? { findOne: roundFindOneMock }
+            : { findOne: reportFindOneMock },
+        );
+
+      const result = await service.findPreviousRoundCrew(3);
+
+      expect(reportFindOneMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { round: { roundId: 2 } },
+          relations: ['personnels', 'machines'],
+        }),
+      );
+      expect(result).toEqual({
+        workingPeriod: '08:00 - 17:00',
+        weather: 'Rainy',
+        personnels,
+        machines,
+      });
+    });
+  });
 });

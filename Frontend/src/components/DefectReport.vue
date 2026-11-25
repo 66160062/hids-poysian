@@ -553,7 +553,6 @@
                 :src="resolveImageUrl(url, '', 400)"
                 class="summary-evidence-photo"
               />
-              <span v-if="!topic.photos.length" class="summary-muted">{{ t('reports.defect.noEvidencePhotos') }}</span>
             </div>
           </div>
         </div>
@@ -842,6 +841,7 @@ import GmailLogo from 'src/assets/Logos/Gmail.png';
 const apiUrl = import.meta.env.VITE_API_URL;
 
 import { useBranchStore } from 'src/stores/useBranch';
+import { formatLocation } from 'src/utils/location';
 const branchStore = useBranchStore();
 // ใช้ข้อมูลสาขาที่มากับ round ก่อน — หน้า print ของ Puppeteer ไม่ได้โหลด branch store ทำให้ footer ว่าง
 const branch = computed(
@@ -1324,7 +1324,7 @@ const majorChunks = computed(() => {
 const allDefectGroups = computed(() => {
   const groups: Record<string, Defect[]> = {};
   props.defects.forEach((defect) => {
-    const key = `${pickLocalized(defect.room?.roomName, defect.room?.roomNameEn) || '-'}, ${pickLocalized(defect.subRoom?.roomName, defect.subRoom?.roomNameEn) || '-'}, ${pickLocalized(defect.floor?.label, defect.floor?.labelEn)}`;
+    const key = getRoomShortName(defect);
     if (!groups[key]) groups[key] = [];
     groups[key].push(defect);
   });
@@ -1368,6 +1368,18 @@ const hasAiSummary = computed(
   () => props.round.completionPercent != null || !!aiSummaryDisplay.value,
 );
 
+// ชื่อชั้นต่อท้ายชื่อแปลน: ไม่ต้องใส่เมื่อชื่อแปลนมาจากชื่อชั้นอยู่แล้ว (แปลน{ชั้น}) เหลือไว้เฉพาะแปลนที่ตั้งชื่อเอง
+function planFloorLabel(
+  plan: { name?: string | null; nameEn?: string | null; floor?: { label: string; labelEn?: string | null } | null } | null | undefined,
+): string | null {
+  const floor = plan?.floor;
+  if (!floor) return null;
+  const derivedTh = `แปลน${floor.label.trim()}`;
+  const derivedEn = floor.labelEn ? `${floor.labelEn.trim()} Plan` : null;
+  if (plan?.name === derivedTh || (derivedEn !== null && plan?.nameEn === derivedEn)) return null;
+  return pickLocalized(floor.label, floor.labelEn) || null;
+}
+
 // Compute plan pages for PDF - groups defects by planId, only plans with pinned defects
 const planPages = computed(() => {
   const planMap = new Map<
@@ -1394,7 +1406,7 @@ const planPages = computed(() => {
         planId,
         planName: planData?.name ? pickLocalized(planData.name, planData.nameEn) : t('reports.defect.planNameFallback', { id: planId }),
         imageUrl: planData?.imageUrl ?? '',
-        floorLabel: pickLocalized(planData?.floor?.label, planData?.floor?.labelEn) || null,
+        floorLabel: planFloorLabel(planData),
         defects: [],
       });
     }
@@ -1590,8 +1602,7 @@ const completionGap = computed(() => {
 });
 
 function getRoomShortName(defect: Defect) {
-  const parts = [pickLocalized(defect.room?.roomName, defect.room?.roomNameEn), pickLocalized(defect.subRoom?.roomName, defect.subRoom?.roomNameEn), pickLocalized(defect.floor?.label, defect.floor?.labelEn)].filter(Boolean);
-  return parts.length ? parts.join(', ') : '-';
+  return formatLocation([pickLocalized(defect.room?.roomName, defect.room?.roomNameEn), pickLocalized(defect.subRoom?.roomName, defect.subRoom?.roomNameEn), pickLocalized(defect.floor?.label, defect.floor?.labelEn)]);
 }
 
 function formatDate(dateStr: string) {

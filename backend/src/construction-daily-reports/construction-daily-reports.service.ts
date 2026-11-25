@@ -234,6 +234,56 @@ export class ConstructionDailyReportsService {
   async findPreviousRoundWorkItems(
     currentRoundId: number,
   ): Promise<DailyWorkItem[]> {
+    const previousReport = await this.findPreviousRoundReport(currentRoundId, [
+      'workItems',
+    ]);
+
+    if (!previousReport?.workItems) {
+      return [];
+    }
+
+    // กรองงานที่ 100% ออก (เสร็จสมบูรณ์แล้ว ไม่ต้อง carry forward)
+    return previousReport.workItems.filter(
+      (item) => (item.actualPercent ?? 0) < 100,
+    );
+  }
+
+  /**
+   * ดึงช่วงเวลาทำงาน สภาพอากาศ บุคลากร/คนงาน และเครื่องจักรจากรายงานรอบก่อน
+   * ใช้กับปุ่ม "ใช้ข้อมูลจากรอบก่อน" บนมือถือ (ทีมหน้างานมักเป็นชุดเดิม)
+   * คืน null ถ้ายังไม่มีรายงานรอบก่อน
+   */
+  async findPreviousRoundCrew(currentRoundId: number): Promise<{
+    workingPeriod: string | null;
+    weather: string | null;
+    personnels: DailyPersonnel[];
+    machines: DailyMachine[];
+  } | null> {
+    const previousReport = await this.findPreviousRoundReport(currentRoundId, [
+      'personnels',
+      'machines',
+    ]);
+
+    if (!previousReport) {
+      return null;
+    }
+
+    return {
+      workingPeriod: previousReport.workingPeriod ?? null,
+      weather: previousReport.weather ?? null,
+      personnels: previousReport.personnels ?? [],
+      machines: previousReport.machines ?? [],
+    };
+  }
+
+  /**
+   * หารายงานล่าสุดของรอบก่อนหน้า (roundNumber - 1) ใน job เดียวกัน
+   * คืน null ถ้าเป็นรอบแรก ไม่พบรอบก่อน หรือรอบก่อนยังไม่มีรายงาน
+   */
+  private async findPreviousRoundReport(
+    currentRoundId: number,
+    relations: string[],
+  ): Promise<ConstructionDailyReport | null> {
     // 1. ดึง round ปัจจุบัน พร้อม job
     const currentRound = await this.dataSource
       .getRepository(InspectionRound)
@@ -243,7 +293,7 @@ export class ConstructionDailyReportsService {
       });
 
     if (!currentRound || currentRound.roundNumber <= 1) {
-      return [];
+      return null;
     }
 
     // 2. หา round ก่อนหน้า (roundNumber - 1, same job)
@@ -257,25 +307,14 @@ export class ConstructionDailyReportsService {
       });
 
     if (!previousRound) {
-      return [];
+      return null;
     }
 
     // 3. หา daily report ของรอบก่อนหน้า (ล่าสุด)
-    const previousReport = await this.dataSource
-      .getRepository(ConstructionDailyReport)
-      .findOne({
-        where: { round: { roundId: previousRound.roundId } },
-        relations: ['workItems'],
-        order: { createdAt: 'DESC' },
-      });
-
-    if (!previousReport?.workItems) {
-      return [];
-    }
-
-    // 4. กรองงานที่ 100% ออก (เสร็จสมบูรณ์แล้ว ไม่ต้อง carry forward)
-    return previousReport.workItems.filter(
-      (item) => (item.actualPercent ?? 0) < 100,
-    );
+    return this.dataSource.getRepository(ConstructionDailyReport).findOne({
+      where: { round: { roundId: previousRound.roundId } },
+      relations,
+      order: { createdAt: 'DESC' },
+    });
   }
 }

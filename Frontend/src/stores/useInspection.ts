@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { isAxiosError } from 'axios';
 import type { Category, DefectSubCategory, RoomTemplate, SubCategory, Defect } from 'src/models.ts';
-import { api } from 'src/boot/axios';
+import { api, REQUEST_TIMEOUT_MS, UPLOAD_TIMEOUT_MS } from 'src/boot/axios';
 import { t } from 'src/boot/i18n';
 import { localizedText } from 'src/composables/useLocalizedField';
 
@@ -96,6 +96,49 @@ const SEVERITY_LABEL: Record<string, string> = {
   Minor: 'Minor',
 };
 
+// ── Cache ข้อมูลที่ใช้ซ้ำระหว่างเดินตรวจ ────────────────────────
+// เดิมเปิดหน้าเพิ่ม defect ทีไรต้องรอ /rooms → /sub-rooms → /floor ทีละตัว + ดึงรอบตรวจซ้ำ 3 ครั้ง
+// ข้อมูลพวกนี้แทบไม่เปลี่ยนระหว่างตรวจ จึงโหลดครั้งเดียวแล้วใช้ซ้ำทั้ง session
+
+// isOther: ตัวเลือก "ชั้นอื่นๆ" ที่ต้องให้ผู้ตรวจพิมพ์ชื่อชั้นเอง
+// order: floor_order จาก backend (ชั้นมาตรฐาน 10..110, ชั้นที่พิมพ์เอง/อื่นๆ = null) ใช้เรียงแปลนตามชั้นแบบตายตัว
+export type SelectOption = { value: number; label: string; isOther?: boolean; order?: number | null };
+
+type FloorRow = { floorId: number; label: string; labelEn?: string | null; floorOrder?: number | null };
+
+// แถว "ชั้นอื่นๆ....." เป็น lookup ธรรมดาในตาราง floor (ไม่มีคอลัมน์บอกว่าเป็นตัวเลือกอื่นๆ) จึงดูจากชื่อ
+export const isOtherFloor = (floor: Pick<FloorRow, 'label' | 'labelEn'>) =>
+  /อื่น/.test(floor.label) || /other/i.test(floor.labelEn ?? '');
+
+// ตัวเลือก "อื่นๆ" อยู่ท้ายสุดเสมอ ชั้นที่พิมพ์เพิ่มเองจะขึ้นก่อนหน้ามัน
+const toFloorOptions = (rows: FloorRow[]): SelectOption[] => {
+  const options = rows.map((f) => ({ value: f.floorId, label: f.label, isOther: isOtherFloor(f), order: f.floorOrder ?? null }));
+  return [...options.filter((o) => !o.isOther), ...options.filter((o) => o.isOther)];
+};
+
+export interface RoundSummary {
+  roundId: number;
+  status?: string;
+  job?: { jobId?: number };
+}
+
+// สถานะรอบอาจถูกเปลี่ยนจากอีกเครื่อง (เช่นแอดมินอนุมัติ) จึงเก็บไว้แค่ช่วงสั้นๆ
+// ส่วนการเปลี่ยนจากเครื่องนี้ (submit/confirm/approve) ล้าง cache ทันทีผ่าน interceptor ด้านล่าง
+const ROUND_CACHE_MS = 60_000;
+
+const quick = { timeout: REQUEST_TIMEOUT_MS };
+
+// ตำแหน่งล่าสุดที่บันทึก defect ในรอบนั้น ใช้เป็นค่าเริ่มต้นเวลาเปิดฟอร์มใหม่ ไม่ต้องเลือกห้อง/ชั้นซ้ำ
+export interface LastDefectLocation {
+  roomId: number;
+  subRoomId: number | null;
+  floorId: number;
+  // เลือก "ชั้นอื่นๆ" แล้วพิมพ์ชื่อเอง: เก็บชื่อไว้เติมให้จุดถัดไป
+  customFloorLabel: string | null;
+  categoryId: number | null;
+  planId: number | null;
+}
+
 // ── Store ─────────────────────────────────────────────────────
 
 export const useInspectionStore = defineStore('inspection', () => {
@@ -123,7 +166,20 @@ export const useInspectionStore = defineStore('inspection', () => {
 
   const defectSyncState = ref<Record<number, DefectSyncEntry>>({});
   // ไม่ต้อง reactive เพราะเก็บ closure (FormData/File อยู่ข้างใน) ไว้ให้ retry เรียกซ้ำได้
-  const syncTasks = new Map<number, () => Promise<void>>();
+  const syncTasks = new Map<number, () => Promise<unknown>>();
+
+  // roundId ของ defects ที่อยู่ใน store ตอนนี้ ใช้ตัดสินว่าแสดง list เดิมก่อนแล้วค่อย refresh ได้ไหม
+  const defectsRoundId = ref<string | null>(null);
+
+  // master data สำหรับฟอร์ม defect (โหลดครั้งเดียว)
+  const roomOptions = ref<SelectOption[]>([]);
+  const subRoomOptions = ref<SelectOption[]>([]);
+  const floorOptions = ref<SelectOption[]>([]);
+  let masterDataPromise: Promise<void> | null = null;
+
+  const roundCache = new Map<string, { at: number; promise: Promise<RoundSummary> }>();
+
+  const lastLocationByRound = ref<Record<string, LastDefectLocation>>({});
 
   // ── computed เดิม (ไม่แตะ) ────────────────────────────────
   const allRooms = computed(() => rooms.value);
@@ -323,26 +379,79 @@ export const useInspectionStore = defineStore('inspection', () => {
 
   // ── actions เดิม (ไม่แตะ) ─────────────────────────────────
 
-  async function fetchInspectionMasterData(roundId: string | number) {
+  // โหลดหมวด/หมวดย่อย/ห้อง/ห้องย่อย/ชั้นพร้อมกันครั้งเดียวต่อ session
+  // เรียกซ้ำระหว่างโหลดอยู่จะได้ promise เดิม ถ้าพลาดจะลองใหม่ได้ในครั้งถัดไป
+  function ensureMasterData(): Promise<void> {
+    if (masterDataPromise) return masterDataPromise;
     isLoading.value = true;
+    masterDataPromise = Promise.all([
+      api.get('/defect-categories', quick),
+      api.get('/defect-sub-categories', quick),
+      api.get<{ roomId: number; roomName: string }[]>('/rooms', quick),
+      api.get<{ subRoomId: number; roomName: string }[]>('/sub-rooms', quick),
+      api.get<FloorRow[]>('/floor', quick),
+    ])
+      .then(([catRes, subRes, roomRes, subRoomRes, floorRes]) => {
+        categories.value = catRes.data;
+        subCategories.value = subRes.data;
+        roomOptions.value = roomRes.data.map((r) => ({ value: r.roomId, label: r.roomName }));
+        subRoomOptions.value = subRoomRes.data.map((s) => ({ value: s.subRoomId, label: s.roomName }));
+        floorOptions.value = toFloorOptions(floorRes.data);
+      })
+      .catch((err) => {
+        masterDataPromise = null;
+        console.error('Fetch Master Data Error:', err);
+        throw err;
+      })
+      .finally(() => {
+        isLoading.value = false;
+      });
+    return masterDataPromise;
+  }
+
+  // ข้อมูลรอบตรวจ (สถานะล็อก + jobId) ใช้ร่วมกันทุกหน้าในรอบเดียวกัน ยิงจริงครั้งเดียวต่อช่วง cache
+  function getRound(roundId: string | number, { fresh = false } = {}): Promise<RoundSummary> {
+    const key = String(roundId);
+    const cached = roundCache.get(key);
+    if (!fresh && cached && Date.now() - cached.at < ROUND_CACHE_MS) return cached.promise;
+    const promise = api.get<RoundSummary>(`/inspection-rounds/${key}`, quick).then((res) => res.data);
+    roundCache.set(key, { at: Date.now(), promise });
+    promise.catch(() => roundCache.delete(key));
+    return promise;
+  }
+
+  function invalidateRound(roundId: string | number) {
+    roundCache.delete(String(roundId));
+  }
+
+  // เปลี่ยนสถานะรอบจากเครื่องนี้ (submit/confirm/approve ฯลฯ) ต้องไม่เห็นสถานะเก่าจาก cache
+  api.interceptors.response.use((response) => {
+    const method = response.config.method?.toLowerCase();
+    const match = /\/inspection-rounds\/(\d+)/.exec(response.config.url ?? '');
+    if (method && method !== 'get' && match?.[1]) invalidateRound(match[1]);
+    return response;
+  });
+
+  function rememberLocation(roundId: string | number, location: LastDefectLocation) {
+    lastLocationByRound.value[String(roundId)] = location;
+  }
+
+  function lastLocation(roundId: string | number): LastDefectLocation | undefined {
+    return lastLocationByRound.value[String(roundId)];
+  }
+
+  // ของเดิมยังมีคนเรียกได้ ให้ชี้ไปใช้ cache ตัวใหม่แทนการยิงซ้ำ
+  async function fetchInspectionMasterData() {
     try {
-      const [catRes, subRes] = await Promise.all([
-        api.get('/defect-categories'),
-        api.get('/defect-sub-categories'),
-        api.get(`/inspection-rounds/${roundId}`),
-      ]);
-      categories.value = catRes.data;
-      subCategories.value = subRes.data;
-    } catch (err) {
-      console.error('Fetch Master Data Error:', err);
-    } finally {
-      isLoading.value = false;
+      await ensureMasterData();
+    } catch {
+      // logged in ensureMasterData
     }
   }
 
   async function saveDefect(payload: FormData) {
     try {
-      const res = await api.post('/defects', payload);
+      const res = await api.post<Defect>('/defects', payload, { timeout: UPLOAD_TIMEOUT_MS });
       return res.data;
     } catch (err) {
       const error = err as { response?: { data: unknown } };
@@ -353,7 +462,7 @@ export const useInspectionStore = defineStore('inspection', () => {
 
   async function updateDefect(id: number, payload: FormData) {
     try {
-      const res = await api.patch(`/defects/${id}`, payload);
+      const res = await api.patch(`/defects/${id}`, payload, { timeout: UPLOAD_TIMEOUT_MS });
       return res.data;
     } catch (err) {
       const error = err as { response?: { data: unknown } };
@@ -391,11 +500,33 @@ export const useInspectionStore = defineStore('inspection', () => {
     return fallback;
   }
 
+  // backend ตอบ defect ที่สร้างในรูปร่างเดียวกับ list (GET /defects/round/:id) ใส่ลง store ได้เลย
+  // ไม่ต้องดึงทั้งรอบใหม่ทุกครั้งที่บันทึก (เดิม refetch ทั้ง list หลังสร้างแต่ละตัว)
+  // ชั้นที่ backend เพิ่งสร้างจากชื่อที่ผู้ตรวจพิมพ์ ให้ขึ้นในรายการชั้นทันที (ก่อนตัวเลือก "อื่นๆ")
+  function upsertFloorOption(floor: Defect['floor']) {
+    if (!floor || floorOptions.value.some((o) => o.value === floor.floorId)) return;
+    floorOptions.value = toFloorOptions([
+      ...floorOptions.value.map((o) => ({ floorId: o.value, label: o.label, labelEn: o.isOther ? 'Other' : null, floorOrder: o.order ?? null })),
+      { floorId: floor.floorId, label: floor.label, labelEn: floor.labelEn ?? null },
+    ]);
+  }
+
+  function upsertDefect(roundId: string | number, defect: Defect) {
+    upsertFloorOption(defect.floor);
+    if (defectsRoundId.value !== String(roundId)) return;
+    const idx = defects.value.findIndex((d) => d.defectId === defect.defectId);
+    if (idx === -1) defects.value.push(defect);
+    else defects.value[idx] = defect;
+  }
+
+  const isDefect = (value: unknown): value is Defect =>
+    typeof value === 'object' && value !== null && typeof (value as Defect).defectId === 'number';
+
   async function runDefectSync(
     id: number,
     isCreate: boolean,
     roundId: string | number,
-    task: () => Promise<void>,
+    task: () => Promise<unknown>,
     previewDefect?: Defect,
   ) {
     syncTasks.set(id, task);
@@ -407,12 +538,13 @@ export const useInspectionStore = defineStore('inspection', () => {
       ...(previewDefect ? { previewDefect } : {}),
     };
     try {
-      await task();
+      const result = await task();
+      if (isCreate) {
+        if (isDefect(result)) upsertDefect(roundId, result);
+        else await fetchDefects(roundId, { background: true });
+      }
       delete defectSyncState.value[id];
       syncTasks.delete(id);
-      if (isCreate) {
-        await fetchDefects(roundId);
-      }
     } catch (err) {
       const existing = defectSyncState.value[id];
       defectSyncState.value[id] = {
@@ -443,18 +575,29 @@ export const useInspectionStore = defineStore('inspection', () => {
 
   // ── actions ใหม่ ───────────────────────────────────────────
 
-  async function fetchDefects(roundId: string | number) {
-    isLoadingDefects.value = true;
-    defectsError.value = null;
+  // background: refresh เงียบๆ โดยไม่โชว์ skeleton/error ทับ list ที่แสดงอยู่แล้ว
+  async function fetchDefects(roundId: string | number, { background = false } = {}) {
+    const key = String(roundId);
+    if (!background) {
+      isLoadingDefects.value = true;
+      defectsError.value = null;
+    }
     try {
-      const { data } = await api.get<Defect[]>(`/defects/round/${roundId}`);
+      const { data } = await api.get<Defect[]>(`/defects/round/${key}`, quick);
       defects.value = data;
+      defectsRoundId.value = key;
     } catch (err) {
-      defectsError.value = t('stores.inspection.fetchDefectsError');
+      if (!background) defectsError.value = t('stores.inspection.fetchDefectsError');
       console.error('Fetch Defects Error:', err);
     } finally {
-      isLoadingDefects.value = false;
+      if (!background) isLoadingDefects.value = false;
     }
+  }
+
+  // แสดง list ที่มีอยู่ของรอบนี้ทันทีแล้ว refresh เบื้องหลัง (stale-while-revalidate)
+  // ครั้งแรกของรอบ (ยังไม่มีข้อมูล) ถึงจะรอโหลดจริง
+  function hasDefectsFor(roundId: string | number) {
+    return defectsRoundId.value === String(roundId);
   }
 
   function applyFilter(newFilter: FilterState) {
@@ -477,6 +620,16 @@ export const useInspectionStore = defineStore('inspection', () => {
     allCategories,
     getSubByCategoryId,
     fetchInspectionMasterData,
+    ensureMasterData,
+    roomOptions,
+    subRoomOptions,
+    floorOptions,
+    getRound,
+    invalidateRound,
+    rememberLocation,
+    lastLocation,
+    hasDefectsFor,
+    groupKeyOf: buildGroupKey,
     saveDefect,
     updateDefect,
     deleteDefect,

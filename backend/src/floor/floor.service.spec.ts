@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { FloorService } from './floor.service';
+import { FloorService, STANDARD_FLOORS } from './floor.service';
 import { Floor } from './entities/floor.entity';
 
 describe('FloorService', () => {
@@ -17,7 +17,7 @@ describe('FloorService', () => {
 
   beforeEach(async () => {
     floorRepo = {
-      create: jest.fn(),
+      create: jest.fn((v) => v),
       save: jest.fn(),
       find: jest.fn(),
       findOneBy: jest.fn(),
