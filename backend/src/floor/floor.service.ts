@@ -1,7 +1,9 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { CreateFloorDto } from './dto/create-floor.dto';
 import { UpdateFloorDto } from './dto/update-floor.dto';
@@ -16,13 +18,13 @@ export const STANDARD_FLOORS: ReadonlyArray<{
   labelEn: string;
   floorOrder: number;
 }> = [
-  ...Array.from({ length: 10 }, (_, i) => ({
-    label: `ชั้น ${i + 1}`,
-    labelEn: `Floor ${i + 1}`,
-    floorOrder: (i + 1) * 10,
-  })),
-  { label: 'ชั้นลอย', labelEn: 'Mezzanine', floorOrder: 110 },
-];
+    ...Array.from({ length: 10 }, (_, i) => ({
+      label: `ชั้น ${i + 1}`,
+      labelEn: `Floor ${i + 1}`,
+      floorOrder: (i + 1) * 10,
+    })),
+    { label: 'ชั้นลอย', labelEn: 'Mezzanine', floorOrder: 110 },
+  ];
 
 @Injectable()
 export class FloorService implements OnModuleInit {
@@ -31,7 +33,7 @@ export class FloorService implements OnModuleInit {
   constructor(
     @InjectRepository(Floor)
     private readonly floorRepo: Repository<Floor>,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     try {
