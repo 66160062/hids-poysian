@@ -105,6 +105,7 @@ export interface HousePlan {
 
 export interface Defect {
   defectId: number;
+  roundDefectNumber?: number; // ลำดับใน round (1, 2, 3...) — ส่งมาจาก backend ทุก endpoint ที่ list defect ตามรอบ
   description: string;
   descriptionEn?: string | null;
   severity: string;

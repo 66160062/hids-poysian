@@ -366,7 +366,7 @@
 
         <div class="defects-grid">
           <div v-for="defect in chunk" :key="defect.defectId" class="defect-card">
-            <div class="badge-id">#{{ defect.defectId }}</div>
+            <div class="badge-id">#{{ defect.roundDefectNumber ?? defect.defectId }}</div>
             <div class="badge-main" style="background: #ef4444">{{ defect.severity }}</div>
             <img loading="eager" :src="resolveImageUrl(defect.imageUrl, 'https://via.placeholder.com/400x300?text=No+Image', defectThumbWidth)" class="defect-img" />
             <div class="card-body">
@@ -440,7 +440,7 @@
           </div>
           <div class="defects-grid">
             <div v-for="defect in group.defects" :key="defect.defectId" class="defect-card">
-              <div class="badge-id">#{{ defect.defectId }}</div>
+              <div class="badge-id">#{{ defect.roundDefectNumber ?? defect.defectId }}</div>
               <div
                 class="badge-main"
                 :style="defect.severity === 'Major' ? 'background: #ef4444' : 'background: #fb8c00'"
@@ -659,7 +659,7 @@
                       {{ item.displayIndex }}
                     </span>
                   </td>
-                  <td class="text-center text-grey-8">#{{ item.defect.defectId }}</td>
+                  <td class="text-center text-grey-8">#{{ item.defect.roundDefectNumber ?? item.defect.defectId }}</td>
                   <td>{{ getRoomShortName(item.defect) }}</td>
                   <td>
                     <span v-if="item.defect.subCategories && item.defect.subCategories.length">
