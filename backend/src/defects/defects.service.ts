@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, IsNull, Repository } from 'typeorm';
+import { In, IsNull, LessThan, Repository } from 'typeorm';
 import { Defect } from './entities/defect.entity';
 import { CreateDefectDto } from './dto/create-defect.dto';
 import { UpdateDefectDto } from './dto/update-defect.dto';
@@ -530,20 +530,42 @@ export class DefectsService {
     'plan.floor',
   ];
 
-  findByRound(roundId: number) {
-    return this.defectsRepo.find({
+  // กำหนด roundDefectNumber (1, 2, 3...) ตาม defectId ASC ภายในรอบเดียวกัน
+  // ใช้แทนการแสดง defectId จริง (global auto-increment) เพื่อให้แต่ละรอบนับจาก 1 ใหม่
+  private assignRoundNumbers<T extends { defectId: number }>(
+    defects: T[],
+  ): (T & { roundDefectNumber: number })[] {
+    return defects.map((d, index) => ({ ...d, roundDefectNumber: index + 1 }));
+  }
+
+  async findByRound(roundId: number) {
+    const defects = await this.defectsRepo.find({
       where: { round: { roundId } },
       relations: DefectsService.LIST_RELATIONS,
       order: { defectId: 'ASC' },
     });
+    return this.assignRoundNumbers(defects);
   }
 
   // defect ตัวเดียวในรูปร่างเดียวกับ findByRound ใช้ตอบกลับหลังสร้าง ให้ frontend ใส่ลง list
   // ได้ทันทีโดยไม่ต้องดึงทั้งรอบใหม่
-  findListItem(defectId: number) {
-    return this.defectsRepo.findOneOrFail({
+  // roundDefectNumber = ลำดับของ defect นี้ใน round (นับจาก defectId ASC)
+  async findListItem(defectId: number) {
+    const defect = await this.defectsRepo.findOneOrFail({
       where: { defectId },
-      relations: DefectsService.LIST_RELATIONS,
+      relations: [...DefectsService.LIST_RELATIONS, 'round'],
     });
+
+    // นับจำนวน defect ในรอบเดียวกันที่มี defectId น้อยกว่า → ได้ลำดับที่ตัวนี้ควรเป็น
+    const roundId = defect.round?.roundId;
+    let roundDefectNumber = 1;
+    if (roundId) {
+      const preceding = await this.defectsRepo.count({
+        where: { round: { roundId }, defectId: LessThan(defectId) },
+      });
+      roundDefectNumber = preceding + 1;
+    }
+
+    return { ...defect, roundDefectNumber };
   }
 }
